@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.km.conts.dao.KmRelLinkMapper">
+
+    <select id="selectList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+		SELECT 
+			KMS_REL_LNK_ID
+			,RGTR_ID
+			,(SELECT USER_NM FROM PLT_USER WHERE USER_ID = T.RGTR_ID) AS RGTR_NM
+			,TO_CHAR(TO_DATE(REG_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD') AS REG_DT
+			,KMS_CONTS_ID
+			,REL_LNK_NM
+			,REL_LNK_URL
+			,MDFR_ID
+			,MDFCN_DT
+			,ROW_NUMBER() OVER(ORDER BY T.REG_DT) ROW_NUMBER
+		FROM PLT_KMS_REL_LNK T
+		WHERE 1=1
+			AND DEL_YN = 'N'
+			AND KMS_CONTS_ID = #{ KMS_CONTS_ID }::numeric
+		<if test="KMS_REL_LNK_ID != null and KMS_REL_LNK_ID != ''">
+			AND KMS_REL_LNK_ID = #{ KMS_REL_LNK_ID }::numeric
+		</if>
+		<if test="LIKE_REL_LNK_NM != null and LIKE_REL_LNK_NM != '' ">
+				AND REL_LNK_NM LIKE '%' || #{ LIKE_REL_LNK_NM } || '%'
+		</if>
+		<if test="LIKE_REL_LNK_URL != null and LIKE_REL_LNK_URL != '' ">
+				AND REL_LNK_URL LIKE '%' || #{ LIKE_REL_LNK_URL } || '%'
+		</if>
+		ORDER BY ROW_NUMBER DESC
+	</select>
+
+	<insert id="insert" parameterType="java.util.HashMap">
+
+		INSERT INTO PLT_KMS_REL_LNK
+		(
+			KMS_REL_LNK_ID
+			,KMS_CONTS_ID
+			<if test="REL_LNK_NM != null and REL_LNK_NM != ''">,REL_LNK_NM</if>
+			<if test="REL_LNK_URL != null and REL_LNK_URL != ''">,REL_LNK_URL</if>
+			,RGTR_ID
+			,REG_DT
+			,DEL_YN
+		)
+		VALUES
+		(
+			#{ KMS_REL_LNK_ID }::numeric
+			,#{ KMS_CONTS_ID }::numeric
+			<if test="REL_LNK_NM != null and REL_LNK_NM != ''">,#{ REL_LNK_NM }</if>
+			<if test="REL_LNK_URL != null and REL_LNK_URL != ''">,#{ REL_LNK_URL }</if>
+			,#{ RGTR_ID }::numeric
+			,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			,'N'
+		)
+	</insert>
+
+	<update id="update" parameterType="java.util.HashMap" >
+
+		UPDATE PLT_KMS_REL_LNK SET
+			KMS_CONTS_ID = #{ KMS_CONTS_ID }::numeric
+			<if test="REL_LNK_NM != null and REL_LNK_NM != ''">
+				,REL_LNK_NM = #{ REL_LNK_NM }
+			</if>
+			<if test="REL_LNK_URL != null and REL_LNK_URL != ''">
+				,REL_LNK_URL = #{ REL_LNK_URL }
+			</if>
+			,MDFR_ID = #{ MDFR_ID }::numeric
+			,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE KMS_REL_LNK_ID = #{ KMS_REL_LNK_ID }::numeric
+	</update>
+
+	<update id="delete" parameterType="java.util.HashMap" >
+		UPDATE PLT_KMS_REL_LNK SET
+		 	DEL_YN = 'Y'
+			,MDFR_ID = #{ MDFR_ID }
+			,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE KMS_REL_LNK_ID IN 
+		 <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+        	#{item}::numeric
+  		</foreach>
+	</update>
+
+	
+</mapper>

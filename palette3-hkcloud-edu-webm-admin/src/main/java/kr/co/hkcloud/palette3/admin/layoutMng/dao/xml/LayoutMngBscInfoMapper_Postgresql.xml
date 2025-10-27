@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper">
+  <select id="selectLayoutList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /* 레이아웃 리스트 조회 (kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper.selectLayoutList) */
+    PL.LAYOUT_ID
+    , PL.LAYOUT_NM
+    , PL.LAYOUT_CLSF_ID
+    , (SELECT CLSF_NM FROM CUSTCO.PLT_LAYOUT_CLSF WHERE LAYOUT_CLSF_ID = PL.LAYOUT_CLSF_ID) as CLSF_NM
+    , (SELECT ICON_FILE_GROUP_KEY FROM CUSTCO.PLT_LAYOUT_CLSF WHERE LAYOUT_CLSF_ID = PL.LAYOUT_CLSF_ID) as ICON
+    , PC.CO_NM AS CUSTCO_NM
+    , PL.USE_YN
+    , (SELECT USER_NM FROM CUSTCO.PLT_USER WHERE USER_ID = PL.RGTR_ID) AS RGTR_NM
+    , PL.REG_DT
+    , PCC.SCHEMA_ID
+    , PCC.CERT_CUSTCO_ID
+    FROM PLT_LAYOUT PL
+    LEFT JOIN PLT_CUSTCO PC ON PC.CUSTCO_ID = PL.CUSTCO_ID
+    LEFT JOIN CUSTCO.PLT_CERT_CUSTCO PCC ON PCC.SCHEMA_ID = #{SCHEMA_ID}
+    WHERE
+    PL.DEL_YN = 'N'
+    AND PL.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+    <if test="USE_YN !='' and USE_YN != null">
+    AND PL.USE_YN = #{USE_YN}
+    </if>
+    <if test="LAYOUT_CLSF_ID !='' and LAYOUT_CLSF_ID != null">
+      AND PL.LAYOUT_CLSF_ID = #{LAYOUT_CLSF_ID}:: INTEGER
+    </if>
+    <if test="CO_NM !='' and CO_NM != null">
+      AND PL.CUSTCO_ID IN (SELECT CUSTCO_ID FROM PLT_CUSTCO WHERE CO_NM LIKE '%'||#{CO_NM}||'%')
+    </if>
+    ORDER BY PL.USE_YN DESC, LAYOUT_ID DESC
+  </select>
+  <select id="selectLayoutClsfList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /* 레이아웃 분류 조회 (kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper.selectLayoutClsfList) */
+        LAYOUT_CLSF_ID
+           ,CLSF_NM
+           ,ICON_FILE_GROUP_KEY AS ICON
+    FROM PLT_LAYOUT_CLSF PLC
+    WHERE USE_YN = 'Y'
+      AND DEL_YN = 'N'
+    ORDER BY SORT_ORD ASC
+  </select>
+  <select id="selectCertCustcoInfo4Layout" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /* 레이아웃 고객사정보 조회 (kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper.selectCertCustcoInfo4Layout) */
+        PCC.CERT_CUSTCO_ID
+         , SCHEMA_ID
+         , CUSTCO_ID
+         , CUSTCO_NM
+         , (SELECT CD_NM FROM CUSTCO.PLT_COMM_CD CC WHERE GROUP_CD_ID = 'PCS_CUST_CL' AND CC.CD_ID = PCC.CUSTCO_SE_CD) AS CUSTCO_SE_CD
+         , BRNO
+         , (SELECT SRVC_GDS_NM FROM CUSTCO.PLT_CERT_SRVC_GDS WHERE SRVC_GDS_ID = PCC.SRVC_GDS_ID)                      AS SRVC_GDS_NM
+         , SRVC_BGNG_DT
+         , SRVC_END_DT
+         , APLY_USER_NM
+         , ADDR
+         , DTL_ADDR
+    FROM CUSTCO.PLT_CERT_CUSTCO PCC
+   INNER JOIN ( SELECT CERT_CUSTCO_ID FROM CUSTCO.PLT_CERT_CUSTCO_LKAG GROUP BY CERT_CUSTCO_ID)  CCL ON CCL.CERT_CUSTCO_ID  = PCC.CERT_CUSTCO_ID
+    WHERE (PCC.SCHEMA_ID IS NULL OR PCC.SCHEMA_ID != 'public')
+      AND SRVC_STTS_CD = 'ON'
+      AND BFR_SYS_YN = 'N'
+    ORDER BY CERT_CUSTCO_ID
+  </select>
+  <select id="selectLkagByCertCustco" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /* 고객사별 연동정보조회 (kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper.selectLkagByCertCustco) */
+      ROW_NUMBER() OVER(ORDER BY LMNG.REG_DT) AS ROW_NUMBER
+         , CCL.CERT_CUSTCO_ID
+         , PCC.CUSTCO_NM
+         , LMNG.LKAG_ID
+         , LMNG.LKAG_MST_ID
+         , LMST.MST_NM
+         , LMNG.LKAG_NM
+    FROM CUSTCO.PLT_CERT_CUSTCO_LKAG CCL
+           JOIN CUSTCO.PLT_CERT_CUSTCO PCC ON PCC.CERT_CUSTCO_ID = CCL.CERT_CUSTCO_ID
+           JOIN CUSTCO.PLT_LKAG_MNG LMNG ON LMNG.LKAG_ID = CCL.LKAG_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_MST LMST ON LMST.LKAG_MST_ID = LMNG.LKAG_MST_ID
+    WHERE BFR_SYS_YN = 'N'
+      AND (PCC.SCHEMA_ID IS NULL OR PCC.SCHEMA_ID != 'PUBLIC')
+      <choose>
+          <when test="SRCH_ASP_CUST_KEY != null and SRCH_ASP_CUST_KEY !=''"> AND PCC.ASP_CUST_KEY = #{SRCH_ASP_CUST_KEY}  </when>
+          <otherwise> AND PCC.CERT_CUSTCO_ID = #{SRCH_CERT_CUSTCO_ID}::INTEGER </otherwise>
+      </choose>
+  </select>
+  <select id="selectTabCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT COUNT(TAB_ID) FROM PLT_LAYOUT_TAB WHERE LAYOUT_ID = #{LAYOUT_ID}::INTEGER
+  </select>
+  <insert id="insertBscInfo" parameterType="java.util.HashMap">
+    INSERT INTO PLT_LAYOUT /* 레이아웃 기본정보 등록 (kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper.insertBscInfo) */
+    (LAYOUT_ID,
+     LAYOUT_CLSF_ID,
+     CUSTCO_ID,
+     LAYOUT_NM,
+     LAYOUT_TYPE_CD,
+     USE_YN,
+     DEL_YN,
+     RGTR_ID,
+     REG_DT,
+     MDFR_ID,
+     MDFCN_DT)
+    VALUES (#{LAYOUT_ID}::INTEGER,
+            #{LAYOUT_CLSF_ID}::INTEGER,
+            (SELECT CUSTCO_ID FROM CUSTCO.PLT_CERT_CUSTCO WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER),
+            #{LAYOUT_NM},
+            NULL,
+            'N',
+            'N',
+            #{USER_ID}::INTEGER,
+            TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+            NULL,
+            NULL)
+  </insert>
+  <update id="updateBscInfo" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT /* 레이아웃 기본정보 업데이트(kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper.deleteBscInfo) */
+    SET MDFR_ID = #{USER_ID}::INTEGER
+        , MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        <if test="LAYOUT_NM != '' and LAYOUT_NM != null">
+        , LAYOUT_NM = #{LAYOUT_NM}
+        </if>
+        <if test="LAYOUT_TYPE_CD != '' and LAYOUT_TYPE_CD != null">
+        , LAYOUT_TYPE_CD = #{LAYOUT_TYPE_CD}
+        </if>
+        <if test="LAYOUT_CLSF_ID != '' and LAYOUT_CLSF_ID != null">
+        , LAYOUT_CLSF_ID = #{LAYOUT_CLSF_ID}:: INTEGER
+        </if>
+    WHERE LAYOUT_ID = #{LAYOUT_ID}:: INTEGER
+  </update>
+  <update id="deleteBscInfo" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT /* 레이아웃 기본정보 논리삭제(kr.co.hkcloud.palette3.admin.layoutMng.dao.LayoutMngBscInfoMapper.deleteBscInfo) */
+    SET MDFR_ID = #{USER_ID}::INTEGER
+        , MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , DEL_YN ='Y'
+        , USE_YN ='N'
+    WHERE LAYOUT_ID = #{LAYOUT_ID}::INTEGER
+  </update>
+  <update id="updateUseLayout" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT
+    SET MDFR_ID = #{USER_ID}::INTEGER
+        , MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        <choose>
+          <when test="TYPE == 'setUse'">
+            , USE_YN = 'Y'
+          </when>
+          <otherwise>
+            , USE_YN = 'N'
+          </otherwise>
+        </choose>
+    WHERE LAYOUT_ID = #{LAYOUT_ID}::INTEGER
+  </update>
+</mapper>
+

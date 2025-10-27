@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.sms.dao.SendSmsMapper">
+  
+    <!-- 파일 그룹키에 해당하는 첨부파일 조회 -->
+    <select id="selectAttachedFile" parameterType= "java.lang.String" resultType="java.util.HashMap">
+    	SELECT  task_type_cd		AS TASK_TYPE_CD
+			   ,path_type_cd		AS PATH_TYPE_CD
+			   ,strg_file_nm		AS STRG_FILE_NM
+			   ,file_path			AS FILE_PATH
+			   ,file_sz				AS FILE_SZ
+			   ,file_key 			AS FILE_KEY
+		  FROM  PLT_FILE 
+		 WHERE  USE_YN = 'Y' 
+		   AND  FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+    </select>
+    
+    <insert id="saveSendHistory" parameterType= "java.util.HashMap">
+		/* saveSendHistory - 문자 대량발송 이력 저장 */
+		INSERT INTO PLT_MTS_SNDNG_HSTRY(
+				MTS_SNDNG_HSTRY_ID
+			   ,SNDNG_SE_CD
+			   ,RCPTN_PHN_NO
+			   ,DSPTCH_PHN_NO
+			   ,SNDNG_CN
+			   ,RSLT_CD
+			   ,RSLT_MSG
+			   ,SNDNG_DT
+			   ,REG_DT
+			   ,RGTR_ID
+			   ,CUSTCO_ID
+			   <if test="svyTrgt != '' and svyTrgt != null and svyTrgt != undefined">
+				   ,SRVY_TRGT_ID
+			   </if>
+		)VALUES(
+				#{mtsSndngHstryId}::INTEGER
+			   ,#{sendType}
+			   ,(regexp_replace(#{phone_number}, '-', '', 'g'))
+			   ,(regexp_replace(#{callback_number}, '-', '', 'g'))
+			   ,#{message}
+			   ,#{resultCode}
+			   ,#{resultMessage}
+			   ,#{sndngDt}
+			   ,TO_CHAR(now(), 'YYYYMMDDHH24MISS')
+			   ,#{userId}::INTEGER
+			   ,#{custcoId}::INTEGER
+			   <if test="svyTrgt != '' and svyTrgt != null and svyTrgt != undefined">
+				   ,#{svyTrgt}::INTEGER
+			   </if>
+		)
+    </insert>
+    
+    <update id="updateSndngRslt" parameterType= "java.util.HashMap">
+		/* updateSndngRslt - MTS발송 결과 삽입 */
+		UPDATE PLT_MTS_SNDNG_HSTRY
+		SET RSLT_CD = #{result_code}
+		   , RSLT_MSG = #{RSLT_MSG} || #{ETC_MSG} || '||result:Y'
+		   , SNDNG_DT = #{real_send_date}
+		   , SNDNG_CN = #{send_msg}
+		WHERE
+			<choose>
+				<when test="MTS_SNDNG_HSTRY_GROUP_ID != '' and MTS_SNDNG_HSTRY_GROUP_ID != null and MTS_SNDNG_HSTRY_GROUP_ID != undefined">
+					RSLT_MSG LIKE ('%'|| '||group:' || #{MTS_SNDNG_HSTRY_GROUP_ID} || '%')
+					AND RCPTN_PHN_NO = #{phone_number}
+				</when>
+				<otherwise>
+					MTS_SNDNG_HSTRY_ID = #{MTS_SNDNG_HSTRY_ID}::INTEGER
+				</otherwise>
+			</choose>
+    </update>
+    
+</mapper>

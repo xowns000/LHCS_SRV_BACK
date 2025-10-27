@@ -1,0 +1,1267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.qa2.dao.PhoneQAPlanManageMapper">
+
+	<!-- 평가 기획 목록 조회 -->
+	<select id="selectRtnQa" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.CUSTCO_ID AS ASP_NEWCUST_KEY
+			, (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_CUST_NM
+			, A.QA_ID
+			, A.QA_EVA_ID
+			, B.QA_EVA_RE_YN
+			, B.QA_EVA_CN
+			, A.QA_NM
+			, A.QA_TY
+			, COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT008' AND CD = A.QA_TY), '-') AS QA_TY_NM
+			, TO_CHAR(TO_DATE(A.QA_ST_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_ST_DTTM
+			, TO_CHAR(TO_DATE(A.QA_EN_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_EN_DTTM
+			, A.QA_TA_DV
+			, A.QA_TA_SC
+			, A.QA_TA_ST
+			, COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT013' AND CD = A.QA_TA_ST), '-') AS QA_TA_ST_NM
+			, A.QA_PG_AD_US_YN
+			, A.QA_PG_AD_CN_YN
+			, TO_CHAR(TO_DATE(A.QA_FS_ST_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_FS_ST_DTTM
+			, TO_CHAR(TO_DATE(A.QA_FS_EN_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_FS_EN_DTTM
+			, TO_CHAR(TO_DATE(A.QA_SC_ST_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_SC_ST_DTTM
+			, TO_CHAR(TO_DATE(A.QA_SC_EN_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_SC_EN_DTTM
+			, TO_CHAR(TO_DATE(A.QA_FN_ST_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_FN_ST_DTTM
+			, TO_CHAR(TO_DATE(A.QA_FN_EN_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_FN_EN_DTTM
+			, A.QA_FS_CP_YN
+			, A.QA_SC_CP_YN
+			, A.QA_TG_TY
+			, COALESCE(TO_CHAR(TO_DATE(A.QA_TG_ST_DTTM,'YYYYMMDD'), 'YYYY-MM-DD'), TO_CHAR(NOW(),'YYYY-MM-DD')) AS QA_TG_ST_DTTM
+			, COALESCE(TO_CHAR(TO_DATE(A.QA_TG_EN_DTTM,'YYYYMMDD'), 'YYYY-MM-DD'), TO_CHAR(NOW(), 'YYYY-MM-DD')) AS QA_TG_EN_DTTM
+			, A.QA_TG_CR_ST
+			, A.QA_TG_CR_EN
+			, A.QA_TG_CNSL_TIME
+			, A.QA_CNSL_TYP_CD
+			, A.QA_CNSL_TYP_CD2
+			, A.QA_CNSL_TYP_CD3
+			, A.QA_CNSL_TYP_CD4
+			, COALESCE((SELECT COUNT(1) FROM PLT_QA_DATA AA, PLT_QA_EVA BB WHERE AA.QA_EVA_ID = BB.QA_EVA_ID AND AA.QA_ID = A.QA_ID ),0) AS QA_TG_CNT
+			, COALESCE((SELECT COUNT(1) FROM PLT_QA_DATA AA, PLT_QA_EVA BB WHERE AA.QA_EVA_ID = BB.QA_EVA_ID AND AA.QA_ID = A.QA_ID AND AA.QA_DATA_QAID IS NOT NULL),0) AS QA_DIV_CNT
+			, COALESCE((SELECT COUNT(1) FROM (SELECT QA_DATA_QAID FROM PLT_QA_DATA WHERE QA_ID = A.QA_ID AND QA_DATA_QAID IS NOT NULL GROUP BY QA_DATA_QAID)),0) AS QA_USER_CNT
+			, DECODE(A.QA_TG_CNT, NULL, 'N', 'Y') AS QA_TG_YN
+			, A.QA_TG_PL_ID
+			, A.QA_TG_PL_NM
+			, DECODE(A.QA_TA_ST, 10, 'Y', 'N') AS MODIFY_YN
+		FROM PLT_QA A
+		LEFT OUTER JOIN PLT_QA_EVA B ON A.CUSTCO_ID = B.CUSTCO_ID AND A.QA_EVA_ID = B.QA_EVA_ID
+		WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		<if test='QA_TY != null and QA_TY != ""'>
+			AND A.QA_TY = #{QA_TY}
+		</if>
+		<if test='QA_NM != null and QA_NM != ""'>
+			AND A.QA_NM LIKE '%' || #{QA_NM} || '%'
+		</if>
+		<if test="START_DATE	!= '' and START_DATE != null">   AND TO_DATE(A.QA_EN_DTTM, 'YYYYMMDD') >= TO_DATE(REPLACE(#{START_DATE},'-','')||'000000', 'YYYYMMDDHH24MISS')  </if>
+		<if test="END_DATE 		!= '' and END_DATE != null">  <![CDATA[ AND TO_DATE(A.QA_ST_DTTM, 'YYYYMMDD') <= TO_DATE(REPLACE(#{END_DATE},'-','') ||'235959', 'YYYYMMDDHH24MISS') ]]>   </if>
+		ORDER BY QA_ID DESC
+	</select>
+	
+	<!-- 평가기획 등록 -->
+	<insert id="insertRtnQa" parameterType="java.util.HashMap">
+		MERGE INTO PLT_QA
+		USING DUAL
+        ON (
+            CUSTCO_ID = #{ASP_NEWCUST_KEY}
+            AND QA_ID = #{QA_ID}
+        )
+        WHEN MATCHED THEN
+        UPDATE SET
+        	QA_TY = #{QA_TY}
+        	, QA_NM = #{QA_NM}
+        	, QA_ST_DTTM = REPLACE(#{QA_ST_DTTM},'-','')
+        	, QA_EN_DTTM = REPLACE(#{QA_EN_DTTM},'-','')
+        	, CHNG_ID = #{REG_ID}
+        	, CHNG_DTTM = TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+        WHEN NOT MATCHED THEN
+		INSERT (
+			CUSTCO_ID
+			, QA_ID
+			, QA_TY
+			, QA_NM
+			, QA_ST_DTTM
+			, QA_EN_DTTM
+			, QA_TA_ST
+			, QA_TG_PL_ID
+			, QA_TG_PL_NM
+			, REG_ID
+			, REG_DTTM
+			, CHNG_ID
+			, CHNG_DTTM
+		) VALUES (
+			#{ASP_NEWCUST_KEY}
+			, #{QA_ID}
+			, #{QA_TY}
+			, #{QA_NM}
+			, REPLACE(#{QA_ST_DTTM},'-','')
+			, REPLACE(#{QA_EN_DTTM},'-','')
+			, '10'
+			, #{REG_ID}
+			, #{REG_NM}
+			, #{REG_ID}
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, #{REG_ID}
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	<!-- 평가기획 수정 -->
+	<update id="updateRtnQa" parameterType="java.util.HashMap">
+		UPDATE PLT_QA
+		SET CHNG_DTTM = TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, CHNG_ID = #{REG_ID}
+			<if test='QA_EVA_ID != null and QA_EVA_ID != ""'>
+			, QA_EVA_ID = #{QA_EVA_ID}
+			</if>
+			<if test='QA_NM != null and QA_NM != ""'>
+			, QA_NM = #{QA_NM}
+			</if>
+			<if test='QA_TY != null and QA_TY != ""'>
+			, QA_TY = #{QA_TY}
+			</if>
+			<if test='QA_ST_DTTM != null and QA_ST_DTTM != ""'>
+			, QA_ST_DTTM = REPLACE(#{QA_ST_DTTM},'-','')
+			</if>
+			<if test='QA_EN_DTTM != null and QA_EN_DTTM != ""'>
+			, QA_EN_DTTM = REPLACE(#{QA_EN_DTTM},'-','')
+			</if>
+			<if test='QA_TA_DV != null and QA_TA_DV != ""'>
+			, QA_TA_DV = #{QA_TA_DV}
+			</if>
+			<if test='QA_TA_SC != null and QA_TA_SC != ""'>
+			, QA_TA_SC = #{QA_TA_SC}
+			</if>
+			<if test='QA_TA_ST != null and QA_TA_ST != ""'>
+			, QA_TA_ST = #{QA_TA_ST}
+			</if>
+			<if test='QA_PG_AD_US_YN != null and QA_PG_AD_US_YN != ""'>
+			, QA_PG_AD_US_YN = #{QA_PG_AD_US_YN}
+			</if>
+			<if test='QA_PG_AD_CN_YN != null and QA_PG_AD_CN_YN != ""'>
+			, QA_PG_AD_CN_YN = #{QA_PG_AD_CN_YN}
+			</if>
+			<if test='QA_FS_ST_DTTM != null and QA_FS_ST_DTTM != ""'>
+			, QA_FS_ST_DTTM = REPLACE(#{QA_FS_ST_DTTM},'-','')
+			</if>
+			<if test='QA_FS_EN_DTTM != null and QA_FS_EN_DTTM != ""'>
+			, QA_FS_EN_DTTM = REPLACE(#{QA_FS_EN_DTTM},'-','')
+			</if>
+			<if test='QA_SC_ST_DTTM != null and QA_SC_ST_DTTM != ""'>
+			, QA_SC_ST_DTTM = REPLACE(#{QA_SC_ST_DTTM},'-','')
+			</if>
+			<if test='QA_SC_EN_DTTM != null and QA_SC_EN_DTTM != ""'>
+			, QA_SC_EN_DTTM = REPLACE(#{QA_SC_EN_DTTM},'-','')
+			</if>
+			<if test='QA_FN_ST_DTTM != null and QA_FN_ST_DTTM != ""'>
+			, QA_FN_ST_DTTM = REPLACE(#{QA_FN_ST_DTTM},'-','')
+			</if>
+			<if test='QA_FN_EN_DTTM != null and QA_FN_EN_DTTM != ""'>
+			, QA_FN_EN_DTTM = REPLACE(#{QA_FN_EN_DTTM},'-','')
+			</if>
+			<if test='QA_FS_CP_YN != null and QA_FS_CP_YN != ""'>
+			, QA_FS_CP_YN = #{QA_FS_CP_YN}
+			</if>
+			<if test='QA_SC_CP_YN != null and QA_SC_CP_YN != ""'>
+			, QA_SC_CP_YN = #{QA_SC_CP_YN}
+			</if>
+			<if test='QA_TG_TY != null and QA_TG_TY != ""'>
+			, QA_TG_TY = #{QA_TG_TY}
+			</if>
+			<if test='QA_TG_ST_DTTM != null and QA_TG_ST_DTTM != ""'>
+			, QA_TG_ST_DTTM = REPLACE(#{QA_TG_ST_DTTM},'-','')
+			</if>
+			<if test='QA_TG_EN_DTTM != null and QA_TG_EN_DTTM != ""'>
+			, QA_TG_EN_DTTM = REPLACE(#{QA_TG_EN_DTTM},'-','')
+			</if>
+			<if test='QA_TG_CR_ST != null and QA_TG_CR_ST != ""'>
+			, QA_TG_CR_ST = #{QA_TG_CR_ST}
+			</if>
+			<if test='QA_TG_CR_EN != null and QA_TG_CR_EN != ""'>
+			, QA_TG_CR_EN = #{QA_TG_CR_EN}
+			</if>
+			<if test='QA_TG_CNSL_TIME != null and QA_TG_CNSL_TIME != ""'>
+			, QA_TG_CNSL_TIME = #{QA_TG_CNSL_TIME}
+			</if>
+			<if test='QA_CNSL_TYP_CD != null and QA_CNSL_TYP_CD != ""'>
+			, QA_CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+			</if>
+			<if test='QA_CNSL_TYP_CD2 != null and QA_CNSL_TYP_CD2 != ""'>
+			, QA_CNSL_TYP_CD2 = #{QA_CNSL_TYP_CD2}
+			</if>
+			<if test='QA_CNSL_TYP_CD3 != null and QA_CNSL_TYP_CD3 != ""'>
+			, QA_CNSL_TYP_CD3 = #{QA_CNSL_TYP_CD3}
+			</if>
+			<if test='QA_CNSL_TYP_CD4 != null and QA_CNSL_TYP_CD4 != ""'>
+			, QA_CNSL_TYP_CD4 = #{QA_CNSL_TYP_CD4}
+			</if>
+			<if test='QA_TG_CNT != null and QA_TG_CNT != ""'>
+			, QA_TG_CNT = #{QA_TG_CNT}
+			</if>
+			
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND QA_ID = #{QA_ID}
+
+	</update>
+	<!-- 평가 기획 삭제 -->
+	<delete id="deleteRtnQa" parameterType="java.util.HashMap">
+		DELETE
+		FROM PLT_QA
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND QA_ID = #{QA_ID}
+		AND QA_TA_ST = '10' <!-- 기획 상태일 경우만 삭제 -->
+	</delete>
+	<!-- 평가지 목록 조회 -->
+	<select id="selectRtnEvlPaper" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.QA_EVA_ID
+	        , A.QA_EVA_TY
+	        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT008' AND CD = QA_EVA_TY) AS QA_EVA_TY_NM
+	        , A.QA_EVA_NM
+	        , A.QA_EVA_RE_YN
+	        , A.QA_EVA_CN
+	        , COALESCE((
+	        	SELECT SUM(QA_QS_TY_SC)
+	        	FROM PLT_QA_EVA_RST B, PLT_QA_QS C
+	        	WHERE B.QA_QS_ID = C.QA_QS_ID
+	        	AND B.CUSTCO_ID = C.CUSTCO_ID
+	        	AND B.CUSTCO_ID = A.CUSTCO_ID
+	        	AND B.QA_EVA_ID = A.QA_EVA_ID
+	        ), 0) AS QA_EVA_SUM
+	        , A.QA_EVA_RT
+		FROM PLT_QA_EVA A
+		WHERE A.QA_EVA_ID IN (
+			SELECT QA_EVA_ID
+			FROM PLT_QA_EVA_RST
+			WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		)
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		<if test='QA_EVA_TY != null and QA_EVA_TY !=""'>
+			AND A.QA_EVA_TY = #{QA_EVA_TY}
+		</if>
+	</select>
+	
+	<!-- 콜 상담이력 -->
+	<select id="selectRtnPhoneCnslHist" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+			SELECT ROW_TBL.*
+			      , PAG_TBL.*
+			   FROM (
+			         SELECT A.CNSL_HIST_NO       					/*상담이력번호*/
+			               ,B.CNSL_HIST_DTL_NO  					/*상담이력상세번호*/
+			               ,A.RDWT_FILE_NM          						/*녹취ID*/
+			               ,A.CNSL_BEGIN_DATE AS CNSL_DATE 			/*상담일자*/
+			               ,A.CNSL_BEGIN_DATE
+			               ,TO_CHAR (TRUNC(NOW()) + NUMTODSINTERVAL(A.TEL_TIME, 'second'), 'hh24:mi:ss') AS TEL_TIME      /* 통화시간*/
+			               ,(SELECT CD_NM
+			                   FROM PLT_COMN_CD K
+						        WHERE GROUP_CD = 'PLT007'
+						        AND A.CALL_TY = K.CD) AS CALL_TY_NM				/* 콜유형*/
+			               ,C.USER_NM AS CSLT_NM 			/*상담원명*/
+			               ,A.CUST_NM              			/*고객명*/
+			               ,A.SEND_MAN_NO                  	/*발신자번호*/
+			               ,A.INGNO                		 	/*인가번호*/
+			               ,A.CUST_NO
+			               ,A.CU_NM                     	/*조합명*/
+			               ,A.SECU_NO                   	/*증권번호*/
+			               ,A.CSLT_ID                   	/*상담사ID*/
+			               ,B.CNSL_TYP_CD
+			               ,B.CNSL_TYP_CD_2  
+			               ,B.CNSL_TYP_CD_3
+						   ,B.CNSL_TYP_CD_4
+						   ,(SELECT CNSL_TYP_NM 
+			                    FROM PLT_CHT_CUTT_TYP T6
+			                   WHERE T6.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                     AND B.CNSL_TYP_CD = T6.CNSL_TYP_CD
+			                     AND T6.CNSL_TYP_DIV_CD = '1'
+			                  ) AS CNSL_TYP_NM
+			               , (SELECT CNSL_TYP_NM 
+			                    FROM PLT_CHT_CUTT_TYP T7
+			                   WHERE T7.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                     AND B.CNSL_TYP_CD_2 = T7.CNSL_TYP_CD
+			                     AND T7.CNSL_TYP_DIV_CD = '2'
+			                  ) AS CNSL_TYP_NM_2
+			               , (SELECT CNSL_TYP_NM 
+			                    FROM PLT_CHT_CUTT_TYP T8
+			                   WHERE T8.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                     AND B.CNSL_TYP_CD_3 = T8.CNSL_TYP_CD
+			                     AND T8.CNSL_TYP_DIV_CD = '3'
+			                  ) AS CNSL_TYP_NM_3
+			               , (SELECT CNSL_TYP_NM 
+			                    FROM PLT_CHT_CUTT_TYP T9
+			                   WHERE T9.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                     AND B.CNSL_TYP_CD_4 = T9.CNSL_TYP_CD
+			                     AND T9.CNSL_TYP_DIV_CD = '4'
+			                  ) AS CNSL_TYP_NM_4
+			                     ,(SELECT CD_NM
+			                   FROM PLT_COMN_CD K
+			                  WHERE GROUP_CD = 'CO001'
+			                    AND B.PROC_CODE_LCLS = K.CD) AS PROC_LCLS_NM	/* 완료코드*/
+			               ,B.PROC_CODE_LCLS
+			               ,(SELECT CD_NM
+			                   FROM PLT_COMN_CD K
+			                  WHERE GROUP_CD = 'CO002'
+			                    AND B.PROC_CODE_MDCLS = K.CD) AS PROC_MDCLS_NM	/* 미완료사유*/
+			               ,B.PROC_CODE_MDCLS
+			               ,(SELECT CD_NM
+			                   FROM PLT_COMN_CD K
+			                  WHERE GROUP_CD = 'CO001'
+			                    AND B.PROC_CODE_LCLS = K.CD) AS PROC_NM			/* 완료여부*/
+			               ,A.CUST_TEL_NO      		/* 고객전화번호*/
+			               ,A.CNSL_EOT_DATE         /* 상담종료일자*/
+			               ,A.RDWT_FILE_PATH          /* 녹취파일명*/   
+			               ,B.CNSL_CNTN             /* 상담내용*/   
+			               ,A.CALL_TY
+			               ,A.CNSL_BEGIN_TIME       /* 상담시작시간*/
+			               ,A.REG_DTIM
+			               ,A.REG_MAN
+			               ,A.CHNG_DTIM
+			               ,A.CHNG_MAN  
+			               ,A.CNSL_EOT_TIME 		/* 상담종료시간*/
+			               ,COALESCE(A.RDWT_SEND_YN,'N') AS RDWT_SEND_YN
+			               , (SELECT CD_NM    FROM PLT_COMN_CD    WHERE GROUP_CD = 'CO999'  AND CD = B.PROC_CODE_SCLS) AS PROC_CODE_SCLS_NM		/* 통화자명 */
+			           	   , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+			           FROM PLT_PHN_CNSL A 
+			           JOIN PLT_PHN_CNSL_DTL B ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+			           LEFT OUTER JOIN PLT_USER C ON A.CSLT_ID = C.USER_ID
+			          WHERE 1=1
+					  AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					  <if test='QA_TG_CNSL_TIME != null and QA_TG_CNSL_TIME != ""'>
+					  	<![CDATA[
+						  	AND A.TEL_TIME >= #{QA_TG_CNSL_TIME}
+					  	]]>
+					  </if>
+					  <if test='QA_TG_ST_DTTM != null and QA_TG_ST_DTTM != ""'>
+					  	<![CDATA[
+					  		AND A.REG_DTIM >= #{QA_TG_ST_DTTM} || '000000'
+					  	]]>
+					  </if>
+					  <if test='QA_TG_EN_DTTM != null and QA_TG_EN_DTTM != ""'>
+					  	<![CDATA[
+					  		AND A.REG_DTIM <= #{QA_TG_EN_DTTM} || '235959'
+					  	]]>
+					  </if>
+					  <if test='QA_TG_CR_ST != null and QA_TG_CR_ST != ""'>
+					  	<![CDATA[
+					  		AND MONTHS_BETWEEN(NOW(), TO_DATE(C.ENTCO_DT, 'YYYYMMDD')) >= #{QA_TG_CR_ST}
+					  	]]>
+					  </if>
+					  <if test='QA_TG_CR_EN != null and QA_TG_CR_EN != ""'>
+					  	<![CDATA[
+					  		AND MONTHS_BETWEEN(NOW(), TO_DATE(C.ENTCO_DT, 'YYYYMMDD')) <= #{QA_TG_CR_EN}
+					  	]]>
+					  </if>
+			          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 == '' and QA_CNSL_TYP_CD3 == '' and QA_CNSL_TYP_CD4 == ''"> 
+			           AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+			          </if>
+			          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 == '' and QA_CNSL_TYP_CD4 == ''"> 
+			          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+			          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+			          </if>
+			          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 != '' and QA_CNSL_TYP_CD4 == ''"> 
+			          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+			          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+			          AND B.CNSL_TYP_CD_3 = #{QA_CNSL_TYP_CD3}
+			          </if>
+			          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 != '' and QA_CNSL_TYP_CD4 != ''"> 
+			          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+			          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+			          AND B.CNSL_TYP_CD_3 = #{QA_CNSL_TYP_CD3}
+			          AND B.CNSL_TYP_CD_4 = #{QA_CNSL_TYP_CD4}
+			          </if>
+			          
+			         ) ROW_TBL
+			        , (
+			             SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+			               FROM PLT_PHN_CNSL A JOIN PLT_PHN_CNSL_DTL B ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+			               LEFT OUTER JOIN PLT_USER C ON A.CSLT_ID = C.USER_ID
+			              WHERE 1=1
+						  AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			              <if test='QA_TG_CNSL_TIME != null and QA_TG_CNSL_TIME != ""'>
+						  	<![CDATA[
+							  	AND A.TEL_TIME >= #{QA_TG_CNSL_TIME}
+						  	]]>
+						  </if>
+						  <if test='QA_TG_ST_DTTM != null and QA_TG_ST_DTTM != ""'>
+						  	<![CDATA[
+						  		AND A.REG_DTIM >= #{QA_TG_ST_DTTM} || '000000'
+						  	]]>
+						  </if>
+						  <if test='QA_TG_EN_DTTM != null and QA_TG_EN_DTTM != ""'>
+						  	<![CDATA[
+						  		AND A.REG_DTIM <= #{QA_TG_EN_DTTM} || '235959'
+						  	]]>
+						  </if>
+						  <if test='QA_TG_CR_ST != null and QA_TG_CR_ST != ""'>
+						  	<![CDATA[
+						  		AND MONTHS_BETWEEN(NOW(), TO_DATE(C.ENTCO_DT, 'YYYYMMDD')) >= #{QA_TG_CR_ST}
+						  	]]>
+						  </if>
+						  <if test='QA_TG_CR_EN != null and QA_TG_CR_EN != ""'>
+						  	<![CDATA[
+						  		AND MONTHS_BETWEEN(NOW(), TO_DATE(C.ENTCO_DT, 'YYYYMMDD')) <= #{QA_TG_CR_EN}
+						  	]]>
+						  </if>
+				          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 == '' and QA_CNSL_TYP_CD3 == '' and QA_CNSL_TYP_CD4 == ''"> 
+				           AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+				          </if>
+				          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 == '' and QA_CNSL_TYP_CD4 == ''"> 
+				          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+				          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+				          </if>
+				          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 != '' and QA_CNSL_TYP_CD4 == ''"> 
+				          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+				          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+				          AND B.CNSL_TYP_CD_3 = #{QA_CNSL_TYP_CD3}
+				          </if>
+				          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 != '' and QA_CNSL_TYP_CD4 != ''"> 
+				          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+				          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+				          AND B.CNSL_TYP_CD_3 = #{QA_CNSL_TYP_CD3}
+				          AND B.CNSL_TYP_CD_4 = #{QA_CNSL_TYP_CD4}
+				          </if>	
+			        ) PAG_TBL
+			        ORDER BY ROW_TBL.CNSL_BEGIN_DATE DESC, ROW_TBL.CNSL_BEGIN_TIME DESC
+
+	</select>
+	<!-- 채팅 상담이력 -->
+	<select id="selectRtnChatCnslHist" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+		<![CDATA[
+		SELECT
+			ROW_TBL.*
+			, PAG_TBL.*
+		FROM(
+			SELECT
+				 RE1.TALK_USER_KEY
+		        , RE1.TALK_CONTACT_ID
+		        , RE1.SNDR_KEY_NM
+		        , RE1.TALK_STAT_NM
+		        , RE1.USER_NICK || '(' || RE1.USER_ID || '/' || RE1.USER_NM || ')'                                             AS TRANS_USER_ID_NM /*최종상담사*/
+		        , CASE WHEN RE1.ORI_TALK_CONTACT_ID IS NOT NULL
+			           THEN (SELECT USER_NICK || '(' || USER_ID || '/' || USER_NM || ')'
+			                   FROM PLT_USER 
+			                  WHERE USER_ID = (SELECT USER_ID 
+			                                     FROM PLT_CHT_CUTT 
+			                                    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                                      AND TALK_CONTACT_ID = RE1.ORI_TALK_CONTACT_ID
+			                                   )
+			                 )
+			           ELSE RE1.USER_NICK || '(' || RE1.USER_ID || '/' || RE1.USER_NM || ')'
+			       END                                                                                                         AS USER_ID_NM /*최초상담사*/
+			    , USER_ID || '/' || USER_NM                                                                                    AS USER_NM    /*상담사*/
+		        , RE1.EXEC_RST_CD
+		        , COALESCE(RE1.CUSTOMER_NM, '알수없음')																				   AS CUSTOMER_NM
+		        , COALESCE(RE1.CUSTOMER_SEQ,RE1.CUSTOMER_ID) 																	   AS CUSTOMER_ID
+				, RE1.CNSL_TYP_CD
+		        , RE1.CNSL_TYP_CD_2
+		        , RE1.CNSL_TYP_CD_3
+		        , RE1.CNSL_TYP_CD_4
+	            , (SELECT CNSL_TYP_NM 
+	                 FROM PLT_CHT_CUTT_TYP T6
+	                WHERE T6.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                  AND RE1.CNSL_TYP_CD = T6.CNSL_TYP_CD
+	                  AND T6.CNSL_TYP_DIV_CD = '1'
+	               ) AS CNSL_TYP_NM
+	            , (SELECT CNSL_TYP_NM 
+	                 FROM PLT_CHT_CUTT_TYP T7
+	                WHERE T7.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                  AND RE1.CNSL_TYP_CD_2 = T7.CNSL_TYP_CD
+	                  AND T7.CNSL_TYP_DIV_CD = '2'
+	               ) AS CNSL_TYP_NM_2
+	            , (SELECT CNSL_TYP_NM 
+	                 FROM PLT_CHT_CUTT_TYP T8
+	                WHERE T8.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                  AND RE1.CNSL_TYP_CD_3 = T8.CNSL_TYP_CD
+	                  AND T8.CNSL_TYP_DIV_CD = '3'
+	               ) AS CNSL_TYP_NM_3
+	            , (SELECT CNSL_TYP_NM 
+	                 FROM PLT_CHT_CUTT_TYP T9
+	                WHERE T9.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                  AND RE1.CNSL_TYP_CD_4 = T9.CNSL_TYP_CD
+	                  AND T9.CNSL_TYP_DIV_CD = '4'
+	               ) AS CNSL_TYP_NM_4
+	               
+					   
+				, CASE WHEN T5.INQRY_TYP_DIV_CD = '1' THEN T5.INQRY_TYP_NM 
+					   ELSE (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T5.SPST_INQRY_TYP_CD) END 		                               AS TALK_INQRY_NM_1
+				, CASE WHEN T5.INQRY_TYP_DIV_CD = '1' THEN T5.INQRY_TYP_CD 
+					   ELSE (SELECT INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T5.SPST_INQRY_TYP_CD) END 		                               AS TALK_INQRY_CD_1
+					   
+				, CASE WHEN T5.INQRY_TYP_DIV_CD = '2' THEN T5.INQRY_TYP_NM 
+					   ELSE (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = RPAD(SUBSTR(T5.SPST_INQRY_TYP_CD, 0, 3), 3, '*')) END 		   AS TALK_INQRY_NM_2
+				, CASE WHEN T5.INQRY_TYP_DIV_CD = '2' THEN T5.INQRY_TYP_CD 
+					   ELSE (SELECT INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = RPAD(SUBSTR(T5.SPST_INQRY_TYP_CD, 0, 3), 3, '*')) END 		   AS TALK_INQRY_CD_2
+	
+				, CASE WHEN T5.INQRY_TYP_DIV_CD = '3' THEN T5.INQRY_TYP_NM 
+					   ELSE (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = RPAD(SUBSTR(T5.SPST_INQRY_TYP_CD, 0, 5), 5, '*')) END 		   AS TALK_INQRY_NM_3
+				, CASE WHEN T5.INQRY_TYP_DIV_CD = '3' THEN T5.INQRY_TYP_CD 
+					   ELSE (SELECT INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = RPAD(SUBSTR(T5.SPST_INQRY_TYP_CD, 0, 5), 5, '*')) END 		   AS TALK_INQRY_CD_3 
+					   
+		        , RE1.BOT_SERVICE_NM
+		        , RE1.TALK_QST
+		        , RE1.TALK_ANS
+		        , RE1.TALK_DIST_DT
+				, RE1.TALK_START_DT
+				, RE1.TALK_POST_DT
+				, RE1.TALK_END_DT
+				
+		        , CASE WHEN RE1.TALK_DIST_DT IS NULL OR RE1.TALK_START_DT IS NULL OR RE1.TALK_STAT_CD NOT IN ('14','20','21')
+		               THEN NULL
+		               ELSE        
+		                 TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(RE1.TALK_START_DT,'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_DIST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+		                 TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(RE1.TALK_START_DT,'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_DIST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+		                 TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(RE1.TALK_START_DT,'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_DIST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')   
+		               END                                                                                				   			   AS READY_TIME /*고객대기시간(상담중-대기중)*/
+	              
+			    , CASE WHEN RE1.TALK_POST_DT IS NULL OR RE1.TALK_START_DT IS NULL OR RE1.TALK_STAT_CD NOT IN ('14','20','21')
+			           THEN NULL
+			           ELSE 
+		                 TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(COALESCE(DECODE(TALK_POST_DT, '', TALK_END_DT, TALK_POST_DT), TALK_START_DT),'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+			             TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(COALESCE(DECODE(TALK_POST_DT, '', TALK_END_DT, TALK_POST_DT), TALK_START_DT),'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+			             TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(COALESCE(DECODE(TALK_POST_DT, '', TALK_END_DT, TALK_POST_DT), TALK_START_DT),'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')                 
+			          END                                                                                				   			   AS CHAT_TIME /*상담소요시간(후처리-상담중)*/
+			              
+			     , CASE WHEN RE1.TALK_END_DT IS NULL OR RE1.TALK_POST_DT IS NULL OR RE1.TALK_STAT_CD NOT IN ('14','21')
+			            THEN NULL
+			            ELSE 
+			              TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(RE1.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(DECODE(RE1.TALK_POST_DT, '', RE1.TALK_END_DT, RE1.TALK_POST_DT), 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+			              TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(RE1.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(DECODE(RE1.TALK_POST_DT, '', RE1.TALK_END_DT, RE1.TALK_POST_DT), 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+			              TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(RE1.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(DECODE(RE1.TALK_POST_DT, '', RE1.TALK_END_DT, RE1.TALK_POST_DT), 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')                 
+			            END                                                                                				   			   AS AFTER_TIME /*후처리시간(상담이력저장-후처리)*/
+	              
+	      		 , CASE WHEN RE1.TALK_END_DT IS NULL OR RE1.TALK_START_DT IS NULL OR RE1.TALK_STAT_CD NOT IN ('14','21')
+	             		THEN NULL
+	             		ELSE 
+		                 TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(RE1.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+		                 TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(RE1.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+		                 TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(RE1.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')                 
+	              		END                                                                                				   			   AS TOT_TIME /*총소요시간(상담이력저장-상담중)*/
+	              
+				, RE1.TALK_TITLE
+				, RE1.TALK_STAT_CD
+				, RE1.CUSTOMER_MEMO
+		        , RE1.SNDR_KEY
+				, RE1.REFERENCE_CUSTOMER_KEY 																					   AS REFERENCE_CUSTOMER_KEY
+		        , RE1.TID				 																						   AS TID
+				, T5.INQRY_TYP_DIV_CD
+				, RE1.BOT_CALL_ID																								   AS CALL_ID
+				, CASE WHEN RE1.TID = '' OR RE1.TID IS NULL THEN '비회원' ELSE '회원' END 											   AS CUSTOMER_MEMBER
+				, (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK005' AND CT.CD=RE1.EXEC_RST_CD AND CT.CD_TYPE  = '1') AS EXEC_RST_NM
+	]]>
+		FROM (
+		
+		SELECT AAA.*
+		     , BBB.USER_NM
+		     , BBB.USER_NICK
+		  FROM (
+				SELECT  CC.TALK_USER_KEY
+					, CC.TALK_CONTACT_ID
+					, T4.DSPTCH_PRF_NM AS SNDR_KEY_NM
+					, CC.BOT_CALL_ID
+					, T3.CD_NM 																									   AS TALK_STAT_NM
+					, CC.TALK_INQRY_CD
+					, CC.CNSL_TYP_CD
+					, CC.CNSL_TYP_CD_2
+					, CC.CNSL_TYP_CD_3
+					, CC.CNSL_TYP_CD_4
+			        , CC.EXEC_RST_CD
+					, CC.TALK_TITLE
+					, CC.USER_ID
+					, CC.TALK_DIST_DT
+					, CC.TALK_READ_DT
+					, CC.TALK_START_DT
+			        , CASE WHEN CC.TALK_POST_DT IS NULL 
+			        	AND (CC.TALK_END_DT IS NULL OR CC.TALK_END_DT = '')
+			        	THEN NULL
+			        	ELSE COALESCE(CC.TALK_POST_DT, CC.TALK_END_DT)		
+			        	END																		AS TALK_POST_DT
+			        , CC.TALK_END_DT
+	
+				   		
+					, CC.REG_DTTM
+			        , CC.TALK_QST
+			        , CC.TALK_ANS
+			        , CC.BOT_SERVICE_NM
+					, CASE CC.ORI_TALK_CONTACT_ID WHEN '' THEN 'Y' ELSE 'N' END 															AS ORIGINAL_CHAT_FLAG
+					, CC.TALK_STAT_CD
+			        , CC.SNDR_KEY
+			        , T2.CUSTOMER_ID
+			        , T2.CUSTOMER_SEQ
+		            , T2.CUSTOMER_NM
+		            , T2.CUSTOMER_MEMO
+		            , T2.REFERENCE_CUSTOMER_KEY
+		            , T2.TID
+			        , CC.ORI_TALK_CONTACT_ID
+	             FROM (
+	                SELECT 
+				       AA.YYYYMMDD
+				       , BB.WORK_TIME_FROM
+				       , BB.WORK_TIME_TO
+				       , AA.YYYYMMDD || BB.WORK_TIME_FROM || '00' AS WORK_START  
+				       , CASE WHEN BB.WORK_TIME_FROM
+				                   >= BB.WORK_TIME_TO
+				                THEN TO_CHAR(TO_DATE(AA.YYYYMMDD, 'YYYYMMDD')+1, 'YYYYMMDD')
+				                ELSE AA.YYYYMMDD
+				            END
+				         || BB.WORK_TIME_TO || '00' AS WORK_END 
+	                  FROM (
+						    SELECT TO_CHAR(TO_DATE(REPLACE(#{QA_TG_ST_DTTM},'-',''),'YYYYMMDD') + (LEVEL-1),'YYYYMMDD') AS YYYYMMDD
+						     CONNECT BY LEVEL <![CDATA[<=]]> (TO_DATE(REPLACE(#{QA_TG_EN_DTTM},'-',''),'YYYYMMDD') - TO_DATE(REPLACE(#{QA_TG_ST_DTTM},'-',''),'YYYYMMDD') + 1)
+	                        ) AA
+	        		  JOIN PLT_CHT_WRK_TIME_HST BB
+	                    ON AA.YYYYMMDD BETWEEN BB.MANAGE_DATE_FROM
+	                                       AND BB.MANAGE_DATE_TO
+	                 WHERE BB.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                   AND BB.USE_YN = 'Y'
+	        ) DD
+	          JOIN PLT_CHT_CUTT CC
+	            ON ((    
+				<!--상담요청일시-->
+	                 DD.WORK_START <![CDATA[<=]]> CC.TALK_DIST_DT
+	                 AND CC.TALK_DIST_DT <![CDATA[<]]> DD.WORK_END
+
+	                 )
+	           AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	           AND CC.TALK_STAT_CD IN ('80'
+	                                 , '82'
+	                                 , '90'
+	                                 , '81'
+	                                 , '83'
+	                                 , '91'
+	                                 , '92'
+	                                 , '12'
+	                                 , '20'
+	                                 , '21'
+	                                 , '14'
+	                                 , '93'
+	                                 , '40' -- 챗봇상담
+	                                   )
+	                )
+				INNER JOIN PLT_COMN_CD T3
+				ON CC.TALK_STAT_CD = T3.CD
+				AND T3.GROUP_CD = 'TALK001'
+				INNER JOIN PLT_ASP_CUS_CHN T4
+				ON CC.SNDR_KEY = T4.SNDR_KEY
+				LEFT OUTER JOIN PLT_CUS T2
+				ON CC.TALK_USER_KEY = T2.TALK_USER_KEY
+				WHERE 1 = 1
+				AND CC.TALK_STAT_CD NOT IN ('12')
+				<if test="QA_CNSL_TYP_CD 		!='' and QA_CNSL_TYP_CD 		 != null"> AND CC.CNSL_TYP_CD 		= #{QA_CNSL_TYP_CD}			</if>
+				<if test="QA_CNSL_TYP_CD_2 	!='' and QA_CNSL_TYP_CD_2 		 != null"> AND CC.CNSL_TYP_CD_2 	= #{QA_CNSL_TYP_CD_2}			</if>
+				<if test="QA_CNSL_TYP_CD_3 	!='' and QA_CNSL_TYP_CD_3 		 != null"> AND CC.CNSL_TYP_CD_3 	= #{QA_CNSL_TYP_CD_3}			</if>
+				<if test="QA_CNSL_TYP_CD_4 	!='' and QA_CNSL_TYP_CD_4 		 != null"> AND CC.CNSL_TYP_CD_4 	= #{QA_CNSL_TYP_CD_4}			</if>
+				<if test="QA_CNSL_TYP_CD_4 	!='' and QA_CNSL_TYP_CD_4 		 != null"> AND CC.CNSL_TYP_CD_4 	= #{QA_CNSL_TYP_CD_4}			</if>				
+			 ORDER BY CC.TALK_DIST_DT DESC
+			  ) AAA
+			  LEFT
+			  JOIN PLT_USER BBB 
+			    ON AAA.USER_ID = BBB.USER_ID
+			  WHERE 1=1
+			  <if test="QA_TG_CR_ST != null and QA_TG_CR_ST != ''">
+			  	<![CDATA[
+			  	AND MONTHS_BETWEEN(NOW(), TO_DATE(BBB.ENTCO_DT, 'YYYYMMDD')) >= #{QA_TG_CR_ST}
+			  	]]>
+			  </if>
+			  <if test="QA_TG_CR_EN != null and QA_TG_CR_EN != ''">
+			  	<![CDATA[
+			  	AND MONTHS_BETWEEN(NOW(), TO_DATE(BBB.ENTCO_DT, 'YYYYMMDD')) <= #{QA_TG_CR_EN}
+			  	]]>
+			  </if>
+			) RE1
+			LEFT OUTER JOIN PLT_CHT_INQ_TYP T5
+			ON RE1.TALK_INQRY_CD = T5.INQRY_TYP_CD
+			AND T5.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			ORDER BY RE1.TALK_DIST_DT DESC
+		) ROW_TBL, (
+			SELECT
+				COUNT(1) AS TWB_PAGING_TOT_COUNT
+		FROM (
+		
+		SELECT AAA.*
+		     , BBB.USER_NM
+		     , BBB.USER_NICK
+		  FROM (
+				SELECT  CC.TALK_USER_KEY
+					, CC.TALK_CONTACT_ID
+					, T4.DSPTCH_PRF_NM AS SNDR_KEY_NM
+					, CC.BOT_CALL_ID
+					, T3.CD_NM 																									   AS TALK_STAT_NM
+					, CC.TALK_INQRY_CD
+					, CC.CNSL_TYP_CD
+					, CC.CNSL_TYP_CD_2
+					, CC.CNSL_TYP_CD_3
+					, CC.CNSL_TYP_CD_4
+			        , CC.EXEC_RST_CD
+					, CC.TALK_TITLE
+					, CC.USER_ID
+					, CC.TALK_DIST_DT
+					, CC.TALK_READ_DT
+					, CC.TALK_START_DT
+			        , CASE WHEN CC.TALK_POST_DT IS NULL 
+			        	AND (CC.TALK_END_DT IS NULL OR CC.TALK_END_DT = '')
+			        	THEN NULL
+			        	ELSE COALESCE(CC.TALK_POST_DT, CC.TALK_END_DT)		
+			        	END																		AS TALK_POST_DT
+			        , CC.TALK_END_DT
+	
+				   		
+					, CC.REG_DTTM
+			        , CC.TALK_QST
+			        , CC.TALK_ANS
+			        , CC.BOT_SERVICE_NM
+					, CASE CC.ORI_TALK_CONTACT_ID WHEN '' THEN 'Y' ELSE 'N' END 															AS ORIGINAL_CHAT_FLAG
+					, CC.TALK_STAT_CD
+			        , CC.SNDR_KEY
+			        , T2.CUSTOMER_ID
+			        , T2.CUSTOMER_SEQ
+		            , T2.CUSTOMER_NM
+		            , T2.CUSTOMER_MEMO
+		            , T2.REFERENCE_CUSTOMER_KEY
+		            , T2.TID
+			        , CC.ORI_TALK_CONTACT_ID
+	             FROM (
+	                SELECT 
+				       AA.YYYYMMDD
+				       , BB.WORK_TIME_FROM
+				       , BB.WORK_TIME_TO
+				       , AA.YYYYMMDD || BB.WORK_TIME_FROM || '00' AS WORK_START  
+				       , CASE WHEN BB.WORK_TIME_FROM
+				                   >= BB.WORK_TIME_TO
+				                THEN TO_CHAR(TO_DATE(AA.YYYYMMDD, 'YYYYMMDD')+1, 'YYYYMMDD')
+				                ELSE AA.YYYYMMDD
+				            END
+				         || BB.WORK_TIME_TO || '00' AS WORK_END 
+	                  FROM (
+						    SELECT TO_CHAR(TO_DATE(REPLACE(#{QA_TG_ST_DTTM},'-',''),'YYYYMMDD') + (LEVEL-1),'YYYYMMDD') AS YYYYMMDD
+						     CONNECT BY LEVEL <![CDATA[<=]]> (TO_DATE(REPLACE(#{QA_TG_EN_DTTM},'-',''),'YYYYMMDD') - TO_DATE(REPLACE(#{QA_TG_ST_DTTM},'-',''),'YYYYMMDD') + 1)
+	                        ) AA
+	        		  JOIN PLT_CHT_WRK_TIME_HST BB
+	                    ON AA.YYYYMMDD BETWEEN BB.MANAGE_DATE_FROM
+	                                       AND BB.MANAGE_DATE_TO
+	                 WHERE BB.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                   AND BB.USE_YN = 'Y'
+	        ) DD
+	          JOIN PLT_CHT_CUTT CC
+	            ON ((    
+				<!--상담요청일시-->
+	                 DD.WORK_START <![CDATA[<=]]> CC.TALK_DIST_DT
+	                 AND CC.TALK_DIST_DT <![CDATA[<]]> DD.WORK_END
+
+	                 )
+	           AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	           AND CC.TALK_STAT_CD IN ('80'
+	                                 , '82'
+	                                 , '90'
+	                                 , '81'
+	                                 , '83'
+	                                 , '91'
+	                                 , '92'
+	                                 , '12'
+	                                 , '20'
+	                                 , '21'
+	                                 , '14'
+	                                 , '93'
+	                                 , '40' -- 챗봇상담
+	                                   )
+	                )
+				INNER JOIN PLT_COMN_CD T3
+				ON CC.TALK_STAT_CD = T3.CD
+				AND T3.GROUP_CD = 'TALK001'
+				INNER JOIN PLT_ASP_CUS_CHN T4
+				ON CC.SNDR_KEY = T4.SNDR_KEY
+				LEFT OUTER JOIN PLT_CUS T2
+				ON CC.TALK_USER_KEY = T2.TALK_USER_KEY
+				WHERE 1 = 1
+				AND CC.TALK_STAT_CD NOT IN ('12')
+				<if test="QA_CNSL_TYP_CD 		!='' and QA_CNSL_TYP_CD 		 != null"> AND CC.CNSL_TYP_CD 		= #{QA_CNSL_TYP_CD}			</if>
+				<if test="QA_CNSL_TYP_CD_2 	!='' and QA_CNSL_TYP_CD_2 		 != null"> AND CC.CNSL_TYP_CD_2 	= #{QA_CNSL_TYP_CD_2}			</if>
+				<if test="QA_CNSL_TYP_CD_3 	!='' and QA_CNSL_TYP_CD_3 		 != null"> AND CC.CNSL_TYP_CD_3 	= #{QA_CNSL_TYP_CD_3}			</if>
+				<if test="QA_CNSL_TYP_CD_4 	!='' and QA_CNSL_TYP_CD_4 		 != null"> AND CC.CNSL_TYP_CD_4 	= #{QA_CNSL_TYP_CD_4}			</if>
+				<if test="QA_CNSL_TYP_CD_4 	!='' and QA_CNSL_TYP_CD_4 		 != null"> AND CC.CNSL_TYP_CD_4 	= #{QA_CNSL_TYP_CD_4}			</if>				
+			 ORDER BY CC.TALK_DIST_DT DESC
+			  ) AAA
+			  LEFT
+			  JOIN PLT_USER BBB 
+			    ON AAA.USER_ID = BBB.USER_ID
+			  WHERE 1=1
+			  <if test="QA_TG_CR_ST != null and QA_TG_CR_ST != ''">
+			  	<![CDATA[
+			  	AND MONTHS_BETWEEN(NOW(), TO_DATE(BBB.ENTCO_DT, 'YYYYMMDD')) >= #{QA_TG_CR_ST}
+			  	]]>
+			  </if>
+			  <if test="QA_TG_CR_EN != null and QA_TG_CR_EN != ''">
+			  	<![CDATA[
+			  	AND MONTHS_BETWEEN(NOW(), TO_DATE(BBB.ENTCO_DT, 'YYYYMMDD')) <= #{QA_TG_CR_EN}
+			  	]]>
+			  </if>
+			) RE1
+			LEFT OUTER JOIN PLT_CHT_INQ_TYP T5
+			ON RE1.TALK_INQRY_CD = T5.INQRY_TYP_CD
+			AND T5.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		) PAG_TBL
+
+	</select>
+	
+	<!-- 대상 발췌 (콜) -->
+	<insert id="insertRtnPhoneQaData" parameterType="java.util.HashMap">
+		INSERT INTO PLT_QA_DATA(
+			CUSTCO_ID,
+			QA_ID,
+			QA_EVA_ID,
+			QA_DATA_ID,
+			QA_DATA_CNSL_DT,
+			QA_DATA_CNSL_TIME,
+			QA_DATA_TY,
+			QA_DATA_US_ID,
+			QA_DATA_US_NM,
+			QA_DATA_CS_ID,
+			QA_DATA_CS_NM,
+			QA_DATA_CS_MB_YN,
+			QA_DATA_CS_NO,
+			QA_DATA_CS_TELL,
+			QA_CNSL_TYP_CD,
+			QA_CNSL_TYP_CD_2,
+			QA_CNSL_TYP_CD_3,
+			QA_CNSL_TYP_CD_4,
+			QA_CNSL_CP_YN,
+			CNSL_HIST_NO,
+			RDWT_FILE_NM,
+			CNSL_CNTN,
+			CHNG_DTTM,
+			CHNG_ID,
+			REG_DTTM,
+			REG_ID
+		) SELECT #{ASP_NEWCUST_KEY},
+			#{QA_ID},
+			#{QA_EVA_ID},
+			SEQ_PLT_QA_DATA_ID.NEXTVAL, 
+			A.CNSL_BEGIN_DATE ,
+			A.TEL_TIME,
+			#{QA_TG_TY},
+			A.CSLT_ID,
+			C.USER_NM,
+			'',
+			A.CUST_NM,
+			'',
+			A.CUST_NO,
+			A.CUST_TEL_NO,
+			B.CNSL_TYP_CD,
+			B.CNSL_TYP_CD_2,
+			B.CNSL_TYP_CD_3,
+			B.CNSL_TYP_CD_4,
+			DECODE(B.PROC_CODE_LCLS,'00001','Y','N'),
+			A.CNSL_HIST_NO,
+			A.RDWT_FILE_NM,
+			B.CNSL_CNTN,
+			TO_CHAR(NOW() ,'YYYYMMDDHH24MISS'),
+			#{REG_ID},
+			TO_CHAR(NOW() ,'YYYYMMDDHH24MISS'),
+			#{REG_ID}
+           FROM PLT_PHN_CNSL A 
+           JOIN PLT_PHN_CNSL_DTL B ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+           LEFT OUTER JOIN PLT_USER C ON A.CSLT_ID = C.USER_ID
+          WHERE 1=1
+		  AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		  <if test='QA_TG_CNSL_TIME != null and QA_TG_CNSL_TIME != ""'>
+		  	<![CDATA[
+			  	AND A.TEL_TIME >= #{QA_TG_CNSL_TIME}
+		  	]]>
+		  </if>
+		  <if test='QA_TG_ST_DTTM != null and QA_TG_ST_DTTM != ""'>
+		  	<![CDATA[
+		  		AND A.REG_DTIM >= #{QA_TG_ST_DTTM} || '000000'
+		  	]]>
+		  </if>
+		  <if test='QA_TG_EN_DTTM != null and QA_TG_EN_DTTM != ""'>
+		  	<![CDATA[
+		  		AND A.REG_DTIM <= #{QA_TG_EN_DTTM} || '235959'
+		  	]]>
+		  </if>
+		  <if test='QA_TG_CR_ST != null and QA_TG_CR_ST != ""'>
+		  	<![CDATA[
+		  		AND MONTHS_BETWEEN(NOW(), TO_DATE(C.ENTCO_DT, 'YYYYMMDD')) >= #{QA_TG_CR_ST}
+		  	]]>
+		  </if>
+		  <if test='QA_TG_CR_EN != null and QA_TG_CR_EN != ""'>
+		  	<![CDATA[
+		  		AND MONTHS_BETWEEN(NOW(), TO_DATE(C.ENTCO_DT, 'YYYYMMDD')) <= #{QA_TG_CR_EN}
+		  	]]>
+		  </if>
+          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 == '' and QA_CNSL_TYP_CD3 == '' and QA_CNSL_TYP_CD4 == ''"> 
+           AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+          </if>
+          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 == '' and QA_CNSL_TYP_CD4 == ''"> 
+          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+          </if>
+          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 != '' and QA_CNSL_TYP_CD4 == ''"> 
+          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+          AND B.CNSL_TYP_CD_3 = #{QA_CNSL_TYP_CD3}
+          </if>
+          <if test="QA_CNSL_TYP_CD != '' and QA_CNSL_TYP_CD2 != '' and QA_CNSL_TYP_CD3 != '' and QA_CNSL_TYP_CD4 != ''"> 
+          AND B.CNSL_TYP_CD = #{QA_CNSL_TYP_CD}
+          AND B.CNSL_TYP_CD_2 = #{QA_CNSL_TYP_CD2}
+          AND B.CNSL_TYP_CD_3 = #{QA_CNSL_TYP_CD3}
+          AND B.CNSL_TYP_CD_4 = #{QA_CNSL_TYP_CD4}
+          </if>			
+	</insert>
+	
+	<!-- 대상 발췌 (채팅) -->
+	<insert id="insertRtnChatQaData" parameterType="java.util.HashMap">
+		INSERT INTO PLT_QA_DATA(
+			CUSTCO_ID,
+			QA_ID,
+			QA_EVA_ID,
+			QA_DATA_ID,
+			QA_DATA_CNSL_DT,
+			QA_DATA_CNSL_TIME,
+			QA_DATA_TY,
+			QA_DATA_US_ID,
+			QA_DATA_US_NM,
+			QA_DATA_CS_ID,
+			QA_DATA_CS_NM,
+			QA_DATA_CS_MB_YN,
+			INQRY_TYP_CD,
+			INQRY_TYP_NM,
+			QA_CNSL_TYP_CD,
+			QA_CNSL_TYP_CD_2,
+			QA_CNSL_TYP_CD_3,
+			QA_CNSL_TYP_CD_4,
+			QA_CNSL_CP_YN,
+			TALK_CONTACT_ID,
+			CNSL_CNTN,
+			CHNG_DTTM,
+			CHNG_ID,
+			REG_DTTM,
+			REG_ID
+		)
+		<![CDATA[
+			SELECT
+				#{ASP_NEWCUST_KEY},
+				#{QA_ID},
+				#{QA_EVA_ID},
+				SEQ_PLT_QA_DATA_ID.NEXTVAL, 
+				TO_CHAR(TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS'),'YYYYMMDD'),
+				TRUNC((CAST(TO_CHAR(TO_DATE(RE1.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(RE1.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60))),
+				#{QA_TG_TY},
+				USER_ID,
+				USER_NM,
+				COALESCE(RE1.CUSTOMER_SEQ,RE1.CUSTOMER_ID),
+				COALESCE(RE1.CUSTOMER_NM, '알수없음'),
+				CASE WHEN RE1.TID = '' OR RE1.TID IS NULL THEN 'N' ELSE 'Y' END,
+				CASE WHEN T5.INQRY_TYP_DIV_CD = '1' THEN T5.INQRY_TYP_CD 
+					ELSE (SELECT INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T5.SPST_INQRY_TYP_CD) END,
+				CASE WHEN T5.INQRY_TYP_DIV_CD = '1' THEN T5.INQRY_TYP_NM 
+					ELSE (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T5.SPST_INQRY_TYP_CD) END,
+				RE1.CNSL_TYP_CD,
+		        RE1.CNSL_TYP_CD_2,
+		        RE1.CNSL_TYP_CD_3,
+		        RE1.CNSL_TYP_CD_4,
+		        DECODE(RE1.TALK_STAT_CD, 21, 'Y','N'),
+		        RE1.TALK_CONTACT_ID,
+		        RE1.TALK_ANS,
+				TO_CHAR(NOW() ,'YYYYMMDDHH24MISS'),
+				#{REG_ID},
+				TO_CHAR(NOW() ,'YYYYMMDDHH24MISS'),
+				#{REG_ID}
+	]]>
+		FROM (
+		
+		SELECT AAA.*
+		     , BBB.USER_NM
+		     , BBB.USER_NICK
+		  FROM (
+				SELECT  CC.TALK_USER_KEY
+					, CC.TALK_CONTACT_ID
+					, T4.DSPTCH_PRF_NM AS SNDR_KEY_NM
+					, CC.BOT_CALL_ID
+					, T3.CD_NM 																									   AS TALK_STAT_NM
+					, CC.TALK_INQRY_CD
+					, CC.CNSL_TYP_CD
+					, CC.CNSL_TYP_CD_2
+					, CC.CNSL_TYP_CD_3
+					, CC.CNSL_TYP_CD_4
+			        , CC.EXEC_RST_CD
+					, CC.TALK_TITLE
+					, CC.USER_ID
+					, CC.TALK_DIST_DT
+					, CC.TALK_READ_DT
+					, CC.TALK_START_DT
+			        , CASE WHEN CC.TALK_POST_DT IS NULL 
+			        	AND (CC.TALK_END_DT IS NULL OR CC.TALK_END_DT = '')
+			        	THEN NULL
+			        	ELSE COALESCE(CC.TALK_POST_DT, CC.TALK_END_DT)		
+			        	END																		AS TALK_POST_DT
+			        , CC.TALK_END_DT
+	
+				   		
+					, CC.REG_DTTM
+			        , CC.TALK_QST
+			        , CC.TALK_ANS
+			        , CC.BOT_SERVICE_NM
+					, CASE CC.ORI_TALK_CONTACT_ID WHEN '' THEN 'Y' ELSE 'N' END 															AS ORIGINAL_CHAT_FLAG
+					, CC.TALK_STAT_CD
+			        , CC.SNDR_KEY
+			        , T2.CUSTOMER_ID
+			        , T2.CUSTOMER_SEQ
+		            , T2.CUSTOMER_NM
+		            , T2.CUSTOMER_MEMO
+		            , T2.REFERENCE_CUSTOMER_KEY
+		            , T2.TID
+			        , CC.ORI_TALK_CONTACT_ID
+	             FROM (
+	                SELECT 
+				       AA.YYYYMMDD
+				       , BB.WORK_TIME_FROM
+				       , BB.WORK_TIME_TO
+				       , AA.YYYYMMDD || BB.WORK_TIME_FROM || '00' AS WORK_START  
+				       , CASE WHEN BB.WORK_TIME_FROM
+				                   >= BB.WORK_TIME_TO
+				                THEN TO_CHAR(TO_DATE(AA.YYYYMMDD, 'YYYYMMDD')+1, 'YYYYMMDD')
+				                ELSE AA.YYYYMMDD
+				            END
+				         || BB.WORK_TIME_TO || '00' AS WORK_END 
+	                  FROM (
+						    SELECT TO_CHAR(TO_DATE(REPLACE(#{QA_TG_ST_DTTM},'-',''),'YYYYMMDD') + (LEVEL-1),'YYYYMMDD') AS YYYYMMDD
+						     CONNECT BY LEVEL <![CDATA[<=]]> (TO_DATE(REPLACE(#{QA_TG_EN_DTTM},'-',''),'YYYYMMDD') - TO_DATE(REPLACE(#{QA_TG_ST_DTTM},'-',''),'YYYYMMDD') + 1)
+	                        ) AA
+	        		  JOIN PLT_CHT_WRK_TIME_HST BB
+	                    ON AA.YYYYMMDD BETWEEN BB.MANAGE_DATE_FROM
+	                                       AND BB.MANAGE_DATE_TO
+	                 WHERE BB.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                   AND BB.USE_YN = 'Y'
+	        ) DD
+	          JOIN PLT_CHT_CUTT CC
+	            ON ((    
+				<!--상담요청일시-->
+	                 DD.WORK_START <![CDATA[<=]]> CC.TALK_DIST_DT
+	                 AND CC.TALK_DIST_DT <![CDATA[<]]> DD.WORK_END
+
+	                 )
+	           AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	           AND CC.TALK_STAT_CD IN ('80'
+	                                 , '82'
+	                                 , '90'
+	                                 , '81'
+	                                 , '83'
+	                                 , '91'
+	                                 , '92'
+	                                 , '12'
+	                                 , '20'
+	                                 , '21'
+	                                 , '14'
+	                                 , '93'
+	                                 , '40' -- 챗봇상담
+	                                   )
+	                )
+				INNER JOIN PLT_COMN_CD T3
+				ON CC.TALK_STAT_CD = T3.CD
+				AND T3.GROUP_CD = 'TALK001'
+				INNER JOIN PLT_ASP_CUS_CHN T4
+				ON CC.SNDR_KEY = T4.SNDR_KEY
+				LEFT OUTER JOIN PLT_CUS T2
+				ON CC.TALK_USER_KEY = T2.TALK_USER_KEY
+				WHERE 1 = 1
+				AND CC.TALK_STAT_CD NOT IN ('12')
+				<if test="QA_CNSL_TYP_CD 		!='' and QA_CNSL_TYP_CD 		 != null"> AND CC.CNSL_TYP_CD 		= #{QA_CNSL_TYP_CD}			</if>
+				<if test="QA_CNSL_TYP_CD_2 	!='' and QA_CNSL_TYP_CD_2 		 != null"> AND CC.CNSL_TYP_CD_2 	= #{QA_CNSL_TYP_CD_2}			</if>
+				<if test="QA_CNSL_TYP_CD_3 	!='' and QA_CNSL_TYP_CD_3 		 != null"> AND CC.CNSL_TYP_CD_3 	= #{QA_CNSL_TYP_CD_3}			</if>
+				<if test="QA_CNSL_TYP_CD_4 	!='' and QA_CNSL_TYP_CD_4 		 != null"> AND CC.CNSL_TYP_CD_4 	= #{QA_CNSL_TYP_CD_4}			</if>
+				<if test="QA_CNSL_TYP_CD_4 	!='' and QA_CNSL_TYP_CD_4 		 != null"> AND CC.CNSL_TYP_CD_4 	= #{QA_CNSL_TYP_CD_4}			</if>				
+			 ORDER BY CC.TALK_DIST_DT DESC
+			  ) AAA
+			  LEFT
+			  JOIN PLT_USER BBB 
+			    ON AAA.USER_ID = BBB.USER_ID
+			  WHERE 1=1
+			  <if test="QA_TG_CR_ST != null and QA_TG_CR_ST != ''">
+			  	<![CDATA[
+			  	AND MONTHS_BETWEEN(NOW(), TO_DATE(BBB.ENTCO_DT, 'YYYYMMDD')) >= #{QA_TG_CR_ST}
+			  	]]>
+			  </if>
+			  <if test="QA_TG_CR_EN != null and QA_TG_CR_EN != ''">
+			  	<![CDATA[
+			  	AND MONTHS_BETWEEN(NOW(), TO_DATE(BBB.ENTCO_DT, 'YYYYMMDD')) <= #{QA_TG_CR_EN}
+			  	]]>
+			  </if>
+			) RE1
+			LEFT OUTER JOIN PLT_CHT_INQ_TYP T5
+			ON RE1.TALK_INQRY_CD = T5.INQRY_TYP_CD
+			AND T5.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</insert>
+	
+	<!-- QA할당 건수 -->
+	<select id="selectRtnQaDivCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT TOT_CNT
+	      , NO_DIV_CNT
+	      , DIV_CNT
+	      , CP_FS_QA_CNT
+	      , CP_SC_QA_CNT
+	      , CP_FN_QA_CNT
+	      , CASE WHEN QA_EVA_CN = 1
+	      THEN CP_FS_QA_CNT
+	      WHEN QA_EVA_CN = 2
+	      THEN CP_SC_QA_CNT
+	      WHEN QA_EVA_CN = 3
+	      THEN CP_FN_QA_CNT
+	      END AS CP_QA_CNT
+	    FROM (
+	      SELECT COUNT(1) AS TOT_CNT
+	      , SUM(DECODE(A.QA_DATA_QAID, NULL,1,0)) AS NO_DIV_CNT
+	      , SUM(DECODE(A.QA_DATA_QAID, NULL,0,1)) AS DIV_CNT
+	      , (
+	        SELECT COUNT(1)
+	       FROM PLT_QA_DATA AA
+	       WHERE AA.QA_ID = A.QA_ID
+	       AND EXISTS (
+	          SELECT 1
+	          FROM PLT_QA_DATA_RST BB
+	          WHERE AA.QA_DATA_ID = BB.QA_DATA_ID
+	          AND BB.QA_DATA_RST_CN = '1'
+	       )
+	      ) AS CP_FS_QA_CNT
+	      , (
+	        SELECT COUNT(1)
+	       FROM PLT_QA_DATA AA
+	       WHERE AA.QA_ID = A.QA_ID
+	       AND EXISTS (
+	          SELECT 1
+	          FROM PLT_QA_DATA_RST BB
+	          WHERE AA.QA_DATA_ID = BB.QA_DATA_ID
+	          AND BB.QA_DATA_RST_CN = '2'
+	       )
+	      ) AS CP_SC_QA_CNT
+	      , (
+	        SELECT COUNT(1)
+	       FROM PLT_QA_DATA AA
+	       WHERE AA.QA_ID = A.QA_ID
+	       AND EXISTS (
+	          SELECT 1
+	          FROM PLT_QA_DATA_RST BB
+	          WHERE AA.QA_DATA_ID = BB.QA_DATA_ID
+	          AND BB.QA_DATA_RST_CN = '3'
+	       )
+	      ) AS CP_FN_QA_CNT
+	      , MAX(B.QA_EVA_CN) AS QA_EVA_CN
+	    FROM PLT_QA_DATA A
+	    JOIN PLT_QA_EVA B ON A.QA_EVA_ID = B.QA_EVA_ID
+	    WHERE A.QA_ID = #{QA_ID}
+	    AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    GROUP BY A.QA_ID
+	    )
+	</select>
+	
+	<!-- QA할당 목록 -->
+	<select id="selectRtnQaDiv" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT DIV_USER_ID
+		  , DIV_USER_NM
+		  , DIV_CNT
+		  , CP_FS_QA_CNT
+		  , CP_SC_QA_CNT
+		  , CP_FN_QA_CNT
+		  , COALESCE(CASE WHEN QA_EVA_CN = 1
+		  THEN CP_FS_QA_CNT
+		  WHEN QA_EVA_CN = 2
+		  THEN CP_SC_QA_CNT
+		  WHEN QA_EVA_CN = 3
+		  THEN CP_FN_QA_CNT
+		  END, 0) AS CP_QA_CNT
+		  , (DIV_CNT - START_COUNT) AS WAIT_QA_CNT
+		FROM (
+		  SELECT A.USER_ID AS DIV_USER_ID
+					, A.USER_NM AS DIV_USER_NM
+					, COUNT(B.QA_DATA_ID) AS DIV_CNT
+		      , MAX(C.QA_EVA_CN) AS QA_EVA_CN
+		      , (
+		        SELECT COUNT(1)
+		        FROM PLT_QA_DATA AA
+		        WHERE AA.QA_ID = #{QA_ID}
+		        AND AA.QA_DATA_QAID = A.USER_ID
+		        AND EXISTS (
+			          SELECT 1
+			          FROM PLT_QA_DATA_RST BB
+			          WHERE AA.QA_DATA_ID = BB.QA_DATA_ID
+			          AND BB.QA_DATA_RST_CN = '1'
+		        )
+		      ) AS CP_FS_QA_CNT
+		      , (
+		        SELECT COUNT(1)
+		        FROM PLT_QA_DATA AA
+		        WHERE AA.QA_ID = #{QA_ID}
+		        AND AA.QA_DATA_QAID = A.USER_ID
+		        AND EXISTS (
+			          SELECT 1
+			          FROM PLT_QA_DATA_RST BB
+			          WHERE AA.QA_DATA_ID = BB.QA_DATA_ID
+			          AND BB.QA_DATA_RST_CN = '2'
+		        )
+		      ) AS CP_SC_QA_CNT
+		      , (
+		        SELECT COUNT(1)
+		        FROM PLT_QA_DATA AA
+		        WHERE AA.QA_ID = #{QA_ID}
+		        AND AA.QA_DATA_QAID = A.USER_ID
+		        AND EXISTS (
+			          SELECT 1
+			          FROM PLT_QA_DATA_RST BB
+			          WHERE AA.QA_DATA_ID = BB.QA_DATA_ID
+			          AND BB.QA_DATA_RST_CN = '3'
+		        )
+		      ) AS CP_FN_QA_CNT
+		      , (
+		        SELECT COUNT(1)
+		        FROM PLT_QA_DATA AA
+		        WHERE AA.QA_ID = #{QA_ID}
+		        AND AA.QA_DATA_QAID = A.USER_ID
+		        AND EXISTS (
+			          SELECT 1
+			          FROM PLT_QA_DATA_RST BB
+			          WHERE AA.QA_DATA_ID = BB.QA_DATA_ID
+			          AND BB.QA_DATA_RST_CN IN (1,2,3)
+		        )
+		      ) AS START_COUNT
+				FROM PLT_QA_US_RATER A
+				LEFT OUTER JOIN PLT_QA_DATA B ON A.USER_ID = B.QA_DATA_QAID AND B.QA_ID = #{QA_ID}
+		    	LEFT OUTER JOIN PLT_QA_EVA C ON B.QA_EVA_ID = C.QA_EVA_ID
+		    	WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				GROUP BY A.USER_ID, A.USER_NM
+		)
+	</select>
+	
+	<update id="updateRtnQaDivRecall" parameterType="java.util.HashMap">
+		UPDATE PLT_QA_DATA
+		SET QA_DATA_QAID = NULL
+			, QA_DATA_QANM = NULL
+		WHERE QA_DATA_ID IN (
+			SELECT QA_DATA_ID
+			FROM PLT_QA_DATA A
+			WHERE A.QA_ID = #{QA_ID}
+			AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			AND A.QA_DATA_QAID = #{DIV_USER_ID}
+			AND NOT EXISTS (
+				SELECT 1
+				FROM PLT_QA_DATA_RST
+				WHERE QA_DATA_ID = A.QA_DATA_ID
+			)
+			<![CDATA[
+			AND ROWNUM <= #{QA_DATA}
+			]]>
+		)
+	</update>
+	
+	<update id="updateRtnQaDiv" parameterType="java.util.HashMap">
+		UPDATE PLT_QA_DATA
+		SET QA_DATA_QAID = #{DIV_USER_ID}
+			, QA_DATA_QANM = #{DIV_USER_NM}
+		WHERE QA_ID = #{QA_ID}
+		AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND QA_DATA_QAID IS NULL
+		<![CDATA[
+			AND ROWNUM <= #{QA_DATA}
+		]]>
+	</update>
+</mapper>

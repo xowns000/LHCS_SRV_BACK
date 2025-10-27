@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.login.dao.LogoutMapper">
+<!-- <mapper namespace="com.hcteletalk.teletalk.login.dao.LogoutMapper"> -->
+
+	<!-- 
+	로그인 성공 시 기본정보 업데이트, CUSTCO_IDFMF 사용하면 안됨
+	 -->
+	<update id="updateLogoutSuccessInfo" parameterType="kr.co.hkcloud.palette3.login.domain.LoginLogDTO">
+	UPDATE PLT_USER
+	   SET CNTN_IP       = ''                /* 접속아이피 */
+	     , PRST_LGN_YN  = #{prstLgnYn}    /* 현재로그인여부 */
+	 WHERE USER_ID = #{userId}
+	</update>
+</mapper>

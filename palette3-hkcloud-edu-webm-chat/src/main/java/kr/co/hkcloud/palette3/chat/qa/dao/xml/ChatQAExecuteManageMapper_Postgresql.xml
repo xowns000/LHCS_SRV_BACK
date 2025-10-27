@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.qa.dao.ChatQAExecuteManageMapper">
+
+<!-- QA 대상자 현황 전체 조회 -->
+<select id="selectRtnQA"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+           P1.CNSLT_ID
+		 , P1.RCEPT_DATE
+         , P1.RCEPT_DT
+		 , P1.CHNNL_DIV_CD
+		 , CC1.CD_NM AS CHNNL_DIV_NM
+         , CC2.CD_NM AS CNSLT_RSLT_NM
+         , CT1.CNSLT_TY_NM || '>' || CT2.CNSLT_TY_NM || '>' || CT3.CNSLT_TY_NM || '>' || CT4.CNSLT_TY_NM AS CNSLT_TY_NM
+         , P1.TEL_ID
+         , P1.TEL_TY_CD
+         , COALESCE(P1.TOT_TEL_SECND, 0) AS TOT_TEL_SECND
+         , P1.REC_NO
+         , P1.QA_SEQ
+         , P1.QA_USER_ID
+         , UI2.USER_NM AS QA_USER_NM
+         , P1.USER_ID
+         , UI1.USER_NM
+         , P1.CHRGR_ATTR_A
+		 , P1.CHRGR_ATTR_B
+		 , P1.CHRGR_ATTR_C
+		 , P1.CHRGR_ATTR_D
+		 , UBI1.ATTR_DIV_NM AS CHRGR_ATTR_ANAME
+		 , UBI2.ATTR_DIV_NM AS CHRGR_ATTR_BNAME
+		 , UBI3.ATTR_DIV_NM AS CHRGR_ATTR_CNAME
+		 , UBI4.ATTR_DIV_NM AS CHRGR_ATTR_DNAME
+		 , P1.FILE_GROUP_KEY
+         , PAG_TBL.*
+	  FROM (
+			SELECT 
+				   ROW_TBL.*
+			  FROM (
+					SELECT AA.*
+					     , QRM.QA_SEQ
+					     , QRM.QA_USER_ID
+					     , ' ' AS FILE_GROUP_KEY
+					  FROM (
+							SELECT
+								   A.CNSLT_ID
+								 , A.RCEPT_DATE
+								 , A.RCEPT_DATE || A.RCEPT_TIME AS RCEPT_DT
+								 , SUBSTR(A.RCEPT_DATE, 1, 6) AS QA_YM
+								 , B.TEL_ID
+								 , A.CHNNL_DIV_CD
+								 , CASE WHEN A.CHNNL_DIV_CD = 'IB' AND B.TEL_TY_CD = 'IB' THEN 'IB'
+					             	    WHEN A.CHNNL_DIV_CD = 'IB' AND B.TEL_TY_CD = 'OB' THEN '재통화'
+					             	 	WHEN A.CHNNL_DIV_CD = 'OB' THEN  
+						                    	CASE WHEN B.USER_ID = A.REGR_ID THEN 'OB' 
+						                       		 ELSE '재통화'
+					                     		 END    
+					                    WHEN A.CHNNL_DIV_CD = 'BULLETIN' AND B.TEL_TY_CD = 'OB' THEN '재통화' ELSE ' '
+					                END AS TEL_TY_CD
+								 , A.CNSLT_RSLT_CD
+								 , A.CNSLT_TY_XL
+								 , A.CNSLT_TY_L
+								 , A.CNSLT_TY_M
+								 , A.CNSLT_TY_S
+								 , B.USER_ID
+								 , A.CHRGR_ATTR_A
+								 , A.CHRGR_ATTR_B
+								 , A.CHRGR_ATTR_C
+								 , A.CHRGR_ATTR_D
+								 , B.TOT_TEL_SECND
+								 , B.REC_NO
+							  FROM CNSLT_INFO A
+							     , TEL_HIST B
+							 WHERE A.RCEPT_DATE BETWEEN #{REQUEST_DT_FROM} AND #{REQUEST_DT_TO}
+							   AND A.CNSLT_ID = B.CNSLT_ID
+							   AND B.USER_ID = #{CHRGR_ID}
+							   <if test="CHNNL_DIV_CD	!='' and CHNNL_DIV_CD	!= null">AND A.CHNNL_DIV_CD = #{CHNNL_DIV_CD}</if>
+							   <if test="CNSLT_RSLT_CD	!='' and CNSLT_RSLT_CD 	!= null">AND A.CNSLT_RSLT_CD = #{CNSLT_RSLT_CD}</if>
+							   <if test="CNSLT_TY_XL_CD !='' and CNSLT_TY_XL_CD != null">AND A.CNSLT_TY_XL = #{CNSLT_TY_XL_CD}</if>
+							   <if test="CNSLT_TY_L_CD  !='' and CNSLT_TY_L_CD  != null">AND A.CNSLT_TY_L = #{CNSLT_TY_L_CD}</if>
+							   <if test="CNSLT_TY_M_CD  !='' and CNSLT_TY_M_CD  != null">AND A.CNSLT_TY_M = #{CNSLT_TY_M_CD}</if>
+							   <if test="CNSLT_TY_S_CD  !='' and CNSLT_TY_S_CD  != null">AND A.CNSLT_TY_S = #{CNSLT_TY_S_CD}</if>
+							   <if test="CHRGR_ATTR_A   !='' and CHRGR_ATTR_A   != null">AND A.CHRGR_ATTR_A = #{CHRGR_ATTR_A}</if>
+							   <if test="CHRGR_ATTR_B   !='' and CHRGR_ATTR_B   != null">AND A.CHRGR_ATTR_B = #{CHRGR_ATTR_B}</if>
+							   <if test="CHRGR_ATTR_C   !='' and CHRGR_ATTR_C   != null">AND A.CHRGR_ATTR_C = #{CHRGR_ATTR_C}</if>
+							   <if test="CHRGR_ATTR_D   !='' and CHRGR_ATTR_D   != null">AND A.CHRGR_ATTR_D = #{CHRGR_ATTR_D}</if>
+					   		) AA
+					  LEFT JOIN PLT_CHT_QA_EVAL_RST QRM 
+					    ON QRM.CNSLT_ID = AA.CNSLT_ID 
+					   AND QRM.QA_YM = AA.QA_YM 
+					   AND QRM.QA_SEQ = (SELECT MAX(QA_SEQ) FROM QA_EVAL_RESULT_MST WHERE QA_YM = AA.QA_YM AND QA_TY_CD = QRM.QA_TY_CD AND CHRGR_ID = AA.USER_ID AND CNSLT_ID = AA.CNSLT_ID)
+				       AND QRM.TEL_ID = AA.TEL_ID
+				     WHERE 1 = 1
+				      <if test="QA_USER_ID  	!='' and QA_USER_ID     != null">AND QRM.QA_USER_ID = #{QA_USER_ID}</if>		
+					 
+					 UNION
+
+					SELECT
+						   A.CNSLT_ID
+						 , A.RCEPT_DATE
+						 , A.RCEPT_DATE || A.RCEPT_TIME AS RCEPT_DT
+						 , SUBSTR(A.RCEPT_DATE, 1, 6) AS QA_YM
+						 , B.TEL_ID
+						 , A.CHNNL_DIV_CD
+						 , CASE WHEN A.CHNNL_DIV_CD = 'IB' AND B.TEL_TY_CD = 'IB' THEN 'IB'
+			             	    WHEN A.CHNNL_DIV_CD = 'IB' AND B.TEL_TY_CD = 'OB' THEN '재통화'
+			             	 	WHEN A.CHNNL_DIV_CD = 'OB' THEN  
+				                    	CASE WHEN B.USER_ID = A.REGR_ID THEN 'OB' 
+				                       		 ELSE '재통화'
+			                     		 END    
+			                    WHEN A.CHNNL_DIV_CD = 'BULLETIN' AND B.TEL_TY_CD = 'OB' THEN '재통화' ELSE ' '
+			                END AS TEL_TY_CD
+						 , A.CNSLT_RSLT_CD
+						 , A.CNSLT_TY_XL
+						 , A.CNSLT_TY_L
+						 , A.CNSLT_TY_M
+						 , A.CNSLT_TY_S
+						 , A.CHRGR_ID AS USER_ID
+						 , A.CHRGR_ATTR_A
+						 , A.CHRGR_ATTR_B
+						 , A.CHRGR_ATTR_C
+						 , A.CHRGR_ATTR_D
+						 , B.TOT_TEL_SECND
+						 , B.REC_NO
+						 , QRM.QA_SEQ
+						 , QRM.QA_USER_ID
+						 , C.FILE_GROUP_KEY
+					  FROM CNSLT_INFO A
+					  LEFT JOIN TEL_HIST B ON A.CNSLT_ID = B.CNSLT_ID
+					  LEFT JOIN PLT_PHN_QA_EVAL QRM 
+					    ON A.CNSLT_ID = QRM.CNSLT_ID 
+					   AND QRM.QA_YM = SUBSTR(A.RCEPT_DATE, 1, 6)
+					   AND QRM.QA_SEQ = (SELECT MAX(QA_SEQ) FROM QA_EVAL_RESULT_MST WHERE QA_YM = SUBSTR(A.RCEPT_DATE, 1, 6) AND QA_TY_CD = QRM.QA_TY_CD AND CHRGR_ID = A.CHRGR_ID AND CNSLT_ID = A.CNSLT_ID)
+					   AND COALESCE(QRM.TEL_ID, '') = COALESCE(B.TEL_ID ,'')
+					  LEFT JOIN BULLETIN_INQRY_INFO C  ON A.INQRY_ID = C.INQRY_ID
+					 WHERE A.RCEPT_DATE BETWEEN #{REQUEST_DT_FROM} AND #{REQUEST_DT_TO}
+					   AND A.CHNNL_DIV_CD = 'BULLETIN'
+					   AND A.CHRGR_ID = #{CHRGR_ID}
+					   <if test="CNSLT_RSLT_CD	!='' and CNSLT_RSLT_CD 	!= null">AND A.CNSLT_RSLT_CD = #{CNSLT_RSLT_CD}</if>
+					   <if test="CNSLT_TY_XL_CD !='' and CNSLT_TY_XL_CD != null">AND A.CNSLT_TY_XL = #{CNSLT_TY_XL_CD}</if>
+					   <if test="CNSLT_TY_L_CD  !='' and CNSLT_TY_L_CD  != null">AND A.CNSLT_TY_L = #{CNSLT_TY_L_CD}</if>
+					   <if test="CNSLT_TY_M_CD  !='' and CNSLT_TY_M_CD  != null">AND A.CNSLT_TY_M = #{CNSLT_TY_M_CD}</if>
+					   <if test="CNSLT_TY_S_CD  !='' and CNSLT_TY_S_CD  != null">AND A.CNSLT_TY_S = #{CNSLT_TY_S_CD}</if>
+					   <if test="CHRGR_ATTR_A   !='' and CHRGR_ATTR_A   != null">AND A.CHRGR_ATTR_A = #{CHRGR_ATTR_A}</if>
+					   <if test="CHRGR_ATTR_B   !='' and CHRGR_ATTR_B   != null">AND A.CHRGR_ATTR_B = #{CHRGR_ATTR_B}</if>
+					   <if test="CHRGR_ATTR_C   !='' and CHRGR_ATTR_C   != null">AND A.CHRGR_ATTR_C = #{CHRGR_ATTR_C}</if>
+					   <if test="CHRGR_ATTR_D   !='' and CHRGR_ATTR_D   != null">AND A.CHRGR_ATTR_D = #{CHRGR_ATTR_D}</if>
+					   <if test="QA_USER_ID  	!='' and QA_USER_ID     != null">AND QRM.QA_USER_ID = #{QA_USER_ID}</if>
+			   		) ROW_TBL
+			    WHERE 1=1
+			    <if test="TEL_SEC_FROM	!='' and TEL_SEC_FROM 	!= null">AND ROW_TBL.TOT_TEL_SECND <![CDATA[>]]> #{TEL_SEC_FROM}</if>
+			    <if test="TEL_SEC_TO	!='' and TEL_SEC_TO	 	!= null">AND ROW_TBL.TOT_TEL_SECND <![CDATA[<=]]> #{TEL_SEC_TO}</if>
+				ORDER BY ROW_TBL.RCEPT_DT DESC, ROW_TBL.TEL_ID
+			) P1
+		LEFT  JOIN COM_CODE CC1 ON CC1.GROUP_CD = 'CRM002' AND CC1.CD = P1.CHNNL_DIV_CD
+		LEFT  JOIN COM_CODE CC2 ON CC2.GROUP_CD = 'CRM003' AND CC2.CD = P1.CNSLT_RSLT_CD
+		LEFT  JOIN CNSLT_TY_CODE CT1 ON CT1.CNSLT_TY_ID = P1.CNSLT_TY_XL
+		LEFT  JOIN CNSLT_TY_CODE CT2 ON CT2.CNSLT_TY_ID = P1.CNSLT_TY_L
+		LEFT  JOIN CNSLT_TY_CODE CT3 ON CT3.CNSLT_TY_ID = P1.CNSLT_TY_M
+		LEFT  JOIN CNSLT_TY_CODE CT4 ON CT4.CNSLT_TY_ID = P1.CNSLT_TY_S
+		LEFT  JOIN USER_INFO UI1 ON UI1.USER_ID = P1.USER_ID
+		LEFT  JOIN USER_INFO UI2 ON UI2.USER_ID = P1.QA_USER_ID
+		LEFT  JOIN PLT_USER_BLNG UBI1 ON UBI1.ATTR_DIV_CD = P1.CHRGR_ATTR_A AND UBI1.CUSTCO_ID = 'HKCTALKMNG' AND UBI1.ATTR_CD = 'A'
+		LEFT  JOIN PLT_USER_BLNG UBI2 ON UBI2.ATTR_DIV_CD = P1.CHRGR_ATTR_B AND UBI2.CUSTCO_ID = 'HKCTALKMNG' AND UBI2.ATTR_CD = 'B'
+		LEFT  JOIN PLT_USER_BLNG UBI3 ON UBI3.ATTR_DIV_CD = P1.CHRGR_ATTR_C AND UBI3.CUSTCO_ID = 'HKCTALKMNG' AND UBI3.ATTR_CD = 'C'
+		LEFT  JOIN PLT_USER_BLNG UBI4 ON UBI4.ATTR_DIV_CD = P1.CHRGR_ATTR_D AND UBI4.CUSTCO_ID = 'HKCTALKMNG' AND UBI4.ATTR_CD = 'D'
+</select>
+
+<!-- QA 평가 대상자 현황 (상담톡) 조회 -->
+<select id="selectRtnQAIN"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ET.TALK_USER_KEY
+		  	 , ET.TALK_CONTACT_ID
+           	, T4.DSPTCH_PRF_NM AS SNDR_KEY_NM
+			, T3.CD_NM 																									   AS TALK_STAT_NM 
+		    , ET.USER_NICK || '(' || ET.USER_ID || '/' || ET.USER_NM || ')' 	AS TRANS_USER_ID_NM /*최종상담사*/
+		    , CASE WHEN ET.ORI_TALK_CONTACT_ID IS NOT NULL
+			       THEN (SELECT USER_NICK || '(' || USER_ID || '/' || USER_NM || ')' 
+			               FROM PLT_USER 
+			              WHERE CUSTCO_ID = 'HKCTALKMNG'
+			                AND USER_ID = (SELECT USER_ID 
+			                                 FROM PLT_CHT_CUTT 
+			                                WHERE CUSTCO_ID = 'HKCTALKMNG'
+			                                  AND TALK_CONTACT_ID = ET.ORI_TALK_CONTACT_ID
+			                               )
+			             )
+			       ELSE ET.USER_NICK || '(' || ET.USER_ID || '/' || ET.USER_NM || ')'
+			   END                                                                                                             AS USER_ID_NM /*최초상담사*/
+           , (SELECT USER_NICK || '(' || USER_ID || '/' || USER_NM || ')'
+		        FROM PLT_USER 
+		       WHERE CUSTCO_ID = 'HKCTALKMNG'
+		         AND USER_ID = ET.QA_USER_ID
+		      ) AS QA_USER_ID_NM	 /*QA담당자*/
+		      
+		      
+           , ET.EXEC_RST_CD
+           , COALESCE(T2.CUSTOMER_NM, '알수없음')                                                    AS CUSTOMER_NM
+           
+           , COALESCE(T2.CUSTOMER_ID,ET.TALK_USER_KEY)                                            AS CUSTOMER_ID
+           , ET.CNSL_TYP_CD
+           , ET.CNSL_TYP_CD_2
+           , ET.CNSL_TYP_CD_3
+           , ET.CNSL_TYP_CD_4
+           , (SELECT CNSL_TYP_NM 
+                FROM PLT_CHT_CUTT_TYP T6
+                WHERE T6.CUSTCO_ID = 'HKCTALKMNG'
+                AND ET.CNSL_TYP_CD = T6.CNSL_TYP_CD
+                AND T6.CNSL_TYP_DIV_CD = '1') 													AS CNSL_TYP_NM
+           , (SELECT CNSL_TYP_NM 
+                FROM PLT_CHT_CUTT_TYP T7
+                WHERE T7.CUSTCO_ID = 'HKCTALKMNG'
+                AND ET.CNSL_TYP_CD_2 = T7.CNSL_TYP_CD
+                AND T7.CNSL_TYP_DIV_CD = '2') 													AS CNSL_TYP_NM_2
+           , (SELECT CNSL_TYP_NM 
+                 FROM PLT_CHT_CUTT_TYP T8
+                 WHERE T8.CUSTCO_ID = 'HKCTALKMNG'
+                 AND ET.CNSL_TYP_CD_3 = T8.CNSL_TYP_CD
+                 AND T8.CNSL_TYP_DIV_CD = '3') 													AS CNSL_TYP_NM_3
+           , (SELECT CNSL_TYP_NM 
+                 FROM PLT_CHT_CUTT_TYP T9
+                 WHERE T9.CUSTCO_ID = 'HKCTALKMNG'
+                 AND ET.CNSL_TYP_CD_4 = T9.CNSL_TYP_CD
+                 AND T9.CNSL_TYP_DIV_CD = '4') 													AS CNSL_TYP_NM_4
+           , CASE WHEN T5.INQRY_TYP_DIV_CD = '1'
+           	 THEN T5.INQRY_TYP_NM 
+             ELSE (SELECT INQRY_TYP_NM 
+             	   FROM PLT_CHT_INQ_TYP 
+             	   WHERE CUSTCO_ID = 'HKCTALKMNG'
+             	     AND INQRY_TYP_CD = T5.SPST_INQRY_TYP_CD) END          						AS TALK_INQRY_NM_1
+           , CASE WHEN T5.INQRY_TYP_DIV_CD = '1' 
+           	 THEN T5.INQRY_TYP_CD 
+             ELSE (SELECT INQRY_TYP_CD 
+             	   FROM PLT_CHT_INQ_TYP
+             	   WHERE CUSTCO_ID = 'HKCTALKMNG'
+             	     AND INQRY_TYP_CD = T5.SPST_INQRY_TYP_CD) END          						AS TALK_INQRY_CD_1
+           , CASE WHEN T5.INQRY_TYP_DIV_CD = '2' 
+           	 THEN T5.INQRY_TYP_NM
+           	 ELSE ''  END          															    AS TALK_INQRY_NM_2
+           , CASE WHEN T5.INQRY_TYP_DIV_CD = '2'
+           	 THEN T5.INQRY_TYP_CD
+           	 ELSE ''  END          																AS TALK_INQRY_CD_2
+           , ET.BOT_SERVICE_NM
+           , ET.TALK_QST
+           , ET.TALK_ANS
+           , ET.TALK_DIST_DT
+           , ET.TALK_START_DT
+           , COALESCE(ET.TALK_POST_DT,ET.TALK_END_DT) 											AS TALK_POST_DT
+			, ET.TALK_END_DT
+			, CASE WHEN ET.TALK_DIST_DT IS NULL OR ET.TALK_START_DT IS NULL OR ET.TALK_STAT_CD NOT IN ('14','20','21')
+		              THEN NULL
+		              ELSE        
+		                TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(ET.TALK_START_DT,'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_DIST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+		                TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(ET.TALK_START_DT,'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_DIST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+		                TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(ET.TALK_START_DT,'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_DIST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')   
+		              END                                                                                				   			   AS READY_TIME /*고객대기시간(상담중-대기중)*/
+		            
+		    , CASE WHEN ET.TALK_POST_DT IS NULL OR ET.TALK_START_DT IS NULL OR ET.TALK_STAT_CD NOT IN ('14','20','21')
+		           THEN NULL
+		           ELSE 
+		             TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(COALESCE(DECODE(TALK_POST_DT, '', TALK_END_DT, TALK_POST_DT), TALK_START_DT),'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+		             TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(COALESCE(DECODE(TALK_POST_DT, '', TALK_END_DT, TALK_POST_DT), TALK_START_DT),'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+		             TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(COALESCE(DECODE(TALK_POST_DT, '', TALK_END_DT, TALK_POST_DT), TALK_START_DT),'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')                 
+		          END                                                                                				   			   AS CHAT_TIME /*상담소요시간(후처리-상담중)*/
+		              
+		     , CASE WHEN ET.TALK_END_DT IS NULL OR ET.TALK_POST_DT IS NULL OR ET.TALK_STAT_CD NOT IN ('14','21')
+		            THEN NULL
+		            ELSE 
+		              TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(ET.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(DECODE(ET.TALK_POST_DT, '', ET.TALK_END_DT, ET.TALK_POST_DT), 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+		              TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(ET.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(DECODE(ET.TALK_POST_DT, '', ET.TALK_END_DT, ET.TALK_POST_DT), 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+		              TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(ET.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(DECODE(ET.TALK_POST_DT, '', ET.TALK_END_DT, ET.TALK_POST_DT), 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')                 
+		            END                                                                                				   			   AS AFTER_TIME /*후처리시간(상담이력저장-후처리)*/
+		            
+			 , CASE WHEN ET.TALK_END_DT IS NULL OR ET.TALK_START_DT IS NULL OR ET.TALK_STAT_CD NOT IN ('14','21')
+		      		THEN NULL
+		      		ELSE 
+			           TO_CHAR(TRUNC((CAST(TO_CHAR(TO_DATE(ET.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ':' ||  
+			           TO_CHAR(TRUNC(MOD((CAST(TO_CHAR(TO_DATE(ET.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ':' ||  
+			           TO_CHAR(MOD((CAST(TO_CHAR(TO_DATE(ET.TALK_END_DT,'YYYYMMDDHH24MISS') - TO_DATE(ET.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')                 
+		       		END                                                                                				   			   AS TOT_TIME /*총소요시간(상담이력저장-상담중)*/
+
+           , ET.TALK_TITLE
+           , ET.TALK_STAT_CD
+           , T2.CUSTOMER_MEMO
+		   , ET.SNDR_KEY
+		   , T2.REFERENCE_CUSTOMER_KEY                                                         AS REFERENCE_CUSTOMER_KEY
+		   , T2.TID                                                                            AS TID
+           , T5.INQRY_TYP_DIV_CD
+           , ET.BOT_CALL_ID                                                                    AS CALL_ID
+           , CASE WHEN T2.TID IS NULL OR T2.TID IS NULL THEN '비회원' ELSE '회원' END                 AS CUSTOMER_MEMBER
+           , (SELECT CD_NM 
+           	  FROM PLT_COMN_CD CT
+           	  WHERE CT.GROUP_CD = 'TALK005'
+           	  AND CT.CD=ET.EXEC_RST_CD
+           	  AND CT.CD_TYPE  = '1') 														   AS EXEC_RST_NM
+           , ET.USER_ID
+           , ET.QA_USER_ID
+           , ET.QA_SEQ
+           , COALESCE(ET.QA_NOTIN, 'N') 														   AS QA_NOTIN
+           , ET.QA_FIN
+           , ET.RCEPT_DATE
+  	FROM (
+        SELECT AFP.*
+             , B01.USER_NM
+             , B01.USER_NICK
+          FROM (
+            SELECT T1.QA_END,
+            	   T1.QA_USER_ID,
+            	   T1.QA_SEQ,
+            	   T1.QA_NOTIN,
+            	   T1.QA_FIN,
+            	   T1.QA_YM AS RCEPT_DATE,
+				   T2.* 
+			FROM (
+					SELECT * FROM PLT_CHT_QA_EVAL
+					WHERE CUSTCO_ID = 'HKCTALKMNG'
+					AND QA_YM = #{QA_YM}
+					AND QA_TY_CD = #{QA_TY_CD}
+					AND QA_SEQ = #{QA_SEQ}
+					AND QA_END = 'Y'
+					<if test="QA_FINCNT == ''">	AND QA_FIN	= 'Y'	</if>
+					<if test="USER_ID != ''">	AND USER_ID 	= #{USER_ID}	</if>
+					<if test="QA_USER_ID != ''">AND QA_USER_ID 	= #{QA_USER_ID} </if>
+					<choose>
+						<when test="QA_FINCNT eq 'NON_CNT'.toString()">
+							AND QA_USER_ID IS NULL
+						</when>
+					</choose>
+				)T1
+			INNER JOIN PLT_CHT_CUTT T2
+			ON T1.TALK_CONTACT_ID = T2.TALK_CONTACT_ID
+			WHERE T2.CUSTCO_ID = 'HKCTALKMNG'
+           ) AFP
+	      LEFT
+	      JOIN PLT_USER B01 
+	        ON AFP.USER_ID = B01.USER_ID
+	) ET   
+	
+	INNER JOIN PLT_COMN_CD T3
+	ON ET.TALK_STAT_CD = T3.CD
+	AND T3.GROUP_CD = 'TALK001'
+	INNER JOIN PLT_ASP_CUS_CHN T4
+	ON ET.SNDR_KEY = T4.SNDR_KEY
+	LEFT OUTER JOIN PLT_CUS T2
+	ON ET.TALK_USER_KEY = T2.TALK_USER_KEY
+	LEFT OUTER JOIN PLT_CHT_INQ_TYP T5
+	ON ET.TALK_INQRY_CD = T5.INQRY_TYP_CD
+	AND T5.CUSTCO_ID = 'HKCTALKMNG'
+</select>
+
+<!-- QA 대상자 현황 게시판 조회 -->
+<select id="selectRtnQABul"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+           P1.CNSLT_ID
+		 , P1.RCEPT_DATE
+         , P1.RCEPT_DT
+         , P1.CHNNL_DIV_CD
+		 , CC1.CD_NM AS CHNNL_DIV_NM
+         , CC2.CD_NM AS CNSLT_RSLT_NM
+         , CT1.CNSLT_TY_NM || '>' || CT2.CNSLT_TY_NM || '>' || CT3.CNSLT_TY_NM || '>' || CT4.CNSLT_TY_NM AS CNSLT_TY_NM
+         , P1.TEL_ID
+         , P1.TEL_TY_CD
+         , COALESCE(P1.TOT_TEL_SECND, 0) AS TOT_TEL_SECND
+         , P1.REC_NO
+         , P1.QA_SEQ
+		 , P1.QA_USER_ID
+		 , UI2.USER_NM AS QA_USER_NM
+         , P1.USER_ID
+         , UI1.USER_NM
+         , P1.CHRGR_ATTR_A
+		 , P1.CHRGR_ATTR_B
+		 , P1.CHRGR_ATTR_C
+		 , P1.CHRGR_ATTR_D
+		 , UBI1.ATTR_DIV_NM AS CHRGR_ATTR_ANAME
+		 , UBI2.ATTR_DIV_NM AS CHRGR_ATTR_BNAME
+		 , UBI3.ATTR_DIV_NM AS CHRGR_ATTR_CNAME
+		 , UBI4.ATTR_DIV_NM AS CHRGR_ATTR_DNAME
+		 , P1.FILE_GROUP_KEY
+         , PAG_TBL.*
+	  FROM (
+			SELECT 
+				   ROW_TBL.*
+			  FROM (
+					SELECT
+						   A.CNSLT_ID
+						 , A.RCEPT_DATE
+						 , A.RCEPT_DATE || A.RCEPT_TIME AS RCEPT_DT
+						 , B.TEL_ID
+						 , A.CHNNL_DIV_CD
+						 , CASE WHEN A.CHNNL_DIV_CD = 'IB' AND B.TEL_TY_CD = 'IB' THEN 'IB'
+			             	    WHEN A.CHNNL_DIV_CD = 'IB' AND B.TEL_TY_CD = 'OB' THEN '재통화'
+			             	 	WHEN A.CHNNL_DIV_CD = 'OB' THEN  
+				                    	CASE WHEN B.USER_ID = A.REGR_ID THEN 'OB' 
+				                       		 ELSE '재통화'
+			                     		 END    
+			                    WHEN A.CHNNL_DIV_CD = 'BULLETIN' AND B.TEL_TY_CD = 'OB' THEN '재통화' ELSE ' '
+			                END AS TEL_TY_CD						 
+						 , A.CNSLT_RSLT_CD
+						 , A.CNSLT_TY_XL
+						 , A.CNSLT_TY_L
+						 , A.CNSLT_TY_M
+						 , A.CNSLT_TY_S
+						 , A.CHRGR_ID AS USER_ID
+						 , A.CHRGR_ATTR_A
+						 , A.CHRGR_ATTR_B
+						 , A.CHRGR_ATTR_C
+						 , A.CHRGR_ATTR_D
+						 , B.TOT_TEL_SECND
+						 , B.REC_NO
+						 , QRM.QA_SEQ
+						 , QRM.QA_USER_ID
+						 , C.FILE_GROUP_KEY
+					  FROM CNSLT_INFO A
+					  LEFT JOIN TEL_HIST B ON A.CNSLT_ID = B.CNSLT_ID
+					  LEFT JOIN QA_EVAL_RESULT_MST QRM 
+					    ON A.CNSLT_ID = QRM.CNSLT_ID 
+					   AND QRM.QA_YM = LEFT(A.RCEPT_DATE, 6) 
+					   AND QRM.QA_SEQ = (SELECT MAX(QA_SEQ) FROM QA_EVAL_RESULT_MST WHERE QA_YM = LEFT(A.RCEPT_DATE, 6) AND QA_TY_CD = QRM.QA_TY_CD AND CHRGR_ID = A.CHRGR_ID AND CNSLT_ID = A.CNSLT_ID)
+					   AND QRM.TEL_ID = B.TEL_ID
+					  LEFT JOIN BULLETIN_INQRY_INFO C  ON A.INQRY_ID = C.INQRY_ID    
+					 WHERE A.RCEPT_DATE BETWEEN #{REQUEST_DT_FROM} AND #{REQUEST_DT_TO}
+					   AND A.CHNNL_DIV_CD = 'BULLETIN'
+					   AND A.CHRGR_ID = #{CHRGR_ID}
+					   <if test="CNSLT_RSLT_CD	!='' and CNSLT_RSLT_CD 	!= null">AND A.CNSLT_RSLT_CD = #{CNSLT_RSLT_CD}</if>
+					   <if test="CNSLT_TY_XL_CD !='' and CNSLT_TY_XL_CD != null">AND A.CNSLT_TY_XL = #{CNSLT_TY_XL_CD}</if>
+					   <if test="CNSLT_TY_L_CD  !='' and CNSLT_TY_L_CD  != null">AND A.CNSLT_TY_L = #{CNSLT_TY_L_CD}</if>
+					   <if test="CNSLT_TY_M_CD  !='' and CNSLT_TY_M_CD  != null">AND A.CNSLT_TY_M = #{CNSLT_TY_M_CD}</if>
+					   <if test="CNSLT_TY_S_CD  !='' and CNSLT_TY_S_CD  != null">AND A.CNSLT_TY_S = #{CNSLT_TY_S_CD}</if>
+					   <if test="CHRGR_ATTR_A   !='' and CHRGR_ATTR_A   != null">AND A.CHRGR_ATTR_A = #{CHRGR_ATTR_A}</if>
+					   <if test="CHRGR_ATTR_B   !='' and CHRGR_ATTR_B   != null">AND A.CHRGR_ATTR_B = #{CHRGR_ATTR_B}</if>
+					   <if test="CHRGR_ATTR_C   !='' and CHRGR_ATTR_C   != null">AND A.CHRGR_ATTR_C = #{CHRGR_ATTR_C}</if>
+					   <if test="CHRGR_ATTR_D   !='' and CHRGR_ATTR_D   != null">AND A.CHRGR_ATTR_D = #{CHRGR_ATTR_D}</if>
+					   <if test="QA_USER_ID  	!='' and QA_USER_ID     != null">AND QRM.QA_USER_ID = #{QA_USER_ID}</if>
+			   		) ROW_TBL
+			    WHERE 1 = 1
+			    <if test="TEL_SEC_FROM	!='' and TEL_SEC_FROM 	!= null">AND ROW_TBL.TOT_TEL_SECND <![CDATA[>]]> #{TEL_SEC_FROM}</if>
+			    <if test="TEL_SEC_TO	!='' and TEL_SEC_TO	 	!= null">AND ROW_TBL.TOT_TEL_SECND <![CDATA[<=]]> #{TEL_SEC_TO}</if>
+				ORDER BY ROW_TBL.RCEPT_DT DESC, ROW_TBL.TEL_ID
+			) P1
+		LEFT  JOIN COM_CODE CC1 ON CC1.GROUP_CD = 'CRM002' AND CC1.CD = P1.CHNNL_DIV_CD
+		LEFT  JOIN COM_CODE CC2 ON CC2.GROUP_CD = 'CRM003' AND CC2.CD = P1.CNSLT_RSLT_CD
+		LEFT  JOIN CNSLT_TY_CODE CT1 ON CT1.CNSLT_TY_ID = P1.CNSLT_TY_XL
+		LEFT  JOIN CNSLT_TY_CODE CT2 ON CT2.CNSLT_TY_ID = P1.CNSLT_TY_L
+		LEFT  JOIN CNSLT_TY_CODE CT3 ON CT3.CNSLT_TY_ID = P1.CNSLT_TY_M
+		LEFT  JOIN CNSLT_TY_CODE CT4 ON CT4.CNSLT_TY_ID = P1.CNSLT_TY_S
+		LEFT  JOIN USER_INFO UI1 ON UI1.USER_ID = P1.USER_ID
+		LEFT  JOIN USER_INFO UI2 ON UI2.USER_ID = P1.QA_USER_ID
+		LEFT  JOIN PLT_USER_BLNG UBI1 ON UBI1.ATTR_DIV_CD = P1.CHRGR_ATTR_A AND UBI1.CUSTCO_ID = 'HKCTALKMNG' AND UBI1.ATTR_CD = 'A'
+		LEFT  JOIN PLT_USER_BLNG UBI2 ON UBI2.ATTR_DIV_CD = P1.CHRGR_ATTR_B AND UBI2.CUSTCO_ID = 'HKCTALKMNG' AND UBI2.ATTR_CD = 'B'
+		LEFT  JOIN PLT_USER_BLNG UBI3 ON UBI3.ATTR_DIV_CD = P1.CHRGR_ATTR_C AND UBI3.CUSTCO_ID = 'HKCTALKMNG' AND UBI3.ATTR_CD = 'C'
+		LEFT  JOIN PLT_USER_BLNG UBI4 ON UBI4.ATTR_DIV_CD = P1.CHRGR_ATTR_D AND UBI4.CUSTCO_ID = 'HKCTALKMNG' AND UBI4.ATTR_CD = 'D'
+</select>
+
+<!-- QA평가 여부 갯수 -->
+<select id="selectRtnQaEvalCnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT A.QA_NOTING_CNT
+		   , B.QA_ING_CNT
+	   FROM (SELECT COUNT(*) AS QA_NOTING_CNT
+		       FROM PLT_CHT_QA_EVAL
+			   WHERE CUSTCO_ID = 'HKCTALKMNG'
+			   AND QA_YM = #{QA_YM}
+			   AND QA_TY_CD = #{QA_TY_CD}
+			   AND QA_SEQ = #{QA_SEQ}
+		       AND QA_USER_ID IS NULL
+	       )A,
+	       (SELECT COUNT(*) AS QA_ING_CNT
+		       FROM PLT_CHT_QA_EVAL
+			   WHERE CUSTCO_ID = 'HKCTALKMNG'
+			   AND QA_YM = #{QA_YM}
+			   AND QA_TY_CD = #{QA_TY_CD}
+			   AND QA_SEQ = #{QA_SEQ}
+			   AND QA_USER_ID IS NOT NULL
+	  	   )B
+</select>
+
+
+<!-- 평가마감취소 -->
+<update id="processRtnCancel" parameterType= "java.util.HashMap" >
+UPDATE PLT_CHT_QA_EVAL
+SET QA_FIN = ''
+WHERE TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+</update>
+
+</mapper>

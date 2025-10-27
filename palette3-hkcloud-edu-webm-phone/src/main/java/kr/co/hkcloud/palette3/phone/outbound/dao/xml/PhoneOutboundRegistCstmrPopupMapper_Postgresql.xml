@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <!-- 상담유형 관리 -->
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundRegistCstmrPopupMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="HOUSE_TEL_NO" column="HOUSE_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CO_TEL_NO" column="CO_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="MOBIL_NO" column="MOBIL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CARD_NO" column="CARD_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="ACT_NO" column="ACT_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+
+	<select id="selectObndCam" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		/* selectObndCam 아웃바운드 조회 팝업 */
+		<![CDATA[
+			SELECT 
+	            A.CAM_ID
+	            ,A.CAM_NM
+				,A.CENT_TY	/* 센터구분 */
+				,A.CAM_TY 	/* 캠페인 구분 */
+	            ,A.BUSI_TY	/* 업무 구분 */
+	            ,A.FISH_YN 	/* 완료 구분 */
+	       ]]>     
+             <!-- <if test='CENT_TY.equals("G")'> -->
+		        /* 공제 */
+			  ,( SELECT C.CD_NM   
+			  	FROM PLT_COMN_CD C		
+			  	WHERE C.GROUP_CD = (CASE WHEN LENGTH(A.CAM_TY) >= 3 THEN 'RE010' ELSE 'OU001' END)
+			  	AND C.CD = A.CAM_TY
+			  ) AS CAM_TY_NM
+              ,(SELECT C.CD_NM FROM PLT_COMN_CD C 
+			   WHERE GROUP_CD = 'OU002'
+			   AND C.CD = A.BUSI_TY) AS BUSI_TY_NM
+		     <!-- </if>
+	 		  <if test='CENT_TY.equals("E")'> 
+			     ,( SELECT c.CD_NM   
+				  	FROM PLT_COMN_CD c		
+				  	WHERE c.GROUP_CD = 'TWB507' 
+				  	AND c.CD = A.CAM_TY
+				  ) AS CAM_TY_NM
+			     ,(SELECT c.CD_NM FROM PLT_COMN_CD c 
+				   WHERE c.GROUP_CD = 'TWB508'
+				   AND c.CD = A.BUSI_TY) AS BUSI_TY_NM
+			  </if> -->
+	        <![CDATA[    
+	            ,A.CAM_BEGIN_DATE
+	            ,A.CAM_BEGIN_TIME 
+	            ,A.CAM_EOT_DATE
+	            ,A.CAM_EOT_TIME 
+	            ,A.QUEST_ID  
+	            ,A.FISH_DATE
+	        FROM PLT_PHN_CAMP A
+	        WHERE A.USE_YN = 'Y'
+	     	AND 
+			  ( 
+			   A.CAM_BEGIN_DATE <= REPLACE(REPLACE(#{START_OBND_DATE},'/'),'-') AND A.CAM_BEGIN_DATE <= REPLACE(REPLACE(#{END_OBND_DATE},'/'),'-') 
+			   AND A.CAM_EOT_DATE >= REPLACE(REPLACE(#{START_OBND_DATE},'/'),'-') AND A.CAM_EOT_DATE >= REPLACE(REPLACE(#{END_OBND_DATE},'/'),'-') 
+			   OR (A.CAM_BEGIN_DATE BETWEEN REPLACE(REPLACE(#{START_OBND_DATE},'/'),'-') AND REPLACE(REPLACE(#{END_OBND_DATE},'/'),'-'))
+			   OR (A.CAM_EOT_DATE BETWEEN REPLACE(REPLACE(#{START_OBND_DATE},'/'),'-') AND REPLACE(REPLACE(#{END_OBND_DATE},'/'),'-'))
+			  )
+	     	]]>
+	    	<!-- 
+	     <if test="CENT_TY !='' and CENT_TY != null"> 
+		 	 <![CDATA[  
+		 	 	AND A.CENT_TY = #{CENT_TY}
+		 	 ]]>  
+		 </if>
+		  -->
+	     <if test="CAM_TY !='' and CAM_TY != null"> 
+		 	 <![CDATA[  
+		 	 	AND A.CAM_TY = #{CAM_TY}
+		 	 ]]>  
+		 </if>
+	     <if test="FISH_YN !='' and FISH_YN != null"> 
+		 	 <![CDATA[  
+		 	 	AND A.FISH_YN = #{FISH_YN}
+		 	 ]]>  
+		 </if>
+	     <if test="BUSI_TY !='' and BUSI_TY != null"> 
+		 	 <![CDATA[  
+		 	 	AND A.BUSI_TY = #{BUSI_TY}
+		 	 ]]>  
+		 </if>
+	     <if test="CAM_NM !='' and CAM_NM != null"> 
+		 	 <![CDATA[  
+		 	 	AND A.CAM_NM LIKE ('%'||#{CAM_NM}||'%')
+		 	 ]]>  
+		 </if>
+	     <if test="CAM_ID !='' and CAM_ID != null"> 
+		 	 <![CDATA[  
+		 	 	AND A.CAM_ID = #{CAM_ID}
+		 	 ]]>  
+		 </if>
+	        
+	        ORDER BY A.REG_DTIM ASC, A.CAM_BEGIN_DATE ASC, A.CAM_EOT_DATE ASC
+		
+	</select>
+	
+	
+	<!-- 상담원 배분 팝업 시 아웃바운드 조회 -->
+	<select id="selectObndPopList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		<![CDATA[
+			/* selectObndPopList 상담원 배분 팝업 시 아웃바운드 조회 */
+			SELECT * 
+				  FROM (
+    	    			  SELECT
+						 	    CAM_ID
+							  , CAM_NM
+							  /*, CENT_TY    */
+							  , CAM_BEGIN_DATE
+							  , FISH_DATE
+							  , CAM_EOT_DATE
+						  FROM PLT_PHN_CAMP
+						  WHERE USE_YN='Y'
+					      AND 
+					      (
+					       (CAM_BEGIN_DATE <= REPLACE(#{START_OBND_DATE},'/') AND CAM_BEGIN_DATE >= REPLACE(#{END_OBND_DATE},'/'))
+						  	OR
+						   (CAM_EOT_DATE >= REPLACE(#{START_OBND_DATE},'/') AND CAM_BEGIN_DATE >= REPLACE(#{END_OBND_DATE},'/'))
+						  )
+		]]>
+		
+					<!-- <if test="CENT_TY !='' and CENT_TY != null"> 
+					  	<![CDATA[	AND A.CENT_TY  =  #{CENT_TY}	   ]]>
+					</if>  -->
+					<if test="CAM_TY !='' and CAM_TY != null"> 
+					  	<![CDATA[	AND A.CAM_TY  =  #{CAM_TY}	   ]]>
+					</if>
+					<if test="CAM_NM !='' and CAM_NM != null"> 
+					  	<![CDATA[	AND A.CAM_NM  LIKE  ('%'||#{CAM_NM}||'%')	   ]]>
+					</if>
+		<![CDATA[
+					ORDER BY CAM_BEGIN_DATE DESC
+					     
+                 ) WHERE ROWNUM <= 200
+	 	]]>
+	</select>
+
+	
+</mapper>

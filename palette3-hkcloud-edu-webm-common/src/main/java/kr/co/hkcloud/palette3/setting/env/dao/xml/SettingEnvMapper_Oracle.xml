@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.env.dao.SettingEnvMapper">
+  <select id="custcoSettingList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /*고객사별 환경설정 목록(템플릿변경, 고객핵심정보, 콜밸, 예약콜 등등) 조회 (kr.co.hkcloud.palette3.setting.env.dao.SettingEnvMapper.custcoSettingList)*/
+		PEA.EXPSN_ATTR_NM
+		, UPPER(PEA.EXPSN_ATTR_COL_ID) AS EXPSN_ATTR_COL_ID
+		, PCS.ATTR_VL
+		, PEA.EXPSN_ATTR_EXPLN
+		, PEA.DATA_TYPE_CD
+		, PEA.GROUP_CD_ID
+	FROM PLT_CUSTCO_STNG PCS
+	LEFT OUTER JOIN PLT_EXPSN_ATTR PEA ON PEA.ATTR_ID = PCS.ATTR_ID
+	WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}
+	AND PEA.SE = 'ENV'
+	AND PEA.DEL_YN = 'N'
+	AND PEA.USE_YN = 'Y'
+	AND PEA.BSC_PVSN_ATTR_YN = 'N'
+	AND PEA.SCRN_EXPSR_YN = 'Y'
+	ORDER BY PCS.CUSTCO_ID, PEA.SORT_ORD
+  </select>
+  
+  <select id="selectSettingEnv"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /*고객사별 환경설정(템플릿변경, 고객핵심정보, 콜밸, 예약콜 등등) 조회 (kr.co.hkcloud.palette3.setting.env.dao.SettingEnvMapper.selectSettingEnv)*/
+           CUSTCO_ID
+    <foreach collection="EXPSN_ATTR_LIST" item="ATTR" open="" separator="" close="" >
+		<choose>
+			<when test='ATTR.EXPSN_ATTR_COL_ID == "ENV_TMPL_TP"'>
+				, CASE WHEN ENV_TMPL_TP = 'DEFAULT' THEN '1' WHEN ENV_TMPL_TP ='ECOMMERCE' THEN '2' ELSE '1' END AS ${ATTR.EXPSN_ATTR_COL_ID}
+			</when>
+			<otherwise>
+				, CASE WHEN ${ATTR.EXPSN_ATTR_COL_ID} = 'N' THEN 'false' ELSE 'true' END AS ${ATTR.EXPSN_ATTR_COL_ID}
+			</otherwise>
+		</choose>
+	</foreach>
+	FROM (
+		SELECT PCS.CUSTCO_ID, PCS.ATTR_VL, PEA.EXPSN_ATTR_COL_ID
+		FROM PLT_CUSTCO_STNG PCS INNER JOIN PLT_EXPSN_ATTR PEA ON PCS.ATTR_ID = PEA.ATTR_ID AND SE='ENV'
+			AND PEA.CUSTCO_ID = #{CUSTCO_ID}
+			AND PEA.SE = 'ENV'
+			AND PEA.DEL_YN = 'N'
+			AND PEA.USE_YN = 'Y'
+			AND PEA.BSC_PVSN_ATTR_YN = 'N'
+			AND PEA.SCRN_EXPSR_YN = 'Y'
+	)
+	PIVOT(
+		MAX(ATTR_VL) FOR EXPSN_ATTR_COL_ID IN
+		<foreach collection="EXPSN_ATTR_LIST" item="ATTR"  open="(" separator="," close=")" >
+			#{ATTR.EXPSN_ATTR_COL_ID} AS ${ATTR.EXPSN_ATTR_COL_ID}
+		</foreach>
+	)
+  </select>
+  <update id="updateSettingEnv"  parameterType= "java.util.HashMap">
+<!--    UPDATE PLT_CUSTCO_STNG /* 고객사별 환경설정(템플릿변경, 고객핵심정보, 콜밸, 예약콜 등등) 수정 (kr.co.hkcloud.palette3.setting.env.dao.SettingEnvMapper.selectSettingEnv)*/-->
+<!--       SET ATTR_VL = #{ATTR_VL}-->
+<!--     WHERE CUSTCO_ID = #{CUSTCO_ID}-->
+<!--       AND ATTR_ID = #{ATTR_ID}-->
+	UPDATE PLT_CUSTCO_STNG /* 고객사별 환경설정(템플릿변경, 고객핵심정보, 콜밸, 예약콜 등등) 수정 (kr.co.hkcloud.palette3.setting.env.dao.SettingEnvMapper.updateSettingEnv)*/
+		SET ATTR_VL = #{ATTR_VL}
+	WHERE CUSTCO_ID = #{CUSTCO_ID}
+		AND EXISTS (SELECT 1 FROM PLT_EXPSN_ATTR WHERE ATTR_ID = PLT_CUSTCO_STNG.ATTR_ID AND SE = 'ENV' AND BSC_PVSN_ATTR_YN = 'N' AND EXPSN_ATTR_COL_ID = #{EXPSN_ATTR_COL_ID})
+  </update>
+</mapper>

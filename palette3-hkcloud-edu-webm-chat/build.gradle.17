@@ -1,0 +1,18 @@
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+// palette-hkcloud-edu-chat
+//
+////////////////////////////////////////////////////////////////////////////////////////////
+jar {
+    enabled = true
+}
+
+bootJar {
+    enabled = false
+}
+
+dependencies {
+    implementation fileTree(dir: '../libs', include: '*.jar')
+    implementation project(":palette3-hkcloud-edu-webm-common")
+    implementation project(":palette3-hkcloud-edu-webm-v3")
+}

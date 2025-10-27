@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.center.dao.PhoneCenterSMSManageMapper">
+	<!-- 조회 조건 용도 -->
+	<sql id="search">
+		<!-- 센터구분 -->
+		<if test="CENT_TY !='' and CENT_TY != null">
+			AND A.CENT_TY = #{CENT_TY}
+		</if>
+		<!-- SMS유형 -->
+		<if test="SMS_TY !='' and SMS_TY != null">
+			AND SMS_TY = #{SMS_TY}
+		</if>
+		<!-- SMS템플릿 -->
+		<if test="SMS_TMPLT !='' and SMS_TMPLT != null">
+			AND SMS_TMPLT = #{SMS_TMPLT}
+		</if>
+		<!-- SMS문구 -->
+		<if test="SMS_CON !='' and SMS_CON != null">
+			<!-- 고객명 -->
+			<if test="SMS_CON == '01'">
+				AND CUST_NM_ADD_YN = 'Y'
+			</if>
+			<!-- 조합 -->
+			<if test="SMS_CON == '02'">
+				AND CU_INFO_ADD_YN = 'Y'
+			</if>
+			<!-- 코드 -->
+			<if test="SMS_CON == '03'">
+				AND CODE_INFO_ADD_YN = 'Y'
+			</if>
+		</if>
+		<!-- 사용여부 -->
+		<if test="USE_YN !='' and USE_YN != null">
+			AND A.USE_YN = #{USE_YN}
+		</if>
+		<!-- 제목 -->
+		<if test="TIT !='' and TIT != null">
+			AND TIT LIKE '%' || #{TIT} || '%'
+		</if>
+		<!-- SMS번호 -->
+		<if test="SMS_NO !='' and SMS_NO != null">
+			AND SMS_NO = #{SMS_NO}
+		</if>		
+		<!-- 즐겨찾기 -->
+		<if test="SEL_SCR_DISP_YN !='' and SEL_SCR_DISP_YN != null">
+			<if test="SEL_SCR_DISP_YN == '01'">
+				AND SCR_DISP_YN = 'Y'
+			</if>
+			<if test="SEL_SCR_DISP_YN == '02'">
+				AND (SCR_DISP_YN = '' OR SCR_DISP_YN IS NULL)
+			</if>
+		</if>
+	</sql>
+
+	<!-- SMS관리 건수 조회 -->
+	<select id="selectSmsMngCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectSmsMngCnt */
+		SELECT COUNT(1) AS CNT 
+		  FROM PLT_PHN_SMS_TMPL
+		 WHERE CENT_TY = #{CENT_TY}
+		   AND SMS_TY = #{SMS_TY}
+		   AND SMS_TMPLT = #{SMS_TMPLT}
+		   <if test="SMS_NO !='' and SMS_NO != null">
+		   		AND SMS_NO != #{SMS_NO}
+		   </if>
+	</select>
+	
+	<!-- SMS관리 목록 조회 -->
+	<select id="selectSmsMngList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectSmsMngList */
+		SELECT ROW_TBL.*
+	         , PAG_TBL.*
+	     FROM (
+		SELECT A.SMS_NO           	/* SMS번호 */
+		     , A.CENT_TY          	/* 센터구분 */
+		     , B.CD_NM AS CENT_TY_NM	/* 센터구분명 */
+		     , A.SMS_TY           	/* SMS유형 */
+		     , C.CD_NM AS SMS_TY_NM	/* SMS유형명 */
+		     , A.SMS_TMPLT			/* SMS템플릿 */
+		     , D.CD_NM AS SMS_TMPLT_NM	/* SMS템플릿명 */
+		     , A.TIT              	/* 제목 */
+		     , A.SMS_CNTN         	/* SMS내용 */
+		     , A.SMS_TOT_SEND_YN	/* SMS일괄전송여부 */
+		     , A.CUST_NM_ADD_YN		/* 고객명추가여부 */
+		     , A.CU_INFO_ADD_YN		/* 조합정보추가여부 */
+		     , A.CODE_INFO_ADD_YN	/* 코드정보추가여부 */
+		     , A.USE_YN           	/* 사용여부 */
+		     , A.REG_DTIM         	/* 등록일시 */
+		     , A.REG_MAN          	/* 등록자 */
+		     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.REG_MAN) AS REG_MAN_NM /* 등록자명 */
+		     , A.CHNG_DTIM        	/* 변경일시 */
+		     , A.CHNG_MAN        	/* 변경자 */
+		     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.CHNG_MAN) AS CHNG_MAN_NM /* 변경자명 */
+		     , A.SCR_DISP_YN        	/* 즐겨찾기 */
+		  FROM PLT_PHN_SMS_TMPL A
+		  LEFT OUTER JOIN PLT_COMN_CD B
+		    ON A.CENT_TY = B.CD
+		   AND B.USE_YN = 'Y'
+		   AND B.CD != '****'
+		   AND B.GROUP_CD = 'TWB500'
+		  LEFT OUTER JOIN PLT_COMN_CD C
+		    ON A.SMS_TY = C.CD
+		   AND C.USE_YN = 'Y'
+		   AND C.CD != '****'
+		   AND C.GROUP_CD = DECODE(A.CENT_TY, 'G', 'TWB503', 'C', 'TWB511', 'E', 'TWB512')
+		  LEFT OUTER JOIN PLT_COMN_CD D
+		    ON A.SMS_TMPLT = D.CD
+		   AND D.USE_YN = 'Y'
+		   AND D.CD != '****'
+		   AND D.GROUP_CD = 'RE020'
+		 <where>
+		 	<include refid="search" />
+		 </where>
+	 	ORDER BY SMS_NO DESC
+	 	) ROW_TBL
+		, (
+				SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+				  FROM PLT_PHN_SMS_TMPL A
+				  <where>
+				 	 <include refid="search" />
+				  </where> 
+		) PAG_TBL
+	</select>
+	
+	<!-- SMS관리 등록 -->
+	<insert id="insertSmsMng" parameterType="java.util.HashMap">
+		<!-- <selectKey keyProperty="SMS_NO" resultType="int" order="BEFORE">
+		    SELECT COALESCE(MAX(TO_NUMBER(SMS_NO)), 0)+1
+		      FROM PLT_PHN_SMS_TMPL
+		</selectKey> -->
+		/* insertSmsMng */
+		INSERT 
+		      INTO PLT_PHN_SMS_TMPL(
+		           SMS_NO           /* SMS번호 */
+		         , CENT_TY          /* 센터구분 */
+		         , SMS_TY           /* SMS유형 */
+		         , SMS_TMPLT		/* SMS템플릿 */
+		         , TIT              /* 제목 */
+		         , SMS_CNTN         /* SMS내용 */
+		         , SMS_TOT_SEND_YN	/* SMS일괄전송여부 */
+		         , CUST_NM_ADD_YN	/* 고객명추가여부 */
+		         , CU_INFO_ADD_YN	/* 조합정보추가여부 */
+		         , CODE_INFO_ADD_YN	/* 코드정보추가여부 */
+		         , USE_YN             /* 사용여부 */
+		         , REG_DTIM         /* 등록일시 */
+		         , REG_MAN          /* 등록자 */
+		         , SCR_DISP_YN    /* 즐겨찾기 */
+		         )
+		    VALUES(#{SEQ}
+		         , #{CENT_TY}
+		         , #{SMS_TY}
+		         , #{SMS_TMPLT}
+		         , #{TIT}
+		         , #{SMS_CNTN}
+		         , #{SMS_TOT_SEND_YN}
+		         , #{CUST_NM_ADD_YN}
+		         , #{CU_INFO_ADD_YN}
+		         , #{CODE_INFO_ADD_YN}
+		         , #{USE_YN}
+		         , #{REG_DTIM}
+		         , #{REG_MAN}
+		         , #{SCR_DISP_YN}
+		         )
+	</insert>
+	
+	
+	
+	<!-- SMS관리 수정 -->
+	<update id="updateSmsMng" parameterType="java.util.HashMap">
+		/* updateSmsMng */
+		UPDATE PLT_PHN_SMS_TMPL
+		   SET CENT_TY = #{CENT_TY}         			/* 센터구분 */
+		     , SMS_TY = #{SMS_TY}           			/* SMS유형 */
+		     , SMS_TMPLT = #{SMS_TMPLT}           		/* SMS템플릿 */
+		     , TIT = #{TIT}              				/* 제목 */
+		     , SMS_CNTN = #{SMS_CNTN}         			/* SMS내용 */
+		     , SMS_TOT_SEND_YN = #{SMS_TOT_SEND_YN}		/* SMS일괄전송여부  */
+		     , CUST_NM_ADD_YN = #{CUST_NM_ADD_YN}		/* 고객명추가여부  */
+		     , CU_INFO_ADD_YN = #{CU_INFO_ADD_YN}		/* 조합정보추가여부  */
+		     , CODE_INFO_ADD_YN = #{CODE_INFO_ADD_YN}	/* 코드정보추가여부  */
+		     , USE_YN = #{USE_YN}           			/* 사용여부 */
+		     , CHNG_DTIM = #{CHNG_DTIM}        			/* 변경일시 */
+		     , CHNG_MAN = #{CHNG_MAN}         			/* 변경자 */
+		     , SCR_DISP_YN = #{SCR_DISP_YN}         		/* 즐겨찾기 */
+		 WHERE SMS_NO = #{SMS_NO}
+	</update>
+	
+	<!-- SMS관리 삭제 -->
+	<delete id="deleteSmsMng" parameterType="java.util.HashMap">
+		/* deleteSmsMng */
+		DELETE FROM PLT_PHN_SMS_TMPL
+		 WHERE SMS_NO = #{SMS_NO}
+	</delete>
+	
+	<!-- SMS전송 코드 목록 조회 -->
+	<select id="selectSmsSndCdList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectSmsSndCdList */
+		SELECT GROUP_CD	/* 그룹코드 */
+		     , (SELECT CD_NM FROM PLT_COMN_CD WHERE A.GROUP_CD = ETC_INFO01) AS GROUP_CD_NM	/* 그룹코드명 */
+		     , CD		/* 코드 */
+		     , CD_NM 	/* 코드명 */
+		  FROM PLT_COMN_CD A
+		 WHERE USE_YN = 'Y'
+		   AND CD != '****'
+		<!-- 센터구분 -->
+		<if test="CENT_TY !='' and CENT_TY != null">
+			<!-- 공제지원센터 -->
+			<if test='CENT_TY == "G"'>
+				AND GROUP_CD IN ('TWB516', 'TWB518')
+			</if>
+			<!-- 업무지원센터 -->
+			<if test='CENT_TY == "E"'>
+				AND GROUP_CD IN ('TWB517', 'TWB519')
+			</if>
+		</if>
+		<!-- 그룹코드 -->
+		<if test="GROUP_CD !='' and GROUP_CD != null">
+			AND GROUP_CD = #{GROUP_CD}
+		</if>
+		 ORDER BY GROUP_CD, SORT_ORD
+	</select>
+	
+	<!-- SMS발송이력 등록 -->
+	<insert id="insertSmsSendHist" parameterType="java.util.HashMap">
+
+	</insert>
+	
+	<!-- SMS 즐겨찾기 목록 조회 -->
+	<select id="selectScrDispList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectScrDispList */
+		SELECT SMS_NO AS CD,	/* SMS번호 */
+		       	   TIT AS CD_NM		/* 제목 */
+		FROM PLT_PHN_SMS_TMPL
+		WHERE CENT_TY = #{CENT_TY}
+		    AND SCR_DISP_YN = 'Y'
+	</select>
+</mapper>

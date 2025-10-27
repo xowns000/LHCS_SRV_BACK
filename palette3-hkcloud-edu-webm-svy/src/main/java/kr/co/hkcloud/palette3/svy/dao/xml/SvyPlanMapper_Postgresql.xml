@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.svy.dao.SvyPlanMapper">
+	<!--  설문계획 조회 -->
+	<select id="selectListPlan" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+		SELECT	 /* selectListPlan 설문계획 조회 */
+				 ROW_NUMBER() OVER(ORDER BY A.REG_DT DESC) AS ROW_NUMBER
+				,A.SRVY_ID
+				,A.CUSTCO_ID
+				,A.SRVY_YR
+				,A.SRVY_YR || '년' AS SRVY_YR_NM
+				,A.SRVY_SE_CD
+				,B.CD_NM AS SRVY_SE_NM
+				,A.STTS_CD
+				,A.PSTG_YN
+				,C.CD_NM AS STTS_NM
+				,A.SRVY_NM
+				,A.SRVY_BGNG_DT
+				,A.SRVY_END_DT
+				,A.GOAL_PSNAL_DSGN_YN
+				,COALESCE(A.GOAL_PSNAL::TEXT,'-') AS GOAL_PSNAL
+				,A.SRVY_EXPLN
+				,A.REG_DT
+				,D.USER_NM AS RGTR_ID
+				,A.TRGT_DSGN_YN
+				,(SELECT COUNT(X.SRVY_ID) FROM PLT_SRVY_QITEM_GROUP X WHERE X.SRVY_ID = A.SRVY_ID AND X.DEL_YN = 'N' AND X.HEAD_YN = 'N') AS GRP_CNT
+				,(SELECT COUNT(SH.SRVY_STTS_HSTRY_ID) FROM PLT_SRVY_STTS_HSTRY SH WHERE SH.SRVY_ID = A.SRVY_ID) AS HSTRY_CNT
+				,E.PRCS_NM
+				,E.PRCS_DT
+		FROM	PLT_SRVY	A
+		LEFT OUTER JOIN PLT_COMM_CD B
+			ON A.SRVY_SE_CD = B.CD_ID AND B.GROUP_CD_ID = 'SUVY_CL' AND B.CUSTCO_ID = A.CUSTCO_ID
+		LEFT OUTER JOIN PLT_COMM_CD C
+			ON A.STTS_CD = C.CD_ID AND C.GROUP_CD_ID = 'PROG_ST' AND C.CUSTCO_ID = A.CUSTCO_ID
+		LEFT OUTER JOIN PLT_USER D
+			ON A.RGTR_ID = D.USER_ID
+		LEFT OUTER JOIN (
+			SELECT IPSSH.SRVY_STTS_HSTRY_ID, IPSSH.SRVY_ID, IPSSH.RGTR_ID AS PRCS_ID, IPSSH.REG_DT PRCS_DT, IPU.USER_NM AS PRCS_NM
+			FROM PLT_SRVY_STTS_HSTRY IPSSH
+			JOIN PLT_USER IPU ON IPU.USER_ID = IPSSH.RGTR_ID
+		) E ON E.SRVY_ID = A.SRVY_ID AND E.SRVY_STTS_HSTRY_ID=(SELECT MAX(SRVY_STTS_HSTRY_ID) FROM PLT_SRVY_STTS_HSTRY WHERE SRVY_ID=A.SRVY_ID)
+		WHERE 	A.CUSTCO_ID 	= #{CUSTCO_ID}::INTEGER
+		AND 	A.DEL_YN 		= 'N'
+		<if test="SRVY_ID != null and SRVY_ID != ''">
+			AND 	A.SRVY_ID = #{SRVY_ID}::INT
+		</if>
+		<if test="SRVY_YR != null and SRVY_YR != ''">
+			AND 	A.SRVY_YR = #{SRVY_YR}
+		</if>
+		<if test="STTS_CD != null and STTS_CD != ''">
+			AND 	A.STTS_CD = #{STTS_CD}
+		</if>
+		<if test="SRVY_SE_CD != null and SRVY_SE_CD != ''">
+			AND 	A.SRVY_SE_CD = #{SRVY_SE_CD}
+		</if>
+		<if test="SRVY_NM != null and SRVY_NM != ''">
+			AND 	A.SRVY_NM LIKE '%' || #{SRVY_NM} || '%'
+		</if>
+
+	</select>
+
+	<!--  설문계획 저장 -->
+	<insert id="insertListPlan" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY(
+				/* insertListPlan 설문계획 저장 */
+				SRVY_ID 				-- 설문_ID
+				,CUSTCO_ID 				-- 고객사_ID
+				,SRVY_YR 				-- 설문_연도
+				,SRVY_SE_CD 			-- 설문_구분_코드
+				,STTS_CD 				-- 진행_상태_코드
+				,SRVY_NM 				-- 설문_명
+				,SRVY_BGNG_DT 			-- 설문_시작_일시
+				,SRVY_END_DT 			-- 설문_종료_일시
+				,GOAL_PSNAL_DSGN_YN 	-- 목표_인원_지정_여부
+				,GOAL_PSNAL 			-- 목표_인원
+				,SRVY_EXPLN 			-- 설문_설명
+				,REG_DT 				-- 등록_일시
+				,RGTR_ID 				-- 등록자_ID
+				,MDFCN_DT 				-- 수정일시
+				,MDFR_ID 				-- 수정자
+				,TRGT_DSGN_YN 			-- 대상_지정_여부
+				,PSTG_YN 				-- 게시_여부
+				,DEL_YN 				-- 삭제여부
+				,PSNAL_LMT_SBMSN_STNG_YN -- 인원_제한_제출_설정_여부
+				,CLCT_AGRE_USE_YN 		-- 개인정보수집
+				,SRVY_YMD_INDCT_YN 		-- 설문일자 표시여부
+		) VALUES (
+				#{SRVY_ID}::INTEGER
+				,#{CUSTCO_ID}::INTEGER
+				,#{SRVY_YR}
+				,#{SRVY_SE_CD}
+				,#{STTS_CD}
+				,#{SRVY_NM}
+				,#{SRVY_BGNG_DT}
+				,#{SRVY_END_DT}
+				,#{GOAL_PSNAL_DSGN_YN}
+				,(CASE WHEN #{GOAL_PSNAL_DSGN_YN} = 'Y' THEN #{GOAL_PSNAL}::INTEGER ELSE NULL END)
+				,#{SRVY_EXPLN}
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,#{TRGT_DSGN_YN}
+				,#{PSTG_YN}
+				,'N'
+				,#{GOAL_PSNAL_DSGN_YN}
+				,(CASE WHEN #{TRGT_DSGN_YN} = 'Y' THEN 'N' ELSE 'Y' END)
+				,'Y'
+		)
+	</insert>
+
+	<!--  계획수정 -->
+	<update id="updateListPlan" parameterType= "java.util.HashMap">
+		UPDATE  /* updateListPlan 계획수정 */
+				PLT_SRVY
+		SET   	SRVY_YR = #{SRVY_YR}
+				,SRVY_SE_CD = #{SRVY_SE_CD}
+				,SRVY_NM = #{SRVY_NM}
+				,SRVY_BGNG_DT = #{SRVY_BGNG_DT}
+				,SRVY_END_DT = #{SRVY_END_DT}
+				,GOAL_PSNAL_DSGN_YN = #{GOAL_PSNAL_DSGN_YN}
+				,GOAL_PSNAL = (CASE WHEN #{GOAL_PSNAL_DSGN_YN} = 'Y' THEN #{GOAL_PSNAL}::INTEGER ELSE NULL END)
+				,SRVY_EXPLN = #{SRVY_EXPLN}
+				,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+				,TRGT_DSGN_YN = #{TRGT_DSGN_YN}
+				,PSNAL_LMT_SBMSN_STNG_YN = #{GOAL_PSNAL_DSGN_YN}
+				,CLCT_AGRE_USE_YN = (CASE WHEN #{TRGT_DSGN_YN} = 'Y' THEN 'N' ELSE 'Y' END)
+		WHERE   SRVY_ID = #{SRVY_ID}::INTEGER
+	</update>
+
+	<!--  계획수정 -->
+	<update id="updateListSrvyQitemGroupNm" parameterType= "java.util.HashMap">
+		UPDATE  /* updateListSrvyQitemGroupNm 계획수정후 설문문항그룹명 수정 */
+				PLT_SRVY_QITEM_GROUP
+		SET   	SRVY_QITEM_GROUP_NM = #{SRVY_NM}
+		WHERE   SRVY_ID = #{SRVY_ID}::INTEGER
+				AND DEL_YN = 'N'
+				AND HEAD_YN = 'Y'
+	</update>
+
+	<!--  설문지그룹 헤더 저장 -->
+	<insert id="insertGrpHdMakeItems" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY_QITEM_GROUP(
+				/* insertGrpHdMakeItems 설문지그룹 헤더 저장 */
+				SRVY_QITEM_GROUP_ID 	-- 설문_문항_그룹_ID
+				,SRVY_ID 				-- 설문_ID
+				,SRVY_QITEM_GROUP_NM 	-- 설문_문항_그룹_명
+				,SORT_ORD 				-- 정렬_순서
+				,DEL_YN 				-- 삭제_여부
+				,HEAD_YN 				-- 헤더_여부
+				,REG_DT 				-- 등록_일시
+				,RGTR_ID 				-- 등록자_ID
+				,MDFCN_DT 				-- 수정일시
+				,MDFR_ID 				-- 수정자
+		) VALUES (
+				#{SRVY_QITEM_GROUP_ID}::INTEGER
+				,#{SRVY_ID}::INTEGER
+				,#{SRVY_NM}
+				,0
+				,'N'
+				,'Y'
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+		)
+	</insert>
+
+	<!--  그룹항목 있는지 체크 -->
+	<select id="listPlanGrpChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* listPlanGrpChk 그룹항목 있는지 체크 */
+				COUNT(A.SRVY_QITEM_GROUP_ID) AS CNT
+		FROM	PLT_SRVY_QITEM_GROUP	A
+		WHERE 	A.SRVY_ID = #{SRVY_ID}::INTEGER
+		AND 	A.DEL_YN = 'N'
+		AND 	A.HEAD_YN = 'N'
+	</select>
+
+	<!--  상태가 준비중인것인지 체크 -->
+	<select id="listPlanSttsChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* listPlanSttsChk 상태가 준비중인것인지 체크 */
+				COUNT(A.SRVY_ID) AS CNT
+		FROM	PLT_SRVY	A
+		WHERE 	A.SRVY_ID = #{SRVY_ID}::INTEGER
+		AND 	A.STTS_CD != 'PRPARG'
+	</select>
+
+	<!--  상태가 진행중인것인지 체크 -->
+	<select id="listPlanCloseChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* listPlanCloseChk 상태가 진행중인것인지 체크 */
+				COUNT(A.SRVY_ID) AS CNT
+		FROM	PLT_SRVY	A
+		WHERE 	A.SRVY_ID = #{SRVY_ID}::INTEGER
+		AND 	A.STTS_CD != 'ONGONG'
+	</select>
+
+	<!--  설문계획 삭제 -->
+	<update id="deleteListPlan" parameterType= "java.util.HashMap">
+		UPDATE  /* deleteListPlan 설문계획 삭제 */
+				PLT_SRVY
+		SET   	DEL_YN 	= 'Y'
+				, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				, MDFR_ID = #{USER_ID}::INT
+		WHERE   SRVY_ID = #{SRVY_ID}::INTEGER
+	</update>
+
+	<!--  설문그룹 헤더 삭제 -->
+	<update id="deleteGrpHdMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* deleteGrpHdMakeItems 설문그룹 헤더 삭제 */
+				PLT_SRVY_QITEM_GROUP
+		SET   	DEL_YN 	= 'Y'
+				, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				, MDFR_ID = #{USER_ID}::INT
+		WHERE   SRVY_ID = #{SRVY_ID}::INTEGER
+		AND 	HEAD_YN = 'Y'
+	</update>
+
+	<!--  설문계획 종료 -->
+	<update id="closeListPlan" parameterType= "java.util.HashMap">
+		UPDATE  /* closeListPlan 설문계획 종료 */
+				PLT_SRVY
+		SET   	STTS_CD 	= 'TERMIAT'
+				, SRVY_END_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				, MDFR_ID = #{USER_ID}::INT
+		WHERE   SRVY_ID = #{SRVY_ID}::INTEGER
+	</update>
+	
+	<insert id="insertExpsnAttr" parameterType= "java.util.HashMap">
+		INSERT INTO /*insertExpsnAttr - 설문 계획 관리 등록 시 가장 마지막 확장 항목 저장*/
+		PLT_EXPSN_ATTR(ATTR_ID,CUSTCO_ID,BSC_PVSN_ATTR_YN,SE,LNKG_ATTR_ID,EXPSN_ATTR_NM,EXPSN_ATTR_EXPLN,EXPSN_ATTR_COL_ID,DATA_TYPE_CD,DATA_LEN,GROUP_CD_ID,SYS_BSC_YN,ESNTL_YN,MDFCN_PSBLTY_YN,USE_YN,DEL_YN,SORT_ORD,MSG_USE_YN,MSG_CN,RGTR_ID,REG_DT,MDFR_ID,MDFCN_DT,CPI_ID,SIC_ID,INDI_INFO_ENCPT_YN,SCRN_EXPSR_YN, SRVY_ID)
+		SELECT GETSEQNO('ATTR_ID'),CUSTCO_ID,BSC_PVSN_ATTR_YN,SE,LNKG_ATTR_ID,EXPSN_ATTR_NM,EXPSN_ATTR_EXPLN,EXPSN_ATTR_COL_ID,DATA_TYPE_CD,DATA_LEN,GROUP_CD_ID,SYS_BSC_YN,ESNTL_YN,MDFCN_PSBLTY_YN,USE_YN,DEL_YN,SORT_ORD,MSG_USE_YN,MSG_CN,RGTR_ID,REG_DT,MDFR_ID,MDFCN_DT,CPI_ID,SIC_ID,INDI_INFO_ENCPT_YN,SCRN_EXPSR_YN, #{SRVY_ID}::INTEGER
+		FROM PLT_EXPSN_ATTR WHERE SE='SRVY' AND SRVY_ID=(SELECT COALESCE(MAX(SRVY_ID),-1) FROM PLT_EXPSN_ATTR WHERE SE='SRVY' AND CUSTCO_ID=#{CUSTCO_ID}::INTEGER)
+		ORDER BY SORT_ORD
+	</insert>
+
+
+	<insert id="insertSttsHstry" parameterType= "java.util.HashMap">
+		INSERT INTO 	/* insertSttsHstry - 설문_상태_이력 저장 */
+			PLT_SRVY_STTS_HSTRY (
+				SRVY_STTS_HSTRY_ID,
+				SRVY_ID,
+				STTS_CD,
+				<if test="CN != null and CN != ''">
+				CN,
+				</if>
+				RGTR_ID,
+				REG_DT
+			) VALUES (
+				#{SRVY_STTS_HSTRY_ID}::BIGINT,
+				#{SRVY_ID}::BIGINT,
+				#{STTS_CD},
+				<if test="CN != null and CN != ''">
+				#{CN},
+				</if>
+				#{USER_ID}::BIGINT,
+				TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			)
+	</insert>
+	
+	<select id="selectSttsHistory" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT  
+			SSH.SRVY_STTS_HSTRY_ID,
+			SSH.SRVY_ID,
+			SSH.STTS_CD,
+			SSH.CN,
+			SSH.RGTR_ID,
+			SSH.REG_DT,
+			TO_CHAR(TO_TIMESTAMP(SSH.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') REG_DT_F,
+			C.CD_NM AS STTS_NM,
+			D.USER_NM AS RGTR_NM
+		FROM PLT_SRVY_STTS_HSTRY SSH
+		LEFT JOIN PLT_SRVY S ON S.SRVY_ID = SSH.SRVY_ID AND S.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+		LEFT OUTER JOIN PLT_COMM_CD C
+			ON C.CD_ID = SSH.STTS_CD AND C.GROUP_CD_ID = 'PROG_ST' AND C.CUSTCO_ID = S.CUSTCO_ID
+		LEFT OUTER JOIN PLT_USER D
+			ON D.USER_ID = SSH.RGTR_ID
+		WHERE SSH.SRVY_ID = #{SRVY_ID}::BIGINT
+		ORDER BY SSH.SRVY_STTS_HSTRY_ID DESC
+	</select>
+
+</mapper>

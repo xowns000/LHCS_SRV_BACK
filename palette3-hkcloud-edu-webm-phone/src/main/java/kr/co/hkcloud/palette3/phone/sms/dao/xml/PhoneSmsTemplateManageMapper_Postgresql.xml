@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.sms.dao.PhoneSmsTemplateManageMapper">
+
+    <!-- SMS 템플릿 분류 트리 조회 -->
+	<select id="selectSmsTree"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		/* PhoneSmsTemplateManageMapper_Oracle.selectRtnSmsTree SMS 템플릿 분류 트리 조회 */
+				
+		SELECT  TMPL_CLSF.TMPL_CLSF_ID			AS C_NODE_NO
+			   ,TMPL_CLSF.UP_TMPL_CLSF_ID		AS P_NODE_NO
+			   ,TMPL_CLSF.TMPL_CLSF_NM			AS TMPL_NM
+			   ,(SELECT TMPL_CLSF_NM
+			   	   FROM PLT_TMPL_CLSF
+			   	  WHERE TMPL_CLSF_ID = 
+			   	  TMPL_CLSF.UP_TMPL_CLSF_ID)	AS P_TMPL_NM
+			   ,TMPL_CLSF.USE_YN 				AS USE_YN
+			   ,TMPL_CLSF.SORT_ORD				AS SORT_ORD
+			   ,COALESCE((SELECT MIN(SORT_ORD)
+			   	   FROM PLT_TMPL_CLSF
+			   	  WHERE CUSTCO_ID = TMPL_CLSF.CUSTCO_ID  
+					AND UP_TMPL_CLSF_ID = TMPL_CLSF.UP_TMPL_CLSF_ID 
+					AND USE_YN = 'Y'), 1)		AS MIN_SORT_ORD
+			   ,COALESCE((SELECT MAX(SORT_ORD) 
+			   	   FROM PLT_TMPL_CLSF 
+				  WHERE CUSTCO_ID = tmpl_clsf.CUSTCO_ID  
+					AND UP_TMPL_CLSF_ID = TMPL_CLSF.UP_TMPL_CLSF_ID 
+					AND USE_YN = 'Y'), 1)		AS MAX_SORT_ORD
+			   ,(SELECT COUNT(SMS_TMPL_ID) 
+			   	   FROM PLT_SMS_TMPL
+			   	  WHERE CUSTCO_ID = TMPL_CLSF.CUSTCO_ID
+					AND TMPL_CLSF_ID = TMPL_CLSF.TMPL_CLSF_ID
+					AND USE_YN  = 'Y')			AS SMS_TMPL_COUNT
+			   ,(SELECT COUNT(TMPL_CLSF_ID)
+			   	   FROM PLT_TMPL_CLSF
+			   	  WHERE CUSTCO_ID = TMPL_CLSF.CUSTCO_ID
+					AND UP_TMPL_CLSF_ID = TMPL_CLSF.TMPL_CLSF_ID
+					AND USE_YN  = 'Y')			AS TMPL_CLSF_COUNT
+		  FROM  PLT_TMPL_CLSF		AS TMPL_CLSF
+		 WHERE  1=1
+		   AND  CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		   AND  USE_YN = 'Y'
+	  ORDER BY  TMPL_CLSF.SORT_ORD, TMPL_CLSF.TMPL_CLSF_ID
+	</select>
+	
+	<!-- SMS 리스트 조회 -->
+	<select id="selectSmsList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 /* PhoneSmsManageMapper_Postgresql.selectSmsList SMS 리스트 조회 */
+		 
+		 SELECT  (ROW_NUMBER() OVER()) 		AS ROWNUM
+		 		,TMPL.SMS_TMPL_ID			AS SMS_TMPL_ID
+				,TMPL.SMS_TMPL_NM			AS SMS_TMPL_NM
+				,TMPL.SMS_TMPL_CN			AS SMS_TMPL_CN
+				,CLSF.TMPL_CLSF_ID			AS TMPL_CLSF_ID
+				,CLSF.TMPL_CLSF_NM			AS TMPL_CLSF_NM
+				,TMPL.SMS_TMPL_TYPE_CD		AS SMS_TMPL_TYPE_CD
+				,SMSTP.CD_NM				AS SMS_TMPL_TYPE_NM
+				,TMPL.SORT_ORD 				AS SORT_ORD
+				,TMPL.FILE_GROUP_KEY		AS FILE_GROUP_KEY
+				,TMPL.USE_YN				AS USE_YN
+				,USEYN.CD_NM				AS USE_NM
+		   FROM  PLT_SMS_TMPL 			AS TMPL
+		   JOIN  PLT_TMPL_CLSF 			AS CLSF
+			 ON  TMPL.TMPL_CLSF_ID = CLSF.TMPL_CLSF_ID
+		   JOIN  PLT_COMM_CD 			AS SMSTP
+			 ON  SMSTP.CUSTCO_ID = #{CUSTCO_ID}::INT AND TMPL.SMS_TMPL_TYPE_CD = SMSTP.CD_ID
+			AND  SMSTP.GROUP_CD_ID IN ('MSG_TMPL_TP', 'SMS_TP')
+		   JOIN  PLT_COMM_CD 			AS USEYN
+		     ON  USEYN.CUSTCO_ID = #{CUSTCO_ID}::INT AND TMPL.USE_YN = USEYN.CD_ID
+		    AND  USEYN.GROUP_CD_ID = 'USE_WT'
+		  WHERE  1=1
+			AND  CLSF.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND  TMPL.DEL_YN = 'N'
+			AND  TMPL.TMPL_CLSF_ID IN ( WITH RECURSIVE tmpl_tree AS (
+										  SELECT TMPL_CLSF_ID
+										  FROM PLT_TMPL_CLSF
+										  WHERE TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER
+										  
+										  UNION ALL
+										  
+										  SELECT t.TMPL_CLSF_ID
+										  FROM PLT_TMPL_CLSF t
+										  JOIN tmpl_tree ON t.UP_TMPL_CLSF_ID = tmpl_tree.TMPL_CLSF_ID
+										)
+										SELECT * FROM tmpl_tree
+			)
+		<if test="USE_YN != ''">
+		<![CDATA[
+			AND  TMPL.USE_YN = #{USE_YN}
+		]]>
+		</if>
+		<if test="SMS_TMPL_NM != ''">
+		<![CDATA[
+			AND  TMPL.SMS_TMPL_NM LIKE ('%'|| #{SMS_TMPL_NM} ||'%')
+		]]>
+		</if>
+		<if test="TEMP_MODE != '' and TEMP_MODE != null">
+		<![CDATA[
+			AND  SMSTP.CD_NM = #{TEMP_MODE}
+		]]>
+		</if>
+		
+		ORDER BY SMS_TMPL_ID DESC
+	</select>
+	
+	<!-- sms 템플릿 분류 트리 추가 가능 확인, 해당 노드 포함 하위 -->
+<!-- 	<select id="isRegTmplClsf" parameterType= "java.util.HashMap" resultType="java.util.HashMap"> -->
+<!-- 		SELECT  CASE WHEN COUNT(SMS_TMPL_ID) > 0  -->
+<!-- 					 THEN 'N' -->
+<!-- 					 ELSE 'Y' END	AS REG_YN -->
+<!-- 		  FROM  PLT_SMS_TMPL  -->
+<!-- 		 WHERE  TMPL_CLSF_ID = CAST(#{TMPL_CLSF_ID} AS INTEGER) -->
+<!-- 		   AND  USE_YN = 'Y' -->
+<!-- 		   AND  DEL_YN = 'N' -->
+<!-- 	</select> -->
+	
+	<!-- 템플릿 분류 항목 추가 -->
+	<insert id="insertTmplClsf" parameterType= "java.util.HashMap">		
+		INSERT INTO PLT_TMPL_CLSF (
+				 TMPL_CLSF_ID
+			<if test="UP_TMPL_CLSF_ID != ''">
+			   , UP_TMPL_CLSF_ID
+			</if>
+			   , TMPL_CLSF_NM
+			   , CUSTCO_ID
+			   , SORT_ORD
+			   , USE_YN
+			   , DEL_YN
+			   , RGTR_ID
+			   , REG_DT
+			   , MDFR_ID
+			   , MDFCN_DT
+		)VALUES (
+				 #{TMPL_CLSF_ID}::INTEGER
+			<if test="UP_TMPL_CLSF_ID != ''">
+			   , #{UP_TMPL_CLSF_ID}::INTEGER
+			</if>
+			   , #{TMPL_CLSF_NAME}
+			   , #{CUSTCO_ID}::INTEGER
+		<choose>
+			<when test="UP_TMPL_CLSF_ID == ''">
+				, 1
+			</when>
+			<otherwise>
+			   , (SELECT COALESCE((MAX(SORT_ORD) + 1), 1) 
+		   			FROM PLT_TMPL_CLSF 
+		   	   	   WHERE UP_TMPL_CLSF_ID = #{UP_TMPL_CLSF_ID}::INTEGER
+		   	   	     AND USE_YN = 'Y'
+		   	 	 )
+			</otherwise>
+		</choose>   
+			   , #{USE_YN}
+			   , 'N'
+			   , CAST(#{USER_ID} AS INTEGER)
+			   , TO_CHAR(now(), 'YYYYMMDDHH24MISS')
+			   , CAST(#{USER_ID} AS INTEGER)
+			   , TO_CHAR(now(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	<update id="modifyTmplClsf" parameterType= "java.util.HashMap">
+		UPDATE PLT_TMPL_CLSF
+		   SET TMPL_CLSF_NM = #{TMPL_CLSF_NAME}
+		 WHERE TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER
+	</update>
+	
+	<!-- 템플릿 유형 삭제 -->
+	<update id="deleteTmplClsf" parameterType= "java.util.HashMap">
+		UPDATE  PLT_TMPL_CLSF
+		   SET  USE_YN = 'N'
+		 WHERE  TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER
+	</update>
+	
+	<!-- 템플릿 분류 모든 하위 분류와 연결된 템플릿 삭제 -->
+<!-- 	<update id="deleteSmsTmplConnectedToAllchildOfTmplClsf" parameterType= "java.util.HashMap"> -->
+<!-- 		UPDATE  PLT_SMS_TMPL -->
+<!-- 		   SET  USE_YN = 'N' -->
+<!-- 		       ,DEL_YN = 'Y' -->
+<!-- 		 WHERE  TMPL_CLSF_ID IN  -->
+<!-- 		 	<foreach collection="tmplClsfIdList" item="item" open="(" separator="," close=")" > -->
+<!-- 		 		#{item}::INTEGER -->
+<!-- 		 	</foreach> -->
+<!-- 	</update> -->
+	
+	<!-- SMS 신규등록 -->
+	<insert id="insertSmsTmpl" parameterType= "java.util.HashMap">		
+			INSERT INTO PLT_SMS_TMPL (
+					SMS_TMPL_ID
+				  , TMPL_CLSF_ID
+				  , SMS_TMPL_TYPE_CD
+				  , SMS_TMPL_NM
+				  , SMS_TMPL_CN
+			<if test="FILE_GROUP_KEY != ''">
+				  , FILE_GROUP_KEY
+			</if>
+				  , SORT_ORD
+				  , USE_YN
+				  , DEL_YN
+				  , RGTR_ID
+				  , REG_DT
+				  , MDFR_ID
+				  , MDFCN_DT
+			) VALUES(
+				    CAST(#{SMS_TMPL_ID} AS INTEGER)
+				  , CAST(#{TMPL_CLSF_ID} AS INTEGER)
+				  , #{SMS_TMPL_TYPE_CD}
+				  , #{SMS_TMPL_NM}
+				  , #{SMS_TMPL_CN}
+			<if test="FILE_GROUP_KEY != ''">
+				  , #{FILE_GROUP_KEY}
+			</if>
+				  , (SELECT COALESCE((MAX(SORT_ORD) + 1), 1)
+				  	   FROM PLT_SMS_TMPL 
+				  	  WHERE TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER
+				  	    AND USE_YN = 'Y'
+				  	)
+				  , #{USE_YN}
+				  , 'N'
+				  , CAST(#{USER_ID} AS INTEGER)
+				  , TO_CHAR(now(), 'YYYYMMDDHH24MISS')
+				  , CAST(#{USER_ID} AS INTEGER)
+				  , TO_CHAR(now(), 'YYYYMMDDHH24MISS')
+			)
+	
+	</insert>
+	
+	<!-- SMS 템플릿 수정 -->
+	<update id="modifySmsTmpl" parameterType= "java.util.HashMap">
+		UPDATE PLT_SMS_TMPL SET
+					SMS_TMPL_TYPE_CD = #{SMS_TMPL_TYPE_CD}
+				  , SMS_TMPL_NM = #{SMS_TMPL_NM}
+				  , SMS_TMPL_CN = #{SMS_TMPL_CN}
+				  , USE_YN = #{USE_YN}
+			<if test="FILE_GROUP_KEY != ''">
+				  , FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+			</if>
+				  , MDFR_ID = #{USER_ID}::INTEGER
+				  , MDFCN_DT = TO_CHAR(now(), 'YYYYMMDDHH24MISS')
+			WHERE  SMS_TMPL_ID = #{SMS_TMPL_ID}::INTEGER
+			
+	</update>
+	
+	
+	<!-- 템플릿 분류 모든 하위 분류 조회 -->
+	<select id="selectAllChildOfTmplClsf" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		WITH RECURSIVE TMPL_CLSF_TREE(TMPL_CLSF_ID) AS (
+			SELECT  TMPL_CLSF_ID
+			  FROM  PLT_TMPL_CLSF
+			 WHERE  UP_TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER
+			   AND  USE_YN = 'Y'
+		 UNION ALL
+			SELECT  A.TMPL_CLSF_ID 
+			  FROM  PLT_TMPL_CLSF AS A, TMPL_CLSF_TREE AS B
+			 WHERE  A.UP_TMPL_CLSF_ID = B.TMPL_CLSF_ID
+			   AND  A.USE_YN = 'Y'
+		)
+		SELECT  TMPL_CLSF_ID
+		  FROM  TMPL_CLSF_TREE
+	</select>
+	
+	<!-- 이미지파일 그룹키 통일 -->
+	<update id="fileKeyUnity"  parameterType= "java.util.HashMap">
+		 UPDATE PLT_FILE
+		    SET FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+		  WHERE FILE_KEY IN 
+		  	<foreach collection="arrFileKey" item="item" open="(" separator="," close=")" >
+				#{item}
+			</foreach>
+	</update>
+	
+	<!-- 첨부 파일 리스트 조회 -->
+	<select id="selectMmsUploadFileList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT  upFile.ACTL_FILE_NM				AS ACTL_FILE_NM
+			   ,upFile.FILE_SZ					AS FILE_SZ
+			   ,upFile.DWNLD_CNT				AS DWNLD_CNT
+			   ,upFile.ACTL_FILE_NM				AS ACTL_FILE_NM
+			   ,upFile.FILE_GROUP_KEY			AS FILE_GROUP_KEY
+			   ,upFile.FILE_KEY					AS FILE_KEY
+			   ,upFile.TASK_TYPE_CD				AS TASK_TYPE_CD
+			   ,upFile.PATH_TYPE_CD				AS PATH_TYPE_CD
+   			   ,upFile.FILE_PATH 				AS FILE_PATH
+			   ,upFile.STRG_FILE_NM 			AS STRG_FILE_NM
+		  FROM  PLT_SMS_TMPL tmpl 
+	 LEFT JOIN  PLT_FILE upFile 
+			ON  tmpl.FILE_GROUP_KEY = upFile.FILE_GROUP_KEY
+		 WHERE  tmpl.FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+		   AND  tmpl.SMS_TMPL_ID = #{SMS_TMPL_ID}::INTEGER
+		   AND  upFile.TASK_TYPE_CD = 'mms'
+		   AND  upFile.USE_YN = 'Y'
+	</select>
+	
+	<!-- 첨부파일 삭제, USE_YN = N -->
+	<update id="deleteSmsTmplFileByFileKey" parameterType= "java.util.HashMap">
+		UPDATE PLT_FILE SET USE_YN = 'N' 
+		WHERE FILE_KEY IN
+		<foreach collection="arrFileKey" item="item" open="(" separator="," close=")" >
+			#{item}
+		</foreach>
+	</update>
+	
+	
+	<!-- 템플릿 분류 모든 하위 분류와 연결된 템플릿의 첨부파일 삭제 -->
+<!-- 	<update id="deleteAttacheFileConnectedToAllchildOfSmsTmpl" parameterType= "java.util.HashMap"> -->
+<!-- 		UPDATE PLT_FILE pf  -->
+<!-- 		   SET USE_YN = 'N'  -->
+<!-- 		  FROM (SELECT file_group_key  -->
+<!-- 				  FROM PLT_SMS_TMPL -->
+<!-- 				 WHERE tmpl_clsf_id IN  -->
+<!-- 		 	<foreach collection="tmplClsfIdList" item="item" open="(" separator="," close=")" > -->
+<!-- 		 		#{item}::INTEGER -->
+<!-- 		 	</foreach> -->
+<!-- 				) pst -->
+<!-- 		 WHERE pf.file_group_key = pst.file_group_key -->
+<!-- 	</update> -->
+	
+	<!-- 템플릿 분류 모든 하위 분류 삭제 -->
+<!-- 	<update id="deleteAllchildOfTmplClsf" parameterType= "java.util.HashMap"> -->
+<!-- 		UPDATE  PLT_TMPL_CLSF -->
+<!-- 		   SET  USE_YN = 'N' -->
+<!-- 		       ,DEL_YN = 'Y' -->
+<!-- 		 WHERE  TMPL_CLSF_ID IN  -->
+<!-- 		 	<foreach collection="tmplClsfIdList" item="item" open="(" separator="," close=")" > -->
+<!-- 		 		#{item}::INTEGER -->
+<!-- 		 	</foreach> -->
+<!-- 	</update> -->
+	
+	<!-- 템플릿과 연결된 파일 삭제 -->
+<!-- 	<update id="deleteAttacheFileConnectedToSmsTmpl" parameterType= "java.util.HashMap"> -->
+<!-- 		UPDATE PLT_FILE pf  -->
+<!-- 		   SET USE_YN = 'N'  -->
+<!-- 		  FROM (SELECT file_group_key  -->
+<!-- 				  FROM PLT_SMS_TMPL -->
+<!-- 				 WHERE tmpl_clsf_id = #{TMPL_CLSF_ID}::INTEGER) pst -->
+<!-- 		 WHERE pf.file_group_key = pst.file_group_key -->
+<!-- 	</update> -->
+	
+	<!-- 템플릿 유형과 연결된 템플릿 삭제 -->
+<!-- 	<update id="deleteSmsTmplConnectedToTmplClsf" parameterType= "java.util.HashMap"> -->
+<!-- 		UPDATE  PLT_SMS_TMPL -->
+<!-- 		   SET  USE_YN = 'N' -->
+<!-- 		       ,DEL_YN = 'Y' -->
+<!-- 		 WHERE  TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER -->
+<!-- 	</update> -->
+	
+	<select id="selectSmsTmplFileGroupKey" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT SMS_TMPL_ID, FILE_GROUP_KEY  FROM PLT_SMS_TMPL WHERE SMS_TMPL_ID = #{SMS_TMPL_ID}::INTEGER
+	</select>
+	
+	<update id="deleteSmsTmplFile" parameterType= "java.util.HashMap">
+		UPDATE PLT_FILE SET USE_YN = 'N' WHERE FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+	</update>
+	
+	<update id="deleteSmsTmpl" parameterType= "java.util.HashMap">
+		<!-- deleteSmsTmpl - 문자 템플릿 삭제 -->
+		UPDATE 
+			PLT_SMS_TMPL 
+		SET 
+			USE_YN = 'N'
+			,DEL_YN = 'Y'
+		WHERE SMS_TMPL_ID = #{SMS_TMPL_ID}::INTEGER
+	</update>
+	
+	<!-- 템플릿 분류 정렬순서 변경, 순서 바뀔 대상 정보 조회 -->
+	<select id="selectChangeSortOrderOtherNode" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT  TMPL_CLSF.TMPL_CLSF_ID		AS TMPL_CLSF_ID
+			   ,TMPL_CLSF.USE_YN			AS USE_YN 
+		  FROM (SELECT  UP_TMPL_CLSF_ID
+			   		   ,SORT_ORD 
+				  FROM  PLT_TMPL_CLSF PTC 
+				 WHERE  TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER
+			   )CURT_TMPL
+		  JOIN  PLT_TMPL_CLSF TMPL_CLSF
+			ON  CURT_TMPL.UP_TMPL_CLSF_ID = TMPL_CLSF.UP_TMPL_CLSF_ID
+		   AND  TMPL_CLSF.SORT_ORD = CURT_TMPL.SORT_ORD + #{SUM_MOVE_COUNT}::INTEGER
+	</select>
+	
+	<!-- 우선 순위 변경 -->
+	<update id="updateChangeSortOrder" parameterType="java.util.HashMap">
+		UPDATE PLT_TMPL_CLSF
+		   SET SORT_ORD = SORT_ORD + #{PARAM_MOVE_COUNT}::INTEGER
+		 WHERE TMPL_CLSF_ID IN
+	   <foreach collection="tmplClsfIdList" item="item" open="(" separator="," close=")" >
+	 		#{item}::INTEGER
+	 	</foreach>
+	</update>
+		
+</mapper>

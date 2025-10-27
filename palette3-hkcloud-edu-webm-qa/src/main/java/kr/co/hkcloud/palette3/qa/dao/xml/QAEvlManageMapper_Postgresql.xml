@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.qa.dao.QAEvlManageMapper">
+
+ 	<insert id="insertQaPlanQlty" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_PLAN_QLTY (
+					QA_PLAN_ID
+					,EVL_ARTCL_ID
+					,EVL_ARTCL_NM
+					,ASSSCOR
+					,SORT_ORD
+					,DEL_YN
+					,REG_DT
+					,RGTR_ID
+					<!-- 
+					,MDFCN_DT
+					,MDFR_ID
+					-->
+		) VALUES (
+					#{QA_PLAN_ID}::INTEGER
+					,#{EVL_ARTCL_ID}::INTEGER
+					,#{EVL_ARTCL_NM}
+					,#{ASSSCOR}::INTEGER
+					,#{SORT_ORD}::INTEGER
+					,'N'
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					,#{USER_ID}::INTEGER
+		)
+	</insert>
+ 	<update id="updateQaPlanQlty" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_PLAN_QLTY 
+		   SET EVL_ARTCL_NM = #{EVL_ARTCL_NM}
+				,ASSSCOR = #{ASSSCOR}::INTEGER
+				,SORT_ORD = #{SORT_ORD}::INTEGER
+				,DEL_YN = #{DEL_YN}
+				,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND EVL_ARTCL_ID = #{EVL_ARTCL_ID}::INTEGER
+	</update>
+ 	<update id="updateQaPlanQltyDel" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_PLAN_QLTY 
+		   SET DEL_YN = 'Y'
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND EVL_ARTCL_ID IN (
+			   <foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+		  	   #{ITEM.EVL_ARTCL_ID}::INTEGER
+		   	   </foreach>
+		   	   )
+	</update>
+	<select id="selectQaPlanQtyArtclId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT EVL_ARTCL_ID
+		  FROM PLT_QA_PLAN_QLTY
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</select>
+	
+	<select id="selectQaTrgtSlctnList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT			/* selectQaTrgtSlctnList - QA평가시행관리 대상자 선정 조회 */
+			ROW_NUMBER() OVER(ORDER BY COALESCE(TO_CHAR(TO_TIMESTAMP(PQTS.REG_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD'), '1999-01-01') DESC, CUTT.CUTT_ID DESC) AS RNUM
+			, CUTT.CHNL
+			, (CASE WHEN CUTT.CHNL = 'TEL' THEN '전화'
+					ELSE '채팅'
+					END) AS CHNL_NM
+			, CUTT.CL_TYPE_CD
+			, PCC.CD_NM AS CL_TYPE_NM
+			, CUTT.CUTT_ID
+			, CUTT.ITGRT_HSTRY_ID
+			, TO_DATE(CUTT.CUTT_BGNG_DT, 'YYYYMMDDHH24MISS')::TEXT AS CUTT_DT
+			, TO_CHAR(TO_TIMESTAMP(CUTT.CUTT_BGNG_DT, 'YYYYMMDDHH24MISS'), 'HH24:MI:SS') AS CUTT_BGNG_DT
+			, TO_CHAR(TO_TIMESTAMP(CUTT.CUTT_END_DT, 'YYYYMMDDHH24MISS'), 'HH24:MI:SS') AS CUTT_END_DT
+		   <choose>
+			   <when test="CHNL_CD == 'TEL'">
+				   , CUTT.CUTT_HR
+				   , CUTT.REC_FILE_NM
+			   </when>
+			   <otherwise>
+				   , TO_CHAR(TO_TIMESTAMP(CUTT.CUTT_END_DT, 'YYYYMMDDHH24MISS') - TO_TIMESTAMP(CUTT.CUTT_BGNG_DT, 'YYYYMMDDHH24MISS'), 'HH24:MI:SS') AS CUTT_HR
+				   , CUTT.CHT_CUTT_ID
+					, CUTT.CUST_ID
+					, CUTT.CHT_USER_KEY
+					, CUTT.SNDR_KEY
+					, CUTT.CHN_CLSF_CD
+			   </otherwise>
+		   </choose>
+		    , CUTT.CUSL_ID
+		    , CUTT.USER_NM
+			, CUTT.CUST_ID
+			, CUTT.CUST_NM
+			, CUTT.CUTT_TYPE_ID
+			, (
+				WITH RECURSIVE CUTT_TREE AS (
+					SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID, CUTT_TYPE_SE_CD, CUTT_TYPE_LVL, 1 AS LVL, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+					FROM PLT_CUTT_TYPE
+					WHERE UP_CUTT_TYPE_ID IS NULL
+						AND CUSTCO_ID = CUTT.CUSTCO_ID
+					UNION ALL
+					SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_LVL, C.LVL + 1 AS LVL, CAST(CASE WHEN C.LVL >1 THEN C.FULL_PATH || ' > ' ELSE '' END || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+					FROM PLT_CUTT_TYPE B
+					INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+						AND B.CUSTCO_ID = CUTT.CUSTCO_ID
+					)
+				SELECT
+					CT.FULL_PATH
+				FROM CUTT_TREE CT
+				WHERE CT.CUTT_TYPE_ID = CUTT.CUTT_TYPE_ID
+			) AS CUTT_TYPE
+			, TO_CHAR(TO_TIMESTAMP(PQTS.REG_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS SLCTN_DT
+			<if test="ONLY_MINE != null and ONLY_MINE != ''">
+		      	, COALESCE(SCORE.CYCL1::TEXT, '-') CYCL1
+		      	, COALESCE(SCORE.CYCL2::TEXT, '-') CYCL2
+		      	, COALESCE(SCORE.CYCL3::TEXT, '-') CYCL3
+		      	, COALESCE(SCORE.CYCL1_ID::TEXT, '-') CYCL1_ID
+      			, COALESCE(SCORE.CYCL2_ID::TEXT, '-') CYCL2_ID
+      			, COALESCE(SCORE.CYCL3_ID::TEXT, '-') CYCL3_ID
+      			, COALESCE(SCORE.CYCL1_EVL_DT, '-') CYCL1_EVL_DT
+      			, COALESCE(SCORE.CYCL2_EVL_DT, '-') CYCL2_EVL_DT
+      			, COALESCE(SCORE.CYCL3_EVL_DT, '-') CYCL3_EVL_DT
+      			, SCORE.TOT_SCR
+      			, SCORE.REC_FILE_NM
+      			, SCORE.QA_PLAN_ID
+      			, SCORE.CYCL_CNT
+		     </if>
+			, PQTA.QA_MNGR_ID
+			, PQTS.QA_TRGT_ID
+		FROM (
+		   SELECT
+		   <choose>
+			   <when test="CHNL_CD == 'TEL'">
+				   'TEL' AS CHNL
+				   , CL_TYPE_CD
+				   , CUTT.PHN_CUTT_ID AS CUTT_ID
+				   , (SELECT PPCDE.ATTR_VL::INT FROM PLT_PHN_CUTT_DTL_EXPSN PPCDE WHERE PPCDE.PHN_CUTT_ID = CUTT.PHN_CUTT_ID AND EXISTS (SELECT 1 FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = CUTT.CUSTCO_ID AND SE = 'CONSEL' AND BSC_PVSN_ATTR_YN = 'N' AND EXPSN_ATTR_COL_ID = 'CUSL_TP_CL' AND ATTR_ID = PPCDE.ATTR_ID)) AS CUTT_TYPE_ID
+			   	   , (CASE 
+					  WHEN CUTT.PHN_HR  <![CDATA[<=]]>  3600 
+					  THEN 
+					  	TO_CHAR((CUTT.PHN_HR||' second')::INTERVAL, 'MI:SS')
+					  ELSE 
+						TO_CHAR((CUTT.PHN_HR||' second')::INTERVAL, 'HH24:MI:SS') 
+					  END ) AS CUTT_HR
+					, CUTT.REC_FILE_NM
+			   </when>
+			   <otherwise>
+				   'SNS' AS CHNL
+				   , CUTT.CHN_CLSF_CD AS CL_TYPE_CD
+				   , CUTT.CHT_CUTT_ID AS CUTT_ID
+				   , CUTT.CUTT_TYPE_ID
+				   , CUTT.CHT_CUTT_ID
+					, PCC.CHT_USER_KEY
+					, CUTT.SNDR_KEY
+					, CUTT.CHN_CLSF_CD
+			   </otherwise>
+		   </choose>
+			, CUTT.CUTT_BGNG_DT
+			, CUTT.CUTT_END_DT
+			, CUTT.CUSL_ID
+			, PU.USER_NM
+			, CUTT.CUSTCO_ID
+			, PCIH.ITGRT_HSTRY_ID
+			, PCIH.CUST_ID
+			, (SELECT CUST_NM FROM PLT_CUST WHERE CUST_ID = PCIH.CUST_ID) AS CUST_NM
+			FROM PLT_CUTT_ITGRT_HSTRY PCIH
+			<choose>
+				<when test="CHNL_CD == 'TEL'">
+					INNER JOIN PLT_PHN_CUTT CUTT ON CUTT.PHN_CUTT_ID = PCIH.PHN_CUTT_ID
+				</when>
+				<otherwise>
+					INNER JOIN PLT_CHT_CUTT CUTT ON CUTT.CHT_CUTT_ID = PCIH.CHT_CUTT_ID
+			  		INNER JOIN PLT_CHT_CUST PCC
+			  			ON CUTT.CUST_ID = PCC.CUST_ID
+			  			AND CUTT.SNDR_KEY = PCC.SNDR_KEY
+				</otherwise>
+			</choose>
+			LEFT JOIN PLT_USER PU ON PU.USER_ID = CUTT.CUSL_ID
+			WHERE PCIH.CUSTCO_ID = #{CUSTCO_ID}::INT
+			<choose>
+				<when test="CHNL_CD == 'TEL'">
+					AND COALESCE(CUTT.FORC_CRT_YN, 'N') = 'N'
+					AND CUTT.REC_FILE_NM IS NOT NULL
+					AND PCIH.PHN_CUTT_ID IS NOT NULL
+				</when>
+				<otherwise>
+					AND COALESCE(CUTT.FORC_REG_YN, 'N') = 'N'
+					AND PCIH.CHT_CUTT_ID IS NOT NULL
+					AND CUTT.CUTT_STTS_CD LIKE '%CMPL%'
+				</otherwise>
+			</choose>
+			<if test="CUTT_BGNG_DT != '' and CUTT_BGNG_DT != null and CUTT_BGNG_DT != undefined">
+				AND CUTT.CUTT_BGNG_DT  >=  TO_CHAR(TO_TIMESTAMP(#{CUTT_BGNG_DT}, 'YYYY-MM-DD'),'YYYYMMDDHH24MISS')::VARCHAR
+			</if>
+			<if test="CUTT_END_DT != '' and CUTT_END_DT != null and CUTT_END_DT != undefined">
+				AND CUTT.CUTT_END_DT  <![CDATA[<=]]>  TO_CHAR(TO_TIMESTAMP(CONCAT(#{CUTT_END_DT}, ' 23:59:59'), 'YYYY-MM-DD HH24:MI:SS'),'YYYYMMDDHH24MISS')::VARCHAR
+			</if>
+			<if test="PHN_HR != '' and PHN_HR != null and PHN_HR != undefined">
+				<choose>
+					<when test="CHNL_CD == 'TEL'">
+						AND CUTT.PHN_HR > #{PHN_HR}::INTEGER
+					</when>
+					<otherwise>
+						AND TO_CHAR(TO_TIMESTAMP(CUTT.CUTT_END_DT, 'YYYYMMDDHH24MISS') - TO_TIMESTAMP(CUTT.CUTT_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYYMMDDHH24MISS')::INTEGER >= #{CHT_HR}::INTEGER
+					</otherwise>
+				</choose>
+			</if>
+			<if test="CUSL_ID != '' and CUSL_ID != null and CUSL_ID != undefined">
+				AND CUTT.CUSL_ID = #{CUSL_ID}::INTEGER
+			</if>
+		) CUTT
+		<choose>
+			<when test="CHNL_CD == 'TEL'">
+				LEFT JOIN PLT_COMM_CD PCC ON PCC.CD_ID = CUTT.CL_TYPE_CD AND PCC.GROUP_CD_ID = 'CALL_TP' AND PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			</when>
+			<otherwise>
+				LEFT JOIN PLT_COMM_CD PCC ON PCC.CD_ID = CUTT.CL_TYPE_CD AND PCC.GROUP_CD_ID = 'CHNL_CL' AND PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			</otherwise>
+		</choose>
+		LEFT OUTER JOIN PLT_QA_TRGT_SLCTN AS PQTS ON PQTS.ITGRT_HSTRY_ID = CUTT.ITGRT_HSTRY_ID AND PQTS.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		LEFT OUTER JOIN PLT_QA_TRGT_ALTMNT AS PQTA ON PQTA.QA_TRGT_ID = PQTS.QA_TRGT_ID AND PQTS.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		<if test="ONLY_MINE != null and ONLY_MINE != ''">
+			LEFT OUTER JOIN (
+		       SELECT CYCL.QA_PLAN_ID
+					  ,RSLT.QA_MNGR_ID 
+					  ,RSLT.QA_TRGT_ID 
+				      ,SLCTN.ITGRT_HSTRY_ID
+				      ,HSTRY.PHN_CUTT_ID
+				      ,CUTT.CUSL_ID
+					  ,SUM(CASE WHEN CYCL.CYCL_NM = '1' THEN RSLT.SCR ELSE 0 END) CYCL1
+					  ,SUM(CASE WHEN CYCL.CYCL_NM = '2' THEN RSLT.SCR ELSE 0 END) CYCL2
+					  ,SUM(CASE WHEN CYCL.CYCL_NM = '3' THEN RSLT.SCR ELSE 0 END) CYCL3
+					  ,MAX(CASE WHEN CYCL.CYCL_NM = '1' THEN CYCL.QA_CYCL_ID::TEXT ELSE '' END) CYCL1_ID
+					  ,MAX(CASE WHEN CYCL.CYCL_NM = '2' THEN CYCL.QA_CYCL_ID::TEXT ELSE '' END) CYCL2_ID
+					  ,MAX(CASE WHEN CYCL.CYCL_NM = '3' THEN CYCL.QA_CYCL_ID::TEXT ELSE '' END) CYCL3_ID
+					  ,MAX(CASE WHEN CYCL.CYCL_NM = '1' THEN TO_CHAR(TO_TIMESTAMP(COALESCE(RSLT.MDFCN_DT, RSLT.REG_DT), 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') ELSE '' END) CYCL1_EVL_DT
+					  ,MAX(CASE WHEN CYCL.CYCL_NM = '2' THEN TO_CHAR(TO_TIMESTAMP(COALESCE(RSLT.MDFCN_DT, RSLT.REG_DT), 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') ELSE '' END) CYCL2_EVL_DT
+					  ,MAX(CASE WHEN CYCL.CYCL_NM = '3' THEN TO_CHAR(TO_TIMESTAMP(COALESCE(RSLT.MDFCN_DT, RSLT.REG_DT), 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') ELSE '' END) CYCL3_EVL_DT
+					  ,TOT_SCR.SCR TOT_SCR
+					  ,CUTT.REC_FILE_NM
+					  ,COUNT(DISTINCT CYCL.QA_CYCL_ID) CYCL_CNT
+				  FROM PLT_QA_RSLT AS RSLT 
+				  LEFT JOIN PLT_QA_CYCL AS CYCL ON CYCL.QA_PLAN_ID = RSLT.QA_PLAN_ID AND CYCL.QA_CYCL_ID = RSLT.QA_CYCL_ID
+				  LEFT JOIN PLT_QA_TRGT_SLCTN AS SLCTN ON SLCTN.QA_TRGT_ID = RSLT.QA_TRGT_ID
+				  LEFT JOIN PLT_CUTT_ITGRT_HSTRY AS HSTRY ON HSTRY.ITGRT_HSTRY_ID = SLCTN.ITGRT_HSTRY_ID
+				  LEFT JOIN PLT_PHN_CUTT AS CUTT ON CUTT.PHN_CUTT_ID = HSTRY.PHN_CUTT_ID
+				  LEFT JOIN (
+							SELECT PLAN.QA_PLAN_ID
+								  ,SUM(QLTY.ASSSCOR) SCR
+							  FROM PLT_QA_PLAN AS PLAN 
+							  LEFT JOIN PLT_QA_PLAN_QLTY AS QLTY ON QLTY.QA_PLAN_ID = PLAN.QA_PLAN_ID
+							 WHERE PLAN.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+							 GROUP BY
+							 	  PLAN.QA_PLAN_ID
+				            ) AS TOT_SCR ON TOT_SCR.QA_PLAN_ID = RSLT.QA_PLAN_ID
+				 WHERE CYCL.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+				   AND CUTT.CUSL_ID = #{USER_ID}::INTEGER
+				 GROUP BY
+				 	   CYCL.QA_PLAN_ID
+				 	  ,HSTRY.PHN_CUTT_ID
+				      ,CUTT.CUSL_ID
+				      ,SLCTN.ITGRT_HSTRY_ID
+				      ,TOT_SCR.SCR
+				      ,CUTT.REC_FILE_NM
+				      ,RSLT.QA_MNGR_ID 
+				      ,RSLT.QA_TRGT_ID 
+		     ) AS SCORE ON SCORE.ITGRT_HSTRY_ID = CUTT.ITGRT_HSTRY_ID 
+	     </if>
+		WHERE 1=1
+		<if test="CALL_TP_CD != '' and CALL_TP_CD != null and CALL_TP_CD != undefined">
+			AND CUTT.CL_TYPE_CD = #{CALL_TP_CD}
+		</if>
+		<if test="SCH_CUTT_TYPE != '' and SCH_CUTT_TYPE != null and SCH_CUTT_TYPE != undefined">
+			AND CUTT.CUTT_TYPE_ID = #{SCH_CUTT_TYPE}::INTEGER
+		</if>
+		<if test="ONLY_SLCTN != '' and ONLY_SLCTN != null and ONLY_SLCTN != undefined">
+			AND PQTS.REG_DT IS NOT NULL
+		</if>
+		<if test="ONLY_MINE != '' and ONLY_MINE != null and ONLY_MINE != undefined">
+			AND CUTT.CUSL_ID = #{USER_ID}::INTEGER
+		</if>
+	</select>
+	<!-- 
+ 	<select id="selectQaTrgtAlmntInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(S.QA_TRGT_ID) AS TOTAL_TRGT_CNT
+			  ,COUNT(A.QA_TRGT_ID) AS ATLMNT_CNT
+			  ,COUNT(S.QA_TRGT_ID) - COUNT(A.QA_TRGT_ID) AS FREE_CNT
+			  ,(CASE WHEN COUNT(DISTINCT A.QA_MNGR_ID) = 0 
+			  		 THEN 0 
+			  		 ELSE (COUNT(A.QA_TRGT_ID)::FLOAT / COUNT(DISTINCT A.QA_MNGR_ID)::FLOAT) END
+			   ) AS AVERAGE_CNT
+		  FROM PLT_QA_TRGT_SLCTN S
+		  	   LEFT OUTER JOIN PLT_QA_TRGT_ALTMNT AS A 
+		  	   	ON S.QA_PLAN_ID = A.QA_PLAN_ID AND S.QA_TRGT_ID = A.QA_TRGT_ID
+		 WHERE S.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+ 	</select>
+ 	-->
+ 	<select id="selectQaTrgtAlmntInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+ 	
+		SELECT TOTAL_TRGT_CNT
+			  ,ALTMNT_CNT, FREE_CNT
+			  ,(CASE WHEN MNGR_CNT = 0 THEN 0 
+					 ELSE (ALTMNT_CNT::FLOAT / MNGR_CNT::FLOAT) 
+				END ) AS AVERAGE_CNT
+			  ,MNGR_CNT
+		FROM (
+			  SELECT COUNT(S.QA_TRGT_ID) AS TOTAL_TRGT_CNT
+					,COUNT(A.QA_TRGT_ID) AS ALTMNT_CNT
+					,COUNT(S.QA_TRGT_ID) - COUNT(A.QA_TRGT_ID) AS FREE_CNT
+					,(SELECT COUNT(DISTINCT QA_MNGR_ID) FROM PLT_QA_MNGR WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER) AS MNGR_CNT 
+				FROM PLT_QA_TRGT_SLCTN S
+						LEFT OUTER JOIN PLT_QA_TRGT_ALTMNT AS A 
+							ON S.QA_PLAN_ID = A.QA_PLAN_ID AND S.QA_TRGT_ID = A.QA_TRGT_ID
+				WHERE S.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+			 ) AS A
+ 	</select>
+ 	<insert id="insertQaTrgtSlctn" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_TRGT_SLCTN (
+					QA_TRGT_ID
+					,QA_PLAN_ID
+					,REG_DT
+					,RGTR_ID
+					,ITGRT_HSTRY_ID
+		) VALUES
+		<foreach collection="LIST_DATA" item="ITEM" close="" separator=",">
+		(
+					#{ITEM.QA_TRGT_ID}::INTEGER
+					,#{QA_PLAN_ID}::INTEGER
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					,#{USER_ID}::INTEGER
+					,#{ITEM.ITGRT_HSTRY_ID}::INTEGER
+		)
+		</foreach>
+	</insert>
+ 	<update id="updateQaTrgtSlctn" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_TRGT_SLCTN
+		   SET QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		      ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		      ,MDFR_ID = #{USER_ID}::INTEGER
+		      ,ITGRT_HSTRY_ID = #{ITGRT_HSTRY_ID}::INTEGER
+		 WHERE QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+		   AND QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</update>
+ 	<delete id="deleteQaTrgtSlctn" parameterType= "java.util.HashMap">
+		DELETE FROM PLT_QA_TRGT_SLCTN
+		 WHERE QA_TRGT_ID IN (
+			   <foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+		  	   #{ITEM.QA_TRGT_ID}::INTEGER
+		   	   </foreach>
+		   	   )
+		   AND QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</delete>
+	
+	<select id="selectQaTrgtSlctnListForAltmnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT QA_TRGT_ID
+		  FROM PLT_QA_TRGT_SLCTN
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</select>
+	<select id="selectQaTrgtAltmntnListForAltmnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT QA_MNGR_ID
+			  ,QA_TRGT_ID
+	      FROM PLT_QA_TRGT_ALTMNT
+	     WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</select>
+	<select id="selectQaTrgtAltmntCntWithMngrId"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT QA_MNGR_ID, COUNT(*) CNT
+	      FROM PLT_QA_TRGT_ALTMNT
+		 WHERE QA_MNGR_ID IN (
+			   <foreach collection="MNGR_LIST" item="ITEM" close="" separator=",">
+		  	   #{ITEM.QA_MNGR_ID}::INTEGER
+		   	   </foreach>
+		   	   )
+		   AND QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		 GROUP BY QA_MNGR_ID
+	</select>
+	<insert id="insertQaTrgtAltmntWithCnt" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_TRGT_ALTMNT 
+			   (QA_PLAN_ID, QA_MNGR_ID, QA_TRGT_ID, REG_DT, RGTR_ID)
+			   (SELECT QA_PLAN_ID
+			   		  ,#{MNGR_ID}::INTEGER
+			   		  ,QA_TRGT_ID
+			   		  ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			   		  ,#{USER_ID}::INTEGER
+				  FROM PLT_QA_TRGT_SLCTN
+				 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+				   AND QA_TRGT_ID NOT IN (
+										  SELECT QA_TRGT_ID 
+										    FROM PLT_QA_TRGT_ALTMNT 
+										   WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+										 )
+				 LIMIT #{addInput}::INTEGER)
+	</insert>
+	<delete id="deleteQaTrgtAltmntWithCnt" parameterType= "java.util.HashMap">
+		DELETE FROM PLT_QA_TRGT_ALTMNT 
+		 WHERE QA_TRGT_ID IN (
+		 						SELECT QA_TRGT_ID
+				  				  FROM PLT_QA_TRGT_ALTMNT
+				 				 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+				 				   AND QA_MNGR_ID = #{MNGR_ID}::INTEGER
+				 				   AND QA_TRGT_ID NOT IN (
+										 				   SELECT DISTINCT QA_TRGT_ID
+										 				     FROM PLT_QA_RSLT
+															WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+															  AND QA_MNGR_ID = #{MNGR_ID}::INTEGER
+				 				   						 )				 				   
+				 				 ORDER BY REG_DT DESC
+				 				 LIMIT #{addInput}::INTEGER		 
+		 	                 )
+		   AND QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_MNGR_ID = #{MNGR_ID}::INTEGER
+	</delete>
+	<delete id="deleteQaTrgtAltmntAll" parameterType= "java.util.HashMap">
+		DELETE FROM PLT_QA_TRGT_ALTMNT 
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</delete>
+	<select id="getQaTargetInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT M.QA_MNGR_ID
+			  ,COUNT(A.QA_TRGT_ID) AS CNT
+		  FROM PLT_QA_MNGR AS M 
+		  	   LEFT OUTER JOIN PLT_QA_TRGT_ALTMNT A 
+		  	     ON M.QA_PLAN_ID = A.QA_PLAN_ID AND M.QA_MNGR_ID = A.QA_MNGR_ID
+		 WHERE M.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		 GROUP BY M.QA_MNGR_ID
+		 UNION ALL
+		SELECT -1 AS QA_MNGR_ID
+			 ,COUNT(*) AS CNT
+		  FROM PLT_QA_TRGT_SLCTN
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		 ORDER BY QA_MNGR_ID
+	</select>
+</mapper>

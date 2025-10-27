@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.lm.dao.PhoneLmPlanManageMapper">
+	
+	<select id="selectRtnLm" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.CUSTCO_ID AS ASP_NEWCUST_KEY
+			, (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_CUST_NM
+			, A.LM_ID
+			, A.LM_EVA_ID
+			, A.LM_ID_NM
+			, A.LM_TY
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT018' AND CD = A.LM_TY) AS LM_TY_NM
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI') AS LM_ST_DTTM
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS LM_ST_DATE
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'HH24:MI') AS LM_ST_TIME
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI') AS LM_EN_DTTM
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS LM_EN_DATE
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'HH24:MI') AS LM_EN_TIME
+			, A.LM_TG_SC
+			, A.LM_PG_ST
+			, COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT023' AND CD = A.LM_PG_ST), '-') AS LM_PG_ST_NM
+			, COALESCE(A.LM_LIM_TIME, '-') AS LM_LIM_TIME
+			, A.LM_ATRT_GROUP_ID
+			, A.LM_ATRT_GROUP_NM
+			, A.USER_ATTR_A
+			, A.USER_ATTR_B
+			, A.USER_ATTR_C
+			, A.USER_ATTR_D
+			, A.LM_TG_CNT
+			, A.LM_TG_PL_ID
+			, A.LM_TG_PL_NM
+			, DECODE(A.LM_PG_ST, 10, 'Y', 'N') AS MODIFY_YN
+			, (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID) AS LM_DATA_COUNT
+			, (SELECT COUNT(1) FROM PLT_LM_EVA_RST WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_EVA_ID = A.LM_EVA_ID) AS LM_EVA_RST_COUNT
+			, COALESCE((
+		        	SELECT SUM(LM_QS_TY_SC)
+		        	FROM PLT_LM_EVA_RST B, PLT_LM_QS C
+		        	WHERE B.LM_QS_ID = C.LM_QS_ID
+		        	AND B.CUSTCO_ID = C.CUSTCO_ID
+		        	AND B.CUSTCO_ID = A.CUSTCO_ID
+		        	AND B.LM_EVA_ID = A.LM_EVA_ID
+		     ), 0) AS LM_EVA_SUM
+		     , (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID AND LM_DATA_ANS_YN = 'N') AS LM_NON_DONE_CNT
+		     , (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID AND LM_DATA_ANS_YN = 'Y') AS LM_DONE_CNT
+		FROM PLT_LM A
+		WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		<if test='LM_TY != null and LM_TY != ""'>
+			AND A.LM_TY = #{LM_TY}
+		</if>
+		<if test='LM_ID_NM != null and LM_ID_NM != ""'>
+			AND A.LM_ID_NM LIKE '%' || #{LM_ID_NM} || '%'
+		</if>
+		<if test="START_DATE	!= '' and START_DATE != null">   AND TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS') >= TO_DATE(REPLACE(#{START_DATE},'-','')||'000000', 'YYYYMMDDHH24MISS')  </if>
+		<if test="END_DATE 		!= '' and END_DATE != null">  <![CDATA[ AND TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS') <= TO_DATE(REPLACE(#{END_DATE},'-','') ||'235959', 'YYYYMMDDHH24MISS') ]]>   </if>
+		ORDER BY A.LM_ID DESC
+	</select>
+
+	<insert id="insertRtnLm" parameterType="java.util.HashMap">
+		MERGE INTO PLT_LM
+		USING DUAL
+		ON (
+			CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			AND LM_ID = #{LM_ID}
+		)
+		WHEN MATCHED THEN
+		UPDATE SET
+			LM_TY = #{LM_TY}
+			, LM_ID_NM = #{LM_ID_NM}
+			, LM_ST_DTTM = #{LM_ST_DTTM}
+			, LM_EN_DTTM = #{LM_EN_DTTM}
+			, CHNG_ID = #{REG_ID}
+			, CHNG_DTTM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHEN NOT MATCHED THEN
+		INSERT (
+			CUSTCO_ID
+			, LM_ID
+			, LM_TY
+			, LM_ID_NM
+			, LM_ST_DTTM
+			, LM_EN_DTTM
+			, LM_TG_PL_ID
+			, LM_TG_PL_NM
+			, LM_PG_ST
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+		) VALUES (
+			#{ASP_NEWCUST_KEY}
+			, #{LM_ID}
+			, #{LM_TY}
+			, #{LM_ID_NM}
+			, #{LM_ST_DTTM}
+			, #{LM_EN_DTTM}
+			, #{REG_ID}
+			, #{REG_NM}
+			, '10'
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, #{REG_ID}
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, #{REG_ID}
+		)
+	</insert>
+	
+	<update id="updateRtnLm" parameterType="java.util.HashMap">
+		UPDATE PLT_LM
+		SET CHNG_DTTM = TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, CHNG_ID = #{REG_ID}
+			<if test='LM_EVA_ID != null and LM_EVA_ID !=""'>
+			, LM_EVA_ID = #{LM_EVA_ID}
+			</if>
+			<if test='LM_TG_SC != null and LM_TG_SC != ""'>
+			, LM_TG_SC = #{LM_TG_SC}
+			</if>
+			<if test='LM_LIM_TIME != null and LM_LIM_TIME != ""'>
+			, LM_LIM_TIME = #{LM_LIM_TIME}
+			</if>
+			<if test='LM_ATRT_GROUP_ID != null and LM_ATRT_GROUP_ID != ""'>
+			, LM_ATRT_GROUP_ID = #{LM_ATRT_GROUP_ID}
+			</if>
+			<if test='LM_ATRT_GROUP_NM != null and LM_ATRT_GROUP_NM != ""'>
+			, LM_ATRT_GROUP_NM = #{LM_ATRT_GROUP_NM}
+			</if>
+			<if test='USER_ATTR_A != null and USER_ATTR_A != ""'>
+			, USER_ATTR_A = #{USER_ATTR_A}
+			</if>
+			<if test='USER_ATTR_B != null and USER_ATTR_B != ""'>
+			, USER_ATTR_B = #{USER_ATTR_B}
+			</if>
+			<if test='USER_ATTR_C != null and USER_ATTR_C != ""'>
+			, USER_ATTR_C = #{USER_ATTR_C}
+			</if>
+			<if test='USER_ATTR_D != null and USER_ATTR_D != ""'>
+			, USER_ATTR_D = #{USER_ATTR_D}
+			</if>
+			<if test='LM_TG_CNT != null and LM_TG_CNT !=""'>
+			, LM_TG_CNT = #{LM_TG_CNT}
+			</if>
+			<if test='LM_PG_ST != null and LM_PG_ST !=""'>
+			, LM_PG_ST = #{LM_PG_ST}
+			</if>
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND LM_ID = #{LM_ID}
+	</update>
+	
+	<delete id="deleteRtnLm" parameterType="java.util.HashMap">
+		DELETE
+		FROM PLT_LM
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND LM_ID = #{LM_ID}
+		AND LM_PG_ST = '10'
+	</delete>
+	
+	<select id="selectRtnEvlPaper" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.LM_EVA_ID
+			, A.LM_EVA_TY
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT018' AND CD = A.LM_EVA_TY) AS LM_EVA_TY_NM
+			, A.LM_EVA_NM
+			, A.LM_EVA_COMM
+			, A.LM_EVA_RM_YN
+			, COALESCE(
+				(
+					SELECT SUM(LM_QS_TY_SC)
+					FROM PLT_LM_EVA_RST B, PLT_LM_QS C
+					WHERE B.LM_QS_ID = C.LM_QS_ID
+					AND B.CUSTCO_ID = C.CUSTCO_ID
+					AND B.CUSTCO_ID = A.CUSTCO_ID
+					AND B.LM_EVA_ID = A.LM_EVA_ID 
+				)
+			,0) AS LM_EVA_SUM
+		FROM PLT_LM_EVA A
+		WHERE A.LM_EVA_ID IN (
+			SELECT LM_EVA_ID
+			FROM PLT_LM_EVA_RST
+			WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		)
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		<if test='LM_EVA_TY != null and LM_EVA_TY != ""'>
+			AND A.LM_EVA_TY = #{LM_EVA_TY}
+		</if>
+		<choose>
+			<when test='LM_EVA_YN == "Y"'>
+				AND (SELECT COUNT(1) FROM PLT_LM WHERE LM_EVA_ID = A.LM_EVA_ID AND CUSTCO_ID = A.CUSTCO_ID) > 0
+			</when>
+			<when test='LM_EVA_YN == "N"'>
+				AND (SELECT COUNT(1) FROM PLT_LM WHERE LM_EVA_ID = A.LM_EVA_ID AND CUSTCO_ID = A.CUSTCO_ID) = 0
+			</when>
+		</choose>
+		<if test='LM_EVA_NM != null and LM_EVA_NM != ""'>
+			AND A.LM_EVA_NM LIKE '%' || #{LM_EVA_NM} || '%'
+		</if>
+		ORDER BY A.LM_EVA_ID DESC
+	</select>
+	
+	<insert id="insertRtnLmData" parameterType="java.util.HashMap">
+		MERGE INTO PLT_LM_DATA
+		USING DUAL
+		ON (
+			CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			AND LM_ID = #{LM_ID}
+			AND LM_EVA_ID = #{LM_EVA_ID}
+			AND LM_DATA_US_ID = #{LM_DATA_US_ID}
+		)
+		WHEN NOT MATCHED THEN
+		INSERT (
+			CUSTCO_ID
+			, LM_ID
+			, LM_EVA_ID
+			, LM_DATA_ID
+			, LM_DATA_ANS_YN
+			, LM_DATA_US_ID
+			, LM_DATA_US_NM
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+		) VALUES (
+			#{ASP_NEWCUST_KEY}
+			, #{LM_ID}
+			, #{LM_EVA_ID}
+			, #{LM_DATA_ID}
+			, 'N'
+			, #{LM_DATA_US_ID}
+			, #{LM_DATA_US_NM}
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, #{REG_ID}
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, #{REG_ID}
+		)
+	</insert>
+	
+	<select id="selectRtnLmUser" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.USER_ID AS LM_DATA_US_ID
+		  , A.USER_NM AS LM_DATA_US_NM
+		  , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+		  , (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_CUST_NM
+		  , B.USER_ATTR_A
+		  , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'A' AND ATTR_DIV_CD = B.USER_ATTR_A) AS USER_ATTR_A_NM
+		  , B.USER_ATTR_B
+		  , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'B' AND ATTR_DIV_CD = B.USER_ATTR_B) AS USER_ATTR_B_NM
+		  , B.USER_ATTR_C
+		  , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'C' AND ATTR_DIV_CD = B.USER_ATTR_C) AS USER_ATTR_C_NM
+		  , B.USER_ATTR_D
+		  , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'D' AND ATTR_DIV_CD = B.USER_ATTR_D) AS USER_ATTR_D_NM
+		  , C.ATRT_GROUP_ID
+		  , (SELECT ATRT_GROUP_NM FROM PLT_AUTH WHERE ATRT_GROUP_ID = C.ATRT_GROUP_ID) AS ATRT_GROUP_NM
+		FROM PLT_USER A, PLT_USER_ATTR B, PLT_USER_AUTH C
+		WHERE A.USER_ID = B.USER_ID(+)
+		AND A.CUSTCO_ID = B.CUSTCO_ID(+)
+		AND C.USER_ID = A.USER_ID
+		AND A.CUSTCO_ID LIKE '%' || #{ASP_NEWCUST_KEY} || '%'
+		<if test='ATRT_GROUP_ID != null and ATRT_GROUP_ID != ""'>
+			AND C.ATRT_GROUP_ID = #{ATRT_GROUP_ID}
+		</if>
+		<if test='USER_ATTR_A != null and USER_ATTR_A != ""'>
+			AND B.USER_ATTR_A = #{USER_ATTR_A}
+		</if>
+		<if test='USER_ATTR_B != null and USER_ATTR_B != ""'>
+			AND B.USER_ATTR_B = #{USER_ATTR_B}
+		</if>
+		<if test='USER_ATTR_C != null and USER_ATTR_C != ""'>
+			AND B.USER_ATTR_C = #{USER_ATTR_C}
+		</if>
+		<if test='USER_ATTR_D != null and USER_ATTR_D != ""'>
+			AND B.USER_ATTR_D = #{USER_ATTR_D}
+		</if>
+		ORDER BY A.USER_ID
+	</select>
+	
+	<select id="selectRtnLmData" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.CUSTCO_ID AS ASP_NEWCUST_KEY
+			, (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_CUST_NM
+			, A.LM_ID
+			, A.LM_EVA_ID
+			, A.LM_DATA_ID
+			, A.LM_DATA_ST_DTTM
+			, A.LM_DATA_EN_DTTM
+			, A.LM_DATA_ANS_YN
+			, A.LM_DATA_US_ID
+			, A.LM_DATA_US_NM
+			, A.LM_US_RATER_ID
+			, A.LM_US_RATER_NM
+			, B.USER_ATTR_A
+			, (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'A' AND ATTR_DIV_CD = B.USER_ATTR_A) AS USER_ATTR_A_NM
+			, B.USER_ATTR_B
+			, (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'B' AND ATTR_DIV_CD = B.USER_ATTR_B) AS USER_ATTR_B_NM
+			, B.USER_ATTR_C
+			, (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'C' AND ATTR_DIV_CD = B.USER_ATTR_C) AS USER_ATTR_C_NM
+			, B.USER_ATTR_D
+			, (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = B.CUSTCO_ID AND ATTR_CD = 'D' AND ATTR_DIV_CD = B.USER_ATTR_D) AS USER_ATTR_D_NM
+			, C.ATRT_GROUP_ID
+			, (SELECT ATRT_GROUP_NM FROM PLT_AUTH WHERE ATRT_GROUP_ID = C.ATRT_GROUP_ID) AS ATRT_GROUP_NM
+		FROM PLT_LM_DATA A, PLT_USER_ATTR B, PLT_USER_AUTH C
+		WHERE A.LM_DATA_US_ID = B.USER_ID(+)
+		AND A.CUSTCO_ID = B.CUSTCO_ID(+)
+		AND C.USER_ID = A.LM_DATA_US_ID
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND A.LM_ID = #{LM_ID}
+		AND A.LM_EVA_ID = #{LM_EVA_ID}
+	</select>
+	
+	<delete id="deleteRtnLmData" parameterType="java.util.HashMap">
+		DELETE 
+		FROM PLT_LM_DATA
+		WHERE LM_DATA_ID = #{LM_DATA_ID}
+	</delete>
+</mapper>

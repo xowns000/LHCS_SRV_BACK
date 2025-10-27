@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.cmpgn.dao.PhoneCmpgnManageMapper">
+
+<!-- 스크립트 트리 조회 -->
+<select id="selectRtnScriptTree"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+	SELECT 
+	    A.SCRIPT_ID AS C_NODE_NO
+	    , A.UPPER_SCRIPT_ID AS P_NODE_NO
+	    , (SELECT B.SCRIPT_TIT FROM PLT_PHN_SCRT B where A.UPPER_SCRIPT_ID = B.SCRIPT_ID ) AS UPPER_SCRIPT_NM
+	    , A.SCRIPT_TIT
+	    , '' AS NODE_URL
+	    , A.SCRIPT_ID AS NODE_ID
+	    , A.SCRIPT_ID AS NODE_KEY
+	    , CASE WHEN EXISTS(SELECT 'X' FROM PLT_PHN_SCRT WHERE UPPER_SCRIPT_ID = A.SCRIPT_ID)  THEN 'D' ELSE 'F' END AS NODE_TYPE
+	    , A.LVL_NO AS NODE_LVL
+	    , A.ORD_SEQ AS NODE_SORT
+	    , A.USE_YN
+	    , A.CENT_TY
+	    , CASE WHEN A.USE_YN ='N'
+				   THEN '<span class="dynatree-title is-disabled">' || A.SCRIPT_TIT || '</span> <i class="tt-icon-circle-close is-red"></i>'
+				   ELSE A.SCRIPT_TIT
+		  END  AS NODE_TITLE	/* 메뉴명 */
+	FROM 
+	    PLT_PHN_SCRT A
+	    WHERE 1=1
+	]]>    
+	<if test="CENT_TY !='' and CENT_TY != null">  
+		AND A.CENT_TY = #{CENT_TY}                 
+	</if>
+	<if test="USE_SRCH_YN !='' and USE_SRCH_YN != null">  
+		AND A.USE_YN = #{USE_SRCH_YN}                 
+	</if>
+	START WITH A.UPPER_SCRIPT_ID IS NULL
+	CONNECT BY PRIOR A.SCRIPT_ID = A.UPPER_SCRIPT_ID
+	ORDER SIBLINGS BY A.ORD_SEQ ASC
+	
+</select>	
+
+
+
+
+
+
+
+
+
+
+
+<!-- 캠페인 콤보 조회 -->
+<select id="selectRtn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+        ,A1.CAMP_SEQ, CAMP_NM, CAMP_TYPE_CD, CAMP_STAT_CD, STRT_DATE, END_DATE, SCRT_QTNA_TC, SCRT_QTNA_SEQ
+                , CAMP_DESC, CHG_USER_ID, CHG_DT
+                , FILE_CNT, DATA_CNT, EXTR_CNT, ERR_CNT, C1.ALLC_CNT, EXTR_CNT-ALLC_CNT NO_ALLC_CNT
+                , REG_DT,
+                 FN_USER(REG_USER_ID,'') AS REG_USER_NM
+                  ,USE_YN
+       FROM    (SELECT   A.CAMP_SEQ, COUNT(B.DATA_SEQ) FILE_CNT, SUM(DATA_CNT) DATA_CNT, SUM(EXTR_CNT) EXTR_CNT, SUM(ERR_CNT) ERR_CNT
+                FROM     UC_CMP_BASE A LEFT OUTER JOIN UC_CMP_DATA B ON A.CAMP_SEQ = B.CAMP_SEQ
+                WHERE 1=1
+  <if test="TPL_NM != ''    and TPL_NM != null">    AND TPL_NM LIKE '%'||#{TPL_NM}||'%' </if>
+  <if test="CAMP_NM != ''   and CAMP_NM != null">   AND CAMP_NM LIKE '%'||#{CAMP_NM}||'%' </if>
+  <if test="CAMP_STAT_CD != ''  and CAMP_STAT_CD != null">      AND CAMP_STAT_CD = #{CAMP_STAT_CD} </if>
+  <if test="CAMP_TYPE_CD != ''  and CAMP_TYPE_CD != null">      AND CAMP_TYPE_CD = #{CAMP_TYPE_CD} </if>
+                GROUP BY A.CAMP_SEQ
+        ) A1 INNER JOIN  UC_CMP_BASE B2 ON  A1.CAMP_SEQ = B2.CAMP_SEQ
+        LEFT JOIN 
+       (SELECT CAMP_SEQ, SUM(CASE WHEN ALLC_AGNT_ID IS NOT NULL THEN 1 ELSE 0 END) AS ALLC_CNT 
+        FROM UC_CMP_OBJ_LIST GROUP BY  CAMP_SEQ) C1         
+        ON A1.CAMP_SEQ = C1.CAMP_SEQ 
+ORDER BY A1.CAMP_SEQ DESC  
+
+</select>
+
+<select id="selectRtn2"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT   '0' SELECTED, FN_USER(ALLC_AGNT_ID,'') USER_NM, ALLC_AGNT_ID USER_ID, COUNT(*) ALLC_CNT
+                        , SUM(CASE WHEN LAST_CALL_STAT_CD IS NULL THEN 1 ELSE 0 END ) NO_CALL_CNT
+                        , SUM(CASE WHEN LAST_CALL_STAT_CD IS NULL THEN 0 ELSE 1 END ) CALL_CNT
+                        , MAX(TEAM_LCD) TEAM_LCD, MAX(TEAM_MCD) TEAM_MCD, MAX(TEAM_SCD) TEAM_SCD, FN_CODEBOOK('SYS013',MAX(TEAM_LCD)) TEAM_LCD_NM
+                        , FN_CODEBOOK('CST115',MAX(TEAM_MCD)) TEAM_MCD_NM, FN_CODEBOOK('SYS015',MAX(TEAM_SCD))  TEAM_SCD_NM
+            FROM     UC_CMP_OBJ_LIST A, UC_SYS_USER B
+            WHERE    CAMP_SEQ = #{ CAMP_SEQ} <if test="DATA_SEQ != ''  and DATA_SEQ != null">      AND DATA_SEQ = #{DATA_SEQ} </if>
+            AND      ALLC_AGNT_ID IS NOT NULL
+            AND      A.ALLC_AGNT_ID = B.USER_ID
+            AND      B.RTRM_DATE IS NULL
+            GROUP BY ALLC_AGNT_ID          
+
+</select>
+
+<select id="selectRtn3"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT  A.DATA_SEQ , A.CAMP_SEQ , VALUE(A.DEL_FLG,'N') DEL_FLG
+                    ,MAX(FILE_NM) FILE_NM
+                    ,FN_CODEBOOK('CMP005', MAX(DATA_TC)) AS DATA_TC_NM
+                    ,MAX(DATA_CNT) AS DATA_CNT
+                    ,MAX(EXTR_CNT) AS EXTR_CNT
+                    ,MAX(ERR_CNT) AS ERR_CNT
+                    ,MAX(A.REG_DT) AS REG_DT
+                    ,FN_USER(MAX(A.REG_USER_ID),'') AS REG_USER_NM
+                    ,SUM(CASE WHEN ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '' THEN 0 ELSE 1 END ) AS ALLC_CNT
+                    ,SUM(CASE WHEN ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '' THEN 1 ELSE 0 END ) AS NO_ALLC_CNT
+              FROM  UC_CMP_DATA A LEFT OUTER JOIN UC_CMP_OBJ_LIST B ON A.CAMP_SEQ = B.CAMP_SEQ AND  A.DATA_SEQ = B.DATA_SEQ
+             WHERE  A.CAMP_SEQ = #{CAMP_SEQ}
+                AND A.DEL_FLG IS NULL 
+          GROUP BY  A.CAMP_SEQ, A.DATA_SEQ , A.DEL_FLG
+          ORDER BY  MAX(A.REG_DT) DESC
+ 
+</select>           
+
+
+<select id="selectRtn4"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+                    ,CUST_NO
+                    ,CUST_TC
+                    ,CUST_NM 
+                    ,JBCL_CD
+                    ,LAST_INTG_PRJ_NO
+                    ,LAST_DEAL_LINE_DIV
+                    ,ACPT_NO
+                    ,CUST_TNO
+                    ,CALL_TNO
+                    ,MOBL_TNO
+                    ,ETC1_TNO
+                    ,HPCL_TEL_DIV
+                    ,RECV_RJT_YN
+                    ,BL_YN
+                    ,MEMO
+                    ,SPF_ITEM
+                    ,FN_USER(ALLC_AGNT_ID,'') AS ALLC_AGNT_NM
+                    ,ALLC_AGNT_ID
+                    ,AGNT_ALLC_DT
+                    ,SUBSTR(AGNT_ALLC_DT,1, 8) AS AGNT_ALLC_DATE
+                    ,LAST_CALL_DT
+                    ,LAST_CONSL_LCD
+                    ,LAST_CONSL_MCD
+                    ,LAST_CONSL_SCD
+                    ,LAST_CALL_STAT_CD
+                    ,REG_DT
+                    ,FN_USER(REG_USER_ID,'') AS REG_USER_NM
+                    ,LIST_SEQ
+                    ,CAMP_SEQ
+                    ,FN_CODEBOOK('CRS002', LAST_CALL_STAT_CD) AS LAST_CALL_STAT_NM
+              FROM  UC_CMP_OBJ_LIST
+             WHERE  1=1 
+  <if test="CAMP_SEQ != ''    and CAMP_SEQ != null">    AND CAMP_SEQ = #{CAMP_SEQ}</if>
+ <if test="DATA_SEQ != ''    and DATA_SEQ != null">    AND DATA_SEQ = #{DATA_SEQ}</if>
+  <if test="LAST_CALL_STAT_CD != ''    and LAST_CALL_STAT_CD != null">    AND LAST_CALL_STAT_CD = #{LAST_CALL_STAT_CD}</if>
+   <if test="LAST_CALL_STAT_CD != ''    and LAST_CALL_STAT_CD != null">    AND LAST_CALL_STRT_DT BETWEEN #{LAST_CALL_STRT_DATE} || '000000'</if>
+   <if test="LAST_CALL_STAT_CD != ''    and LAST_CALL_STAT_CD != null">    AND   #{LAST_CALL_END_DATE} || '235959'</if>
+   <if test="CONSL_LCD != ''    and CONSL_LCD != null">    AND CONSL_LCD = #{CONSL_LCD}</if>
+   <if test="CONSL_MCD != ''    and CONSL_MCD != null">    AND CONSL_MCD = #{CONSL_MCD}</if>
+   <if test="CONSL_SCD != ''    and CONSL_SCD != null">    AND CONSL_SCD = #{CONSL_SCD}</if>
+    <if test="AGNT_ALLC_STRT_DATE != ''  and AGNT_ALLC_STRT_DATE != null">    AND AGNT_ALLC_DT BETWEEN #{AGNT_ALLC_STRT_DATE} || '000000'</if>
+     <if test="AGNT_ALLC_END_DATE != ''  and AGNT_ALLC_END_DATE != null">    AND   #{AGNT_ALLC_END_DATE} || '235959'</if>
+      <if test="SEARCH_VAL != ''    and SEARCH_VAL != null">   #{SEARCH_VAL}</if>
+          ORDER BY REG_DT 
+
+</select>           
+            
+  <!--  CLOB SELECT -->          
+<resultMap id="mapSelectCntn" type="java.util.HashMap"  >
+<result property="FILE_NM"    column="FILE_NM"  jdbcType="VARCHAR"    javaType="java.lang.String" />
+<result property="ERR_MSG"    column="ERR_MSG"  jdbcType="VARCHAR"    javaType="java.lang.String" />
+<result property="ERR_DATA"    column="ERR_DATA"    jdbcType="VARCHAR"    javaType="java.lang.String"/>
+<result property="REG_DT"    column="REG_DT"   jdbcType="VARCHAR"    javaType="java.lang.String"   />
+<result property="REG_USER_NM"    column="REG_USER_NM"  jdbcType="VARCHAR"    javaType="java.lang.String" />
+</resultMap>
+
+
+<select id="selectRtn5"  parameterType= "java.util.HashMap" resultMap="mapSelectCntn">
+    SELECT  FILE_NM
+                    ,ERR_MSG
+                    ,ERR_DATA
+                    ,A.REG_DT
+                    ,FN_USER(A.REG_USER_ID, '') AS REG_USER_NM
+              FROM  UC_CMP_ERR_DATA A, UC_CMP_DATA B
+             WHERE  A.CAMP_SEQ = #{CAMP_SEQ}
+               AND  A.DATA_SEQ = B.DATA_SEQ
+               --YCHCHANG 20131204 DELETE FLAG
+               AND B.DEL_FLG IS NULL
+          ORDER BY  REG_DT 
+ 
+</select>
+
+
+<select id="selectRtnCombo01"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT  DISTINCT SCRT_QTNA_SEQ , CAMP_NM 
+FROM UC_CMP_BASE
+ 
+</select>
+
+<select id="selectRtnCombo02"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT  TPL_SEQ, TPL_NM
+FROM UC_CMP_TPL  
+ORDER BY TPL_SEQ
+ 
+</select>
+
+
+<insert id="INSERT_UC_CMP_BASE"  parameterType= "java.util.HashMap" >
+INSERT INTO UC_CMP_BASE(CAMP_SEQ, CAMP_NM, CAMP_TYPE_CD, CAMP_STAT_CD, USE_YN, STRT_DATE, END_DATE
+                                , SCRT_QTNA_TC, SCRT_QTNA_SEQ, CAMP_DESC, REG_USER_ID, REG_DT, CHG_USER_ID, CHG_DT)
+            VALUES( NEXTVAL FOR SQ_CMP_CAMP_SEQ, #{CAMP_NM},#{CAMP_TYPE_CD},#{CAMP_STAT_CD}, #{USE_YN}, 
+                #{STRT_DATE},#{END_DATE}, #{SCRT_QTNA_TC}, #{SCRT_QTNA_SEQ}, #{CAMP_DESC}, #{REG_USER_ID},
+                     UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0) , #{CHG_USER_ID}, UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0))    
+</insert>   
+
+<update id="UPDATE_UC_CMP_BASE"  parameterType= "java.util.HashMap" >
+UPDATE UC_CMP_BASE
+            SET    CAMP_NM = #{CAMP_NM}
+                         , CAMP_TYPE_CD = #{CAMP_TYPE_CD}
+                         , CAMP_STAT_CD = #{CAMP_STAT_CD}
+                         , USE_YN = #{USE_YN}
+                         , STRT_DATE = #{STRT_DATE}
+                         , END_DATE = #{END_DATE}
+                         , SCRT_QTNA_TC = #{SCRT_QTNA_TC}
+                         , SCRT_QTNA_SEQ = #{SCRT_QTNA_SEQ}
+                         , CAMP_DESC = #{CAMP_DESC}
+                         , CHG_USER_ID = #{CHG_USER_ID}
+                         , CHG_DT = UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0)
+            WHERE  CAMP_SEQ = #{CAMP_SEQ}
+</update> 
+
+<delete id="DELETE_UC_CMP_BASE"  parameterType= "java.util.HashMap" >
+DELETE FROM UC_CMP_BASE
+        WHERE  CAMP_SEQ = #{CAMP_SEQ}
+</delete>  
+
+
+<!-- 캠페인 데이터 상세등록 -->
+<insert id="INSERT_UC_CMP_DATA_TPL"  parameterType= "java.util.HashMap" >
+    INSERT INTO UC_CMP_DATA_TPL (CAMP_SEQ, DATA_SEQ, COLM_ENG_NM, COLM_KOR_NM, ORD, KEY_YN, REG_DT, REG_USER_ID)
+        (SELECT CAST(#{CAMP_SEQ} AS INTEGER), CAST(#{DATA_SEQ} AS INTEGER), COLM_ENG_NM,
+        COLM_KOR_NM, ORD, KEY_YN, UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0), CAST(#{REG_USER_ID} as VARCHAR(15))
+         FROM   UC_CMP_TPL_COLM
+         WHERE  TPL_SEQ = #{TPL_SEQ})
+</insert>
+
+
+<!-- 캠페인 리스트 등록 -->
+<insert id="INSERT_UC_CMP_OBJ_LIST"  parameterType= "java.util.HashMap">
+INSERT INTO UC_CMP_OBJ_LIST 
+        (
+             CAMP_SEQ
+            , LIST_SEQ
+            , DATA_SEQ
+            , CUST_NO
+            , CUST_TC
+            , CUST_NM
+            , JBCL_CD
+            , LAST_INTG_PRJ_NO
+            , LAST_DEAL_LINE_DIV
+            , PRJ_NO
+            , HO_NO
+            , CUST_TNO
+            , CALL_TNO
+            , MOBL_TNO
+            , ETC1_TNO
+            , HPCL_TEL_DIV
+            , RECV_RJT_YN
+            , BL_YN
+            , MEMO
+            , SPF_ITEM
+            , REG_DT
+            , REG_USER_ID
+            , CHG_DT
+            , CHG_USER_ID
+            , ACPT_NO
+        )
+        VALUES
+        (
+             #{CAMP_SEQ}
+            , #{LIST_SEQ}
+            , #{DATA_SEQ}
+            , #{CUST_NO}
+            , #{CUST_TC}
+            , #{CUST_NM}
+            , #{JBCL_CD}
+            , #{LAST_INTG_PRJ_NO}
+            , #{LAST_DEAL_LINE_DIV}
+            , #{PRJ_NO}
+            , #{HO_NO}
+            , #{CUST_TNO}
+            , #{CALL_TNO}
+            , #{MOBL_TNO}
+            , #{ETC1_TNO}
+            , #{HPCL_TEL_DIV}
+            , #{RECV_RJT_YN}
+            , #{BL_YN}
+            , #{MEMO}
+            , #{SPF_ITEM}
+            , UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0)
+            , #{REG_USER_ID}
+            , UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0)
+            , #{CHG_USER_ID}
+            , #{ACPT_NO}
+        )
+   </insert>
+
+<!-- 나머지 캠페인 리스트 등록 -->
+<insert id="INSERT_UC_CMP_OBJ_DTL"  parameterType= "java.util.HashMap" >
+INSERT INTO UC_CMP_OBJ_DTL 
+(
+    CAMP_SEQ,
+     LIST_SEQ,
+      KEY_NO,
+      ETC_1,
+      ETC_2,
+      ETC_3,
+      ETC_4,
+      ETC_5,
+      ETC_6,
+      ETC_7,
+      ETC_8,
+      ETC_9,
+      ETC_10,
+      ETC_11,
+      ETC_12,
+      ETC_13,
+      ETC_14,
+      ETC_15,
+      ETC_16,
+      ETC_17,
+      ETC_18,
+      ETC_19,
+      ETC_20,
+      REG_DT,
+      REG_USER_ID,
+      CHG_DT, CHG_USER_ID)
+        VALUES(#{CAMP_SEQ}, #{LIST_SEQ}, #{KEY_NO}, #{ETC_1},#{ETC_2}, #{ETC_3}, #{ETC_4}, #{ETC_5}, #{ETC_6},
+         #{ETC_7}, #{ETC_8}, #{ETC_9}, #{ETC_10}, #{ETC_11}, #{ETC_12},#{ETC_13}, #{ETC_14}, #{ETC_15}, #{ETC_16},
+          #{ETC_17}, #{ETC_18}, #{ETC_19}, #{ETC_20}, 
+         UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0),#{ REG_USER_ID},UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0), #{CHG_USER_ID})
+</insert>
+
+<!-- 캠페인 데이터 등록 -->
+<insert id="INSERT_UC_CMP_DATA"  parameterType= "java.util.HashMap" >
+    INSERT INTO UC_CMP_DATA 
+    (CAMP_SEQ, DATA_SEQ, DATA_TC, SUB_CAMP_NM, FILE_NM, DATA_CNT, EXTR_CNT, ERR_CNT, REG_DT, REG_USER_ID)
+    
+        VALUES(#{CAMP_SEQ},#{ DATA_SEQ}, #{DATA_TC}, #{SUB_CAMP_NM}, #{FILE_NM}, #{DATA_CNT}
+                    ,(SELECT COUNT(*) FROM UC_CMP_OBJ_LIST WHERE CAMP_SEQ = #{CAMP_SEQ} AND DATA_SEQ =#{DATA_SEQ})
+                    ,(SELECT COUNT(*) FROM UC_CMP_ERR_DATA WHERE CAMP_SEQ = #{CAMP_SEQ} AND DATA_SEQ = #{DATA_SEQ})
+                    , UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0), #{REG_USER_ID})
+</insert>
+
+<select id="SELECT_UC_CMP_TPL_COLM" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT   '0' SELECTED, A.COLM_ENG_NM, A.COLM_KOR_NM, A.FMT_CD, A.ORD, A.KEY_YN, DATA_SIZE, DATA_TYPE_CD, B.CUST_FND_KEY_YN
+            FROM     UC_CMP_TPL_COLM a, UC_CMP_COLM b
+            WHERE    A.TPL_SEQ = #{TPL_SEQ}
+            AND      A.COLM_ENG_NM = B.COLM_ENG_NM
+            ORDER BY A.ORD 
+
+</select>
+
+<!-- 캠페인 DATA_SEQ 가져오는 쿼리 -->
+<select id="SELECT_GET_CMP_DATA_SEQ" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT NEXTVAL FOR SQ_CMP_DATA_SEQ DATA_SEQ 
+                ,(SELECT COALESCE(MAX(LIST_SEQ),0) FROM UC_CMP_OBJ_LIST WHERE CAMP_SEQ = #{CAMP_SEQ}) LIST_SEQ
+        FROM SYSIBM.SYSDUMMY1
+ 
+</select>
+
+
+<!-- 캠페인 CUST_NO 가져오는 쿼리 -->
+<select id="SELECT_GET_CUST_NO" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT CUST_NO
+  FROM UC_CRS_CUST_INFO
+  WHERE 1=1
+        <choose>
+               <when  test="CHECK_MAPPING =='CUST_NM' ">   AND CUST_NM = #{CUST_NM}</when>    
+               <when  test="CHECK_MAPPING == 'CUST_TNO' ">   AND CUST_TNO = #{CUST_TNO}</when>    
+                <when  test="CHECK_MAPPING == 'CALL_TNO' ">   AND CALL_TNO = #{CALL_TNO}</when>  
+                 <when  test="CHECK_MAPPING == 'ETC1_TNO' ">    AND ETC1_TNO = #{ETC1_TNO}</when>  
+                    <otherwise> </otherwise>
+        </choose>
+                FETCH FIRST  1 ROWS ONLY
+ 
+</select>
+
+
+<update id="upDataRtn"  parameterType= "java.util.HashMap" >
+    UPDATE UC_CMP_DATA SET
+            DEL_FLG = #{DEL_FLG}
+            WHERE DATA_SEQ = #{DATA_SEQ} AND CAMP_SEQ = #{CAMP_SEQ}   
+</update>
+
+<insert id="INSERT_UC_CMP_ERR_DATA"  parameterType= "java.util.HashMap" >
+INSERT INTO UC_CMP_ERR_DATA (CAMP_SEQ, DATA_SEQ, ERR_SEQ, ERR_MSG, ERR_DATA, REG_DT, REG_USER_ID)
+        VALUES(#{CAMP_SEQ}, #{DATA_SEQ}, #{ERR_SEQ}, #{ERR_MSG},#{ERR_DATA},  UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0), #{REG_USER_ID})
+</insert>
+
+<!-- 고객Data 콤보 조회 -->
+<select id="selectRtnFileNmSet"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 1 STEP
+     , DATA_SEQ
+     , FILE_NM
+  FROM UC_CMP_DATA
+ WHERE 1=1
+ <if test="CAMP_SEQ != '' and CAMP_SEQ != null">   AND CAMP_SEQ = #{CAMP_SEQ}</if>    
+   AND DEL_FLG IS NULL   
+
+</select>	
+	
+</mapper>

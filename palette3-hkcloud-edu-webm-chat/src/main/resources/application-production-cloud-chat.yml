@@ -1,0 +1,139 @@
+###################################################
+# local-chat profile
+###################################################
+spring.profiles:
+  -production-cloud-chat
+  
+##spring.profiles.include: "chat"
+spring.profiles.include: 
+  -chat
+
+###################################################
+#
+# 채팅(chat) 속성
+# -------------------------------------------------
+# include 'chat' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "chat"
+# ----------------------------------------
+# ChatProperties
+# ----------------------------------------
+chat:
+  enabled: true
+  # 라우터 활성 여부
+  router-enabled: true
+  # 문의 유형 "이전단계로" 이모티콘 설정 , 문의유형 메시지/챗봇 이벤트명 이모티콘은 관리화면에서 직접설정한다. 예 (윙크)
+  inqry-pre-step-msg: "(미소)"
+  # 이석상태
+  chat-on: "CHATON"
+  chat-off: "CHATOFF"
+  # 비정상종료 시 상담중 채팅창의 TimeOut 시간( minute ) , 상담원 비정상 종료시 상담중이던 채팅칭의 대기 시간 설정  (분)
+  agent-non-response-timeout: 1
+  # 상담사 수락대기 최대 건 수
+  max-agent-chat: 3
+  # 상담 시작 시간
+  work-start-time: "0800"
+  # 상담 종료 시간
+  work-end-time: "0100"
+  # ----------------------------------------
+  # 메신저
+  # ----------------------------------------
+  messenger:
+    # KAKAO-TALK
+    kakaotalk:
+      enabled: true
+      # SENDER KEY
+      #senderkey: ENC(6I8p4iV/RqSNKFM6k2nAVjtoUwCX+MlYMlWKsUhk/dAguRkaY46PNntF2+jE3z+nVYNi20N7+vwuVQuYErgBFocn+AwJre31SwE1xBj6Hwo=)
+      senderkey: ENC(UsZ727FtK6xoCP7p9a9ZRY1YCL1X0sLbyK5dbhSvsJ7Yf8eVEc1lA3lJGf5133QQ1gv66VsTs7l6kU+aQkAW+diZkZdfn4z7lBv8ZoiaiyA=) # 운영
+      #senderkey: ENC(7n2dfp5wj11WjzdavwXP96QFN+FysCiWpJ3pBZiMIQ58WuFjui2bARUkqT8TuRyOZq4QV/oCPB9HJtticuOVL4Z+8lTskRzxp/X1uESZJAA=) # 개발
+      # 기본 URL
+      base-url: https://bzc-api.kakao.com/v1/${chat.messenger.kakaotalk.senderkey}
+      # URL , 호스트 파일에 중계 서버로 설정이 되어 있어야 함
+      urls:
+        profile-chat-activate: ${chat.messenger.kakaotalk.base-url}/profile/chat/activate
+        profile-chat-deactivate: ${chat.messenger.kakaotalk.base-url}/profile/chat/deactivate
+        profile-user-block: ${chat.messenger.kakaotalk.base-url}/profile/user/block
+        profile-user-unblock: ${chat.messenger.kakaotalk.base-url}/profile/user/unblock
+        chat-write: ${chat.messenger.kakaotalk.base-url}/chat/write
+        chat-end: ${chat.messenger.kakaotalk.base-url}/chat/end
+        chat-end-with-bot: ${chat.messenger.kakaotalk.base-url}/chat/endWithBot
+        image-upload: ${chat.messenger.kakaotalk.base-url}/image/upload
+    # T-TALK
+    ttalk:
+      enabled: true
+      # SENDER KEY
+      senderkey: ENC(S/aeEeXb7sHY11psf1FO+W8g5JLtrCkp2IyG/0kliRxvfAAb4MG7PpXLONdXM5t88+oiCEWrX0ZGbITdOByW2LmbQeNQgOhq/W/PvD896Qg=)
+      # 기본 URL
+      base-url: http://172.16.18.6:51001/apis/${chat.messenger.ttalk.senderkey}
+      # URL , 호스트 파일에 중계 서버로 설정이 되어 있어야 함
+      urls: 
+        chat-open: http://172.16.18.6:51000/chat/open
+        profile: ${chat.messenger.ttalk.base-url}/profile
+        chat-write: ${chat.messenger.ttalk.base-url}/chat/write
+        chat-end: ${chat.messenger.ttalk.base-url}/chat/end
+        image-upload: ${chat.messenger.ttalk.base-url}/image/upload
+    #LINE URL , 호스트 파일에 중계 서버로 설정이 되어 있어야 함
+    line:
+      enabled: false
+      # 기본 URL
+      base-url: https://api.line.me/v2/bot
+      urls:
+        bot-message-push: ${chat.messenger.line.base-url}/message/push
+        bot-message-content: ${chat.messenger.line.base-url}/message/%s/content
+        expired-session: https://proxy.hcteletalk.com:15001/expired_session
+    #NAVER-TALKTALK URL
+    navertalktalk:
+      enabled: true
+      # 기본 URL, 네이버톡톡은 하나의 url에서 body 데이터 값에 따라 메시지 구분 결정 ex) 텍스트, 이미지, 종료
+      base-url: https://gw.talk.naver.com/chatbot/v1/event
+      urls:
+        expired-session: https://gw.talk.naver.com/chatbot/v1/event
+        image-upload: https://gw.talk.naver.com/chatbot/v1/imageUpload
+  # ----------------------------------------
+  # 보안
+  # ----------------------------------------
+  security:
+    # 뷰어 화이트리스트 도메인
+    viewer-white-list-domain:
+      - dn-m.talk.kakao.com
+      - dn-v.talk.kakao.com
+      - talk.kakaocdn.net
+      - localhost
+    chat-main:
+      # 사용여부
+      enabled: false
+      #CONTENT ENCRYPT
+      #chat-win-cipher:
+      # 파라미터 위변조 체크 사용되는 private key
+      param-key: ENC(vWKjy8jzOmA9O3TtxdcroLK1xMtdQiTL3MXZ/vMGPMl9YyyfzCiYhKy7XYv+uMN75nCUlXnTJjeRxISRxPDVSCObOLEnc1mU7vA42i4EZsA=)
+  # ----------------------------------------
+  # 지원
+  # ----------------------------------------
+  support:
+    # 사용여부
+    enabled: false
+    urls:
+      #고객사 고객기본정보요청 URL
+      req-cust-base-info: http://localhost/webapps/interfaces/ReqCustBaseInfo
+      #고객 개인정보입력 사용 시 요청 URL
+      mediation-address-mobile: http://210.112.73.26:20005/webapps/talk/link/TalkUserInfoMobile?senderUserKey=
+      mediation-address-web: http://210.112.73.26:20005/webapps/talk/link/TalkUserInfoWeb?senderUserKey=
+  # ----------------------------------------
+  # 챗봇
+  # ----------------------------------------
+  chatbot:
+    skill:
+      #T-skill URL , 챗봇 스킬 서버에서 최종 문의 유형을 받기 위한 설정 (SKILL_USE_YN, 사용함:YES, 사용안함:NO)
+      #skillUseYn          =YES
+      # 챗봇스킬 사용여부
+      enabled: false
+      # CHATBOT SKILL DOMAIN
+      domain: http://localhost:3000
+      #챗봇 sndrKey (메시지를 수신한 발신프로필 키 에 대한 asp_sndrKey)
+      asp-sender-key: "1"
+      svr-url-tskill: https://localhost:8443/chatbot/skill/inqry
+      #챗봇url (현재는 굿웨어몰 전용)
+      url: https://goodwearmall-chatbot.hkpalette.com
+

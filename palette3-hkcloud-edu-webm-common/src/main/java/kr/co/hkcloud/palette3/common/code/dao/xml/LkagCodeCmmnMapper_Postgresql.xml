@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.common.code.dao.LkagCodeCmmnMapper">
+    <!--코드타입기준으로 공통코드정보를 콤보박스에 로드하기 위해 CODE, CODE_NM으로 검색한다.-->
+    <select id="selectRtnCodeBook" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT  /* kr.co.hkcloud.palette3.common.code.dao.LkagCodeCmmnMapper.selectRtnCodeBook */
+              LKAG_CD_ID AS CD /* 코드 */
+            , LKAG_CD_ID /* 코드 */
+            , LKAG_CD_NM /* 코드명 */
+            , LKAG_CD_VL /* 코드값*/
+        FROM CUSTCO.PLT_LKAG_CD_MNG
+        WHERE LKAG_MST_ID = #{LKAG_MST_ID}::INT
+        AND LKAG_CD_ID != '*'
+        AND DEL_YN = 'N'
+        AND USE_YN = 'Y'
+        <choose>
+            <when test="USE_YN != null and USE_YN = 'ALL'"> AND USE_YN IN ('Y','N') </when>
+            <when test="USE_YN != null"> AND USE_YN = #{USE_YN} </when>
+            <otherwise> AND USE_YN = 'Y'</otherwise>
+        </choose>
+        <if test="LKAG_GROUP_CD_ID !='' and LKAG_GROUP_CD_ID != null"> AND LKAG_GROUP_CD_ID = #{LKAG_GROUP_CD_ID} </if>
+
+    </select>
+    <!--코드타입기준으로 공통코드정보를 콤보박스에 로드하기 위해 CODE, CODE_NM으로 검색한다.(멀티)-->
+    <select id="selectRtnCodeBooks" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /* kr.co.hkcloud.palette3.common.code.dao.LkagCodeCmmnMapper.selectRtnCodeBooks */
+              LKAG_CD_ID AS CD /* 코드 */
+            , LKAG_CD_ID  /* 코드 */
+            , LKAG_CD_NM /* 코드명 */
+            , LKAG_GROUP_CD_ID
+        FROM PLT_COMM_CD
+        WHERE LKAG_MST_ID = #{LKAG_MST_ID}::INT
+        AND USE_YN = 'Y'
+        AND LKAG_CD_ID != '****'
+        AND LKAG_GROUP_CD_ID IN (<foreach collection="groupCds" item="item" separator=",">#{item}</foreach>)
+        ORDER BY LKAG_GROUP_CD_ID
+    </select>
+</mapper>

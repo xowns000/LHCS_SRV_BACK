@@ -1,0 +1,852 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.svy.dao.SvyMakeItemsMapper">
+
+	<!-- 설문계획 조회 -->
+	<select id="selectComboMakeItems" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	 /* selectComboMakeItems 설문계획 조회 */
+				 A.SRVY_ID 		AS VALUE
+				,A.SRVY_NM 		AS TEXT
+		FROM 	PLT_SRVY A
+		WHERE 	A.CUSTCO_ID 	= #{CUSTCO_ID}::INTEGER
+		AND 	A.DEL_YN 		= 'N'
+		<if test="SRVY_YR != null and SRVY_YR != ''">
+			AND 	A.SRVY_YR = #{SRVY_YR}
+		</if>
+		<if test="STTS_CD != null and STTS_CD != ''">
+			AND 	A.STTS_CD = #{STTS_CD}
+		</if>
+		<if test="SRVY_SE_CD != null and SRVY_SE_CD != ''">
+			AND 	A.SRVY_SE_CD = #{SRVY_SE_CD}
+		</if>
+		<if test="SRVY_NM != null and SRVY_NM != ''">
+			AND 	A.SRVY_NM = #{SRVY_NM}
+		</if>
+		ORDER BY A.REG_DT DESC
+	</select>
+
+	<!-- 설문그룹항목 조회 -->
+	<select id="selectGrpListMakeItems" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	 /* selectGrpListMakeItems 설문그룹항목 조회 */
+				 A.SRVY_QITEM_GROUP_ID				-- 설문_문항_그룹_ID
+				,A.SRVY_ID							-- 설문_ID
+				,A.SRVY_QITEM_GROUP_NM				-- 설문_문항_그룹_명
+				,A.SRVY_QITEM_GROUP_CN				-- 설문_문항_그룹_내용
+				,A.SORT_ORD AS GRP_SORT_ORD			-- 정렬_순서
+				,A.FILE_GROUP_KEY					-- FILE_GROUP_KEY
+				,(	SELECT ARRAY_TO_STRING(ARRAY_AGG( FILE_PATH || '/' || STRG_FILE_NM ), '')
+					FROM PLT_FILE
+					WHERE FILE_GROUP_KEY = A.FILE_GROUP_KEY AND USE_YN = 'Y' AND FILE_GROUP_KEY != '') AS IMG_URL 		-- 이미지경로
+				,A.HEAD_YN							-- 헤더_여부
+				,A.MVMN_SRVY_QITEM_GROUP_ID
+				,(CASE WHEN B.SRVY_QITEM_ID IS NULL THEN 0 ELSE 1 END) AS QITEM_CNT
+				,B.SRVY_QITEM_ID
+				,B.SRVY_QITEM_CN
+				,B.SRVY_QITEM_EXPLN
+				,B.QITEM_TYPE_CD
+				,E.CD_NM AS QITEM_TYPE_NM
+				,(CASE WHEN B.ESNTL_YN = 'N' THEN '' ELSE B.ESNTL_YN END) AS ESNTL_YN
+				,B.CHC_PM_CNT
+				,B.ANS_LEN_CD
+				,(CASE WHEN B.HR_APLCN_YN = 'N' THEN '' ELSE B.HR_APLCN_YN END) AS HR_APLCN_YN
+				,B.SORT_ORD AS ITEM_SORT_ORD
+				,B.DEL_YN
+				,B.FILE_GROUP_KEY
+				,(SELECT COUNT(X.QITEM_CHC_ID) FROM PLT_SRVY_QITEM_CHC X WHERE X.SRVY_QITEM_ID = B.SRVY_QITEM_ID AND X.DEL_YN = 'N') AS CHC_CNT
+				,'' AS ACTIVE
+				,(CASE WHEN A.HEAD_YN = 'Y' THEN 'header' ELSE 'block' END) AS TYPE
+				,(CASE WHEN A.HEAD_YN = 'Y' THEN '설문 헤더는 삭제할 수 없습니다.' ELSE A.SRVY_QITEM_GROUP_NM END) AS TITLE
+				,'' AS RENAME
+				,'' AS NEWFLAG
+				,(CASE WHEN A.HEAD_YN = A.HEAD_YN THEN 'Y' ELSE '' END) AS NOMOVE
+				,(CASE WHEN B.ESNTL_YN = 'Y' THEN B.ESNTL_YN ELSE '' END) AS REQUIRED
+				,B.SCR_USE_YN
+				,B.GROUP_MVMN_USE_YN
+				,C.TRGT_DSGN_YN
+				,C.SRVY_URL 						-- URL
+				,COALESCE(C.PSTG_YN,'N') AS PSTG_YN
+		FROM	PLT_SRVY_QITEM_GROUP	A
+		LEFT OUTER JOIN PLT_SRVY_QITEM B
+			ON A.SRVY_QITEM_GROUP_ID = B.SRVY_QITEM_GROUP_ID AND B.DEL_YN = 'N'
+		INNER JOIN PLT_SRVY C
+			ON A.SRVY_ID = C.SRVY_ID
+		LEFT OUTER JOIN PLT_COMM_CD E
+			ON B.QITEM_TYPE_CD = E.CD_ID AND E.GROUP_CD_ID = 'SUVY_QST_TP' AND E.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		WHERE 	A.DEL_YN	= 'N'
+		AND  	A.SRVY_ID 	= #{SRVY_ID}::INTEGER
+		ORDER BY A.SORT_ORD, B.SORT_ORD
+	</select>
+
+	<!-- 설문보기내용을 조회 -->
+	<select id="selectChcMakeItems" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	 /* selectChcMakeItems 설문보기내용을 조회 */
+				 A.QITEM_CHC_ID
+				,A.SRVY_QITEM_ID
+				,A.QITEM_CHC_CN
+				,A.SORT_ORD AS CSORT_ORD
+				,A.MVMN_SRVY_QITEM_GROUP_ID
+				,A.RSPNS_USE_YN
+				,A.SCR
+		FROM	PLT_SRVY_QITEM_CHC	A
+		WHERE 	A.DEL_YN	= 'N'
+		AND 	A.SRVY_QITEM_ID = #{SRVY_QITEM_ID}::INTEGER
+		ORDER BY A.SORT_ORD
+	</select>
+
+	<!-- 설문참여자 조회 -->
+	<select id="selectTrgtList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+<!--		-->
+		WITH SNDNG_HSTRY AS (
+			SELECT MTS_SNDNG_HSTRY_ID AS SNDNG_ID, SNDNG_SE_CD, PMSH.SRVY_TRGT_ID, PMSH.SNDNG_DT 
+			FROM PLT_MTS_SNDNG_HSTRY PMSH
+			WHERE SNDNG_DT IS NOT NULL AND PMSH.SRVY_TRGT_ID IS NOT NULL AND PMSH.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			UNION
+			SELECT EML_SNDNG_ID AS SNDNG_ID, 'EMAIL' AS SNDNG_SE_CD , PESH.SRVY_TRGT_ID, PESH.SNDNG_DT 
+			FROM PLT_EML_SNDNG_HSTRY PESH
+			WHERE SNDNG_DT IS NOT NULL AND PESH.SRVY_TRGT_ID IS NOT NULL AND PESH.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		) 
+		SELECT 	 /* selectTrgtList 설문참여자 조회 */
+			 ROW_NUMBER() OVER(ORDER BY A.REG_DT) AS ROW_NUMBER
+			,CUSTCO.GEN_DECRYPT(A.CUST_NM, #{PP_KEY_PP}, #{PP_ALG_PP}) AS CUST_NM
+			,CUSTCO.GEN_DECRYPT(A.CUST_PHN_NO, #{PP_KEY_PP}, #{PP_ALG_PP}) AS CUST_PHN_NO
+			,CUSTCO.GEN_DECRYPT(A.EML, #{PP_KEY_PP}, #{PP_ALG_PP}) AS EML
+			,(CASE WHEN SRVY_RSPNS_DT IS NULL THEN '' ELSE '참여' END) AS SRVY_RSPNS_YN
+			,A.SRVY_RSPNS_DT
+			,A.REG_DT
+			,B.USER_NM AS RGTR_ID
+			,A.SRVY_TRGT_ID
+			,A.SRVY_ID
+			,A.SRVY_ID::TEXT || '_' || A.SRVY_TRGT_ID::TEXT || '_' || (
+				SELECT MIN(U.LGN_ID) 
+				FROM PLT_USER U JOIN PLT_USER_OGNZ UO ON UO.USER_ID = U.USER_ID AND UO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+				WHERE U.LGN_ID LIKE '%svy'
+			) AS URL_KEY
+			,(CASE WHEN POSITION('=' IN C.SRVY_URL) > 0 THEN SUBSTR(C.SRVY_URL, 1, POSITION('=' IN C.SRVY_URL)) ELSE '' END) AS SRVY_URL
+			,PMSH3.MSG_DT
+			, PMSH3.MSG_CNT
+			, PMSH4.SNDNG_SE_CD
+			<if test="EXPSN_ATTR_LIST != null">
+				<foreach collection="EXPSN_ATTR_LIST" item="ATTR" open="" separator="" close="" >
+					<if test='ATTR.ATTR_ID != null and ATTR.ATTR_ID != ""'>
+						, (SELECT ATTR_VL FROM PLT_SRVY_TRGT_DTL PSTD WHERE PSTD.SRVY_TRGT_ID = A.SRVY_TRGT_ID AND ATTR_ID = '${ATTR.ATTR_ID}'::INT) AS ${ATTR.EXPSN_ATTR_COL_ID}
+					</if>
+				</foreach>
+			</if>
+		FROM PLT_SRVY_TRGT A
+		LEFT OUTER JOIN PLT_USER B
+			ON A.RGTR_ID = B.USER_ID
+		INNER JOIN PLT_SRVY C
+			ON A.SRVY_ID = C.SRVY_ID
+		LEFT JOIN (
+			SELECT SH.SRVY_TRGT_ID, COUNT(SNDNG_ID) AS MSG_CNT, SH2.SNDNG_DT AS MSG_DT 
+			FROM SNDNG_HSTRY SH
+			LEFT JOIN (SELECT SRVY_TRGT_ID, MAX(SNDNG_DT) AS SNDNG_DT
+							FROM SNDNG_HSTRY
+							GROUP BY SRVY_TRGT_ID) SH2
+					ON SH2.SRVY_TRGT_ID = SH.SRVY_TRGT_ID
+			GROUP BY SH.SRVY_TRGT_ID, SH2.SNDNG_DT
+		) PMSH3
+			ON PMSH3.SRVY_TRGT_ID = A.SRVY_TRGT_ID
+		LEFT JOIN SNDNG_HSTRY PMSH4
+			ON PMSH4.SRVY_TRGT_ID = A.SRVY_TRGT_ID
+			AND PMSH3.MSG_DT = PMSH4.SNDNG_DT
+		WHERE 	A.DEL_YN	= 'N'
+		AND  	A.SRVY_ID 	= #{SRVY_ID}::INTEGER
+		<if test="SNDNG_SE_CD != null and SNDNG_SE_CD != ''">
+			<choose>
+				<when test='SNDNG_SE_CD == "SMS"'>
+					AND PMSH4.SNDNG_SE_CD IN ('SMS','LMS','MMS')
+				</when>
+				<otherwise>
+					AND PMSH4.SNDNG_SE_CD 	= #{SNDNG_SE_CD}
+				</otherwise>
+			</choose>
+			
+		</if>
+<!--		-->
+	</select>
+
+	<!-- 웅답설정 조회 -->
+	<select id="selectSettingList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	 /* selectSettingList 웅답설정 조회 */
+				 A.PSNAL_LMT_SBMSN_STNG_YN
+				,A.CLCT_AGRE_USE_YN
+				,A.SRVY_YMD_INDCT_YN
+				,TO_CHAR(TO_TIMESTAMP(A.SRVY_BGNG_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS' ) AS SRVY_BGNG_DT
+				,TO_CHAR(TO_TIMESTAMP(A.SRVY_END_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS' ) AS SRVY_END_DT
+				,A.SBMSN_END_MSG
+				,A.SRVY_ID
+				,A.STTS_CD
+		FROM PLT_SRVY A
+		WHERE 	A.SRVY_ID 	= #{SRVY_ID}::INTEGER
+		AND 	A.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</select>
+
+	<!-- 설문그룹헤더 저장 -->
+	<update id="updateHeaderMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* updateHeaderMakeItems 설문그룹헤더 저장 */
+				PLT_SRVY_QITEM_GROUP
+		SET   	SRVY_QITEM_GROUP_CN 	= #{SRVY_QITEM_GROUP_CN}
+				,FILE_GROUP_KEY 		= #{FILE_GROUP_KEY}
+				,MDFCN_DT 				= TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID 				= #{USER_ID}::INTEGER
+		WHERE   SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER
+		AND 	SRVY_ID = #{SRVY_ID}::INTEGER
+	</update>
+
+
+	<!-- 설문그룹블록 저장 -->
+	<insert id="insertBlockMakeItems" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY_QITEM_GROUP(
+				/* insertBlockMakeItems 설문그룹블록 저장 */
+				SRVY_QITEM_GROUP_ID 	-- 설문_문항_그룹_ID
+				,SRVY_ID 				-- 설문_ID
+				,SRVY_QITEM_GROUP_NM 	-- 설문_문항_그룹_명
+				,SORT_ORD 				-- 정렬_순서
+				,DEL_YN 				-- 삭제_여부
+				,HEAD_YN 				-- 헤더_여부
+				,REG_DT 				-- 등록_일시
+				,RGTR_ID 				-- 등록자_ID
+				,MDFCN_DT 				-- 수정일시
+				,MDFR_ID 				-- 수정자
+		) VALUES (
+				#{SRVY_QITEM_GROUP_ID}::INTEGER
+				,#{SRVY_ID}::INTEGER
+				,#{SRVY_QITEM_GROUP_NM}
+				,(SELECT COALESCE(MAX(SORT_ORD), 0) +1 FROM PLT_SRVY_QITEM_GROUP WHERE SRVY_ID = #{SRVY_ID}::INTEGER)
+				,'N'
+				,'N'
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+		)
+
+	</insert>
+
+	<!-- 설문그룹블록 수정 -->
+	<update id="updateBlockMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* updateBlockMakeItems 설문그룹블록 수정 */
+				PLT_SRVY_QITEM_GROUP
+		SET   	SRVY_QITEM_GROUP_NM = #{SRVY_QITEM_GROUP_NM}
+				,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+		WHERE   SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER
+	</update>
+
+	<!-- 설문그룹블록 삭제 -->
+	<update id="deleteBlockMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* deleteBlockMakeItems 설문그룹블록 삭제 */
+				PLT_SRVY_QITEM_GROUP
+		SET   	DEL_YN 	= 'Y'
+		WHERE   SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER
+		AND 	SRVY_ID = #{SRVY_ID}::INTEGER
+	</update>
+	
+	
+	<update id="udpateGroupMvmnSrvyQitemGroup" parameterType= "java.util.HashMap">
+		UPDATE  /* udpateGroupMvmnSrvyQitemGroup 설문_문항_그룹 - 다음 블록 정보 저장 */
+				PLT_SRVY_QITEM_GROUP
+		SET   	MVMN_SRVY_QITEM_GROUP_ID = #{MVMN_SRVY_QITEM_GROUP_ID}::BIGINT
+		WHERE   SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::BIGINT
+		AND 	SRVY_ID = #{SRVY_ID}::BIGINT
+	</update>
+	
+	
+	<update id="updateBlockSortOrd" parameterType= "java.util.HashMap">
+		UPDATE  /* updateBlockSortOrd 설문_그룹 - 순서 변경 정보 저장 */
+				PLT_SRVY_QITEM_GROUP
+		SET   	SORT_ORD = #{SORT_ORD}::BIGINT
+		WHERE   SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::BIGINT
+	</update>
+	
+	
+
+	<!-- 설문아이템 저장 -->
+	<insert id="insertItemsMakeItems" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY_QITEM(
+				/* insertItemsMakeItems 설문아이템 저장 */
+				SRVY_QITEM_ID 				-- 설문_문항_ID
+				<if test="SRVY_QITEM_GROUP_ID != null and SRVY_QITEM_GROUP_ID != ''">
+				,SRVY_QITEM_GROUP_ID 		-- 설문_문항_그룹_ID
+				</if>
+				<if test="SRVY_CLSF_ID != null and SRVY_CLSF_ID != ''">
+				,SRVY_CLSF_ID 				-- 설문_분류_ID
+				</if>
+				,SRVY_QITEM_CN 				-- 설문_문항_내용
+				,SRVY_QITEM_EXPLN 			-- 설문_문항_설명
+				,QITEM_TYPE_CD 				-- 문항_유형_코드
+				,ESNTL_YN 					-- 필수_여부
+				,RLS_YN
+				,CHC_PM_CNT 				-- 선택_허용_수
+				,ANS_LEN_CD 				-- 답안_길이_코드
+				,HR_APLCN_YN 				-- 시간_적용_여부
+				,SCR_USE_YN
+				,GROUP_MVMN_USE_YN
+				,SORT_ORD 					-- 정렬_순서
+				,DEL_YN 					-- 삭제_여부
+				,REG_DT 					-- 등록_일시
+				,RGTR_ID 					-- 등록자_ID
+				,MDFCN_DT 					-- 수정일시
+				,MDFR_ID 					-- 수정자
+		) VALUES (
+				#{SRVY_QITEM_ID}::INTEGER
+				<if test="SRVY_QITEM_GROUP_ID != null and SRVY_QITEM_GROUP_ID != ''">
+				,#{SRVY_QITEM_GROUP_ID}::INTEGER
+				</if>
+				<if test="SRVY_CLSF_ID != null and SRVY_CLSF_ID != ''">
+				,${SRVY_CLSF_ID}::INTEGER
+				</if>
+				,#{SRVY_QITEM_CN}
+				,#{SRVY_QITEM_EXPLN}
+				,#{QITEM_TYPE_CD}
+				,#{ESNTL_YN}
+				,#{RLS_YN}
+				,#{CHC_PM_CNT}
+				,#{ANS_LEN_CD}
+				,#{HR_APLCN_YN}
+				,#{SCR_USE_YN}
+				,#{GROUP_MVMN_USE_YN}
+				<choose>
+					<when test="SRVY_QITEM_GROUP_ID != null and SRVY_QITEM_GROUP_ID != ''">
+						,(SELECT COALESCE(MAX(SORT_ORD), 0) + 1 FROM PLT_SRVY_QITEM WHERE DEL_YN = 'N' AND SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER)
+					</when>
+					<when test="SRVY_CLSF_ID != null and SRVY_CLSF_ID != ''">
+						,(SELECT COALESCE(MAX(SORT_ORD), 0) + 1 FROM PLT_SRVY_QITEM WHERE DEL_YN = 'N' AND SRVY_CLSF_ID = #{SRVY_CLSF_ID}::INTEGER)
+					</when>
+				</choose>
+				
+				,'N'
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+		)
+
+	</insert>
+
+	<!-- 설문아이템 수정 -->
+	<update id="updateItemsMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* updateItemsMakeItems 설문아이템 수정 */
+				PLT_SRVY_QITEM
+		SET   	SRVY_QITEM_CN = #{SRVY_QITEM_CN}
+				,SRVY_QITEM_EXPLN = #{SRVY_QITEM_EXPLN}
+				,QITEM_TYPE_CD = #{QITEM_TYPE_CD}
+				,ESNTL_YN = #{ESNTL_YN}
+				,CHC_PM_CNT = #{CHC_PM_CNT}
+				,HR_APLCN_YN = #{HR_APLCN_YN}
+				,SCR_USE_YN = #{SCR_USE_YN}
+				,GROUP_MVMN_USE_YN = #{GROUP_MVMN_USE_YN}
+				,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+				<if test="RLS_YN != null and RLS_YN != ''">
+				,RLS_YN = #{RLS_YN}
+				</if>
+		WHERE   SRVY_QITEM_ID = #{SRVY_QITEM_ID}::INTEGER
+	</update>
+
+	<!-- 설문아이템목록 저장 -->
+	<insert id="insertItemsChcMakeItems" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY_QITEM_CHC(
+				/* insertItemsChcMakeItems 설문아이템목록 저장 */
+				QITEM_CHC_ID 				-- 문항_선택_ID
+				,SRVY_QITEM_ID 				-- 설문_문항_ID
+				,QITEM_CHC_CN 				-- 문항_선택_내용
+				,RSPNS_USE_YN
+				,SCR
+				,MVMN_SRVY_QITEM_GROUP_ID
+				,SORT_ORD 					-- 정렬_순서
+				,DEL_YN 					-- 삭제_여부
+				,REG_DT 					-- 등록_일시
+				,RGTR_ID 					-- 등록자_ID
+				,MDFCN_DT 					-- 수정일시
+				,MDFR_ID 					-- 수정자
+		) VALUES (
+				#{QITEM_CHC_ID}::INTEGER
+				,#{SRVY_QITEM_ID}::INTEGER
+				,#{QITEM_CHC_CN}
+				,#{RSPNS_USE_YN}
+				,#{SCR}::INTEGER
+				,#{MVMN_SRVY_QITEM_GROUP_ID}::BIGINT
+				,#{CSORT_ORD}::INTEGER
+				,'N'
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+		)
+
+	</insert>
+
+
+	<!-- 설문아이템목록 수정 -->
+	<update id="updateItemsChcMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* updateItemsChcMakeItems 설문아이템목록 수정 */
+				PLT_SRVY_QITEM_CHC
+		SET   	QITEM_CHC_CN = #{QITEM_CHC_CN}
+				,RSPNS_USE_YN = #{RSPNS_USE_YN}
+				,SCR = #{SCR}::INTEGER
+				,MVMN_SRVY_QITEM_GROUP_ID = #{MVMN_SRVY_QITEM_GROUP_ID}::BIGINT
+				,SORT_ORD = #{CSORT_ORD}::INTEGER
+				,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+		WHERE   QITEM_CHC_ID = #{QITEM_CHC_ID}::INTEGER
+	</update>
+
+	<!-- 설문질문 삭제 -->
+	<update id="deleteItemMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* deleteItemMakeItems 설문질문 삭제 */
+				PLT_SRVY_QITEM
+		SET   	DEL_YN 	= 'Y'
+		WHERE   SRVY_QITEM_ID = #{SRVY_QITEM_ID}::INTEGER
+		AND 	SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER
+	</update>
+
+	<!-- 설문질문항목 삭제 -->
+	<update id="deleteItemChcMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* deleteItemChcMakeItems 설문질문항목 삭제 */
+				PLT_SRVY_QITEM_CHC
+		SET   	DEL_YN 	= 'Y'
+		WHERE SRVY_QITEM_ID = #{SRVY_QITEM_ID}::INTEGER
+		<if test="QITEM_CHC_ID != null and QITEM_CHC_ID != ''">
+			AND 	QITEM_CHC_ID = #{QITEM_CHC_ID}::INTEGER
+		</if>
+	</update>
+
+	<!-- 설문 참여자 삭제 -->
+	<update id="deleteExcelMakeItems" parameterType= "java.util.HashMap">
+		UPDATE  /* deleteExcelMakeItems 설문 참여자 삭제 */
+				PLT_SRVY_TRGT
+		SET   	DEL_YN 	= 'Y'
+		WHERE SRVY_ID = #{SRVY_ID}::INTEGER
+		AND   DEL_YN = 'N'
+	</update>
+
+	<!-- 설문 참여자 저장 -->
+	<insert id="uploadExcelMakeItems" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY_TRGT(
+				/* uploadExcelMakeItems 설문 참여자 저장 */
+				SRVY_TRGT_ID 				-- 설문_대상_ID
+				,SRVY_ID 					-- 설문_ID
+				,DEL_YN 					-- 삭제_여부
+				,REG_DT 					-- 등록_일시
+				,RGTR_ID 					-- 등록자_ID
+				,MDFCN_DT 					-- 수정일시
+				,MDFR_ID 					-- 수정자
+				,CUST_NM 					-- 고객_명
+				,CUST_PHN_NO 				-- 고객_전화_번호
+				,EML 						-- 이메일
+		) VALUES (
+				#{SRVY_TRGT_ID}::INTEGER
+				,#{SRVY_ID}::INTEGER
+				,'N'
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,CUSTCO.GEN_ENCRYPT(#{CUST_NM}, #{PP_KEY_PP}, #{PP_ALG_PP})
+				,CUSTCO.GEN_ENCRYPT(#{CUST_PHN_NO}, #{PP_KEY_PP}, #{PP_ALG_PP})
+				,CUSTCO.GEN_ENCRYPT(#{EML}, #{PP_KEY_PP}, #{PP_ALG_PP})
+		)
+	</insert>
+
+	<!-- 설문계획 설정 저장 -->
+	<update id="updateSettingPlan" parameterType= "java.util.HashMap">
+		UPDATE 	/* updateSettingPlan 설문계획 설정 저장 */
+				PLT_SRVY SET
+				PSNAL_LMT_SBMSN_STNG_YN = #{PSNAL_LMT_SBMSN_STNG_YN}
+				,CLCT_AGRE_USE_YN = #{CLCT_AGRE_USE_YN}
+				,SRVY_YMD_INDCT_YN = #{SRVY_YMD_INDCT_YN}
+				,SBMSN_END_MSG = #{SBMSN_END_MSG}
+				,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+		WHERE   SRVY_ID = #{SRVY_ID}::INTEGER
+		AND 	CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+
+	</update>
+
+	<!-- 설문지 게시 -->
+	<update id="updateSrvyOpen" parameterType= "java.util.HashMap">
+		UPDATE 	/* updateSrvyOpen 설문지 게시 */
+				PLT_SRVY SET
+				
+				STTS_CD = #{STTS_CD}
+				,SRVY_URL = (CASE WHEN #{PSTG_YN} = 'Y' THEN #{URL} ELSE '' END)
+				<if test="PSTG_YN != null and PSTG_YN != ''">
+					,PSTG_YN = #{PSTG_YN}
+				</if>
+				<if test="BY_PASS != '' and BY_PASS != null and BY_PASS != undefined">
+					,SRVY_BGNG_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				</if>
+		WHERE   SRVY_ID = #{SRVY_ID}::INTEGER
+		AND 	CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+
+	</update>
+	
+	<!-- 설문아이템 순서변경 -->
+	<update id="moveItemMakeItems" parameterType= "java.util.HashMap">
+		UPDATE 	/* moveItemMakeItems 설문아이템 순서변경 */
+				PLT_SRVY_QITEM SET
+				SORT_ORD = #{SORT_ORD}::INTEGER
+		WHERE   SRVY_QITEM_ID = #{SRVY_QITEM_ID}::INTEGER
+		AND 	SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER
+
+	</update>
+
+	<!-- 대상지정여부가 Y고 등록되어있는지 조회 -->
+	<select id="selectTrgtYn" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* selectTrgtYn  대상지정여부가 Y고 등록되어있는지 조회 */
+				COUNT(A.SRVY_TRGT_ID) AS CNT
+		FROM 	PLT_SRVY_TRGT A
+		WHERE 	A.SRVY_ID 	= #{SRVY_ID}::INTEGER
+		AND 	A.DEL_YN = 'N'
+	</select>
+
+	<!-- 헤더 이미지 저장 -->
+	<update id="updateImgMakeItems" parameterType= "java.util.HashMap">
+		UPDATE 	/* updateImgMakeItems 헤더 이미지 저장 */
+				PLT_SRVY_QITEM_GROUP SET
+				FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+		WHERE   SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER
+
+	</update>
+
+	<!-- 헤더 이미지 삭제 -->
+	<update id="deleteHeaderImgMakeItems" parameterType= "java.util.HashMap">
+		UPDATE 	/* deleteHeaderImgMakeItems 헤더 이미지 삭제 */
+				PLT_SRVY_QITEM_GROUP SET
+				FILE_GROUP_KEY = ''
+		WHERE   SRVY_QITEM_GROUP_ID = #{SRVY_QITEM_GROUP_ID}::INTEGER
+
+	</update>
+	
+	<!-- 설문 참여자 정보 수정 -->
+	<update id="updateExcelMakeItems" parameterType= "java.util.HashMap">
+		UPDATE 	/* updateExcelMakeItems 설문 참여자 정보 수정 */
+			PLT_SRVY_TRGT SET
+			CUST_NM = CUSTCO.GEN_ENCRYPT(#{CUST_NM}, #{PP_KEY_PP}, #{PP_ALG_PP})
+			,CUST_PHN_NO = CUSTCO.GEN_ENCRYPT(#{CUST_PHN_NO}, #{PP_KEY_PP}, #{PP_ALG_PP})
+			,EML = CUSTCO.GEN_ENCRYPT(#{EML}, #{PP_KEY_PP}, #{PP_ALG_PP})
+			,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			,MDFR_ID = #{USER_ID}::INTEGER
+		WHERE   SRVY_TRGT_ID = #{SRVY_TRGT_ID}::INTEGER
+	</update>
+	
+	<!-- 설문 참여자 삭제 -->
+	<update id="delTrgt" parameterType= "java.util.HashMap">
+		UPDATE PLT_SRVY_TRGT SET
+			/* delTrgt 설문 참여자 삭제 (하드삭제가 아닌 소프트삭제) */
+			DEL_YN = 'Y'
+			,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			,MDFR_ID = #{USER_ID}::INTEGER
+		WHERE SRVY_TRGT_ID = #{SRVY_TRGT_ID}::INTEGER
+			AND SRVY_ID = #{SRVY_ID}::INTEGER
+	</update>
+	
+	<!--  참여자 확장 항목 조회 -->
+	<select id="selectSrvyExpsnAttrList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* selectSrvyExpsnAttrList - 참여자 확장 항목 조회 */
+			PEA.ATTR_ID
+			, PEA.EXPSN_ATTR_COL_ID
+			, PEA.EXPSN_ATTR_NM
+			, PEA.ESNTL_YN
+			, PEA.SORT_ORD
+		FROM PLT_EXPSN_ATTR PEA
+		WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PEA.SE = #{SE}
+		AND PEA.SRVY_ID = #{SRVY_ID}::INTEGER
+		AND PEA.DEL_YN = 'N'
+		AND PEA.BSC_PVSN_ATTR_YN = 'N'
+		AND PEA.SCRN_EXPSR_YN = 'Y'
+		ORDER BY PEA.SORT_ORD
+	</select>
+	
+	
+	<insert id="insertSrvyTargetDetail"  parameterType="java.util.HashMap">
+		INSERT INTO PLT_SRVY_TRGT_DTL(
+			/* insertSrvyTargetDetail - 설문 참여자 확장 항목 추가 */
+			 SRVY_TRGT_ID
+			,ATTR_ID
+			,ATTR_VL
+		) VALUES
+		<foreach collection="DETAIL_LIST" item="ITEM" close="" separator=",">
+			<if test='ITEM.ATTR_VL != null and ITEM.ATTR_VL != ""'>
+			(
+				#{SRVY_TRGT_ID}::INTEGER
+				,#{ITEM.ATTR_ID}::INTEGER
+				,#{ITEM.ATTR_VL}
+			)
+			</if>
+		</foreach>
+	</insert>
+	
+	<delete id="deleteSrvyTargetDetail"  parameterType="java.util.HashMap">
+		DELETE /* deleteSrvyTargetDetail - 설문 참여자 확장 항목 추가 삭제 */
+		FROM PLT_SRVY_TRGT_DTL
+		WHERE SRVY_TRGT_ID = #{SRVY_TRGT_ID}::INTEGER
+	</delete>
+	
+	
+	<select id="selectDefaultUrlKey" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT #{SRVY_ID} || '_' || '-1' || '_' || U.LGN_ID AS URL_KEY 
+		FROM PLT_USER U
+			JOIN PLT_USER_OGNZ UO ON UO.USER_ID = U.USER_ID AND UO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		WHERE U.LGN_ID LIKE '%svy'
+		ORDER BY U.USER_ID LIMIT 1
+	</select>
+	
+	<select id="selectCopyHeaderFileGroupKey" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*	selectCopyHeaderFileGroupKey - 복사할 설문 헤더의 파일 정보 조회	*/
+			SRVY_QITEM_GROUP_ID, FILE_GROUP_KEY 
+		FROM PLT_SRVY_QITEM_GROUP 
+		WHERE SRVY_ID = #{COPY_SRVY_ID}::BIGINT AND HEAD_YN = 'Y' AND DEL_YN = 'N'
+	</select>
+	
+	<insert id="copySrvyHeaderImage" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_FILE ( /*	copySrvyHeaderImage - 설문 헤더 이미지 복사	*/
+			FILE_GROUP_KEY,
+			FILE_KEY,
+			CUSTCO_ID,
+			TASK_TYPE_CD,
+			TRGT_TYPE_CD,
+			PATH_TYPE_CD,
+			MIME_TYPE_CD,
+			ACTL_FILE_NM,
+			STRG_FILE_NM,
+			FILE_PATH,
+			FILE_SZ,
+			FILE_EXTN,
+			DWNLD_CNT,
+			FILE_URL,
+			FILE_BLOB,
+			ACS_KEY,
+			FILE_ACS_TYPE_CD,
+			USE_YN,
+			RGTR_ID,
+			REG_DT,
+			MDFR_ID,
+			MDFCN_DT
+		)
+		SELECT 
+			#{FILE_GROUP_KEY},
+			#{FILE_KEY},
+			#{CUSTCO_ID}::BIGINT,
+			TASK_TYPE_CD,
+			TRGT_TYPE_CD,
+			PATH_TYPE_CD,
+			MIME_TYPE_CD,
+			ACTL_FILE_NM,
+			STRG_FILE_NM,
+			FILE_PATH,
+			FILE_SZ,
+			FILE_EXTN,
+			0,
+			FILE_URL,
+			FILE_BLOB,
+			ACS_KEY,
+			FILE_ACS_TYPE_CD,
+			USE_YN,
+			#{USER_ID}::BIGINT,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			#{USER_ID}::BIGINT,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		FROM PLT_FILE WHERE FILE_GROUP_KEY = (SELECT FILE_GROUP_KEY FROM PLT_SRVY_QITEM_GROUP WHERE SRVY_ID = #{COPY_SRVY_ID}::BIGINT AND HEAD_YN = 'Y' AND DEL_YN = 'N');
+	</insert>
+	
+	
+	<update id="copySrvyHeader" parameterType= "java.util.HashMap">
+		UPDATE PLT_SRVY_QITEM_GROUP O SET /*	copySrvyHeader - 설문 헤더 복사	*/
+		SRVY_QITEM_GROUP_CN = (SELECT SRVY_QITEM_GROUP_CN FROM PLT_SRVY_QITEM_GROUP C WHERE C.SRVY_ID = #{COPY_SRVY_ID}::BIGINT AND C.HEAD_YN='Y' AND C.DEL_YN = 'N')
+		, FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+		, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		, MDFR_ID = #{USER_ID}::BIGINT
+		WHERE 
+			SRVY_ID = #{SRVY_ID} ::BIGINT
+			AND HEAD_YN='Y' 
+			AND DEL_YN='N'
+	</update>
+	
+	
+	<insert id="copySrvyGroup" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY_QITEM_GROUP ( /*	copySrvyGroup - 설문 그룹 복사	*/
+			SRVY_QITEM_GROUP_ID,
+			SRVY_ID,
+			SRVY_QITEM_GROUP_NM,
+			SRVY_QITEM_GROUP_CN,
+			SORT_ORD,
+			DEL_YN,
+			FILE_GROUP_KEY,
+			HEAD_YN,
+			REG_DT,
+			RGTR_ID,
+			MDFCN_DT,
+			MDFR_ID,
+			MVMN_SRVY_QITEM_GROUP_ID,
+			ORGNL_SRVY_QITEM_GROUP_ID
+		)
+		SELECT 
+			GETSEQNO('SRVY_QITEM_GROUP_ID'),
+			#{SRVY_ID}::BIGINT,
+			SRVY_QITEM_GROUP_NM,
+			SRVY_QITEM_GROUP_CN,
+			SORT_ORD,
+			DEL_YN,
+			FILE_GROUP_KEY,
+			HEAD_YN,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			#{USER_ID}::BIGINT,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			#{USER_ID}::BIGINT,
+			MVMN_SRVY_QITEM_GROUP_ID,
+			SRVY_QITEM_GROUP_ID
+		FROM PLT_SRVY_QITEM_GROUP
+		WHERE 
+			SRVY_ID = #{COPY_SRVY_ID}::BIGINT 
+			AND HEAD_YN = 'N'
+			AND DEL_YN = 'N'
+		ORDER BY SORT_ORD
+	</insert>
+	
+	<update id="copySrvyGroupMvmn" parameterType= "java.util.HashMap">
+		UPDATE PLT_SRVY_QITEM_GROUP O SET /*	copySrvyGroupMvmn - 설문 그룹 블록 이동 복사	*/
+			MVMN_SRVY_QITEM_GROUP_ID = (SELECT SRVY_QITEM_GROUP_ID FROM PLT_SRVY_QITEM_GROUP C WHERE DEL_YN = 'N' AND C.SRVY_ID = #{SRVY_ID}::BIGINT AND C.ORGNL_SRVY_QITEM_GROUP_ID = O.MVMN_SRVY_QITEM_GROUP_ID)
+		WHERE SRVY_ID = #{SRVY_ID}::BIGINT 
+			AND HEAD_YN = 'N'
+			AND DEL_YN = 'N'
+			AND MVMN_SRVY_QITEM_GROUP_ID IS NOT NULL
+			AND MVMN_SRVY_QITEM_GROUP_ID != -999::BIGINT;
+	</update>
+	
+	
+	<insert id="copySrvyQitem" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_SRVY_QITEM ( /*	copySrvyQitem - 설문 문항 복사	*/
+		SRVY_QITEM_ID,
+		SRVY_QITEM_GROUP_ID,
+		SRVY_QITEM_CN,
+		SRVY_QITEM_EXPLN,
+		QITEM_TYPE_CD,
+		ESNTL_YN,
+		CHC_PM_CNT,
+		ANS_LEN_CD,
+		HR_APLCN_YN,
+		SORT_ORD,
+		DEL_YN,
+		FILE_GROUP_KEY,
+		REG_DT,
+		RGTR_ID,
+		MDFCN_DT,
+		MDFR_ID,
+		RLS_YN,
+		SRVY_CLSF_ID,
+		SCR_USE_YN,
+		GROUP_MVMN_USE_YN,
+		ORGNL_SRVY_QITEM_ID
+	)
+	SELECT 
+		GETSEQNO('SRVY_QITEM_ID'),
+		(SELECT SRVY_QITEM_GROUP_ID FROM PLT_SRVY_QITEM_GROUP G WHERE DEL_YN = 'N' AND SRVY_ID = #{SRVY_ID}::BIGINT AND G.ORGNL_SRVY_QITEM_GROUP_ID = Q.SRVY_QITEM_GROUP_ID),
+		SRVY_QITEM_CN,
+		SRVY_QITEM_EXPLN,
+		QITEM_TYPE_CD,
+		ESNTL_YN,
+		CHC_PM_CNT,
+		ANS_LEN_CD,
+		HR_APLCN_YN,
+		SORT_ORD,
+		DEL_YN,
+		FILE_GROUP_KEY,
+		TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+		#{USER_ID}::BIGINT,
+		TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+		#{USER_ID}::BIGINT,
+		RLS_YN,
+		SRVY_CLSF_ID,
+		SCR_USE_YN,
+		GROUP_MVMN_USE_YN,
+		SRVY_QITEM_ID
+	FROM PLT_SRVY_QITEM Q
+	WHERE 
+		SRVY_QITEM_GROUP_ID IN (SELECT SRVY_QITEM_GROUP_ID FROM PLT_SRVY_QITEM_GROUP WHERE DEL_YN = 'N' AND SRVY_ID = #{COPY_SRVY_ID}::BIGINT)
+		AND DEL_YN = 'N'
+	ORDER BY SORT_ORD
+	</insert>
+	
+	
+	<insert id="copySrvyQitemChc" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SRVY_QITEM_CHC ( /*	copySrvyQitemChc - 설문 문항 선택 복사	*/
+			QITEM_CHC_ID,
+			SRVY_QITEM_ID,
+			QITEM_CHC_CN,
+			SORT_ORD,
+			DEL_YN,
+			REG_DT,
+			RGTR_ID,
+			MDFCN_DT,
+			MDFR_ID,
+			MVMN_SRVY_QITEM_GROUP_ID,
+			RSPNS_USE_YN,
+			SCR
+		)
+		SELECT 
+			GETSEQNO('QITEM_CHC_ID'),
+			(SELECT Q.SRVY_QITEM_ID 
+				FROM PLT_SRVY_QITEM Q 
+				INNER JOIN PLT_SRVY_QITEM_GROUP G ON G.SRVY_QITEM_GROUP_ID = Q.SRVY_QITEM_GROUP_ID AND G.SRVY_ID = #{SRVY_ID}::BIGINT
+				WHERE Q.DEL_YN = 'N' AND Q.ORGNL_SRVY_QITEM_ID = QC.SRVY_QITEM_ID),
+			QITEM_CHC_CN,
+			SORT_ORD,
+			DEL_YN,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			#{USER_ID}::BIGINT,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			#{USER_ID}::BIGINT,
+			CASE WHEN (MVMN_SRVY_QITEM_GROUP_ID IS NOT NULL AND MVMN_SRVY_QITEM_GROUP_ID = -999::BIGINT) THEN MVMN_SRVY_QITEM_GROUP_ID ELSE (SELECT SRVY_QITEM_GROUP_ID FROM PLT_SRVY_QITEM_GROUP G WHERE G.DEL_YN = 'N' AND G.SRVY_ID = #{SRVY_ID}::BIGINT AND G.ORGNL_SRVY_QITEM_GROUP_ID = QC.MVMN_SRVY_QITEM_GROUP_ID) END,
+			RSPNS_USE_YN,
+			SCR
+		FROM PLT_SRVY_QITEM_CHC QC
+		WHERE 
+			QC.SRVY_QITEM_ID IN (SELECT SRVY_QITEM_ID FROM PLT_SRVY_QITEM WHERE SRVY_QITEM_GROUP_ID IN (SELECT SRVY_QITEM_GROUP_ID FROM PLT_SRVY_QITEM_GROUP WHERE DEL_YN = 'N' AND SRVY_ID = #{COPY_SRVY_ID}::BIGINT))
+			AND QC.DEL_YN = 'N'
+		ORDER BY QC.SORT_ORD
+	</insert>
+	
+	<update id="copySrvyResponseSetting" parameterType= "java.util.HashMap">
+		UPDATE PLT_SRVY O SET
+			SRVY_YMD_INDCT_YN = (SELECT SRVY_YMD_INDCT_YN FROM PLT_SRVY C WHERE C.DEL_YN = 'N' AND C.SRVY_ID = #{COPY_SRVY_ID}::BIGINT),
+			SBMSN_END_MSG = (SELECT SBMSN_END_MSG FROM PLT_SRVY C WHERE C.DEL_YN = 'N' AND C.SRVY_ID = #{COPY_SRVY_ID}::BIGINT)
+		WHERE SRVY_ID = #{SRVY_ID}::BIGINT AND DEL_YN = 'N'
+	</update>
+	
+	<select id="selectPossibleCopyYn" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /*	selectPossibleCopyYn - 설문지 불러오기 가능 여부	*/
+		CASE WHEN COUNT(*) = 0 THEN 'Y' ELSE 'N' END POSSIBLE_COPY_YN 
+	FROM PLT_SRVY_QITEM_GROUP 
+	WHERE 
+		DEL_YN='N'
+		AND SRVY_ID = #{SRVY_ID}::BIGINT 
+		AND ORGNL_SRVY_QITEM_GROUP_ID IS NOT NULL
+	</select>
+	
+	<update id="deleteForceQitemGroup" parameterType= "java.util.HashMap">
+	UPDATE PLT_SRVY_QITEM_GROUP SET
+		DEL_YN='Y'
+	WHERE 
+		SRVY_ID = #{SRVY_ID}::BIGINT 
+		AND HEAD_YN='N'
+	</update>
+	
+	<update id="deleteForceQitem" parameterType= "java.util.HashMap">
+	UPDATE PLT_SRVY_QITEM SET 
+		DEL_YN='Y'
+	WHERE 
+		SRVY_QITEM_GROUP_ID IN (SELECT SRVY_QITEM_GROUP_ID FROM PLT_SRVY_QITEM_GROUP WHERE SRVY_ID = #{SRVY_ID}::BIGINT)
+	</update>
+	
+	<update id="deleteForceQitemChc" parameterType= "java.util.HashMap">
+	UPDATE PLT_SRVY_QITEM_CHC SET 
+		DEL_YN='Y'
+	WHERE 
+		SRVY_QITEM_ID IN (SELECT SRVY_QITEM_ID FROM PLT_SRVY_QITEM WHERE SRVY_QITEM_GROUP_ID IN (SELECT SRVY_QITEM_GROUP_ID FROM PLT_SRVY_QITEM_GROUP WHERE SRVY_ID = #{SRVY_ID}::BIGINT))
+	</update>
+</mapper>

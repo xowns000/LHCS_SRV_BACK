@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS getusercustcolist(p_lgn_id character varying);

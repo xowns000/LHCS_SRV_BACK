@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundRegistAgentDstbPopupMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+		<result property="RES_NO" column="RES_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+    <select id="selectCsltDivObndList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+    	<![CDATA[
+			/*  selectCsltDivObndList 상담원 배분 팝업 에서 아웃바운드 조회.  */
+    		SELECT 
+			 	    A.CAM_ID
+				  , A.CAM_NM
+				  /*, A.CENT_TY*/
+				  , A.CAM_TY
+			      , A.BUSI_TY
+			      
+			 ]]>   
+			 	  <!--  
+			      <if test='CENT_TY.equals("G")'>
+			       --> 
+			        /* 공제 */
+			      ,( SELECT c.CD_NM   
+				  	FROM PLT_COMN_CD c		
+				  	WHERE c.GROUP_CD = (CASE WHEN LENGTH(a.CAM_TY) >= 3 THEN 'RE010' ELSE 'OU001' END)
+				  	AND c.CD = A.CAM_TY
+				   ) AS CAM_TY_NM
+			      ,(SELECT c.CD_NM FROM PLT_COMN_CD c 
+				    WHERE c.GROUP_CD = 'OU002'
+				    AND c.CD = A.BUSI_TY) AS BUSI_TY_NM
+				    <!-- 
+			      </if>
+		 		   <if test='CENT_TY.equals("E")'> 
+				     ,( SELECT c.CD_NM   
+					  	FROM PLT_COMN_CD c		
+					  	WHERE c.GROUP_CD = 'TWB507' 
+					  	AND c.CD = A.CAM_TY
+					  ) AS CAM_TY_NM
+				     ,(SELECT c.CD_NM FROM PLT_COMN_CD c 
+					   WHERE c.GROUP_CD = 'TWB508'
+					   AND c.CD = A.BUSI_TY) AS BUSI_TY_NM
+				   </if>
+				    -->
+			 <![CDATA[     
+			      , A.CAM_BEGIN_DATE
+				  , A.CAM_EOT_DATE
+				  , (SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS C WHERE C.CAM_ID = A.CAM_ID ) AS TOT_CNT
+                  , (SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS C WHERE C.CAM_ID = A.CAM_ID AND C.DSTR_YN = 'Y') AS DIV_CNT
+				  , SUM(CASE WHEN B.FISH_TY = '00002' THEN 1 ELSE 0 END) NOT_END_CNT /* 미처리건수 */
+				  , SUM(CASE WHEN B.FISH_TY = '00004' THEN 1 ELSE 0 END) ING_CNT /* 처리중 */
+			  FROM PLT_PHN_CAMP A LEFT OUTER JOIN PLT_PHN_CAMP_CUS_DST B
+			  ON A.CAM_ID = B.CAM_ID 
+			  WHERE A.USE_YN='Y'
+    		]]>
+    		<!-- 
+    		 <if test="CENT_TY !='' and CENT_TY != null"> 
+				  <![CDATA[	AND A.CENT_TY  =  #{CENT_TY}	   ]]>
+			 </if>
+			  -->
+   			 AND A.CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+    		 GROUP BY A.CENT_TY, A.CAM_ID, A.CAM_NM, A.CAM_TY, A.BUSI_TY, A.CAM_BEGIN_DATE, A.CAM_EOT_DATE
+			 ORDER BY A.CAM_BEGIN_DATE 
+    		
+    </select>
+
+    <select id="selectCsltDivObndDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		<![CDATA[   
+		/*  selectCsltDivObndDetail 상담원 배분 팝업 에서 아웃바운드 상세조회.  */
+			SELECT 
+                A.CAM_ID
+                ,SUM(TOT_CNT) AS TOT_CNT	/* 총건수 */
+                ,SUM(DIV_CNT) AS DIV_CNT	/* 배분건수 */
+                ,SUM(END_CNT) AS END_CNT	/* 완료건수 */
+                ,SUM(NOT_END_CNT) AS NOT_END_CNT /* 미처리건수 */
+                ,SUM(CAN_NOT_CNT) AS CAN_NOT_CNT /* 처리불가건수 */
+                ,SUM(ING_CNT) AS ING_CNT	/* 처리중건수 */
+                ,SUM(FAIL_CNT) AS FAIL_CNT	/* 최종시도실패건수 */
+                ,SUM(ETC_CNT) AS ETC_CNT	/* 기타 */
+                ,SUM(EDPF_CNT) AS EDPF_CNT	/* 처리완료 완판 */
+                ,SUM(EDFA_CNT) AS EDFA_CNT	/* 처리완료 불판 */
+                ,SUM(EDTN_CNT) AS EDTN_CNT	/* 처리완료 10회시도 */
+                ,SUM(EDSN_CNT) AS EDSN_CNT	/* 처리완료 안내장발송 */
+            FROM 
+	        (
+	            SELECT
+					 CAM_ID
+	                 , 0 AS TOT_CNT
+	                 , 0 AS DIV_CNT
+	                 , SUM(CASE WHEN FISH_TY = '00001' THEN 1 ELSE 0 END) END_CNT /*완료건수*/
+					 , SUM(CASE WHEN FISH_TY = '00002' THEN 1 ELSE 0 END) NOT_END_CNT /*미처리건수*/
+					 , SUM(CASE WHEN FISH_TY = '00003' THEN 1 ELSE 0 END) CAN_NOT_CNT /*처리불가건수*/
+					 , SUM(CASE WHEN FISH_TY = '00004' THEN 1 ELSE 0 END) ING_CNT /*처리중건수*/
+					 , SUM(CASE WHEN FISH_TY = '00005' THEN 1 ELSE 0 END) FAIL_CNT /*최종시도실패건수*/
+					 , SUM(CASE WHEN FISH_TY = '00006' THEN 1 ELSE 0 END) ETC_CNT /*기타*/
+					 , SUM(CASE WHEN FISH_TY = '00007' THEN 1 ELSE 0 END) EDPF_CNT /*처리완료 완판*/
+					 , SUM(CASE WHEN FISH_TY = '00008' THEN 1 ELSE 0 END) EDFA_CNT /*처리완료 불판*/
+					 , SUM(CASE WHEN FISH_TY = '00009' THEN 1 ELSE 0 END) EDTN_CNT /*처리완료 10회시도*/
+					 , SUM(CASE WHEN FISH_TY = '00010' THEN 1 ELSE 0 END) EDSN_CNT /*처리완료 안내장발송*/
+			    FROM PLT_PHN_CAMP_CUS_DST
+	         ]]>   
+	            WHERE CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+	            GROUP BY CAM_ID
+	            UNION ALL
+	            SELECT
+	                CAM_ID
+	                 ,COUNT(*) AS TOT_CNT
+	                 ,(SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS WHERE CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>) AND DSTR_YN = 'Y' ) AS DIV_CNT
+	        <![CDATA[ 
+	                 , 0 AS END_CNT
+					 , 0 AS NOT_END_CNT
+					 , 0 AS CAN_NOT_CNT
+					 , 0 AS ING_CNT
+					 , 0 AS FAIL_CNT
+					 , 0 AS ETC_CNT /*기타*/
+					 , 0 AS EDPF_CNT /*처리완료 완판*/
+					 , 0 AS EDFA_CNT /*처리완료 불판*/
+					 , 0 AS EDTN_CNT /*처리완료 10회시도*/
+					 , 0 AS EDSN_CNT /*처리완료 안내장발송*/
+			    FROM PLT_PHN_CAMP_CUS
+	        ]]>    
+	            WHERE CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+	            GROUP BY CAM_ID
+	            ) A
+            WHERE 1=1
+            
+		GROUP BY A.CAM_ID
+		
+    </select>
+<!-- <select id="selectCsltDivInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" > -->
+<!--     	<![CDATA[ -->
+<!-- 			/*  selectCsltDivInfo  아웃바운드 상담원 배분정보 조회.  */ -->
+<!--     		SELECT * FROM -->
+<!--     		( -->
+<!--     		    SELECT -->
+<!-- 				       b.AGENT_ID AS CSLT_ID -->
+<!-- 				     , b.AGENT_NM -->
+<!-- 				     , b.TENANT_ID -->
+<!-- 				     , b.DEPT_CD -->
+<!-- 				     ,(SELECT c.DEPT_NM -->
+<!-- 		                   FROM ARGO.V_CM_DEPT_CD c  -->
+<!-- 		                WHERE b.DEPT_CD = c.DEPT_CD -->
+<!-- 		                  AND b.TENANT_ID =  c.TENANT_ID) AS DEPT_NM				/*부서명*/ -->
+<!-- 				     ,(SELECT d.CODE_NM -->
+<!-- 		                   FROM ARGO.V_CM_CODE d  -->
+<!-- 		                WHERE b.TM_KIND = d.CODE -->
+<!-- 		                  AND b.TENANT_ID =  d.TENANT_ID -->
+<!-- 		                  AND d.SORT_CD = 'NOTI_GUBUN') AS TM_KIND_NM				/*업무그룹명*/ -->
+<!-- 				     , COUNT(a.CAM_ID) DIV_CNT -->
+<!-- 					 ,(SELECT d.ANNL_YN FROM PLT_PHN_OBD_DCLZ d WHERE b.AGENT_ID = d.CSLT_ID and d.BASE_DATE = TO_CHAR(NOW(),'YYYYMMDD')  ) AS ANNL_YN -->
+<!--                      ,(SELECT d.HALFD_YN FROM PLT_PHN_OBD_DCLZ d WHERE b.AGENT_ID = d.CSLT_ID and d.BASE_DATE = TO_CHAR(NOW(),'YYYYMMDD')  ) AS HALFD_YN -->
+<!-- 					 , SUM(CASE WHEN a.FISH_TY = '00001' THEN 1 ELSE 0 END) END_CNT -->
+<!-- 					 , SUM(CASE WHEN a.FISH_TY = '00002' THEN 1 ELSE 0 END) NOT_END_CNT /* 미처리건수 */ -->
+<!-- 					 , SUM(CASE WHEN a.FISH_TY = '00003' THEN 1 ELSE 0 END) CAN_NOT_CNT -->
+<!-- 					 , SUM(CASE WHEN a.FISH_TY = '00004' THEN 1 ELSE 0 END) ING_CNT -->
+<!-- 					 , SUM(CASE WHEN a.FISH_TY = '00005' THEN 1 ELSE 0 END) FAIL_CNT -->
+<!-- 				FROM PLT_PHN_CAMP_CUS_DST a -->
+<!-- 	  			RIGHT OUTER JOIN VW_USER_MASTER b -->
+<!-- 				    ON a.CSLT_ID = b.AGENT_ID -->
+<!-- 		]]> -->
+<!-- 	 <if test="CAM_VALUE_ARR.size > 0">  -->
+<!-- 	  	AND a.CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>) -->
+<!-- 	 </if> -->
+<!-- 				WHERE 1=1     -->
+<!-- 	 <if test="TENANT_ID !='' and TENANT_ID != null">  -->
+<!-- 	  	<![CDATA[	AND b.TENANT_ID  =  #{TENANT_ID}	   ]]> -->
+<!-- 	 </if> -->
+<!-- 	 <if test="DEPT_CD !='' and DEPT_CD != null">  -->
+<!-- 	  	<![CDATA[	AND b.DEPT_CD  =  #{DEPT_CD}	   ]]> -->
+<!-- 	 </if> -->
+<!-- 	 <if test="CENT_TY !='' and CENT_TY != null">  -->
+<!-- 	  	<![CDATA[	AND b.DEPT_CD IN ( SELECT DEPT_CD FROM CALUSR.VW_DEPT WHERE CENT_TY = #{CENT_TY} ) ]]> -->
+<!-- 	 </if> -->
+<!-- 	 	<![CDATA[ -->
+<!-- 			  GROUP BY b.AGENT_ID, b.TENANT_ID, b.AGENT_NM, b.DEPT_CD, b.TM_KIND -->
+<!-- 			  ORDER BY b.DEPT_CD, b.AGENT_NM -->
+<!-- 	    	) -->
+<!-- 	    	WHERE (ANNL_YN IS NULL) OR (ANNL_YN <> 'Y') /* 연차는 배제 */ -->
+<!-- 	    ]]> -->
+<!--     </select> -->
+    <select id="selectCsltDivInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+    	<![CDATA[
+			/*  selectCsltDivInfo  아웃바운드 상담원 배분정보 조회.  */
+    		SELECT * FROM
+    		(
+    		    SELECT
+				       b.USER_ID AS CSLT_ID
+				     , b.USER_NM
+				     , b.DEPT_CD
+				     ,(SELECT c.DEPT_NM FROM PLT_ORGZ c WHERE b.DEPT_CD = c.DEPT_CD) AS DEPT_NM
+				     , COUNT(a.CAM_ID) DIV_CNT
+				     ,(SELECT d.ANNL_YN FROM PLT_PHN_OBD_DCLZ d WHERE b.USER_ID = d.CSLT_ID and d.BASE_DATE = TO_CHAR(NOW(),'YYYYMMDD')  ) AS ANNL_YN 
+                     ,(SELECT d.HALFD_YN FROM PLT_PHN_OBD_DCLZ d WHERE b.USER_ID = d.CSLT_ID and d.BASE_DATE = TO_CHAR(NOW(),'YYYYMMDD')  ) AS HALFD_YN 
+					 , SUM(CASE WHEN a.FISH_TY = '00001' THEN 1 ELSE 0 END) END_CNT
+					 , SUM(CASE WHEN a.FISH_TY = '00002' THEN 1 ELSE 0 END) NOT_END_CNT /* 미처리건수 */
+					 , SUM(CASE WHEN a.FISH_TY = '00003' THEN 1 ELSE 0 END) CAN_NOT_CNT
+					 , SUM(CASE WHEN a.FISH_TY = '00004' THEN 1 ELSE 0 END) ING_CNT
+					 , SUM(CASE WHEN a.FISH_TY = '00005' THEN 1 ELSE 0 END) FAIL_CNT
+				FROM PLT_PHN_CAMP_CUS_DST a
+	  			RIGHT OUTER JOIN PLT_USER b
+				    ON a.CSLT_ID = b.USER_ID
+		]]>
+	 <if test="CAM_VALUE_ARR.size > 0"> 
+	  	AND a.CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+	 </if>
+				WHERE 1=1    
+	 <if test="DEPT_CD !='' and DEPT_CD != null"> 
+	  	<![CDATA[	AND b.DEPT_CD  =  #{DEPT_CD}	   ]]>
+	 </if> 
+	 <if test="ASP_NEWCUST_KEY !='' and ASP_NEWCUST_KEY != null"> 
+	  	<![CDATA[	AND b.CUSTCO_ID  LIKE '%'||#{ASP_NEWCUST_KEY}||'%' ]]>
+	 </if>
+	 
+	 	<![CDATA[
+			  GROUP BY b.USER_ID, b.USER_NM, b.DEPT_CD
+			  ORDER BY b.DEPT_CD, b.USER_NM
+	    	)
+	    WHERE (ANNL_YN IS NULL) OR (ANNL_YN <> 'Y') /* 연차는 배제 */
+	    ]]>
+    </select>
+    
+    <select id="selectObndDivCustList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+    	<![CDATA[
+			/*  selectObndDivCustList 상담원배분_아웃바운드 고객 조회  */
+    		    SELECT 
+    		    	ROWNUM
+    		    	,CUST.CAM_ID		/* 캠페인ID */
+    		    	,CUST.CUST_NO		/* 고객번호 */
+    		    	,DSTR.CSLT_ID		/* 상담원사번 */
+    		    	,DSTR.CUSTCO_ID	/* 회사명 */
+    		    FROM
+    		    (
+	    		    SELECT 
+					     a.CAM_ID
+					     , a.CUST_NO
+					  FROM PLT_PHN_CAMP_CUS a, 
+		]]>			  
+		 <!-- <if test='CENT_TY.equals("G")'>  -->
+		  	<![CDATA[	PLT_PHN_OBD_CUS b LEFT OUTER JOIN PLT_PHN_OBD_CUS_ADD c
+								                        ON b.CAM_ID = c.CAM_ID 
+								                        AND b.CUST_NO = c.CUST_NO /* 공제 아웃바운드 */	   ]]>
+					  	WHERE a.CAM_ID = b.CAM_ID
+						AND a.CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+						AND a.DSTR_YN = #{DSTR_YN}
+						AND a.CUST_NO = b.CUST_NO
+						ORDER BY a.CAM_ID, c.SECU_NO
+		 <!-- </if>  -->
+		<!-- <if test='CENT_TY.equals("E")'> 
+		  	<![CDATA[	TB_OB_BI_CUST b /* 업무 아웃바운드 */	   ]]>
+		  				WHERE a.CAM_ID = b.CAM_ID
+						AND a.CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+						AND a.DSTR_YN = #{DSTR_YN}
+						AND a.CUST_NO = b.RES_NO
+						ORDER BY a.CAM_ID, b.CUST_NM
+		 </if> --> 
+			    ) CUST LEFT OUTER JOIN PLT_PHN_CAMP_CUS_DST DSTR
+			    ON CUST.CAM_ID = DSTR.CAM_ID 
+                AND CUST.CUST_NO = DSTR.CUST_NO 
+			    WHERE ROWNUM <![CDATA[<=]]> #{DIV_CNT}
+		
+    </select>
+
+    <select id="selectObndDivList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap"><!-- resultMap="selectHashMap"  DamoPartialDecryptionCipherTypeHandler 36line-->
+    	<![CDATA[
+			/*  selectObndDivList 아웃바운드 배분 조회  */
+    		    SELECT 
+    		    	ROWNUM
+    		    	,CAM_ID
+    		    	,CUST_NO
+    		    FROM
+    		    (
+	    		    SELECT 
+					     ROWNUM
+					     , a.CAM_ID
+					     , a.CUST_NO
+					 FROM PLT_PHN_CAMP_CUS_DST a
+		]]>
+					 WHERE a.CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+		<![CDATA[
+					 AND a.CSLT_ID = #{CSLT_ID}
+					 AND a.FISH_TY = '00004' /* 처리중 */
+					 ORDER BY a.CAM_ID
+			    )
+			    WHERE ROWNUM <= #{DIV_CNT}
+		]]>
+    </select>
+    
+    <update id="updateObndDiv"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateObndDiv 아웃바운드배분수정   */
+		UPDATE PLT_PHN_CAMP_CUS_DST
+		  SET
+		     CSLT_ID = #{CSLT_ID},
+		     CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS'),
+		     CHNG_MAN  = #{CHNG_MAN}
+		 WHERE CUST_NO = #{CUST_NO}
+		   AND CAM_ID = #{CAM_ID}
+		]]>
+		<if test="ASP_NEWCUST_KEY !='' and ASP_NEWCUST_KEY != null">
+		<![CDATA[ AND CUSTCO_ID = #{ASP_NEWCUST_KEY}]]>
+		</if>
+	</update>
+	
+	
+	<insert id="insertObndDiv"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertObndDiv 아웃바운드 배분 등록  */
+		INSERT INTO PLT_PHN_CAMP_CUS_DST
+					 (
+					    CUSTCO_ID
+					    ,CAM_ID	
+						,CUST_NO	
+						,CSLT_ID	
+						,CENT_TY	
+						,DSTR_DATE	
+						,WDRW_YN	
+						,TRY_CNT	
+						,FISH_TY	
+						,REG_DTIM	
+						,REG_MAN	
+						,CHNG_DTIM	
+						,CHNG_MAN	
+					 )
+			    VALUES
+			         (
+			            #{ASP_NEWCUST_KEY}
+			            ,#{CAM_ID}	
+						,#{CUST_NO}
+						,#{CSLT_ID}
+						,#{CENT_TY}	
+						,TO_CHAR(NOW(),'YYYYMMDD')
+						,'N'	
+						,0
+						,'00002'	 
+						, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+						,#{REG_MAN}
+						, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+						,#{REG_MAN}
+					 )
+		
+		]]>
+	</insert>
+	
+	<update id="updateObndDivYn"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateObndDivYn 아웃바운드고객 배분여부 수정   */
+		UPDATE PLT_PHN_CAMP_CUS
+		  SET
+		     DSTR_YN = #{DSTR_YN},
+		     CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS'),
+		     CHNG_MAN  = #{CHNG_MAN}
+		 WHERE CAM_ID = #{CAM_ID}
+		 AND CUST_NO = #{CUST_NO}
+		 ]]>
+		 <if test="ASP_NEWCUST_KEY !='' and ASP_NEWCUST_KEY != null">
+		 <![CDATA[ AND CUSTCO_ID = #{ASP_NEWCUST_KEY}]]>
+		 </if>	
+	</update>
+	
+	
+	<select id="selectCsltDivNotEnd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    	<![CDATA[
+			/*  selectCsltDivNotEnd 아웃바운드 상담원배분미완료 조회  */
+    		    SELECT 
+    		    	ROWNUM
+    		    	,CUST_NO
+    		    	,CAM_ID
+    		    FROM
+    		    (
+	    		    SELECT 
+					     ROWNUM
+					     , a.CUST_NO
+					     , a.CAM_ID
+					 FROM PLT_PHN_CAMP_CUS_DST a
+		]]>	
+					 WHERE a.CAM_ID IN (<foreach collection="CAM_VALUE_ARR" item="item" separator=",">#{item}</foreach>)
+		<![CDATA[
+					 AND a.CSLT_ID = #{CSLT_ID}
+					 AND a.FISH_TY IN ( '00002', '00004' )
+		]]>	    
+			    <if test="FISH_TY !='' and FISH_TY != null"> 
+				  <![CDATA[	AND a.FISH_TY  =  #{FISH_TY}	   ]]>
+				</if>
+			   ORDER BY a.CAM_ID, a.FISH_TY 
+		<![CDATA[	    
+			    )
+			    WHERE ROWNUM <= #{CHG_CNT}
+		]]>
+    </select>
+    
+    <delete id="deleteObndDiv"  parameterType="java.util.HashMap">
+		<![CDATA[
+		 /* deleteObndDiv 아웃바운드 배분삭제 */
+		 DELETE FROM PLT_PHN_CAMP_CUS_DST
+		 WHERE CAM_ID = #{CAM_ID}
+		 AND CUST_NO = #{CUST_NO}
+		 AND CSLT_ID = #{CSLT_ID}
+		]]>
+	</delete>
+	
+	<select id="selectObndHavingCust"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+    	<![CDATA[
+			/*  selectObndHavingCust 고객을가지고있는 상담원 조회  */
+    		    SELECT 
+    		    	obndHavingCust.CSLT_ID AS CSLT_ID
+    		    FROM 
+    		    (
+	    		    SELECT 
+					     ROWNUM AS NUM
+					     , b.CSLT_ID
+					 FROM PLT_PHN_CAMP a, PLT_PHN_CAMP_CUS_DST b
+					 WHERE a.CAM_ID = b.CAM_ID
+					 AND TO_CHAR(NOW(),'YYYYMMDD') >= a.CAM_BEGIN_DATE
+					 AND TO_CHAR(NOW(),'YYYYMMDD') <= a.CAM_EOT_DATE
+					 AND a.FISH_YN = 'N'
+					 AND a.USE_YN = 'Y'
+					 AND a.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					 AND b.CUST_NO = #{CUST_NO}
+					 AND b.FISH_TY = '00002'
+			    ) obndHavingCust
+			    WHERE obndHavingCust.NUM = 1
+		]]>
+    </select>
+
+</mapper>

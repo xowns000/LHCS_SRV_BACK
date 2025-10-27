@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.common.log.dao.AccesLogCmmnMapper">  
+	<!-- TWB_BAS08(사용자접속로그정보) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_PWD_LOG"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_PWD_LOG
+		 ( LOG_ID                      /*로그ID*/
+		 , USER_ID                     /*사용자ID*/
+		 , BIZ_DIV                     /*업무구분 */
+		 , CNNCT_IP                    /*접속아이피*/
+		 , ETC_INFO01                  /*기타정보01*/
+		 , ETC_INFO02                  /*기타정보02*/
+		 , ETC_INFO03                  /*기타정보03*/
+		 , ETC_INFO04                  /*기타정보04*/
+		 , ETC_INFO05                  /*기타정보05*/
+		 , WRTR_DEPT_CD                /*작성자부서코드  */
+		 , WRTR_ID                     /*작성자ID*/
+		 , WRT_DTTM                    /*작성일시*/
+		 , PROC_ID                     /*처리자 */
+		 , IT_PROCESSING               /*전산처리일시*/
+		 )
+	VALUES
+	 ( #{LOG_ID}
+		<choose>
+			<when test="USER_ID != null">			     , #{USER_ID}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="BIZ_DIV != null">			     , #{BIZ_DIV}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="CNNCT_IP != null">			     , #{CNNCT_IP}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO01 != null">			 , #{ETC_INFO01}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO02 != null">			 , #{ETC_INFO02}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO03 != null">			 , #{ETC_INFO03}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO04 != null">			 , #{ETC_INFO04}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO05 != null">			 , #{ETC_INFO05}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="PROC_ID != null">			     , COALESCE((SELECT DEPT_CD FROM PLT_USER WHERE USER_ID = #{PROC_ID}), 'x')</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="PROC_ID != null">			     , #{PROC_ID}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+						 , NOW()
+		<choose>
+			<when test="PROC_ID != null">			     , #{PROC_ID}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+	 , NOW()
+	 )
+</insert>
+<insert id="INSERT_PLT_USER_PSWD_LOG"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_PSWD_LOG
+			( PSWD_LOG_ID
+			, USER_ID
+			, TASK_SE_CD
+			, CNTN_IP
+			, ETC_INFO_01
+			, ETC_INFO_02
+			, ETC_INFO_03
+			, ETC_INFO_04
+			, ETC_INFO_05
+			, RGTR_ID
+			,REG_DT)
+			VALUES
+				( #{PSWD_LOG_ID}::INTEGER
+		<choose>
+			<when test="USER_ID != null">			     	, #{USER_ID}::INTEGER</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="TASK_SE_CD != null">			     , #{TASK_SE_CD}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="CNTN_IP != null">			    	 , #{CNTN_IP}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO_01 != null">			     , #{ETC_INFO_01}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO_02 != null">			     , #{ETC_INFO_02}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO_03 != null">			     , #{ETC_INFO_03}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO_04 != null">			     , #{ETC_INFO_04}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+		<choose>
+			<when test="ETC_INFO_05 != null">			     , #{ETC_INFO_05}</when>
+			<otherwise>			     , NULL</otherwise>
+		</choose>
+				, #{RGTR_ID}::INTEGER
+				, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'))
+</insert>
+</mapper>

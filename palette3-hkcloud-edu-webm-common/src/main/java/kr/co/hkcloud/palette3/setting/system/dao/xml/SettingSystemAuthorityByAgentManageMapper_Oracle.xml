@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemAuthorityByAgentManageMapper">
+
+<!-- ######################################################################### -->
+<!--  사용자 ID로 권한을 단건 조회한다 -->
+<select id="selectRtnAuthByUserId" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT PUA.USER_ID
+	,PUA.AUTHRT_GROUP_ID
+	, PA.AUTHRT_GROUP_NM
+	, PA.GROUP_EXPLN
+	, PA.MNGR_PM_CD
+	, PA.SORT_ORD
+	, PA.USER_SE_CD
+	FROM PLT_USER_AUTHRT PUA
+	INNER JOIN PLT_USER PU
+	ON PUA.USER_ID = PU.USER_ID
+	LEFT OUTER JOIN PLT_AUTHRT PA
+	ON PUA.AUTHRT_GROUP_ID = PA.AUTHRT_GROUP_ID
+	INNER JOIN PLT_USER_OGNZ PUO
+	ON PUO.USER_ID = PU.USER_ID
+	AND PUO.USE_YN = 'Y'
+	AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+	WHERE 1=1 AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+<if test="REG_USER_ID != '' and REG_USER_ID	!= null">AND PUA.USER_ID = #{REG_USER_ID}</if>
+<if test="LGN_ID != '' and LGN_ID 		!= null">AND PU.LGN_ID = #{LGN_ID}</if>	
+<if test="USER_NM != '' and USER_NM 		!= null">AND PU.USER_NM = #{USER_NM}</if>	
+</select>
+
+<!-- 권한그룹별 할당 및 미할당 유져를 조회한다. -->
+<select id="selectRtnNotAuthAllocAll"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+		, PG.*
+FROM (
+	SELECT PU.USER_ID
+			, PU.LGN_ID
+			, PU.USER_NM
+			, PU.USER_NNM
+			, PU.REG_DT
+			, PUA.AUTHRT_GROUP_ID 
+			, (SELECT DEPT_NM FROM PLT_OGNZ WHERE DEPT_ID = PUO.DEPT_ID) AS DEPT_NM			/* 부서이름 */
+			FROM PLT_USER PU
+		LEFT OUTER JOIN PLT_USER_AUTHRT PUA
+		ON PU.USER_ID = PUA.USER_ID
+		INNER JOIN PLT_USER_OGNZ PUO
+		ON PU.USER_ID = PUO.USER_ID
+		AND PUO.USE_YN = 'Y'
+		AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+			WHERE PU.USE_YN = 'Y'
+			AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+			AND PU.USER_ID NOT IN (SELECT USER_ID
+									FROM PLT_USER_AUTHRT
+									WHERE AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID})
+	<if test="LGN_ID != ''"> AND PU.LGN_ID  LIKE '%'|| #{LGN_ID}||  '%'</if>
+	<if test="USER_NM != ''"> AND PU.USER_NM  LIKE '%'|| #{USER_NM}||  '%'</if>	
+	GROUP BY PU.USER_ID, PU.USER_NM, PU.USER_NNM, PU.REG_DT,PUA.AUTHRT_GROUP_ID, DEPT_NM
+	ORDER BY PU.USER_ID, PU.USER_NM, PU.USER_NM, PUA.AUTHRT_GROUP_ID 
+	) PG
+</select>
+
+
+<!-- 권한그룹별 할당 및 할당 유져를 조회한다.-->
+<select id="selectRtnAuthAllocAll"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+				, PG.*
+		FROM (
+		SELECT PU.USER_ID
+				, PU.LGN_ID
+				, PU.REG_DT
+				, PU.USER_NM
+				, PU.USER_NNM
+				, PUA.AUTHRT_GROUP_ID 
+				, PUA.MDFCN_DT
+		FROM PLT_USER PU
+		INNER JOIN PLT_USER_AUTHRT PUA
+		ON PU.USER_ID = PUA.USER_ID
+		INNER JOIN PLT_USER_OGNZ PUO
+		ON PU.USER_ID = PUO.USER_ID
+		AND PUO.USE_YN = 'Y'
+		AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+		WHERE PU.USE_YN = 'Y'
+		  AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+		  AND PU.USER_ID IN (SELECT USER_ID
+							FROM PLT_USER_AUTHRT 
+							WHERE AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID})
+			<if test="LGN_ID != ''"> AND PU.LGN_ID  LIKE '%'|| #{LGN_ID}||  '%'</if>
+			<if test="USER_NM != ''"> AND PU.USER_NM  LIKE '%'|| #{USER_NM}||  '%'</if>	
+			GROUP BY PU.USER_ID, PU.USER_NM, PU.USER_NNM, PU.REG_DT,PUA.AUTHRT_GROUP_ID,PUA.MDFCN_DT
+			ORDER BY PU.USER_ID, PU.USER_NM, PU.USER_NM, PUA.AUTHRT_GROUP_ID 
+		  ) PG
+</select>
+
+<!-- 사용자별 권한그룹 삭제 -->
+<delete id="deleteRtnAuthGroupByUser"  parameterType= "java.util.HashMap">
+DELETE FROM PLT_USER_AUTH 
+ WHERE USER_ID = #{DEL_USER_ID}
+</delete>
+
+<select id="selectRtnAuthByUser" parameterType="map" resultType="hashmap">
+SELECT
+	PU.USER_ID
+	, PU.LGN_ID
+	, 'ROLE_' || PA.AUTHRT_GROUP_ID  AS ATRT_GROUP_ID
+	, PA.AUTHRT_GROUP_NM             AS ATRT_GROUP_NM
+FROM PLT_USER PU
+INNER JOIN PLT_USER_AUTHRT PUA ON PUA.USER_ID = PU.USER_ID
+INNER JOIN PLT_AUTHRT PA ON PA.AUTHRT_GROUP_ID = PUA.AUTHRT_GROUP_ID
+LEFT OUTER JOIN PLT_USER_OGNZ PUO ON PUO.USER_ID = PU.USER_ID AND PUO.USE_YN = 'Y' AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+LEFT OUTER JOIN PLT_CUSTCO PC ON PC.CUSTCO_ID = PUO.CUSTCO_ID
+WHERE PU.USE_YN = 'Y'
+AND PU.USER_ID = #{USER_ID}
+AND PC.CUSTCO_ID = #{CUSTCO_ID}
+</select>
+
+<!-- PLT_USER_AUTH(사용자권한) 테이블 데이터 등록  2023.06.16 NJY -->
+<insert id="INSERT_PLT_USER_AUTHRT"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_AUTHRT
+		( AUTHRT_GROUP_ID				/* 권한그룹 ID*/
+		, USER_ID						/* 사용자 ID*/
+		, RGTR_ID						/* 등록자 ID*/
+		, REG_DT)						/* 등록일자 */
+		VALUES(
+		#{AUTHRT_GROUP_ID}
+		, #{GEN_USER_ID}
+		, #{USER_ID}
+		, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS'))
+</insert>
+
+<!-- 권한회수로 삭제 된 사용자를 PLT_USER_AUTHRT에 INSERT  -->
+<insert id="INSERT_PLT_USER_AUTHRT_DELETED_AUTHRT"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_AUTHRT
+		( AUTHRT_GROUP_ID				/* 권한그룹 ID*/
+		, USER_ID						/* 사용자 ID*/
+		, RGTR_ID						/* 등록자 ID*/
+		, REG_DT						/* 등록일자 */
+		, MDFR_ID						/* 등록자 ID*/
+		, MDFCN_DT)						/* 등록일자 */
+		VALUES(
+		#{AUTHRT_GROUP_ID}
+		, #{REG_USER_ID}
+		, #{USER_ID}
+		, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+		, #{USER_ID}
+		, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS'))
+</insert>
+
+<!-- PLT_USER_AUTH(사용자권한) 테이블 수정(사용자 관리에서 권한 변경 시) 2023.06.16 NJY-->
+<update id="UPDATE_PLT_USER_AUTH_USER"  parameterType= "java.util.HashMap">
+ UPDATE PLT_USER_AUTHRT SET 
+        AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}
+        , MDFR_ID = #{USER_ID}
+        , MDFCN_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+  WHERE USER_ID = #{REG_USER_ID}
+</update>
+
+<!-- PLT_USER_AUTH(사용자권한) 테이블 수정 -->
+<update id="UPDATE_PLT_USER_AUTH"  parameterType= "java.util.HashMap">
+UPDATE PLT_USER_AUTH
+   SET IT_PROCESSING   = SYSDATE
+<if test="REGR_DEPT_CD 		!='' and REGR_DEPT_CD 	!= null"> , REGR_DEPT_CD    = #{REGR_DEPT_CD}     -- 등록자부서코드</if>
+<if test="REGR_ID 			!='' and REGR_ID 		!= null"> , REGR_ID         = #{REGR_ID}          -- 등록자ID		</if>
+<if test="REG_DTTM 			!='' and REG_DTTM 		!= null">
+	  <choose>
+	      <when test="REG_DTTM == 'SYSDATE'">
+			  , REG_DTTM = SYSDATE	/* 등록일시 */ 
+		  </when>
+		  <otherwise>
+		      , REG_DTTM = #{REG_DTTM} /* 등록일시 */
+		  </otherwise>
+	  </choose>
+</if>
+<if test="AMDR_DEPT_CD 		!='' and AMDR_DEPT_CD 	!= null"> , AMDR_DEPT_CD    = #{AMDR_DEPT_CD}     -- 수정자부서코드</if>
+<if test="AMDR_ID 			!='' and AMDR_ID 		!= null"> , AMDR_ID         = #{AMDR_ID}          -- 수정자ID		</if>
+<if test="UPD_DTTM 			!='' and UPD_DTTM 		!= null">
+ 	  <choose>
+	      <when test="UPD_DTTM == 'SYSDATE'">
+			  , UPD_DTTM = SYSDATE	/* 수정일시 */ 
+		  </when>
+		  <otherwise>
+		      , UPD_DTTM = #{UPD_DTTM} /* 수정일시 */
+		  </otherwise>
+	  </choose> 
+</if>
+<if test="PROC_ID 			!='' and PROC_ID 		!= null"> , PROC_ID         = #{PROC_ID}          -- 처리자		</if>
+ WHERE 1 = 1
+   AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID}
+   AND USER_ID         = #{USER_ID}
+</update>
+
+<!-- PLT_USER_AUTH(사용자권한) 데이터 삭제 -->
+<delete id="DELETE_PLT_USER_AUTH"  parameterType= "java.util.HashMap">			
+DELETE FROM PLT_USER_AUTHRT
+ WHERE AUTHRT_GROUP_ID IN
+   <foreach collection="arrAuthrtId" item="AUTHRT_GROUP_ID" open="(" separator="," close=")" >
+		#{AUTHRT_GROUP_ID}
+	</foreach>    
+</delete>
+
+
+<delete id="DELETE_PLT_USER_AUTHRT_USER"  parameterType= "java.util.HashMap">			
+DELETE FROM PLT_USER_AUTHRT
+ WHERE USER_ID = #{DEL_USER_ID}
+ <if test="AUTHRT_GROUP_ID 			!='' and AUTHRT_GROUP_ID 		!= null">AND AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}</if>
+</delete>
+
+
+<!-- <update id="UPDATE_PLT_USER_AUTHRT_MANAGE"  parameterType= "java.util.HashMap">			
+update PLT_USER_AUTHRT
+set AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}
+        , MDFR_ID = #{USER_ID}
+        , MDFCN_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+  WHERE USER_ID = #{REG_USER_ID}
+   <foreach collection="UPDATE_AUTHRT_USER_ID" item="AUTHRT_GROUP_ID" open="(" separator="," close=")" >
+		#{AUTHRT_GROUP_ID}
+	</foreach>    
+</update> -->
+
+<!-- PLT_USER_AUTH(사용자권한) 테이블 데이터 조회 -->
+<select id="SELECT_PLT_USER_AUTH"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT ATRT_GROUP_ID                 -- 권한그룹ID
+     , USER_ID                       -- 사용자ID
+     , REGR_DEPT_CD                  -- 등록자부서코드
+     , REGR_ID                       -- 등록자ID
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+     , AMDR_DEPT_CD                  -- 수정자부서코드
+     , AMDR_ID                       -- 수정자ID
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+     , PROC_ID                       -- 처리자
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+  FROM PLT_USER_AUTH
+ WHERE 1 = 1
+<if test="ATRT_GROUP_ID !='' and ATRT_GROUP_ID 	!= null"> AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID}   </if>
+<if test="USER_ID 		!='' and USER_ID 		!= null"> AND USER_ID         = #{USER_ID}         </if>
+<if test="REGR_DEPT_CD 	!='' and REGR_DEPT_CD 	!= null"> AND REGR_DEPT_CD    = #{REGR_DEPT_CD}    </if>
+<if test="REGR_ID 		!='' and REGR_ID 		!= null"> AND REGR_ID         = #{REGR_ID}         </if>
+<if test="REG_DTTM 		!='' and REG_DTTM 		!= null">   
+	  <choose>
+	      <when test="REG_DTTM == 'SYSDATE'">
+			AND REG_DTTM = SYSDATE 
+		  </when>
+		  <otherwise>
+		    AND REG_DTTM = #{REG_DTTM}
+		  </otherwise>
+	  </choose>
+</if>
+<if test="AMDR_DEPT_CD 	!='' and AMDR_DEPT_CD 	!= null"> AND AMDR_DEPT_CD    = #{AMDR_DEPT_CD}    </if>
+<if test="AMDR_ID 		!='' and AMDR_ID 		!= null"> AND AMDR_ID         = #{AMDR_ID}         </if>
+<if test="UPD_DTTM 		!='' and UPD_DTTM 		!= null">    
+ 	  <choose>
+	      <when test="UPD_DTTM == 'SYSDATE'">
+			AND UPD_DTTM = SYSDATE	
+		  </when>
+		  <otherwise>
+		    AND UPD_DTTM = #{UPD_DTTM}
+		  </otherwise>
+	  </choose> 
+</if>
+<if test="PROC_ID 		!='' and PROC_ID 		!= null"> AND PROC_ID         = #{PROC_ID}         </if>
+</select>
+
+<!-- PLT_USER_AUTH(사용자권한) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_USER_AUTH"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT ROWNUM AS ROW_NUMBER
+         , ROW_TBL.*
+     FROM (
+     		SELECT ATRT_GROUP_ID                 -- 권한그룹ID
+               	   , USER_ID                       -- 사용자ID
+	               , REGR_DEPT_CD                  -- 등록자부서코드
+	               , REGR_ID                       -- 등록자ID
+	               , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+	               , AMDR_DEPT_CD                  -- 수정자부서코드
+	               , AMDR_ID                       -- 수정자ID
+	               , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+	               , PROC_ID                       -- 처리자
+	               , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+	            FROM PLT_USER_AUTH
+	           WHERE 1 = 1
+	<if test="ATRT_GROUP_ID !='' and ATRT_GROUP_ID 	!= null"> AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID}   </if>
+	<if test="USER_ID 		!='' and USER_ID 		!= null"> AND USER_ID         = #{USER_ID}         </if>
+	<if test="REGR_DEPT_CD 	!='' and REGR_DEPT_CD 	!= null"> AND REGR_DEPT_CD    = #{REGR_DEPT_CD}    </if>
+	<if test="REGR_ID 		!='' and REGR_ID 		!= null"> AND REGR_ID         = #{REGR_ID}         </if>
+	<if test="REG_DTTM 		!='' and REG_DTTM 		!= null">      
+		  <choose>
+		      <when test="REG_DTTM == 'SYSDATE'">
+				AND REG_DTTM = SYSDATE
+			  </when>
+			  <otherwise>
+			    AND REG_DTTM = #{REG_DTTM}
+			  </otherwise>
+		  </choose>
+	</if>
+	<if test="AMDR_DEPT_CD 	!='' and AMDR_DEPT_CD 	!= null"> AND AMDR_DEPT_CD    = #{AMDR_DEPT_CD}    </if>
+	<if test="AMDR_ID 		!='' and AMDR_ID 		!= null"> AND AMDR_ID         = #{AMDR_ID}         </if>
+	<if test="UPD_DTTM 		!='' and UPD_DTTM 		!= null"> 
+	 	  <choose>
+		      <when test="UPD_DTTM == 'SYSDATE'">
+				AND UPD_DTTM = SYSDATE	
+			  </when>
+			  <otherwise>
+			    AND UPD_DTTM = #{UPD_DTTM}
+			  </otherwise>
+		  </choose> 
+	</if>
+	<if test="PROC_ID 		!='' and PROC_ID 		!= null"> AND PROC_ID         = #{PROC_ID}         </if>
+	
+	 ) ROW_TBL
+</select>
+
+</mapper>

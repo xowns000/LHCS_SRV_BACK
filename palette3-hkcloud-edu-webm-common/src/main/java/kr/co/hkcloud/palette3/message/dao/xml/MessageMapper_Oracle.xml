@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.message.dao.MessageMapper">
+
+
+
+<!-- 쪽지 INSERT -->
+<insert id="sendMsg">
+INSERT INTO PLT_MSG
+	( MSG_ID			-- 메시지ID
+	, UP_MSG_ID			-- 상위메시지ID
+	, RGTR_ID			-- 등록자ID
+	, REG_DT			-- 등록일
+	, INQ_YN			-- 조회여부
+	, INQ_DT			-- 조회일시
+	, RCPTN_USER_ID		-- 수신사용자ID
+	, MSG_GROUP_ID		-- 메시지그룹ID
+	)
+VALUES
+	( #{MSG_ID}
+	, #{UP_MSG_ID}
+	, #{USER_ID}
+	, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+	, #{INQ_YN}
+	, #{INQ_DT}
+	, #{RCPTN_USER_ID}
+	, #{MSG_GROUP_ID}
+	)
+</insert>
+
+<!-- 쪽지내용 INSERT -->
+<insert id="sendMsgCn">
+INSERT INTO PLT_MSG_CN
+	( MSG_CN
+	, MSG_ID
+	)
+VALUES
+	( #{MSG_CN}
+	, #{MSG_ID}
+	)
+</insert>
+
+
+<!-- 받은쪽지 및 보낸쪽지 조회 -->
+<select id="selectMsgList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT M.MSG_ID			AS MSG_ID																					-- 메시지ID
+	 , UP_MSG_ID		AS UP_MSG_ID																				-- 상위메시지ID
+	 , M.RGTR_ID		AS RGTR_ID																					-- 등록자ID
+	 , TO_CHAR(TO_TIMESTAMP(M.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS')			AS REG_DT				-- 등록일
+	 , INQ_YN			AS INQ_YN																					-- 조회여부
+	 , TO_CHAR(TO_TIMESTAMP(INQ_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS')			AS INQ_DT				-- 조회일시
+	 , RCPTN_USER_ID	AS RCPTN_USER_ID																			-- 수신사용자ID
+	 , MSG_GROUP_ID		AS MSG_GROUP_ID 																			-- 메시지그룹ID
+	 , MSG_CN			AS MSG_CN 																					-- 메시지내용
+	 , U.USER_NM 		AS USER_NAME																				-- 등록자 이름
+	 , UU.USER_NM		AS RCPTN_USER_NAME																			-- 수신사용자 이름
+	 , F.FILE_PATH		AS FILE_PATH
+     , F.STRG_FILE_NM	AS STRG_FILE_NM
+     , FF.FILE_PATH		AS RCPTN_FILE_PATH
+     , FF.STRG_FILE_NM	AS RCPTN_STRG_FILE_NM
+  FROM PLT_MSG M LEFT OUTER JOIN PLT_MSG_CN MC ON M.MSG_ID = MC.MSG_ID
+  				 LEFT OUTER JOIN PLT_USER U ON U.USER_ID = M.RGTR_ID
+				 LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID = M.RCPTN_USER_ID
+				 LEFT OUTER JOIN PLT_FILE F ON U.ICON = F.FILE_GROUP_KEY
+				 LEFT OUTER JOIN PLT_FILE FF ON UU.ICON = FF.FILE_GROUP_KEY
+ WHERE UP_MSG_ID IS NULL
+ <if test="OTHER_USER_ID !='' and OTHER_USER_ID != null"> AND U.USER_ID = #{OTHER_USER_ID} </if>
+ <if test="OTHER_USER_ID == '' or OTHER_USER_ID == null"> AND UU.USER_ID = #{USER_ID} 	   </if>
+ORDER BY REG_DT DESC
+</select>
+
+
+<!-- 회신쪽지 조회 -->
+<select id="selectMsgList2"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT M.MSG_ID			AS REPLY_MSG_ID				-- 메시지ID
+	 , UP_MSG_ID		AS REPLY_UP_MSG_ID			-- 상위메시지ID
+	 , M.RGTR_ID		AS REPLY_RGTR_ID			-- 등록자ID
+	 , M.REG_DT			AS REPLY_REG_DT				-- 등록일
+	 , INQ_YN			AS REPLY_INQ_YN				-- 조회여부
+	 , INQ_DT			AS REPLY_INQ_DT				-- 조회일시
+	 , RCPTN_USER_ID	AS REPLY_RCPTN_USER_ID		-- 수신사용자ID
+	 , MSG_GROUP_ID		AS REPLY_MSG_GROUP_ID 		-- 메시지그룹ID
+	 , MSG_CN			AS REPLY_MSG_CN 			-- 메시지내용
+	 , U.USER_NM 		AS REPLY_USER_NAME			-- 등록자 이름
+	 , U.ICON			AS REPLY_USER_ICON
+	 , (SELECT array_to_string(array_agg( FILE_PATH || '/' || STRG_FILE_NM ), '')
+		FROM PLT_FILE
+		WHERE FILE_GROUP_KEY = U.ICON) as REPLY_ICON_IMG_URI
+	 , UU.USER_NM		AS REPLY_RCPTN_USER_NAME	-- 수신사용자 이름
+  FROM PLT_MSG M LEFT OUTER JOIN PLT_MSG_CN MC ON M.MSG_ID = MC.MSG_ID
+  				 LEFT OUTER JOIN PLT_USER U ON U.USER_ID = M.RGTR_ID
+				 LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID = M.RCPTN_USER_ID
+ WHERE UP_MSG_ID IS NOT NULL
+   <if test="OTHER_USER_ID !='' and OTHER_USER_ID != null"> AND UU.USER_ID = #{OTHER_USER_ID}
+    														 OR U.USER_ID = #{OTHER_USER_ID}  </if>
+   AND UP_MSG_ID = M.MSG_ID
+</select>
+
+
+
+<!-- 보낸쪽지,회신쪽지 조회용 계층쿼리(사용X) 지우지 말것 -->
+<select id="selectMsgList3"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+WITH RECURSIVE NOTE_LIST(MSG_ID, UP_MSG_ID, RGTR_ID, REG_DT, INQ_YN, INQ_DT, RCPTN_USER_ID, MSG_GROUP_ID, MSG_CN, USER_NAME, RCPTN_USER_NAME,
+						 DEPTH, PATH, CYCLE) as (
+SELECT M.MSG_ID			AS MSG_ID				-- 메시지ID
+	 , UP_MSG_ID		AS UP_MSG_ID			-- 상위메시지ID
+	 , M.RGTR_ID		AS RGTR_ID				-- 등록자ID
+	 , M.REG_DT			AS REG_DT				-- 등록일
+	 , INQ_YN			AS INQ_YN				-- 조회여부
+	 , INQ_DT			AS INQ_DT				-- 조회일시
+	 , RCPTN_USER_ID	AS RCPTN_USER_ID		-- 수신사용자ID
+	 , MSG_GROUP_ID		AS MSG_GROUP_ID 		-- 메시지그룹ID
+	 , MSG_CN			AS MSG_CN 				-- 메시지내용
+	 , U.USER_NM 		AS USER_NAME			-- 등록자 이름
+	 , UU.USER_NM		AS RCPTN_USER_NAME		-- 수신사용자 이름
+	 , 1
+	 , ARRAY[M.MSG_ID::TEXT]
+	 , FALSE
+  FROM PLT_MSG M LEFT OUTER JOIN PLT_MSG_CN MC ON M.MSG_ID = MC.MSG_ID
+  				 LEFT OUTER JOIN PLT_USER U ON U.USER_ID = M.RGTR_ID
+				 LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID = M.RCPTN_USER_ID
+ WHERE U.USER_ID = #{USER_ID}
+
+							 UNION ALL
+							 
+SELECT M.MSG_ID			AS MSG_ID				-- 메시지ID
+	 , M.UP_MSG_ID		AS UP_MSG_ID			-- 상위메시지ID
+	 , M.RGTR_ID		AS RGTR_ID				-- 등록자ID
+	 , M.REG_DT			AS REG_DT				-- 등록일
+	 , M.INQ_YN			AS INQ_YN				-- 조회여부
+	 , M.INQ_DT			AS INQ_DT				-- 조회일시
+	 , M.RCPTN_USER_ID	AS RCPTN_USER_ID		-- 수신사용자ID
+	 , M.MSG_GROUP_ID	AS MSG_GROUP_ID 		-- 메시지그룹ID
+	 , MC.MSG_CN		AS MSG_CN 				-- 메시지내용
+	 , U.USER_NM 		AS USER_NAME			-- 등록자 이름
+	 , UU.USER_NM		AS RCPTN_USER_NAME		-- 수신사용자 이름
+	 , N.DEPTH+1
+	 , ARRAY_APPEND(N.PATH,M.MSG_ID::TEXT)
+	 , M.MSG_ID::TEXT = ANY(N.PATH)
+  FROM PLT_MSG M LEFT OUTER JOIN PLT_MSG_CN MC ON M.MSG_ID = MC.MSG_ID
+  				 LEFT OUTER JOIN PLT_USER U ON U.USER_ID = M.RGTR_ID
+				 LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID = M.RCPTN_USER_ID
+	 , NOTE_LIST N
+WHERE M.UP_MSG_ID = N.MSG_ID
+  AND NOT CYCLE
+)
+
+SELECT 
+	   MSG_ID			AS MSG_ID				-- 메시지ID
+	 , UP_MSG_ID		AS UP_MSG_ID			-- 상위메시지ID
+	 , RGTR_ID			AS RGTR_ID				-- 등록자ID
+	 , REG_DT			AS REG_DT				-- 등록일
+	 , INQ_YN			AS INQ_YN				-- 조회여부
+	 , INQ_DT			AS INQ_DT				-- 조회일시
+	 , RCPTN_USER_ID	AS RCPTN_USER_ID		-- 수신사용자ID
+	 , MSG_GROUP_ID		AS MSG_GROUP_ID 		-- 메시지그룹ID
+	 , MSG_CN			AS MSG_CN 				-- 메시지내용
+	 , USER_NAME		AS USER_NAME
+	 , RCPTN_USER_NAME	AS RCPTN_USER_NAME
+	 , DEPTH AS A_MENU_LEVEL
+	 , PATH
+ FROM NOTE_LIST
+-- WHERE DEPTH IN (2,4)
+ORDER BY PATH
+</select>
+
+<!-- 사용자 조회 -->
+<select id="selectUser" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER() 										AS ROW_NUMBER 	/* 번호 */
+		 , PU.USER_ID											AS USER_ID 		/* 사용자ID */
+		 , PU.LGN_ID											AS ID			/* 로그인ID */
+		 , PU.USER_NM											AS USER			/* 사용자이름 */
+		 , PUO.DEPT_ID											AS DEPT_ID 		/* 부서코드 */
+		 , (WITH RECURSIVE DEPT_TREE 
+		 	AS(SELECT DEPT_ID,DEPT_NM,UP_DEPT_ID,DEPT_NM AS full_path
+		    	FROM PLT_OGNZ
+		    	WHERE DEPT_ID = PUO.DEPT_ID
+		    	UNION ALL
+		    	SELECT PO.DEPT_ID,PO.DEPT_NM,PO.UP_DEPT_ID, cast(DT.DEPT_NM || ' > ' || PO.DEPT_NM AS VARCHAR(100))
+		    	FROM DEPT_TREE DT
+		    	INNER JOIN PLT_OGNZ PO on PO.DEPT_ID = DT.UP_DEPT_ID
+			)SELECT FULL_PATH 
+				FROM DEPT_TREE 
+				WHERE UP_DEPT_ID IS NULL)						AS PART			/* 부서 */
+	FROM PLT_USER PU
+	LEFT JOIN PLT_USER_OGNZ PUO
+		on PUO.USER_ID = PU.USER_ID
+		AND PUO.USE_YN = 'Y'
+		AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+	WHERE PUO.CUSTCO_ID = #{CUSTCO_ID} 
+		<if test="USER_STTS_CD != '' and USER_STTS_CD != null">	AND PU.USER_STTS_CD = #{USER_STTS_CD}			</if>
+		<if test="USER_NM != '' and USER_NM != null">			AND (PU.LGN_ID LIKE '%'|| #{USER_NM}|| '%'
+													  			 OR  PU.USER_NM LIKE '%'|| #{USER_NM}|| '%')	</if>
+	ORDER BY ROW_NUMBER
+</select>
+
+<!-- 최신 받은 쪽지 조회 -->
+<select id="selectNewMsg" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT MSG_ID AS MSG_ID
+	 , TO_CHAR(TO_TIMESTAMP(M.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS REG_DT
+	 , INQ_YN
+  FROM PLT_MSG M 
+  LEFT OUTER JOIN PLT_USER U ON U.USER_ID = M.RCPTN_USER_ID 
+ WHERE U.USER_ID = #{USER_ID}
+   AND UP_MSG_ID IS NULL
+ORDER BY REG_DT DESC
+OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
+</select>
+
+<!-- 쪽지 개수 조회 -->
+<select id="selectMsgCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT A.*, B.*
+  FROM (SELECT COALESCE(COUNT(MSG_ID),0) AS MSG_FROM_CNT
+		  FROM PLT_MSG M LEFT OUTER JOIN PLT_USER U ON U.USER_ID = M.RCPTN_USER_ID 
+		 WHERE U.USER_ID = #{USER_ID}
+		   AND UP_MSG_ID IS NULL ) AS A
+	 , (SELECT COALESCE(COUNT(M.MSG_ID),0) AS MSG_TO_CNT
+		  FROM PLT_MSG M LEFT OUTER JOIN PLT_USER U ON U.USER_ID = M.RGTR_ID
+		 WHERE UP_MSG_ID IS NULL
+		   AND U.USER_ID = #{USER_ID}) AS B
+</select>
+<update id="updateInqMsg" parameterType="java.util.HashMap">
+UPDATE PLT_MSG
+SET INQ_YN = #{INQ_YN}
+	, INQ_DT  = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+WHERE MSG_ID = #{MSG_ID}
+</update>
+
+
+	<!-- 발송 이력 저장 -->
+	<insert id="sendInfo" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_MTS_SNDNG_HSTRY			/* sendInfo - 발송 이력 저장 */
+		( MTS_SNDNG_HSTRY_ID				-- 발송이력ID
+	    , SNDNG_SE_CD 					  	-- 발송구분코드
+	    , RCPTN_PHN_NO                    	-- 수신전화번호
+	    , DSPTCH_PHN_NO                   	-- 발신전화번호
+	    , SNDNG_CN                        	-- 발송내용
+	    , RSLT_CD                         	-- 결과코드
+	    , RSLT_MSG                        	-- 결과메시지
+	    , SNDNG_DT                        	-- 발송일시
+	    , REG_DT                          	-- 등록일시
+	    , RGTR_ID                         	-- 등록자ID
+	    , CUSTCO_ID                       	-- 고객사ID
+		)
+	VALUES
+		( #{MTS_SNDNG_HSTRY_ID}
+		, #{SNDNG_SE_CD}
+		, (regexp_replace(#{phone_number}, '-', '', 'g'))
+		, (regexp_replace(#{callback_number}, '-', '', 'g'))
+		, #{message}
+		, #{RSLT_CD}
+		, #{RSLT_MSG}
+		<choose>
+			<when test="send_date != '' and send_date != null and send_date != undefined">
+				, TRANSLATE(#{send_date}, '-: ', '')
+			</when>
+			<otherwise>
+				, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+			</otherwise>
+		</choose>
+		, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+		, #{USER_ID}
+		, #{CUSTCO_ID}
+		)
+	</insert>
+
+</mapper>

@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.transfer.dao.PhoneTransferManageMapper">
+
+    <!--  이관 배분 현황 count 조회  -->
+    <select id="selectTransferDstbCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT AA.TOT_CNT 									/* 총 건수 */
+             , AA.AMT_CNT 									/* 배정 건수 */
+             , AA.TOT_CNT - AA.AMT_CNT AS NOT_AMT_CNT 		/* 미배정 건수 */
+             , AA.COMPLETED_CNT 							/* 처리완료 건수 */
+             , AA.AMT_CNT - AA.COMPLETED_CNT AS NOT_TRY_CNT /* 미처리 건수 */
+          FROM (
+          		SELECT COUNT(PCT.*)            AS TOT_CNT
+					 , COUNT(AMT.TRGT_USER_ID) AS AMT_CNT
+					 , COUNT(TRY.TRGT_USER_ID) AS COMPLETED_CNT
+        		  FROM PLT_CUTT_ITGRT_HSTRY PCIH
+        		       INNER JOIN PLT_CUTT_TRNSF PCT
+        		               ON PCT.ITGRT_HSTRY_ID = PCIH.ITGRT_HSTRY_ID
+        		              AND PCT.REG_DT >= #{DRWI_DT_START}
+                    <![CDATA[ AND PCT.REG_DT <= #{DRWI_DT_END} ]]>
+				  LEFT OUTER JOIN (
+						SELECT PCT.CUTT_TRNSF_ID
+							 , CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+									THEN PCT.TRGT_USER_ID
+									ELSE PCTA.CUSL_ID
+									 END AS TRGT_USER_ID
+						  FROM PLT_CUTT_TRNSF PCT
+						  LEFT OUTER JOIN PLT_CUTT_TRNSF_ALTMNT PCTA
+									   ON PCTA.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+						 WHERE PCT.TRGT_USER_ID != 0::INTEGER			/* 이관담당자 옵션이 USER일 때 배정인 경우 */
+				  ) AMT
+							   ON AMT.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+				  LEFT OUTER JOIN (
+						SELECT PCT.CUTT_TRNSF_ID
+							 , CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+									THEN PCT.TRGT_USER_ID
+									ELSE PCTA.CUSL_ID
+									 END AS TRGT_USER_ID
+						  FROM PLT_CUTT_TRNSF PCT
+						  LEFT OUTER JOIN PLT_CUTT_TRNSF_ALTMNT PCTA
+									   ON PCTA.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+						 WHERE PCT.TRGT_USER_ID != 0::INTEGER           /* 이관담당자 옵션이 USER일 때 배정인 경우 */
+						   AND PCT.STTS_CD = 'CMPT'                     /* 처리완료인 건 */
+				  ) TRY
+							   ON TRY.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+        		 WHERE PCIH.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+          ) AA
+    </select>
+
+	<!--  상담사 별 이관 배분 현황 COUNT 조회 -->
+	<select id="selectTransferAgentDstbCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT ROW_NUMBER() OVER(ORDER BY PU.REG_DT) AS ROW_NUMBER
+		     , PO.DEPT_NM
+			 , PU.USER_NM                                        AS CUSL_NM
+			 , PU.LGN_ID                                         AS CUSL_LGN_ID
+			 , PU.USER_ID                                        AS CUSL_ID
+			 , COUNT(AMT.TRGT_USER_ID)                           AS AMT_CNT       /* 배정 건수 */
+			 , COUNT(TRY.TRGT_USER_ID)                           AS COMPLETED_CNT /* 처리완료 건수 */
+			 , COUNT(AMT.TRGT_USER_ID) - COUNT(TRY.TRGT_USER_ID) AS NOT_TRY_CNT   /* 미처리 건수 */
+		  FROM PLT_USER_OGNZ PUO
+		  LEFT OUTER JOIN PLT_OGNZ PO
+		               ON PO.DEPT_ID = PUO.DEPT_ID
+			   INNER JOIN PLT_USER PU
+					   ON PU.USER_ID = PUO.USER_ID
+		  LEFT OUTER JOIN PLT_CUTT_ITGRT_HSTRY PCIH
+					   ON PCIH.CUSTCO_ID = PUO.CUSTCO_ID
+			   INNER JOIN PLT_CUTT_TRNSF PCT
+					   ON PCT.ITGRT_HSTRY_ID = PCIH.ITGRT_HSTRY_ID
+		  LEFT OUTER JOIN (
+					SELECT PCT.CUTT_TRNSF_ID
+						 , PCT.STTS_CD
+						 , CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+								THEN PCT.TRGT_USER_ID
+								ELSE PCTA.CUSL_ID
+								 END AS TRGT_USER_ID
+					  FROM PLT_CUTT_TRNSF PCT
+					  LEFT OUTER JOIN PLT_CUTT_TRNSF_ALTMNT PCTA
+								   ON PCTA.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+					 WHERE PCT.TRGT_USER_ID != 0::INTEGER			/* 이관담당자 옵션이 USER일 때 배정인 경우 */
+		  ) AMT
+					   ON AMT.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+					  AND AMT.TRGT_USER_ID = PU.USER_ID
+		  LEFT OUTER JOIN (
+					SELECT PCT.CUTT_TRNSF_ID
+						 , PCT.STTS_CD
+						 , CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+								THEN PCT.TRGT_USER_ID
+								ELSE PCTA.CUSL_ID
+								 END AS TRGT_USER_ID
+					  FROM PLT_CUTT_TRNSF PCT
+					  LEFT OUTER JOIN PLT_CUTT_TRNSF_ALTMNT PCTA
+								   ON PCTA.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+					 WHERE PCT.TRGT_USER_ID != 0::INTEGER			/* 이관담당자 옵션이 USER일 때 배정인 경우 */
+					   AND PCT.STTS_CD = 'CMPT'                     /* 처리완료인 건 */
+		  ) TRY
+					   ON TRY.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+					  AND TRY.TRGT_USER_ID = PU.USER_ID
+		 WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<if test=' USER_NM != null and USER_NM != "" '>
+		   AND PU.USER_NM = #{USER_NM}
+		</if>
+		<if test=' LGN_ID != null and LGN_ID != "" '>
+		   AND PU.LGN_ID = #{LGN_ID}
+		</if>
+	  GROUP BY PO.DEPT_NM, PU.USER_NM, PU.LGN_ID, PU.USER_ID
+	</select>
+
+	<!--  해당 상담사에게 배분할 건수만큼 이관 데이터 조회 -->
+	<select id="selectTransferDstbInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT AA.*
+		  FROM (
+				SELECT PCT.CUTT_TRNSF_ID
+					 , COALESCE(PCT.TARGET_OPT_CD, 'USER') AS TARGET_OPT_CD
+					 , CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+							THEN PCT.TRGT_USER_ID
+							ELSE PCTA.CUSL_ID
+							 END AS TRGT_USER_ID
+				  FROM PLT_CUTT_ITGRT_HSTRY PCIH
+					   INNER JOIN PLT_CUTT_TRNSF PCT
+							   ON PCT.ITGRT_HSTRY_ID = PCIH.ITGRT_HSTRY_ID
+							  AND PCT.CUTT_TRNSF_ID IN (
+									<foreach collection="CUTT_TRNSF_IDS" item="CUTT_TRNSF_ID" close="" separator=",">
+										#{CUTT_TRNSF_ID}::INTEGER
+									</foreach>
+							  )
+				  LEFT OUTER JOIN PLT_CUTT_TRNSF_ALTMNT PCTA
+							   ON PCTA.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+				 WHERE PCIH.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		  ) AA
+		 WHERE AA.TRGT_USER_ID = 0		/* 이관 담당자 옵션이 USER인 경우 미배정 건 */
+			OR AA.TRGT_USER_ID IS NULL  /* 그 외의 경우 미배정 건 */
+	  ORDER BY AA.CUTT_TRNSF_ID
+		 LIMIT #{DSTB_CNT}::INTEGER
+	</select>
+
+	<!-- 이관 배분 처리 update -->
+	<update id="updateTransferDstr" parameterType="java.util.HashMap" >
+		UPDATE PLT_CUTT_TRNSF
+		   SET STTS_CD = 'REQ'
+		<if test=' TRGT_USER_ID != null and TRGT_USER_ID != "" '>
+			 , TRGT_USER_ID = #{TRGT_USER_ID}::INTEGER
+		</if>
+		     , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE CUTT_TRNSF_ID = #{CUTT_TRNSF_ID}::INTEGER
+	</update>
+
+	<!-- 이관 배분 처리 배분 테이블에 insert -->
+	<insert id="insertTransferDstr" parameterType="java.util.HashMap">
+		INSERT INTO PLT_CUTT_TRNSF_ALTMNT
+		(
+			CUTT_TRNSF_ID
+		  , CUSL_ID
+		  , RGTR_ID
+		  , REG_DT
+		)
+		VALUES
+		(
+			#{CUTT_TRNSF_ID}::INTEGER
+		  , #{CUSL_ID}::INTEGER
+		  , #{USER_ID}::INTEGER
+		  , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		)
+	</insert>
+
+	<delete id="deleteTransferDstr" parameterType="java.util.HashMap">
+		DELETE FROM PLT_CUTT_TRNSF_ALTMNT AS PCTA
+		USING PLT_CUTT_TRNSF AS PCT
+		WHERE PCTA.CUTT_TRNSF_ID = #{CUTT_TRNSF_ID}::INTEGER
+		  AND PCTA.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+		  AND PCT.STTS_CD = #{STTS_CD}
+	</delete>
+
+	<!-- 이관 배분 이력 추가 -->
+	<insert id="insertTransferHistory" parameterType="java.util.HashMap">
+		INSERT INTO PLT_CUTT_TRNSF_ALTMNT_HSTRY (CUTT_TRNSF_ALTMNT_HSTRY_ID, CUTT_TRNSF_ID, CUSL_ID, TYPE, RGTR_ID, REG_DT)
+		VALUES (#{CUTT_TRNSF_ALTMNT_HSTRY_ID}, #{CUTT_TRNSF_ID}::INTEGER, #{CUSL_ID}::INTEGER, #{TYPE}, #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'))
+	</insert>
+</mapper>
+

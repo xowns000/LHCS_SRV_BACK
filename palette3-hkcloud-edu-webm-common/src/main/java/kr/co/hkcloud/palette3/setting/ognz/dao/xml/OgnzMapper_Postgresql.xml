@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper">
+
+    <select id="ognzTreeList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	WITH RECURSIVE OGNZ_TREE AS ( /*조직 Tree 목록 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.ognzTreeList)*/
+		SELECT CUSTCO_ID, DEPT_ID, UP_DEPT_ID, DEPT_SE_CD, DEPT_NM, SCRN_INDCT_YN, BLDG_PSTN, BLDG_NM, UDGD_YN, BLDG_NOFL, OFC_NO,<if test='RGN_YN != null and RGN_YN != "" and RGN_YN == "Y"'>CO_SE_CD,</if> SORT_ORD, 1 AS LVL, USE_YN, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, DEPT_NM::VARCHAR(300) AS FULL_PATH, LKAG_DEPT
+		FROM PLT_OGNZ
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND UP_DEPT_ID IS NULL
+		UNION ALL
+		SELECT B.CUSTCO_ID, B.DEPT_ID, COALESCE(B.UP_DEPT_ID, 0) AS UP_DEPT_ID, B.DEPT_SE_CD, B.DEPT_NM, B.SCRN_INDCT_YN, B.BLDG_PSTN, B.BLDG_NM, B.UDGD_YN, B.BLDG_NOFL, B.OFC_NO,<if test='RGN_YN != null and RGN_YN != "" and RGN_YN == "Y"'>B.CO_SE_CD,</if> B.SORT_ORD, C.LVL + 1 AS LVL, B.USE_YN, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(C.FULL_PATH || ' > ' || B.DEPT_NM AS VARCHAR(300)) AS FULL_PATH, B.LKAG_DEPT
+		FROM PLT_OGNZ B
+		INNER JOIN OGNZ_TREE C ON C.DEPT_ID = COALESCE(B.UP_DEPT_ID, 0)
+		WHERE B.DEL_YN = 'N'
+		AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	)
+	SELECT AA.*
+	  FROM (
+		SELECT
+			OT.CUSTCO_ID
+			, OT.DEPT_ID
+			, OT.UP_DEPT_ID
+			, OT.DEPT_SE_CD
+			, (SELECT DEPT_NM FROM (SELECT CO_NM AS DEPT_NM, 0::BIGINT AS DEPT_ID FROM PLT_CUSTCO WHERE CUSTCO_ID = OT.CUSTCO_ID UNION ALL SELECT DEPT_NM, DEPT_ID FROM PLT_OGNZ WHERE CUSTCO_ID = OT.CUSTCO_ID) A WHERE DEPT_ID = OT.UP_DEPT_ID) AS UP_DEPT_NM
+			, OT.DEPT_NM
+			, OT.SCRN_INDCT_YN
+			, OT.BLDG_PSTN
+			, OT.BLDG_NM
+			, OT.UDGD_YN
+			, OT.BLDG_NOFL
+			, OT.OFC_NO
+			, ROW_NUMBER() OVER(PARTITION BY OT.UP_DEPT_ID ORDER BY OT.SORT_ORD) AS RE_SORT_ORD
+			, OT.SORT_ORD
+			, OT.SORT
+			, OT.USE_YN
+			, OT.FULL_PATH
+			, OT.LVL
+			, (SELECT COUNT(*) FROM PLT_OGNZ WHERE UP_DEPT_ID = OT.DEPT_ID) AS CHILD_CNT
+			, (SELECT COUNT(DISTINCT USER_ID) FROM PLT_USER_OGNZ PUO WHERE DEPT_ID = OT.DEPT_ID AND USE_YN = 'Y' AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER) AS USE_CNT
+			, (SELECT COUNT(*) FROM PLT_OGNZ WHERE CUSTCO_ID = OT.CUSTCO_ID AND DEPT_SE_CD = OT.DEPT_SE_CD AND COALESCE(UP_DEPT_ID, 0) = OT.UP_DEPT_ID AND DEL_YN = 'N') AS MAX_SORT_ORD
+			<if test='RGN_YN != null and RGN_YN != "" and RGN_YN == "Y"'>, OT.CO_SE_CD, (SELECT ARRAY_TO_STRING(ARRAY_AGG(POR.RGN_CD||','||PR.UP_RGN_CD||','||(SELECT RGN_NM FROM PLT_RGN WHERE RGN_CD = PR.UP_RGN_CD)||' > '||PR.RGN_DTL_NM),'_##_') FROM PLT_OGNZ_RGN POR INNER JOIN PLT_RGN PR ON PR.RGN_CD = POR.RGN_CD WHERE POR.CUSTCO_ID = OT.CUSTCO_ID AND POR.DEPT_ID = OT.DEPT_ID) AS RGN_LIST</if>
+			, OT.LKAG_DEPT
+		FROM OGNZ_TREE OT
+		ORDER BY OT.SORT
+	  ) AA
+		<if test='CHILD_CNT != null and CHILD_CNT != ""'>WHERE AA.CHILD_CNT = #{CHILD_CNT}::INT</if>
+	</select>
+
+	<insert id="INSERT_OGNZ"  parameterType= "java.util.HashMap">
+	INSERT /*조직 관리 등록 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.INSERT_OGNZ)*/
+	INTO PLT_OGNZ ( DEPT_ID
+	       	, CUSTCO_ID
+	       	, DEPT_NM
+	       	, UP_DEPT_ID
+	       	, DEPT_SE_CD
+	       	<if test="ASP_CUST_KEY != NULL and ASP_CUST_KEY != ''">, ASP_CUST_KEY</if>
+			<if test="DEPT_CRT_YMD != NULL and DEPT_CRT_YMD != ''">, DEPT_CRT_YMD</if>
+			<if test="DEPT_ABL_YMD != NULL and DEPT_ABL_YMD != ''">, DEPT_ABL_YMD</if>
+			<if test="SCRN_INDCT_YN != NULL and SCRN_INDCT_YN != ''">, SCRN_INDCT_YN</if>
+			<if test="BLDG_PSTN != NULL and BLDG_PSTN != ''">, BLDG_PSTN</if>
+			<if test="BLDG_NM != NULL and BLDG_NM != ''">, BLDG_NM</if>
+			<if test="UDGD_YN != NULL and UDGD_YN != ''">, UDGD_YN</if>
+			<if test="BLDG_NOFL != NULL and BLDG_NOFL != ''">, BLDG_NOFL</if>
+			<if test="OFC_NO != NULL and OFC_NO != ''">, OFC_NO</if>
+			<if test="CO_SE_CD != NULL and CO_SE_CD != ''">, CO_SE_CD</if>
+	       	, USE_YN
+	       	, DEL_YN
+	       	, SORT_ORD
+	       	, RGTR_ID
+	       	, REG_DT
+			<if test="LKAG_DEPT != NULL and LKAG_DEPT != ''">, LKAG_DEPT</if>
+	       ) 
+	VALUES ( #{DEPT_ID}
+	       , #{CUSTCO_ID}::INTEGER
+	       , #{DEPT_NM}
+	       , #{UP_DEPT_ID}::INTEGER
+	       , #{DEPT_SE_CD}
+	       <if test="ASP_CUST_KEY != NULL and ASP_CUST_KEY != ''">, #{ASP_CUST_KEY}</if>
+		   <if test="DEPT_CRT_YMD != NULL and DEPT_CRT_YMD != ''">, #{DEPT_CRT_YMD}</if>
+		   <if test="DEPT_ABL_YMD != NULL and DEPT_ABL_YMD != ''">, #{DEPT_ABL_YMD}</if>
+		   <if test="SCRN_INDCT_YN != NULL and SCRN_INDCT_YN != ''">, #{SCRN_INDCT_YN}</if>
+	       <if test="BLDG_PSTN != NULL and BLDG_PSTN != ''">, #{BLDG_PSTN}</if>
+	       <if test="BLDG_NM != NULL and BLDG_NM != ''">, #{BLDG_NM}</if>
+	       <if test="UDGD_YN != NULL and UDGD_YN != ''">, #{UDGD_YN}</if>
+	       <if test="BLDG_NOFL != NULL and BLDG_NOFL != ''">, #{BLDG_NOFL}::INTEGER</if>
+	       <if test="OFC_NO != NULL and OFC_NO != ''">, #{OFC_NO}</if>
+	       <if test="CO_SE_CD != NULL and CO_SE_CD != ''">, #{CO_SE_CD}</if>
+	       , #{USE_YN}
+	       , 'N'
+	       , (SELECT COALESCE(MAX(SORT_ORD), 0)+1 FROM PLT_OGNZ WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND UP_DEPT_ID = #{UP_DEPT_ID}::INTEGER)
+	       , #{USER_ID}::INTEGER
+	       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test="LKAG_DEPT != NULL and LKAG_DEPT != ''">, #{LKAG_DEPT}</if>
+	       )
+	</insert>
+		
+	<update id="UPDATE_OGNZ"  parameterType= "java.util.HashMap">
+	UPDATE PLT_OGNZ /*조직 관리 수정 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.UPDATE_OGNZ)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+		, DEPT_NM = #{DEPT_NM}
+		<if test="DEPT_SE_CD != NULL and DEPT_SE_CD != ''">, DEPT_SE_CD = #{DEPT_SE_CD}</if>
+		<if test="ASP_CUST_KEY != NULL and ASP_CUST_KEY != ''">, ASP_CUST_KEY = #{ASP_CUST_KEY}</if>
+		<if test="DEPT_CRT_YMD != NULL and DEPT_CRT_YMD != ''">, DEPT_CRT_YMD = #{DEPT_CRT_YMD}</if>
+		<if test="DEPT_ABL_YMD != NULL and DEPT_ABL_YMD != ''">, DEPT_ABL_YMD = #{DEPT_ABL_YMD}</if>
+		<if test="SCRN_INDCT_YN != NULL and SCRN_INDCT_YN != ''">, SCRN_INDCT_YN = #{SCRN_INDCT_YN}</if>
+		<if test="CO_SE_CD != NULL and CO_SE_CD != ''">, CO_SE_CD = #{CO_SE_CD}</if>
+		, BLDG_PSTN = #{BLDG_PSTN}
+		, BLDG_NM = #{BLDG_NM}
+		, UDGD_YN = #{UDGD_YN}
+		, BLDG_NOFL = <choose><when test='BLDG_NOFL != NULL and BLDG_NOFL != ""'>#{BLDG_NOFL}::INTEGER</when><otherwise>NULL</otherwise></choose>
+		, OFC_NO = #{OFC_NO}
+		, USE_YN = #{USE_YN}
+		<if test="LKAG_DEPT != NULL and LKAG_DEPT != ''">, LKAG_DEPT = #{LKAG_DEPT}</if>
+	 WHERE DEPT_ID = #{DEPT_ID}::INTEGER
+	</update>		
+	
+	<update id="DELETE_OGNZ"  parameterType="java.util.HashMap">
+	UPDATE PLT_OGNZ /*조직 관리 삭제 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.DELETE_OGNZ)*/
+		SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+			, DEL_YN = 'Y'
+	WHERE DEPT_ID IN 
+	<foreach collection="arrDeptId" item="DEPT_ID" open="(" separator="," close=")" >
+		#{DEPT_ID}::INTEGER
+	</foreach>
+	</update>
+
+	<update id="UPDATE_OGNZ_OTHER_SORT_ORDER"  parameterType= "java.util.HashMap">
+	UPDATE PLT_OGNZ /*상담유형 해당 노드 제외한 정렬 순서 변경 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.UPDATE_OGNZ_OTHER_SORT_ORDER)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+			, SORT_ORD = SORT_ORD + (#{ADD_NUM}::INTEGER)
+	 WHERE UP_DEPT_ID = #{UP_DEPT_ID}::INTEGER
+	 AND DEPT_SE_CD = #{DEPT_SE_CD}
+	 AND SORT_ORD = #{SORT_ORD}::INTEGER
+	</update>
+	
+	<update id="UPDATE_OGNZ_SORT_ORDER"  parameterType= "java.util.HashMap">
+	UPDATE PLT_OGNZ /*상담유형 정렬 순서 변경 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.UPDATE_OGNZ_SORT_ORDER)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+			, SORT_ORD = #{SORT_ORD}::INTEGER
+	 WHERE DEPT_ID = #{DEPT_ID}::INTEGER
+	</update>
+	
+	<select id="rgnList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		WITH RECURSIVE RGN_TREE AS ( /*지역 목록 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.rgnList)*/
+			SELECT RGN_CD, UP_RGN_CD::VARCHAR, RGN_NM, RGN_DTL_NM, EXPSR_YN, SORT_ORD, 1 AS LVL, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, RGN_DTL_NM::VARCHAR(300) AS FULL_PATH
+			FROM PLT_RGN
+			WHERE UP_RGN_CD IS NULL
+			UNION ALL
+			SELECT B.RGN_CD, COALESCE(B.UP_RGN_CD, '0') AS UP_RGN_CD, B.RGN_NM, B.RGN_DTL_NM, B.EXPSR_YN, B.SORT_ORD, C.LVL + 1 AS LVL, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(C.FULL_PATH || ' > ' || B.RGN_DTL_NM AS VARCHAR(300)) AS FULL_PATH
+			FROM PLT_RGN B
+			INNER JOIN RGN_TREE C ON C.RGN_CD = COALESCE(B.UP_RGN_CD, '0')
+			WHERE B.EXPSR_YN = 'Y'
+		)
+		SELECT * FROM RGN_TREE RT
+		ORDER BY RT.SORT
+	</select>
+	
+	<delete id="ognzRgnDel"  parameterType= "java.util.HashMap">
+		DELETE FROM PLT_OGNZ_RGN /*조직 지역 삭제 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.ognzRgnDel)*/
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND DEPT_ID = #{DEPT_ID}::INT
+	</delete>
+
+	<insert id="ognzRgnReg"  parameterType= "java.util.HashMap">
+		INSERT /*조직 지역 등록 (kr.co.hkcloud.palette3.setting.ognz.dao.OgnzMapper.ognzRgnReg)*/
+		INTO PLT_OGNZ_RGN (CUSTCO_ID, DEPT_ID, RGN_CD, REG_DT, RGTR_ID)
+		VALUES
+			<foreach collection="RGN_LIST" item="ITEM" open="" separator="," close="" >
+			(#{CUSTCO_ID}::INT, #{DEPT_ID}::INT, #{ITEM.RGN_CD}, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'), #{USER_ID}::INT)
+			</foreach>
+	</insert>
+</mapper>

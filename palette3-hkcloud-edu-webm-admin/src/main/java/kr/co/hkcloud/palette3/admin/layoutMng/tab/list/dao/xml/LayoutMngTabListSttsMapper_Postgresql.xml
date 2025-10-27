@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.layoutMng.tab.list.dao.LayoutMngTabListSttsMapper">
+  <select id="selectStts" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT PLLS.LIST_ID
+         , PLL.TAB_ID
+         , PLLS.RSPNS_ARTCL_ID
+         , PLLS.STTS_NM
+         , PLLS.EPSZ_YN
+         , PLLS.COLOR_CD
+         , PLLS.SORT_MTHD_CD
+         , PCC.CD_VL AS SORT_MTHD_VL
+         , PLLS.BG_COLOR_CD
+         , PLM.LKAG_ID
+         , PLM.LKAG_NM
+         , PLRA.COL_NM
+         , PLRA.DATA_TYPE_CD
+         , PLRA2.RSPNS_ARTCL_ID AS UP_RSPNS_ARTCL_ID
+         , PLRA2.COL_NM AS UP_RSPNS_ARTCL_COL_NM
+         , PLRA2.DATA_TYPE_CD AS UP_RSPNS_DATA_CD
+    FROM PLT_LAYOUT_LIST_STTS PLLS
+    JOIN PLT_LAYOUT_LIST PLL ON PLL.LIST_ID = PLLS.LIST_ID
+        LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLLS.RSPNS_ARTCL_ID
+        LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA2 ON PLRA2.RSPNS_ARTCL_ID = PLRA.UP_ARTCL_ID
+        LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLRA.LKAG_ID
+        LEFT JOIN CUSTCO.PLT_COMM_CD PCC ON PCC.CD_ID = PLLS.SORT_MTHD_CD
+    WHERE PLLS.LIST_ID IN
+    <foreach collection="arrListId" item="listId" open="(" separator="," close=")">
+      #{listId}::INTEGER
+    </foreach>
+  </select>
+  <insert id="insertStts" parameterType="java.util.HashMap">
+    INSERT INTO PLT_LAYOUT_LIST_STTS( LIST_ID
+                                    , RSPNS_ARTCL_ID
+                                    , STTS_NM
+                                    , EPSZ_YN
+                                    , COLOR_CD
+                                    , SORT_MTHD_CD
+                                    , BG_COLOR_CD
+                                    , RGTR_ID
+                                    , REG_DT)
+    VALUES ( #{LIST_ID}::INTEGER
+           , #{RSPNS_ARTCL_ID}::INTEGER
+           , #{STTS_NM}
+           , #{EPSZ_YN}
+           , #{COLOR_CD}
+           , #{SORT_MTHD_CD}
+           , #{BG_COLOR_CD}
+           , #{USER_ID}::INTEGER
+           , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'));
+  </insert>
+  <update id="updateStts" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT_LIST_STTS
+    SET RGTR_ID=#{USER_ID}::INTEGER
+    <if test="STTS_NM != '' and STTS_NM != NULL">
+      , STTS_NM=#{STTS_NM}
+    </if>
+    <if test="EPSZ_YN != '' and EPSZ_YN != NULL">
+      , EPSZ_YN=#{EPSZ_YN}
+    </if>
+    <if test="COLOR_CD != '' and COLOR_CD != NULL">
+      , COLOR_CD=#{COLOR_CD}
+    </if>
+    <if test="SORT_MTHD_CD != '' and SORT_MTHD_CD != NULL">
+      , SORT_MTHD_CD=#{SORT_MTHD_CD}
+    </if>
+    <if test="BG_COLOR_CD != '' and BG_COLOR_CD != NULL">
+      , BG_COLOR_CD=#{BG_COLOR_CD}
+    </if>
+    <if test="RSPNS_ARTCL_ID != '' and RSPNS_ARTCL_ID != NULL">
+      , RSPNS_ARTCL_ID = #{RSPNS_ARTCL_ID}:: INTEGER
+    </if>
+    WHERE LIST_ID=#{LIST_ID}:: INTEGER;
+  </update>
+  <delete id="deleteStts" parameterType="java.util.HashMap">
+    DELETE FROM PLT_LAYOUT_LIST_STTS
+    WHERE LIST_ID = #{LIST_ID}::INTEGER;
+  </delete>
+</mapper>

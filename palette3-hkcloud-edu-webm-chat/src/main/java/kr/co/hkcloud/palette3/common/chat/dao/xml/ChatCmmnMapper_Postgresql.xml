@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.common.chat.dao.ChatCmmnMapper">
+
+<!-- 채팅전달 상담사 팝업 데이 조회 -->  
+<select id="selectRtnPageAgentDeliver"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT AA.*
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'A' AND ATTR_DIV_CD = AA.USER_ATTR_A) AS ATTR_DIV_NM_A
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'B' AND ATTR_DIV_CD = AA.USER_ATTR_B) AS ATTR_DIV_NM_B
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'C' AND ATTR_DIV_CD = AA.USER_ATTR_C) AS ATTR_DIV_NM_C
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'D' AND ATTR_DIV_CD = AA.USER_ATTR_D) AS ATTR_DIV_NM_D
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE CUSTCO_ID = #{CUSTCO_ID} AND USER_ID = AA.USER_ID ) > 0
+            THEN '01'
+            ELSE '11'
+        END                                  AS USER_STAT_CD             -- 상담사상태코드
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE CUSTCO_ID = #{CUSTCO_ID} AND USER_ID = AA.USER_ID ) > 0
+            THEN CT2.CD_NM
+            ELSE CT3.CD_NM
+        END                                  AS USER_STAT_NM             -- 상담사상태
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE CUSTCO_ID = #{CUSTCO_ID} AND USER_ID = #{SEND_USER_ID} ) > 0
+            THEN '01'
+            ELSE '11'
+        END                                  AS SEND_USER_STAT_CD        -- 전달자대기상태코드
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE CUSTCO_ID = #{CUSTCO_ID} AND USER_ID = #{SEND_USER_ID} ) > 0
+            THEN CT2.CD_NM
+            ELSE CT3.CD_NM
+        END                                  AS SEND_USER_STAT_NM        -- 전달자대기상태
+     , (SELECT COUNT(USER_ID) FROM PLT_CHT_CUTT C  WHERE C.CUSTCO_ID = #{CUSTCO_ID} AND AA.USER_ID =C.USER_ID AND TALK_STAT_CD='12') ING_CNT-- 전달자채팅중인 고객수
+  FROM (
+
+        SELECT ROW_NUMBER() OVER(ORDER BY A.USER_NICK, A.USER_NM, A.USER_ID) AS RNUM
+             , A.USER_ID
+             , A.USER_NM
+             , A.USER_NICK
+             , A.INLN_NO
+             , A.HP_NO
+             , A.USER_ATTR_A
+             , A.USER_ATTR_B
+             , A.USER_ATTR_C
+             , A.USER_ATTR_D
+          FROM PLT_USER A
+         WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+           AND A.USE_YN = 'Y' 
+           AND (
+                SELECT COUNT(*) 
+                  FROM PLT_CHT_RDY
+                 WHERE CUSTCO_ID = #{CUSTCO_ID}
+                   AND USER_ID = A.USER_ID
+                ) > 0 
+           AND A.USER_ID != #{SEND_USER_ID}
+        <if test="USER_ID !=''">AND A.USER_ID LIKE '%' || #{USER_ID} || '%' </if>
+        <if test="USER_NM !=''">AND A.USER_NM LIKE '%' || #{USER_NM} || '%' </if>
+        <if test="USER_NICK !=''">AND A.USER_NICK LIKE '%' || #{USER_NICK} || '%' </if>
+        <if test="USER_ATTR_A !=''">AND A.USER_ATTR_A = #{USER_ATTR_A}</if>
+        <if test="USER_ATTR_B !=''">AND A.USER_ATTR_B = #{USER_ATTR_B}</if>
+        <if test="USER_ATTR_C !=''">AND A.USER_ATTR_C = #{USER_ATTR_C}</if>
+        <if test="USER_ATTR_D !=''">AND A.USER_ATTR_D = #{USER_ATTR_D}</if>
+
+        ) AA
+  LEFT OUTER JOIN PLT_COMN_CD CT2 
+    ON CT2.GROUP_CD = 'TALK016' AND CT2.CD='01' AND CT2.CD_TYPE  = '1' 
+  LEFT OUTER JOIN PLT_COMN_CD CT3 
+    ON CT2.GROUP_CD = 'TALK016' AND CT2.CD='11' AND CT2.CD_TYPE  = '1'
+</select>
+
+<!-- 채팅전달 상담사 팝업 데이 조회 -->  
+<select id="selectRtnPageAgentDeliverWithoutPageing"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT AA.*
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'A' AND ATTR_DIV_CD = AA.USER_ATTR_A) AS ATTR_DIV_NM_A
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'B' AND ATTR_DIV_CD = AA.USER_ATTR_B) AS ATTR_DIV_NM_B
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'C' AND ATTR_DIV_CD = AA.USER_ATTR_C) AS ATTR_DIV_NM_C
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'D' AND ATTR_DIV_CD = AA.USER_ATTR_D) AS ATTR_DIV_NM_D
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE 1=1 AND USER_ID = AA.USER_ID ) > 0
+            THEN '01'
+            ELSE '11'
+        END                                  AS USER_STAT_CD             -- 상담사상태코드
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND USER_ID = AA.USER_ID ) > 0
+            THEN CT2.CD_NM
+            ELSE CT3.CD_NM
+        END                                  AS USER_STAT_NM             -- 상담사상태
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND USER_ID = #{SEND_USER_ID} ) > 0
+            THEN '01'
+            ELSE '11'
+        END                                  AS SEND_USER_STAT_CD        -- 전달자대기상태코드
+     , CASE WHEN ( SELECT COUNT(*) FROM PLT_CHT_RDY WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND USER_ID = #{SEND_USER_ID} ) > 0
+            THEN CT2.CD_NM
+            ELSE CT3.CD_NM
+        END                                  AS SEND_USER_STAT_NM        -- 전달자대기상태
+     , (SELECT COUNT(USER_ID) FROM PLT_CHT_CUTT C        WHERE C.CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND AA.USER_ID =C.USER_ID AND TALK_STAT_CD='12') ING_CNT-- 전달자채팅중인 고객수
+  FROM (
+
+        SELECT A.USER_ID
+             , A.USER_NM
+             , A.USER_NICK
+             , A.INLN_NO
+             , A.HP_NO
+             , A.USER_ATTR_A
+             , A.USER_ATTR_B
+             , A.USER_ATTR_C
+             , A.USER_ATTR_D
+          FROM PLT_USER A
+         WHERE A.CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%')
+           AND A.USE_YN = 'Y' 
+           AND (
+                SELECT COUNT(*) 
+                  FROM PLT_CHT_RDY
+                 WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%')
+                   AND USER_ID = A.USER_ID
+                ) > 0 
+           AND A.USER_ID != #{SEND_USER_ID}
+        <if test="KEYWORD !=''">AND ( A.USER_ID LIKE '%' || #{KEYWORD} || '%' 
+                                    OR ( A.USER_NM LIKE '%' || #{KEYWORD} || '%' )
+                                    OR ( A.USER_NICK LIKE '%' || #{KEYWORD} || '%' )
+                                ) 
+        </if>
+        ORDER BY A.USER_NICK, A.USER_NM, A.USER_ID
+        
+        ) AA
+  LEFT OUTER JOIN PLT_COMN_CD CT2 
+    ON CT2.GROUP_CD = 'TALK016' AND CT2.CD='01' AND CT2.CD_TYPE  = '1' 
+  LEFT OUTER JOIN PLT_COMN_CD CT3 
+    ON CT2.GROUP_CD = 'TALK016' AND CT2.CD='11' AND CT2.CD_TYPE  = '1'
+</select>
+
+<!-- 상담설정 정보 조회 --> 
+<select id="selectRtnCnslProp"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT CUSTCO_ID
+     , STNG_CD          /* 설정코드 */
+     , STNG_CD_NM       /* 설정코드명 */
+     , STNG_VL   /* 설정값 */
+  FROM PLT_CHT_ENV
+ WHERE USE_YN = 'Y'
+   AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+</select>
+
+<!-- 상담설정 정보 수정 --> 
+<update id="updateRtnCnslProp" parameterType= "java.util.HashMap">
+MERGE INTO PLT_CHT_ENV A
+      USING DUAL
+        ON (CUSTCO_ID = NULLIF(#{CUSTCO_ID},'') AND STNG_CD = #{STNG_CD})
+      WHEN MATCHED THEN
+            UPDATE
+               SET STNG_VL = #{STNG_VL}
+                    , PROC_ID = #{PROC_ID}
+                    , IT_PROCESSING = NOW()
+      WHEN NOT MATCHED THEN
+        INSERT (
+                 CUSTCO_ID
+                ,STNG_CD
+                ,STNG_CD_NM
+                ,STNG_VL
+                ,USE_YN
+                ,REGR_ID
+                ,REG_DTTM
+                ,PROC_ID
+                ,IT_PROCESSING
+            )
+        VALUES( NULLIF(#{CUSTCO_ID},'')
+                , #{STNG_CD}
+                , #{STNG_CD_NM}
+                , #{STNG_VL}
+                , 'Y'
+                , #{ASP_USER_ID}
+                , TO_CHAR(NOW(), 'YYYYMMDD')
+                , #{PROC_ID}
+                , NOW()
+            )
+</update>
+
+<!-- 지역코드 콤보 조회 --> 
+<select id="selectRtnAreaData"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+	  CD
+	  ,CD_NM
+	FROM PLT_COMN_CD
+	WHERE GROUP_CD = #{CD}
+	AND CD <![CDATA[<>]]> '****'
+	<if test="AREA_TYP_CD    	!='' and AREA_TYP_CD    	 != null"> AND ETC_INFO02 = #{AREA_TYP_CD}</if>
+	AND USE_YN = #{USE_YN}
+</select>
+
+<!-- 상담시작시간 조회 --> 
+<select id="selectSTJobTime"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT STNG_VL	AS WORK_START_TIME
+	FROM PLT_CHT_ENV
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND STNG_CD = 'WORK_START_TIME'
+</select>
+
+<!-- 상담종료시간 조회 --> 
+<select id="selectENDJobTime"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT STNG_VL	AS WORK_END_TIME
+	FROM PLT_CHT_ENV
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND STNG_CD = 'WORK_END_TIME'
+</select>
+
+<!-- 상담 대기중인 상담원 조회 --> 
+<select id="selectCuttRdy"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT PCCR.CUSL_ID	AS USER_ID
+	 	, (SELECT USER_NM
+	 		FROM PLT_USER
+	 		WHERE USER_ID = PCCR.CUSL_ID)	AS USER_NM
+	FROM PLT_CHT_CUTT_RDY PCCR
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND CUSL_ID != #{SEND_USER_ID}::INTEGER
+</select>
+
+<!-- 모든 상담원 리스트 --> 
+<select id="selectAllCusl"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	/* selectAllCusl - 모든 상담원 리스트 */
+	SELECT USER_ID
+	 	, USER_NM
+	FROM PLT_USER
+	WHERE USER_ID != #{SEND_USER_ID}::INTEGER
+</select>
+
+
+</mapper>

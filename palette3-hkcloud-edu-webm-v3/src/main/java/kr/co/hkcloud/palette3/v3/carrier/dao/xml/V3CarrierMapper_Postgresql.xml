@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.v3.carrier.dao.V3CarrierMapper">
+	
+	<select id="selectVstRsvtList" parameterType="kr.co.hkcloud.palette3.v3.common.dto.V3CommonRequestListDto" resultType="kr.co.hkcloud.palette3.v3.carrier.api.dto.V3CarrierVstRsvtListResponseDto">
+		select 
+			pvr.vst_rsvt_id,
+			pvr.zip,
+			pvr.addr,
+			pvr.addr_dtl,
+			pvr.stts_cd,
+			pvr.stts_dtl_cd,
+			pvr.cn,
+			pvr.srvc_type_cd,
+			pvr.rsvt_bgng_dt,
+			pvr.rsvt_end_dt,
+			pvr.dmnd_mttr ,
+			pvr.excptn_mttr,
+			stts.cd_nm as stts_nm,
+			sttsdtl.cd_nm as stts_dtl_nm,
+			srvctype.cd_nm as srvc_type_nm
+		from plt_vst_rsvt pvr
+			left outer join plt_comm_cd stts on stts.custco_id = pvr.custco_id and stts.group_cd_id='VST_RSVT_STAT' and stts.cd_id = pvr.stts_cd 
+			left outer join plt_comm_cd sttsdtl on sttsdtl.custco_id = pvr.custco_id and sttsdtl.group_cd_id = pvr.stts_cd and sttsdtl.cd_id = pvr.stts_dtl_cd
+			left outer join plt_comm_cd srvctype on srvctype.custco_id = pvr.custco_id and srvctype.group_cd_id = 'SRVC_TP' and srvctype.cd_id = pvr.srvc_type_cd
+		where 
+			pvr.custco_id = #{data.custcoId}
+			and pvr.vstr_id = #{data.userId}
+			<if test="data.dateFrom != null and data.dateFrom != ''">
+				and pvr.rsvt_bgng_dt >= #{data.dateFrom}||'000000'
+			</if>
+			<if test="data.dateTo != null and data.dateTo != ''">
+				and pvr.rsvt_end_dt <![CDATA[ <= ]]> #{data.dateTo}||'235959'
+			</if>
+			<if test="data.sttsCd != null and data.sttsCd != ''">
+				and pvr.stts_cd in 
+				<foreach item="item" index="index" collection="data.sttsCd.split(',')" open="(" separator="," close=")"> '${item}'</foreach>
+			</if>
+		order by pvr.rsvt_bgng_dt asc
+	</select>
+	
+	
+	<select id="selectVstRsvtDetail" parameterType="kr.co.hkcloud.palette3.v3.common.dto.V3CommonRequestDto" resultType="kr.co.hkcloud.palette3.v3.carrier.api.dto.V3CarrierVstRsvtDetailResponseDto">
+		select 
+			pvr.vst_rsvt_id,
+			pvr.cust_nm,
+			pvr.rel_cd,
+			pvr.cust_telno,
+			pvr.zip,
+			pvr.addr,
+			pvr.addr_dtl,
+			pvr.rgtr_id,
+			pvr.reg_dt,
+			pvr.mdfr_id,
+			pvr.mdfcn_dt,
+			pvr.stts_cd,
+			pvr.stts_dtl_cd,
+			pvr.cn,
+			pvr.srvc_type_cd,
+			pvr.prdct_type_id,
+			pvr.rsvt_bgng_dt,
+			pvr.rsvt_end_dt,
+			pvr.dmnd_mttr,
+			pvr.excptn_mttr,
+			pvr.altmnt_rgtr_id,
+			pvr.altmnt_dt,
+			pvr.vstr_id,
+			pvr.img_file_group_key,
+			pvr.vdo_file_group_key,
+			relcd.cd_nm as rel_nm,
+			stts.cd_nm as stts_nm,
+			sttsdtl.cd_nm as stts_dtl_nm,
+			srvctype.cd_nm as srvc_type_nm,
+			pvpt.prdct_nm as prdct_type_nm,
+			(select dmnd_mttr from plt_vst_rsvt_hstry pvrh where pvrh.vst_rsvt_id = pvr.vst_rsvt_id and stts_cd = 'VRS_ALTMNT' order by pvrh.vst_rsvt_id desc limit 1) as inq_dmnd_mttr,
+			(select excptn_mttr from plt_vst_rsvt_hstry pvrh where pvrh.vst_rsvt_id = pvr.vst_rsvt_id and stts_cd = 'VRS_ALTMNT' order by pvrh.vst_rsvt_id desc limit 1) as inq_excptn_mttr
+		from plt_vst_rsvt pvr
+			left outer join plt_comm_cd relcd on relcd.custco_id = pvr.custco_id and relcd.group_cd_id = 'REL_TP' and relcd.cd_id = pvr.rel_cd
+			left outer join plt_comm_cd stts on stts.custco_id = pvr.custco_id and stts.group_cd_id = 'VST_RSVT_STAT' and stts.cd_id = pvr.stts_cd
+			left outer join plt_comm_cd sttsdtl on sttsdtl.custco_id = pvr.custco_id and sttsdtl.group_cd_id = pvr.stts_cd and sttsdtl.cd_id = pvr.stts_dtl_cd
+			left outer join plt_comm_cd srvctype on srvctype.custco_id = pvr.custco_id and srvctype.group_cd_id = 'SRVC_TP' and srvctype.cd_id = pvr.srvc_type_cd
+			left outer join plt_vst_prdct_type pvpt on pvpt.custco_id = pvr.custco_id and pvpt.prdct_type_id = pvr.prdct_type_id
+		where 
+			pvr.custco_id = #{custcoId}
+			and pvr.vstr_id = #{userId}
+			and pvr.vst_rsvt_id = #{key}
+	</select>
+	
+	
+	<select id="selectVstRsvtFileList" parameterType="String" resultType="kr.co.hkcloud.palette3.v3.common.dto.V3CommonFileResponseDto">
+		select 
+			file_key,
+			file_group_key,
+			path_type_cd,
+			mime_type_cd,
+			actl_file_nm,
+			('/upload/' || file_path || '/' || strg_file_nm) as uri
+		from plt_file
+		where 
+			file_group_key = #{fileGroupKey}
+			and use_yn = 'Y'
+	</select>
+	
+	
+	
+	<!--
+	<select id="selectVstRsvtListWithCutt" parameterType="kr.co.hkcloud.palette3.v3.auth.api.dto.V3AuthLoginRequestDto" resultType="java.util.HashMap">
+		select 
+			pvr.vst_rsvt_id,
+			pvr.zip,
+			pvr.addr,
+			pvr.addr_dtl,
+			pvr.stts_cd,
+			pvr.cn,
+			pvr.rsvt_dt,
+			pc.cust_id,
+			(case when pc.cutt_cn is not null then custco.gen_decrypt(pc.cutt_cn, 'aes', 'PL30') else null end) cutt_cn,
+			sttscd.cd_nm
+		from plt_vst_rsvt pvr
+			left outer join (
+			select 
+				pvcr.vst_rsvt_id,
+				ppc.cust_id,
+				ppcdc.cutt_cn
+			from plt_vst_cutt_rsvt pvcr 
+				join plt_phn_cutt ppc on ppc.phn_cutt_id = pvcr.phn_cutt_id
+				join plt_phn_cutt_dtl_cn ppcdc on ppcdc.phn_cutt_id = ppc.phn_cutt_id
+			) pc on pc.vst_rsvt_id = pvr.vst_rsvt_id 
+			left outer join plt_comm_cd sttscd on sttscd.cd_id = pvr.stts_cd 
+		where 
+			pvr.custco_id = 51
+			and pvr.vstr_id = 3;
+	</select>
+	-->
+
+	<update id="updateUserToken" parameterType="kr.co.hkcloud.palette3.v3.auth.api.dto.V3UserAppUpdateTokenRequestDto">
+		UPDATE PLT_USER SET /*	updateUserToken 사용자 앱 알림 토큰 수정	*/
+			TOKEN = #{token}
+			, TOKEN_REG_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE USER_ID = #{userId}
+	</update>
+
+</mapper>

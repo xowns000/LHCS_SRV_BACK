@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.setting.dao.ChatSettingMessageManageMapper">
+
+<!-- 상담설정 정보 조회 --> 
+<select id="selectRtnCnslProp"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT STNG_VL
+  FROM PLT_CHT_STNG
+ WHERE USE_YN = 'Y'
+   AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   AND STNG_CD = 'CUST_NORESP_CHATEND'
+</select>
+
+<!-- 시스템 메시지 분류별 조회 -->
+<select id="selectRtnSystemMsgByMsgID" parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+	SELECT ROW_NUMBER() OVER(ORDER BY PCCSM.MSG_HR) AS ROWNUM
+		, PCCSM.CUSTCO_ID				/* 회사구분 */
+		, PCCSM.SYS_MSG_ID				/* 시스템 메시지 ID */
+		, PCSM.MSG_SE_CD				/* 메시지구분 */
+		, (SELECT CD_NM	
+			FROM PLT_COMM_CD
+			WHERE CUSTCO_ID = PCCSM.CUSTCO_ID AND GROUP_CD_ID = 'MESG_CL'
+				AND CD_ID = PCSM.MSG_SE_CD)	AS MSG_SE_CD_NM	/* 메시지구분명 */
+		, PCSM.RCPTN_DSPTCH_CD			/* 수발신구분 */
+		, (SELECT CD_NM	
+			FROM PLT_COMM_CD
+			WHERE CUSTCO_ID = PCCSM.CUSTCO_ID AND GROUP_CD_ID = 'MESG_SNDRCV'
+				AND CD_ID = PCSM.RCPTN_DSPTCH_CD)	AS RCPTN_DSPTCH_CD_NM	/* 수발신구분명 */
+		, PCSM.MSG_TYPE_CD				/* 메시지타입 */
+		, (SELECT CD_NM	
+			FROM PLT_COMM_CD
+			WHERE CUSTCO_ID = PCCSM.CUSTCO_ID AND GROUP_CD_ID = 'MESG_TP'
+				AND CD_ID = PCSM.MSG_TYPE_CD)	AS MSG_TYPE_CD_NM	/* 메시지타입명 */
+		, PCCSM.MSG_HR					/* 메시지 시간 */
+		, PCCSM.MSG_CN					/* 메시지 내용 */
+		, PCSM.MSG_EXPLN				/* 메시지 설명 */
+		, PCCSM.USE_YN					/* 사용여부 */
+	FROM PLT_CHT_CUSTCO_SYS_MSG PCCSM
+	LEFT JOIN PLT_CHT_SYS_MSG PCSM 
+		ON PCCSM.SYS_MSG_ID = PCSM.SYS_MSG_ID
+	WHERE PCCSM.SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+		AND PCCSM.USE_YN = 'Y'
+	ORDER BY PCCSM.MSG_HR
+</select>
+
+<!-- 시스템 메시지 조회 -->
+<select id="selectRtnCustMsg" parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+SELECT T1.SYS_MSG_ID
+     , T1.MSG_CL
+     , T2.CD_NM AS MSG_CL_NAME
+     , T1.SNDRCV_CD
+     , T1.MSG_TYPE
+     , CASE WHEN T1.MSG_TYPE = 'TX' THEN '텍스트메시지'
+       WHEN T1.MSG_TYPE = 'LI' THEN '링크메시지'
+       END                                           AS MSG_TYPE_NAME
+     , T1.MSG_TIME
+     , T1.MSG_CN
+     , T1.MSG_DESC
+     , T1.LINKS_TYPE
+     , T1.USE_YN
+     , T1.REG_DEPT_CD
+     , T1.REG_ID
+     , TO_CHAR(T1.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+     , T1.UPD_DEPT_CD
+     , T1.UPD_ID
+     , TO_CHAR(T1.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM
+     , T1.PROC_ID
+     , TO_CHAR(T1.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+     , (SELECT COUNT(*) FROM PLT_CHT_SYS_MSG 
+         WHERE CUSTCO_ID = #{CUSTCO_ID} 
+           AND MSG_CL = #{MSG_CL}
+           AND MSG_TIME = #{MSG_TIME}) AS CNT_DUPLICAE_MSG_TIME
+  FROM PLT_CHT_SYS_MSG T1
+ INNER JOIN PLT_COMN_CD T2
+    ON T1.MSG_CL = T2.CD
+   AND T2.GROUP_CD = 'TALK017'
+ WHERE T1.CUSTCO_ID = #{CUSTCO_ID}
+   AND T1.MSG_CL = #{MSG_CL}
+   AND T1.USE_YN = 'Y'
+ORDER BY T1.MSG_TIME
+
+</select>
+
+
+<!-- 시스템 메시지 등록 -->
+<insert id="insertRtnCnslMsg" parameterType= "java.util.HashMap">
+INSERT INTO PLT_CHT_CUSTCO_SYS_MSG
+(
+	SYS_MSG_ID
+	, CUSTCO_ID
+	, MSG_HR
+	, MSG_CN
+	, USE_YN
+	, RGTR_ID
+	, REG_DT
+	, MDFR_ID
+	, MDFCN_DT
+)
+VALUES 
+(
+	#{SYS_MSG_ID}::INTEGER
+	, #{CUSTCO_ID}::INTEGER
+	, #{MSG_HR}::INTEGER
+	, #{MSG_CN}
+	, 'Y'
+	, #{USER_ID}::INTEGER
+	, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	, #{USER_ID}::INTEGER
+	, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+)
+</insert>
+<insert id="insertRtnCnslMsgByCustco" parameterType= "java.util.HashMap">
+INSERT INTO PLT_CHT_CUSTCO_SYS_MSG 
+(
+	CUSTCO_ID
+	, SYS_MSG_ID
+)
+VALUES 
+(
+	#{CUSTCO_ID}::INTEGER
+	, #{SYS_MSG_ID}::INTEGER
+)
+</insert>
+
+<!-- 시스템 메시지 수정 -->
+<update id="updateRtnCnslMsg" parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_CUSTCO_SYS_MSG
+	SET MSG_HR = #{MSG_HR}::INTEGER
+		, MSG_CN = #{MSG_CN}
+		, MDFR_ID = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND MSG_HR = #{BF_MSG_HR}::INTEGER
+</update>
+
+<!-- 메시지 삭제 -->
+<delete id="deleteRtnCnslMsg" parameterType= "java.util.HashMap">
+DELETE FROM PLT_CHT_CUSTCO_SYS_MSG
+   WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   	AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+   	AND MSG_HR = #{MSG_HR}::INTEGER
+</delete>
+<delete id="deleteRtnCnslMsgByCustco" parameterType= "java.util.HashMap">
+DELETE FROM PLT_CHT_CUSTCO_SYS_MSG
+ WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+   AND MSG_HR = #{MSG_HR}::INTEGER
+</delete>
+
+<!-- 시스템 메시지 중복 조회 -->
+<select id="selectRtnCustMsgDuplicatedCnt" parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+SELECT COUNT(*) AS CNT_DUPLICAE_MSG_TIME
+  FROM PLT_CHT_SYS_MSG 
+ WHERE CUSTCO_ID = #{CUSTCO_ID} 
+   AND USE_YN = 'Y'
+   AND MSG_SE_CD = #{MSG_SE_CD}
+   AND MSG_HR = #{MSG_HR}
+   AND SYS_MSG_ID != #{SYS_MSG_ID}
+
+</select>
+
+<!-- 시스템메시지 중복 조회 -->
+<select id="selectRtnCustcoMsgDuplicatedCnt" parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+	SELECT COUNT(SYS_MSG_ID)	AS CNT
+	FROM PLT_CHT_CUSTCO_SYS_MSG
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	  AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+	  AND MSG_HR = #{MSG_HR}::INTEGER
+</select>
+
+</mapper>

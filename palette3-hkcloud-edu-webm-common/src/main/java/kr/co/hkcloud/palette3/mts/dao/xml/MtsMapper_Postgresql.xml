@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.mts.dao.MtsMapper">
+	<select id="selectUpdateTargetList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectUpdateTargetList - MTS 발송 결과 업데이트 대상 목록 조회 */
+			MTS_SNDNG_HSTRY_ID, 
+			SNDNG_SE_CD AS SEND_TYPE,
+			(CASE WHEN POSITION('||group:' IN RSLT_MSG) > 0 THEN
+				CASE WHEN POSITION('||senderKey:' IN RSLT_MSG) > 0 THEN
+					SUBSTRING(SPLIT_PART(RSLT_MSG,'||', 2), POSITION('group:' IN SPLIT_PART(RSLT_MSG,'||', 2)) + 6)
+				ELSE 
+					SUBSTRING(RSLT_MSG, POSITION('||group:' IN RSLT_MSG) + 8)
+				END
+			ELSE 
+				''
+			END) AS MTS_SNDNG_HSTRY_GROUP_ID,
+			(CASE WHEN POSITION('||senderKey:' IN RSLT_MSG) > 0 THEN
+				CASE WHEN POSITION('||group:' IN RSLT_MSG) > 0 THEN
+					SUBSTRING(SPLIT_PART(RSLT_MSG,'||', 3), POSITION('senderKey:' IN SPLIT_PART(RSLT_MSG,'||', 3)) + 10)
+				ELSE 
+					SUBSTRING(SPLIT_PART(RSLT_MSG,'||', 2), POSITION('senderKey:' IN SPLIT_PART(RSLT_MSG,'||', 2)) + 10)
+				END
+			ELSE 
+				''
+			END) AS SENDER_KEY,
+			SNDNG_DT AS SEND_DATE,
+			RSLT_MSG,
+			(CASE WHEN POSITION('||' IN RSLT_MSG) > 0 THEN
+				SUBSTRING(RSLT_MSG, POSITION('||' IN RSLT_MSG))
+			ELSE 
+				''
+			END) as ETC_MSG,
+			CUSTCO_ID
+		FROM (
+			SELECT 
+				'' MTS_SNDNG_HSTRY_ID,
+				SNDNG_SE_CD,
+				SUBSTRING(SNDNG_DT,1,8) SNDNG_DT,
+				RSLT_MSG,
+				CUSTCO_ID
+			FROM PLT_MTS_SNDNG_HSTRY
+			WHERE 
+				RSLT_MSG LIKE '%RegistComplete||group:%'
+				AND SUBSTRING(SNDNG_DT,1,8) between TO_CHAR(NOW() - '3 day'::interval, 'YYYYMMDD') AND TO_CHAR(NOW() - '1 day'::interval, 'YYYYMMDD')
+			group by SNDNG_SE_CD, SNDNG_DT, RSLT_MSG, CUSTCO_ID
+			UNION 
+			select 
+				MTS_SNDNG_HSTRY_ID::VARCHAR,
+				SNDNG_SE_CD,
+				SUBSTRING(SNDNG_DT,1,8) SNDNG_DT,
+				RSLT_MSG,
+				CUSTCO_ID
+			FROM PLT_MTS_SNDNG_HSTRY
+			WHERE 
+				RSLT_MSG LIKE '%Regist%' and RSLT_MSG not LIKE '%RegistComplete||group:%'
+				AND SUBSTRING(SNDNG_DT,1,8) between TO_CHAR(NOW() - '3 day'::interval, 'YYYYMMDD') AND TO_CHAR(NOW() - '1 day'::interval, 'YYYYMMDD')
+		) MSH
+		ORDER BY SNDNG_DT DESC
+	</select>
+
+
+	<update id="updateSndngRslt" parameterType= "java.util.HashMap">
+		/* updateSndngRslt - MTS발송 결과 삽입 */
+		UPDATE PLT_MTS_SNDNG_HSTRY
+		SET
+			RSLT_MSG = #{RSLT_MSG} || #{ETC_MSG} || '||result:Y'
+		   , SNDNG_DT = #{real_send_date}
+		   <choose>
+		   		<when test='ATALK_TRAN_SNDNG_YN != null and ATALK_TRAN_SNDNG_YN == "Y"'>
+		   			, ATALK_TRAN_SNDNG_CD = #{ATALK_TRAN_SNDNG_CD}
+		   			, ATALK_TRAN_SNDNG_YN = #{ATALK_TRAN_SNDNG_YN}
+		   			, ATALK_TRAN_SNDNG_RSLT_CD = #{result_code}
+		   			, ATALK_TRAN_SNDNG_CN = #{send_msg}
+		   		</when>
+		   		<otherwise>
+			   		, RSLT_CD = #{result_code}
+			   		, SNDNG_CN = #{send_msg}
+		   		</otherwise>
+		   </choose>
+		WHERE
+			<choose>
+				<when test="MTS_SNDNG_HSTRY_GROUP_ID != '' and MTS_SNDNG_HSTRY_GROUP_ID != null and MTS_SNDNG_HSTRY_GROUP_ID != undefined">
+					RSLT_MSG LIKE ('%'|| '||group:' || #{MTS_SNDNG_HSTRY_GROUP_ID} || '%')
+					AND RCPTN_PHN_NO = #{phone_number}
+				</when>
+				<otherwise>
+					MTS_SNDNG_HSTRY_ID = #{MTS_SNDNG_HSTRY_ID}::INTEGER
+				</otherwise>
+			</choose>
+    </update>
+
+</mapper>

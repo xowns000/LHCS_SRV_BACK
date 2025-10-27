@@ -1,0 +1,633 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.core.chat.msg.dao.TalkMsgMapper">
+<!-- <mapper namespace="com.hcteletalk.teletalk.core.msg.dao.TalkMsgMapper"> -->
+
+<!-- PLT_CHT_CUTT_DTL(고객상담이력상세) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_CHT_CUTT_DTL"  parameterType= "java.util.HashMap">
+	INSERT INTO 		/* INSERT_PLT_CHT_CUTT_DTL - PLT_CHT_CUTT_DTL(고객상담이력상세) 테이블 데이터 등록 */
+		PLT_CHT_CUTT_DTL
+		(
+			CHT_CUTT_DTL_ID
+			, CHT_CUTT_ID
+			, CUSTCO_ID
+			<if test="USER_ID != '' and USER_ID != null and USER_ID != undefined">
+				, CUSL_ID
+			</if>
+			, RCPTN_DSPTCH_CD
+			, RCPTN_SNDPTY_ID
+			, MSG_TYPE_CD
+			, RCPTN_DSPTCH_MSG
+			, CHG_RCPTN_DSPTCH_MSG
+			, IMG_URL
+			, FILE_GROUP_KEY
+			, AUTO_RSPNS_MSG
+			, LNK_INFO
+			, VIDEO_PATH
+			, VIDEO_URL
+			, VIDEO_THUMNAIL_PATH
+			, READ_YN
+			<if test="SYS_MSG_ID != '' and SYS_MSG_ID != null and SYS_MSG_ID != undefined">
+			, SYS_MSG_ID
+			</if>
+			, RGTR_ID
+			, REG_DT
+			, MDFR_ID
+			, MDFCN_DT
+		)
+	VALUES 
+		(
+			#{CHT_CUTT_DTL_ID}::INTEGER
+			<choose>
+				<when test="CHT_CUTT_ID != '' and CHT_CUTT_ID != null and CHT_CUTT_ID != undefined">
+					, #{CHT_CUTT_ID}::INTEGER
+				</when>
+				<otherwise>
+					, (SELECT CHT_CUTT_ID	/* 고객 문의유형 선택 안함(접수지연) 시스템 메시지 발송 후 저장 */
+						FROM PLT_CHT_CUTT
+						WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+							AND CUST_ID = (SELECT CUST_ID
+											FROM PLT_CHT_CUST
+											WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+											AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+											ORDER BY CUST_ID
+	   										LIMIT 1)::INTEGER
+							AND CUTT_STTS_CD IN ('WAIT', 'QSTN_CHCING', 'ALTMNT_WAIT', 'ING')
+						ORDER BY CHT_CUTT_ID DESC
+						LIMIT 1)
+				</otherwise>
+			</choose>
+			, #{CUSTCO_ID}::INTEGER
+			<if test="USER_ID != '' and USER_ID != null and USER_ID != undefined">
+				, #{USER_ID}::INTEGER
+			</if>
+			, #{RCPTN_DSPTCH_CD}
+			<choose>
+				<when test="RCPTN_SNDPTY_ID != '' and RCPTN_SNDPTY_ID != null and RCPTN_SNDPTY_ID != undefined">
+					, #{RCPTN_SNDPTY_ID}::INTEGER
+				</when>
+				<when test="(RCPTN_SNDPTY_ID == '' or RCPTN_SNDPTY_ID == null or RCPTN_SNDPTY_ID == undefined) and RCPTN_DSPTCH_CD == 'SND'">
+					,#{USER_ID}::INTEGER
+				</when>
+				<when test="(RCPTN_SNDPTY_ID == '' or RCPTN_SNDPTY_ID == null or RCPTN_SNDPTY_ID == undefined) and RCPTN_DSPTCH_CD == 'RCV'">
+					<choose>
+						<when test="CUST_ID != '' and CUST_ID != null and CUST_ID != undefined">
+							,#{CUST_ID}::INTEGER
+						</when>
+						<when test="CHT_USER_KEY != '' and CHT_USER_KEY != null and CHT_USER_KEY != undefined">
+							,(SELECT CUST_ID
+								FROM PLT_CHT_CUST
+								WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+								ORDER BY CUST_ID
+	   							LIMIT 1)::INTEGER
+						</when>
+						<otherwise>
+						,(SELECT CUST_ID
+							FROM PLT_CHT_CUST
+							WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+							ORDER BY CUST_ID
+	   						LIMIT 1)::INTEGER
+						</otherwise>
+					</choose>
+				</when>
+				<otherwise>
+				,(SELECT CUST_ID
+					FROM PLT_CHT_CUST
+					WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+					ORDER BY CUST_ID
+					LIMIT 1)::INTEGER
+				</otherwise>
+			</choose>
+			, #{MSG_TYPE_CD}
+			, (CASE WHEN #{MSG_TYPE_CD} = 'product' THEN REGEXP_REPLACE(#{CONTENT}, '""', '"', 'g' )
+					ELSE #{CONTENT}
+					END)
+			, (CASE WHEN #{MSG_TYPE_CD} = 'product' THEN REGEXP_REPLACE(#{CONTENT}, '""', '"', 'g' )
+					ELSE #{CHG_CONTENT}
+					END)
+			, #{IMG_URL}
+			, #{FILE_GROUP_KEY}
+			, #{AUTO_RSPNS_MSG}
+			, #{LNK_INFO}
+			, #{VIDEO_PATH}
+			, #{VIDEO_URL}
+			, #{VIDEO_THUMNAIL_PATH}
+			, #{READ_YN}
+			<if test="SYS_MSG_ID != '' and SYS_MSG_ID != null and SYS_MSG_ID != undefined">
+			, #{SYS_MSG_ID}::INTEGER
+			</if>
+			<choose>
+				<when test="USER_ID != '' and USER_ID != null and USER_ID != undefined">
+					, #{USER_ID}::INTEGER
+					, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					, #{USER_ID}::INTEGER
+					, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				</when>
+				<otherwise>
+					, '2'::INTEGER
+					, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					, '2'::INTEGER
+					, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				</otherwise>
+			</choose>
+		)
+</insert>
+
+<!-- 상담예약문의유형을 선택 했을 때 상담 상태를 상담 예약상태로 만들어준다 -->
+<update id="updateChtCuttRsvt"  parameterType= "java.util.HashMap">
+	/* updateChtCuttRsvt - 상담예약문의유형을 선택 했을 때 상담 상태를 상담 예약상태로 만들어준다 */
+	UPDATE PLT_CHT_CUTT
+	SET CUTT_END_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, PRCS_RSLT_CD = 'RSVT'
+		, CUTT_STTS_CD = 'RSVT'
+	WHERE CHT_CUTT_ID = (SELECT CHT_CUTT_ID
+						FROM PLT_CHT_CUTT_DTL
+						WHERE CHT_CUTT_DTL_ID = #{CHT_CUTT_DTL_ID}::INTEGER
+						LIMIT 1)::INTEGER
+</update>
+
+<!-- 상담예약 대기테이블에서 삭제 -->
+<delete id="deleteChtRdyRsvt"  parameterType= "java.util.HashMap">
+	/* updateChtCuttRsvt - 상담예약 대기테이블에서 삭제 */
+	DELETE FROM PLT_CHT_RDY
+	WHERE ALTMNT_STTS_CD = 'QSTN_CHCING'
+		AND CUST_ID = (SELECT CUST_ID
+						FROM PLT_CHT_CUST
+						WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+						AND SNDR_KEY = #{SNDR_KEY}::INTEGER)::INTEGER
+		AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+</delete>
+
+<!-- PLT_CHT_CUTT(고객상담이력) 테이블 고객 무응답 메시지 시간 0으로 초기화 -->
+<insert id="UPDATE_TWB_TALK_CONTACT_CUSTNORESP_INIT"  parameterType= "java.util.HashMap">
+UPDATE PLT_CHT_CUTT
+   SET CUST_NORSPNS_HR = 0
+ WHERE CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+</insert>
+
+<!-- 상담이력의 최종 TALK_CONTACT_ID를 구한다. -->
+<select id="SELECT_TALK_CONTACT_ID"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+  SELECT A.CHT_CUTT_ID		/* SELECT_TALK_CONTACT_ID - 인입채팅의 상담 정보 조회 */
+     , A.SNDR_KEY
+     , A.USER_ID
+     , A.CUSL_ID
+     , A.TALK_INQRY_CD
+     , A.QSTN_TYPE_ID
+     , A.CALL_TYP_CD
+     , A.CHN_CLSF_CD
+     , A.EXEC_RST_CD
+     , A.PRCS_RSLT_CD
+     , A.CUSTCO_ID
+     , (SELECT SYS_MSG_ID
+  		FROM PLT_CHT_CUTT_DTL
+  		WHERE CHT_CUTT_ID = A.CHT_CUTT_ID
+  		ORDER BY REG_DT DESC
+  		LIMIT 1)	AS SYS_MSG_ID
+  FROM ( SELECT CHT_CUTT_ID
+              , SNDR_KEY
+              , CUSL_ID AS USER_ID
+              , CUSL_ID
+              , ROW_NUMBER() OVER(ORDER BY CUTT_BGNG_DT DESC) AS RK
+              , QSTN_TYPE_ID AS TALK_INQRY_CD
+              , QSTN_TYPE_ID
+              , CHN_CLSF_CD AS CALL_TYP_CD
+              , CHN_CLSF_CD
+              , PRCS_RSLT_CD AS EXEC_RST_CD
+              , PRCS_RSLT_CD
+              , CUSTCO_ID
+           FROM PLT_CHT_CUTT
+          WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+            AND CUTT_STTS_CD IN ('ING','WAIT','TRAN_WAIT','ALTMNT_WAIT', 'CLBK_WAIT', 'CHATBOT')
+            <choose>
+                <when test="CHT_CUTT_ID != null and CHT_CUTT_ID != ''">
+                    AND CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+                </when>
+                <otherwise>
+                    AND CUST_ID = (SELECT CUST_ID
+                        FROM PLT_CHT_CUST
+                        WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+                        ORDER BY CUST_ID
+                        LIMIT 1)::INTEGER
+                </otherwise>
+            </choose>
+            AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+            AND CHN_CLSF_CD = #{CHN_CLSF_CD}
+       ) A
+  WHERE RK=1
+</select>
+
+<!-- 사용가능한 시스템메시지를 조회한다. -->
+<select id="getSystemMessageListByServiceable" resultType="java.util.HashMap">
+SELECT PCCSM.SYS_MSG_ID 
+	, PC.CUSTCO_ID
+	, PC.CO_NM
+	, PCSM.MSG_SE_CD
+	, PCSM.RCPTN_DSPTCH_CD
+	, PCSM.MSG_TYPE_CD
+	, PCCSM.MSG_HR
+	, PCCSM.MSG_CN
+	, PCSM.MSG_EXPLN
+	, PCSM.LNK_TYPE_CD
+	, PCCSM.USE_YN
+	, PCCSM.RGTR_ID
+	, PCCSM.REG_DT
+	, COALESCE(PCCSM.MDFR_ID, PCCSM.RGTR_ID) AS MDFR_ID
+	, COALESCE(PCCSM.MDFCN_DT, PCCSM.REG_DT) AS MDFCN_DT
+FROM PLT_CHT_CUSTCO_SYS_MSG PCCSM
+INNER JOIN PLT_CHT_SYS_MSG PCSM ON PCCSM.SYS_MSG_ID = PCSM.SYS_MSG_ID
+INNER JOIN PLT_CUSTCO PC ON PC.CUSTCO_ID = PCCSM.CUSTCO_ID
+WHERE (PCSM.MSG_SE_CD = 'SYSMSG' OR PCSM.MSG_SE_CD = 'ATOMSG' OR PCSM.MSG_SE_CD = 'CUTTEND' OR PCSM.MSG_SE_CD = 'DLYAUTOMSG')
+AND PCSM.USE_YN = 'Y'
+</select>
+
+<!-- 고객접수, 대기 건을 조회한다 -->
+<select id="SELECT_PLT_CHT_USER_RDY"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT CHT_RDY_ID
+	, CUST_ID
+    , CUSTCO_ID
+    , SNDR_KEY
+    , ALTMNT_STTS_CD AS TALK_READY_CD
+    , ALTMNT_STTS_CD
+    , CUSL_ID
+	, CHN_TYPE_CD AS CALL_TYP_CD
+    , CHN_TYPE_CD
+FROM PLT_CHT_RDY
+WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+	AND CUST_ID = (SELECT CUST_ID
+					FROM PLT_CHT_CUST
+					WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+						AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+					ORDER BY CUST_ID
+					LIMIT 1)::INTEGER
+	AND ALTMNT_STTS_CD IN ('QSTN_CHCING', 'ALTMNT_WAIT', 'WAIT', 'TRAN_WAIT', 'CLBK_WAIT', 'CHATBOT')
+]]>
+</select>
+
+<!-- 고객포기건 대기중에서 상담중으로 데이터 이관 --> 
+<insert id="INSERT_TALK_USER_READY_TO_CONTACT"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_CHT_CUTT
+     (
+        TALK_CONTACT_ID,
+        CUSTCO_ID,
+        TALK_USER_KEY,
+        SNDR_KEY,
+        CUSTOMER_ID,
+        TALK_START_DT,
+        TALK_END_DT,
+        TALK_SESSION_CD,
+        CALL_TYP_CD,
+        CNSL_TYP_CD,
+        TALK_QST,
+        TALK_ANS,
+        TALK_TITLE,
+        OWN_CHECK_YN,
+        EXEC_RST_CD,
+        CST_TYP_CD,
+        TALK_STAT_CD,
+        USER_ID,
+        TALK_DIST_DT,
+        TALK_READY_DT,
+        TALK_READ_DT,
+        TALK_CONTACT_DT,
+        TALK_ENT_CD,
+        REGR_DEPT_CD,
+        REGR_ID,
+        REG_DTTM,
+        AMDR_DEPT_CD,
+        AMDR_ID,
+        UPD_DTTM,
+        PROC_ID,
+        IT_PROCESSING,
+        TALK_INQRY_CD,
+        ORDER_NUMBER,
+        CHANNEL
+     )
+SELECT #{TALK_CONTACT_ID}
+     , TUR.CUSTCO_ID
+     , TUR.TALK_USER_KEY
+     , TUR.SNDR_KEY
+     , C.CUSTOMER_ID
+     , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+     , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+     , ''
+     , TUR.CALL_TYP_CD
+     , ''
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE USE_YN = 'Y' AND GROUP_CD = 'TALK001' AND CD = '90')
+            WHEN TUR.TALK_READY_CD = '10' THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE USE_YN = 'Y' AND GROUP_CD = 'TALK001' AND CD = '91')
+            WHEN TUR.TALK_READY_CD = '11' THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE USE_YN = 'Y' AND GROUP_CD = 'TALK001' AND CD = '92')
+            WHEN TUR.TALK_READY_CD = '13' THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE USE_YN = 'Y' AND GROUP_CD = 'TALK001' AND CD = '93')
+       END
+     , ''
+     , TURD.CONTENT
+     , ''
+     , ''
+     , ''
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN '90'
+            WHEN TUR.TALK_READY_CD = '10' THEN '91'
+            WHEN TUR.TALK_READY_CD = '11' THEN '92'
+            WHEN TUR.TALK_READY_CD = '13' THEN '93'
+       END
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '10' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '11' THEN #{USER_ID}
+            WHEN TUR.TALK_READY_CD = '13' THEN #{USER_ID}
+       END
+     , TUR.TALK_DIST_DT
+     , TUR.TALK_READY_DT
+     , TUR.TALK_READ_DT
+     , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+     , ''
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '10' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '11' THEN #{DEPT_CD}
+            WHEN TUR.TALK_READY_CD = '13' THEN #{DEPT_CD}
+       END
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '10' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '11' THEN #{USER_ID}
+            WHEN TUR.TALK_READY_CD = '13' THEN #{USER_ID}
+       END
+     , SYSTIMESTAMP
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '10' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '11' THEN #{DEPT_CD}
+            WHEN TUR.TALK_READY_CD = '13' THEN #{DEPT_CD}
+       END
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '10' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '11' THEN #{USER_ID}
+            WHEN TUR.TALK_READY_CD = '13' THEN #{USER_ID}
+       END
+     , SYSTIMESTAMP
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '10' THEN 'SYSTEM'
+            WHEN TUR.TALK_READY_CD = '11' THEN #{USER_ID}
+            WHEN TUR.TALK_READY_CD = '13' THEN #{USER_ID}
+       END
+     , SYSTIMESTAMP
+     , CASE WHEN TUR.TALK_READY_CD = '09' THEN #{TALK_INQRY_CD}
+            WHEN TUR.TALK_READY_CD = '10' OR TUR.TALK_READY_CD = '11' OR TUR.TALK_READY_CD = '13' THEN TUR.TALK_INQRY_CD
+       END  
+     , TUR.ORDER_NUMBER
+     , TUR.CHANNEL
+  FROM PLT_CHT_USER_RDY TUR
+     LEFT OUTER JOIN   
+     ( 
+         SELECT * 
+           FROM ( 
+                  SELECT * 
+                    FROM PLT_CHT_USER_RDY_DTL 
+                   WHERE CUSTCO_ID = #{CUSTCO_ID}
+                     AND CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+                     AND SNDR_KEY = #{SNDR_KEY}
+                     AND TYPE NOT IN ('reference','expired')
+                   ORDER BY IT_PROCESSING ASC
+                ) A
+            WHERE ROWNUM = 1
+       ) TURD
+       	ON TUR.TALK_USER_KEY = TURD.TALK_USER_KEY 
+	LEFT OUTER JOIN PLT_CUS C
+		ON TUR.TALK_USER_KEY = C.TALK_USER_KEY
+ WHERE TUR.CUSTCO_ID = #{CUSTCO_ID}
+   AND TUR.CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+   AND TUR.SNDR_KEY = #{SNDR_KEY}
+   AND TUR.TALK_READY_CD IN ('09', '10', '11', '13')
+</insert>
+
+<!-- 상담이력의 상담중 건을 후처리 상태로 업데이트 -->
+<update id="UPDATE_TALK_CONTACT_POST" parameterType= "java.util.HashMap">
+UPDATE PLT_CHT_CUTT /*	상담이력의 상담중 건을 후처리 상태로 업데이트	*/
+   SET CUTT_STTS_CD = 'AFTPRCS'
+	   , CUTT_END_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	   , MDFR_ID = '2'::INTEGER
+	   , MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+ WHERE CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+   AND CUTT_STTS_CD = 'ING'
+</update>
+
+<!-- 요청 고객의 상담중인 대화가 존재하는지 조회한다 (기간 제약 필요) , 201810.08 , SJH -->
+<select id="SELECT_TALK_USER_TALKING"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+	SELECT 
+		( CASE PCCD.RCPTN_DSPTCH_CD 
+	        WHEN 'RCV' THEN (SELECT EXTRACT(EPOCH FROM (NOW() - TO_TIMESTAMP(PCCD.REG_DT, 'YYYYMMDDHH24MISS'))) / 60)
+	        ELSE 0 END)		AS AGENT_NONRESPONSE_TIME
+	FROM PLT_CHT_CUTT PCC
+	LEFT JOIN (SELECT DTL2.CHT_CUTT_DTL_ID, DTL2.CHT_CUTT_ID, DTL2.RCPTN_DSPTCH_CD, DTL2.REG_DT
+				FROM (SELECT CHT_CUTT_ID, MAX(REG_DT)	AS RECENT_DT
+					FROM PLT_CHT_CUTT_DTL
+					GROUP BY CHT_CUTT_ID) DTL1
+				LEFT JOIN PLT_CHT_CUTT_DTL DTL2
+				ON DTL1.RECENT_DT = DTL2.REG_DT) PCCD
+		ON PCC.CHT_CUTT_ID = PCCD.CHT_CUTT_ID 
+	WHERE PCC.SYS_MSG_SKIP_YN = 'N'
+		AND PCC.CUTT_STTS_CD = 'ING'
+		AND PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PCC.CUST_ID = (SELECT CUST_ID
+	   						FROM PLT_CHT_CUST
+	   						WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+	   						AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+	   						ORDER BY CUST_ID
+	   						LIMIT 1)::INTEGER
+]]>
+</select>
+
+<!-- 상담이력의 상담중 건을 비정상종료 상태로 업데이트 -->
+<update id="UPDATE_TALK_CONTACT_STATUS_CD" parameterType= "java.util.HashMap">
+UPDATE PLT_CHT_CUTT
+   SET TALK_STAT_CD = '22'
+   , UPD_DTTM = SYSTIMESTAMP
+   , IT_PROCESSING = SYSTIMESTAMP
+   , PROC_ID = 'SYSTEM'
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+   AND TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+   AND TALK_STAT_CD = '12'
+</update>
+
+
+<!-- 시스템 메시지 발송 가능 여부 판단 -->
+<select id="SELECT_PLT_CHT_CUTT_DTL_INSERT_PARAM"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COUNT(CHT_CUTT_ID) AS CNT	/* SELECT_PLT_CHT_CUTT_DTL_INSERT_PARAM - 시스템 메시지 발송 가능 여부 판단 */
+	FROM PLT_CHT_CUTT
+	WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+		AND CUST_ID = (SELECT CUST_ID
+						FROM PLT_CHT_CUST
+						WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+						ORDER BY CUST_ID
+   						LIMIT 1)::INTEGER
+		AND CUTT_STTS_CD IN ('WAIT', 'QSTN_CHCING','ALTMNT_WAIT','ING')
+</select>
+
+
+<!-- 인입 채팅의 챗봇 사용여부 -->
+<select id="chatbotYn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COALESCE(CHBT_USE_YN,'N') as CHBT_USE_YN		/* chatbotYn - 인입 채팅의 챗봇 사용여부 */
+	FROM PLT_CUSTCO_CHN
+	WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+</select>
+
+
+<!-- 인입 고객이 상담중인지 체크 -->
+<select id="custChtIng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COUNT(CHT_CUTT_ID) AS CNT		/* custChtIng - 인입 고객이 상담중인지 체크 */
+	FROM PLT_CHT_CUTT
+	WHERE CUTT_STTS_CD IN ('ING','QSTN_CHCING','ALTMNT_WAIT','WAIT','TRAN_WAIT','TEMP_SAVE','CLBK_WAIT')
+		AND CUST_ID = (SELECT CUST_ID
+						FROM PLT_CHT_CUST
+						WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+							AND CHT_USER_KEY = #{CHT_USER_KEY}
+						ORDER BY CUST_ID
+						LIMIT 1)::INTEGER
+		AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+</select>
+
+
+<!-- 인입 고객이 챗봇상담중인지 체크 -->
+<select id="custChtbot"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COUNT(CHT_CUTT_ID) AS CNT		/* custChtbot - 인입 고객이 챗봇상담중인지 체크 */
+	FROM PLT_CHT_CUTT
+	WHERE CUTT_STTS_CD = 'CHATBOT'
+		AND CUST_ID = (SELECT CUST_ID
+						FROM PLT_CHT_CUST
+						WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+							AND CHT_USER_KEY = #{CHT_USER_KEY}
+						ORDER BY CUST_ID
+						LIMIT 1)::INTEGER
+		AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+</select>
+
+<!-- 고객의 챗봇내역이 있는지 체크 -->
+<select id="selectKakaoChatbotConents"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COUNT(MESSAGE_ID) AS CNT		/* selectKakaoChatbotConents - 고객의 챗봇내역이 있는지 체크 */
+	FROM goodwearmall.CHATBOT_HISTORY
+	WHERE USER_KEY = #{CHT_USER_KEY}
+		AND MESSAGE_ID LIKE (#{CHBT_DATE}||'%')
+</select>
+
+<!-- 고객의 챗봇내역 insert -->
+<insert id="insertKakaoChatbotConents" parameterType= "java.util.HashMap">
+	INSERT INTO goodwearmall.CHATBOT_HISTORY				/* insertKakaoChatbotConents - 고객의 챗봇내역 insert */
+		(
+			BOT_ID
+			, USER_KEY
+			, MESSAGE_ID
+			, SENDER
+			, EVENT
+			, TYPE
+			, CONTENT
+			, MSG_CD
+			, REG_DTTM
+		) VALUES (
+			(SELECT BOT_ID
+			FROM goodwearmall.CHATBOT_USER
+			WHERE USER_KEY = #{CHT_USER_KEY})
+			, #{CHT_USER_KEY}
+			, #{CHBT_DATE}||'MSG'||nextval('seq_message_id')
+			, 'chatbot'
+			, 'send'
+			, 'composite'
+			, REGEXP_REPLACE(#{CONTENTS}, '""', '"', 'g' )
+			, 'KAKAO'
+			, NOW()
+		)
+</insert>
+
+<!-- 고객챗봇 중복체크 -->
+<select id="chbtCnt" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 			/* chbtCnt - 고객챗봇 중복체크 */
+		COUNT(CHT_CUTT_ID) AS CNT
+	FROM PLT_CHT_CUTT
+	WHERE CUST_ID = (SELECT CUST_ID
+					FROM PLT_CHT_CUST
+					WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+						AND CHT_USER_KEY = #{CHT_USER_KEY}
+					ORDER BY CUST_ID
+					LIMIT 1)::INTEGER
+		AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+		AND CUTT_STTS_CD = 'CHATBOT'
+</select>
+
+
+<!-- 고객챗봇 중복 대기 삭제 -->	
+<delete id="deleteChbtRdyDupl"  parameterType= "java.util.HashMap">
+	DELETE 		/* deleteChbtRdyDupl - 고객챗봇 중복 대기 삭제 */
+		FROM PLT_CHT_RDY 
+	WHERE 
+		CHT_RDY_ID = (SELECT CHT_RDY_ID
+						FROM PLT_CHT_CUTT
+						WHERE CUST_ID = (SELECT CUST_ID
+										FROM PLT_CHT_CUST
+										WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+											AND CHT_USER_KEY = #{CHT_USER_KEY}
+										ORDER BY CUST_ID
+										LIMIT 1)::INTEGER
+							AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+							AND CUTT_STTS_CD = 'CHATBOT'
+						ORDER BY CHT_CUTT_ID DESC
+						LIMIT 1)::INTEGER
+</delete>
+
+
+<!-- 고객챗봇 중복 상담 삭제 -->	
+<delete id="deleteChbtCuttDupl"  parameterType= "java.util.HashMap">
+	DELETE 		/* deleteChbtCuttDupl - 고객챗봇 중복 상담 삭제 */
+		FROM PLT_CHT_CUTT 
+	WHERE 
+		CHT_CUTT_ID = (SELECT CHT_CUTT_ID
+						FROM PLT_CHT_CUTT
+						WHERE CUST_ID = (SELECT CUST_ID
+										FROM PLT_CHT_CUST
+										WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+											AND CHT_USER_KEY = #{CHT_USER_KEY}
+										ORDER BY CUST_ID
+										LIMIT 1)::INTEGER
+							AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+							AND CUTT_STTS_CD = 'CHATBOT'
+						ORDER BY CHT_CUTT_ID DESC
+						LIMIT 1)::INTEGER
+</delete>
+
+<!-- user_key가 상담 대기가 없고 문의유형 선택중인지 체크한다 -->
+<select id="selectTalkUserCutt" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 			/* selectTalkUserCutt - user_key가 상담 대기가 없고 문의유형 선택중인지 체크한다 */
+		COUNT(CHT_CUTT_ID) AS CNT
+	FROM PLT_CHT_CUTT
+	WHERE CUST_ID = (SELECT CUST_ID
+					FROM PLT_CHT_CUST
+					WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+						AND CHT_USER_KEY = #{CHT_USER_KEY}
+					ORDER BY CUST_ID
+					LIMIT 1)::INTEGER
+		AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+		AND CUTT_STTS_CD = 'QSTN_CHCING'
+		AND NOT EXISTS (SELECT 1
+						FROM PLT_CHT_RDY
+						WHERE ALTMNT_STTS_CD = 'QSTN_CHCING'
+							AND CUST_ID = (SELECT CUST_ID
+											FROM PLT_CHT_CUST
+											WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+												AND CHT_USER_KEY = #{CHT_USER_KEY}
+											ORDER BY CUST_ID
+											LIMIT 1)::INTEGER
+							AND SNDR_KEY = #{SNDR_KEY}::INTEGER)
+</select>
+
+<!-- user_key가 상담 대기가 없고 문의유형 선택중인 상담을 종료한다 -->
+<update id="updadateExpiredSessionCutt"  parameterType= "java.util.HashMap">
+UPDATE PLT_CHT_CUTT			/* updadateExpiredSessionCutt - user_key가 상담 대기가 없고 문의유형 선택중인 상담을 종료한다 */
+   SET CUTT_STTS_CD = 'DMND_NOCHC'
+     , MDFR_ID = '2'::INTEGER
+     , MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+ WHERE CUTT_STTS_CD = 'QSTN_CHCING'
+   AND CUST_ID = (SELECT CUST_ID
+   					FROM PLT_CHT_CUST
+   					WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+   						AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+   					ORDER BY CUST_ID
+					LIMIT 1)::INTEGER
+   AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+</update>
+
+</mapper>

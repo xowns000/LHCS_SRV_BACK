@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneOutboundDailyReportMapper">
+
+	<select id="selectObndAdaySttcRprtList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectObndAdaySttcRprtList */
+
+			SELECT   
+    				STA.CAM_TY                       /* 아웃바운드 캠페인구분 */
+                    , ( SELECT   CD_NM   FROM    PLT_COMN_CD  WHERE  CD =  STA.CAM_TY  AND  GROUP_CD  =  CASE WHEN  LENGTH( STA.CAM_TY  ) >= 3  THEN   'RE010'   ELSE   'OU001' END  ) AS  CAM_TY_NM  /* 아웃바운드 캠페인구분명 */
+                    , STA.CAM_ID                         /* 캠페인ID   */
+		            , CAM.CAM_NM                       /* 아웃바운드 캠페인명   */
+		            -- , STA.BASE_DATE                    /* 기준일자   */
+		            -- , STA.CENT_TY                      /* 센터구분   */
+		            , CASE STA.FISH_YN  WHEN  'Y'  THEN  '마감'  ELSE  ''  END   AS   FISH_YN_NM    /* 마감여부   */
+		            , STA.TOT_CNT                      /* 전체건수   */
+		            , STA.TDD_PROC_FISH_CNT            /* 당일처리완료건수  */
+		            , STA.SUM_PROC_FISH_CNT            /* 누적처리완료건수  */
+		            , STA.PROC_ING_CNT                 /* 처리중건수   */
+		            , STA.UNTRY_CNT                    /* 미시도건수   */
+		            , STA.TDD_FAIL_CNT                 /* 당일실패건수 */
+		            , STA.SUM_FAIL_CNT                 /* 누적실패건수 */
+		            , STA.TDD_PROC_UNABL_CNT           /* 당일처리불가건수 */
+		            , STA.SUM_PROC_UNABL_CNT           /* 누적처리불가건수 */
+		            , STA.TDD_ETC_CNT                  /* 당일기타건수  */
+		            , STA.SUM_ETC_CNT                  /* 누적기타건수  */ 
+		           -- , STA.MNTR_FISH_CMPL_CNT           /* 처리완료 완판  */
+                   -- , STA.MNTR_FISH_FAIL_CNT           /* 처리완료 불판  */
+                   -- , STA.MNTR_FISH_10TRY_CNT          /* 처리완료 10회시도 */
+                   -- , STA.MNTR_FISH_GUID_CNT           /* 처리완료 안내장발송 */
+		            , ROUND((( STA.TOT_CNT - STA.PROC_ING_CNT - STA.UNTRY_CNT ) / NULLIF( STA.TOT_CNT , 0)  ) * 100, 1) || '%'  AS PROC_ING_RT
+
+	        FROM    PLT_PHN_STS_OBD_DD  STA
+	        INNER JOIN  PLT_PHN_CAMP  CAM   ON  STA.CAM_ID = CAM.CAM_ID
+	        WHERE 1 = 1 
+            	  
+            	  /*  각 키값별 세분 버전정보 관리 방법론에서, 배분일자별 기준으로만 버전관리로 간소화하여 정정. 세분관리를 다시 하고자하면 배치정보도 동일하게 변경해주어 저장하여야 함.
+                  AND  ( STA.CAM_ID , STA.BASE_DATE, STA.CENT_TY, STA.VER_NO  ) IN ( SELECT CAM_ID, BASE_DATE, CENT_TY, MAX(VER_NO)  
+                                                                                               FROM  PLT_PHN_STS_OBD_DD 
+                                                                                                    WHERE BASE_DATE  = ''  AND  CENT_TY = ''
+                                                                                               
+                                                                                                        GROUP BY  CAM_ID, BASE_DATE, CENT_TY )
+	        	 */
+				-- AND  STA.FISH_YN = 'N'
+				  
+				  AND  STA.BASE_DATE  = REPLACE(#{BASE_DATE},'/')
+	                  
+	              AND  STA.CENT_TY = #{CENT_TY}
+	                  
+	              AND  STA.VER_NO  =  (  SELECT  MAX(VER_NO)  FROM   PLT_PHN_STS_OBD_DD  WHERE  BASE_DATE = STA.BASE_DATE  AND  CENT_TY  = #{CENT_TY} )
+				
+	
+		UNION  ALL
+	
+    
+	       SELECT   
+	            STA.CAM_TY                       /* 아웃바운드 캠페인구분 */
+	            , ''   AS  CAM_TY_NM
+	            , 0         AS  CAM_ID
+	            , '▷ 소계'       AS  CAM_NM
+	            , ''       AS  FISH_YN_NM
+	            , SUM( STA.TOT_CNT  )  AS     TOT_CNT                /* 전체건수   */
+	            , SUM( STA.TDD_PROC_FISH_CNT )  AS  TDD_PROC_FISH_CNT           /* 당일처리완료건수  */
+	            , SUM( STA.SUM_PROC_FISH_CNT )  AS  SUM_PROC_FISH_CNT         /* 누적처리완료건수  */
+	            , SUM( STA.PROC_ING_CNT   )     AS  PROC_ING_CNT             /* 처리중건수   */
+	            , SUM( STA.UNTRY_CNT      )     AS  UNTRY_CNT                /* 미시도건수   */
+	            , SUM( STA.TDD_FAIL_CNT   )     AS  TDD_FAIL_CNT              /* 당일실패건수 */
+	            , SUM( STA.SUM_FAIL_CNT   )     AS  SUM_FAIL_CNT              /* 누적실패건수 */
+	            , SUM( STA.TDD_PROC_UNABL_CNT ) AS  TDD_PROC_UNABL_CNT        /* 당일처리불가건수 */
+	            , SUM( STA.SUM_PROC_UNABL_CNT ) AS  SUM_PROC_UNABL_CNT        /* 누적처리불가건수 */
+	            , SUM( STA.TDD_ETC_CNT        ) AS  TDD_ETC_CNT               /* 당일기타건수  */
+	            , SUM( STA.SUM_ETC_CNT        ) AS  SUM_ETC_CNT               /* 누적기타건수  */ 
+	           -- , SUM( STA.MNTR_FISH_CMPL_CNT ) AS  MNTR_FISH_CMPL_CNT          /* 처리완료 완판  */
+               -- , SUM( STA.MNTR_FISH_FAIL_CNT ) AS  MNTR_FISH_FAIL_CNT          /* 처리완료 불판  */
+               -- , SUM( STA.MNTR_FISH_10TRY_CNT ) AS MNTR_FISH_10TRY_CNT        /* 처리완료 10회시도 */
+               -- , SUM( STA.MNTR_FISH_GUID_CNT  ) AS MNTR_FISH_GUID_CNT         /* 처리완료 안내장발송 */
+	            , ROUND((( SUM( STA.TOT_CNT ) - SUM( STA.PROC_ING_CNT ) - SUM( STA.UNTRY_CNT) ) / NULLIF( SUM( STA.TOT_CNT ), 0)  ) * 100, 1) || '%'  AS PROC_ING_RT
+	
+	        FROM      PLT_PHN_STS_OBD_DD  STA
+	                    
+	                    INNER JOIN  PLT_PHN_CAMP  CAM   ON  STA.CAM_ID = CAM.CAM_ID    
+	        
+	            WHERE 1 = 1 
+	            	
+	            	/*  각 키값별 세분 버전정보 관리 방법론에서, 배분일자별 기준으로만 버전관리로 간소화하여 정정. 세분관리를 다시 하고자하면 배치정보도 동일하게 변경해주어 저장하여야 함.
+	                  AND  ( STA.CAM_ID , STA.BASE_DATE, STA.CENT_TY, STA.VER_NO  ) IN ( SELECT CAM_ID, BASE_DATE, CENT_TY, MAX(VER_NO)  
+	                                                                                               FROM  PLT_PHN_STS_OBD_DD 
+	                                                                                                    WHERE BASE_DATE  = ''  AND  CENT_TY = ''
+	                                                                                               
+	                                                                                                        GROUP BY  CAM_ID, BASE_DATE, CENT_TY )
+	                */  
+	                  -- AND  STA.FISH_YN = 'N'
+	                  
+	                  AND  STA.BASE_DATE  = REPLACE(#{BASE_DATE},'/')
+	                  
+	                  AND  STA.CENT_TY = #{CENT_TY}
+	                  
+	                  AND  STA.VER_NO  =  (  SELECT  MAX(VER_NO)  FROM   PLT_PHN_STS_OBD_DD  WHERE  BASE_DATE = STA.BASE_DATE  AND  CENT_TY  = #{CENT_TY} )
+	                  
+	            GROUP BY   STA.CAM_TY
+	                  
+	         
+	         ORDER BY  CAM_TY, CAM_ID DESC 
+				  
+	</select>
+	
+	<select id="selectObndAdaySttcRprtCntList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectObndAdaySttcRprtCntList */
+
+		SELECT 
+			         STTC.BASE_DATE
+			         , COALESCE( ROUND( (  STTC.TOT_SUM_PROC_FISH_CNT /  NULLIF( ( STTC.TOT_TDD_PROC_FISH_CNT + STTC.TOT_SUM_PROC_FISH_CNT ), 0) * 100) , 1 ), 0 ) || '%'  AS  TOT_SUM_PROC_FISH_RATE     /* 누적처리율  */
+			         , COALESCE( ROUND( (  STTC.TOT_TDD_PROC_FISH_CNT /  NULLIF( ( STTC.TOT_TDD_PROC_FISH_CNT + STTC.TOT_SUM_PROC_FISH_CNT ), 0) * 100) , 1 ), 0 ) || '%'  AS  TOT_TDD_PROC_FISH_RATE     /* 당일처리율  */
+			         , STTC.TOT_TDD_PROC_FISH_CNT       /* 당일처리완료건수  */
+			         , STTC.TOT_SUM_PROC_FISH_CNT       /* 누적처리완료건수  */
+			         , STTC.TOT_SUM_CNT                 /* 총DB건수처리중건수   */
+			         , STTC.TOT_PROC_ING_CNT            /* 처리중 총건수   */
+			         , STTC.TOT_UNTRY_CNT               /* 미시도 총건수   */
+			
+			  FROM  (
+			
+			        SELECT
+			        
+			                STA.BASE_DATE                    								/* 기준일자   */
+			                , SUM( STA.TOT_CNT  )  AS      TOT_SUM_CNT               		/* 전체 DB 건수   */
+			                , SUM( STA.TDD_PROC_FISH_CNT )  AS  TOT_TDD_PROC_FISH_CNT       /* 당일처리완료건수  */
+			                , SUM( STA.SUM_PROC_FISH_CNT )  AS  TOT_SUM_PROC_FISH_CNT       /* 누적처리완료건수  */
+			                , SUM( STA.PROC_ING_CNT      )  AS  TOT_PROC_ING_CNT            /* 처리중 총건수   */
+			                , SUM( STA.UNTRY_CNT         )  AS  TOT_UNTRY_CNT               /* 미시도 총건수   */
+			
+			            FROM      PLT_PHN_STS_OBD_DD  STA
+			                        
+			                        INNER JOIN  PLT_PHN_CAMP  CAM   ON  STA.CAM_ID = CAM.CAM_ID
+			            
+			                WHERE  1 = 1
+			                 
+            				  /*  각 키값별 세분 버전정보 관리 방법론에서, 배분일자별 기준으로만 버전관리로 간소화하여 정정. 세분관리를 다시 하고자하면 배치정보도 동일하게 변경해주어 저장하여야 함.
+			                  AND  ( STA.CAM_ID , STA.BASE_DATE, STA.CENT_TY, STA.VER_NO  ) IN ( SELECT CAM_ID, BASE_DATE, CENT_TY, MAX(VER_NO)  
+			                                                                                               FROM  PLT_PHN_STS_OBD_DD 
+			                                                                                                    WHERE BASE_DATE  = ''  AND  CENT_TY = ''
+			                                                                                               		  GROUP BY  CAM_ID, BASE_DATE, CENT_TY )
+			                  */
+			                  AND  STA.BASE_DATE  = REPLACE(#{BASE_DATE},'/')  
+			                  
+			                  AND  STA.CENT_TY = #{CENT_TY}
+			                  
+			                  AND  STA.VER_NO  =  (  SELECT  MAX(VER_NO)  FROM   PLT_PHN_STS_OBD_DD  WHERE  BASE_DATE = STA.BASE_DATE  AND  CENT_TY  = #{CENT_TY} )
+			                  
+			                GROUP BY  STA.BASE_DATE
+			
+			    )  STTC  
+			    
+			ORDER BY  STTC.BASE_DATE 
+	
+	</select>
+	
+</mapper>

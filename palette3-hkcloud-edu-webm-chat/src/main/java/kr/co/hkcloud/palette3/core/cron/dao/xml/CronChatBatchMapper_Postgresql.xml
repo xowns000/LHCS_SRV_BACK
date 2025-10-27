@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.core.cron.dao.CronChatBatchMapper">
+    <!-- sw에서 가져온 상담예약 insert -->
+    <insert id="getSwRsvt" parameterType="java.util.HashMap">
+        /* getSwRsvt - sw에서 가져온 상담예약 insert */
+        INSERT INTO PLT_RSVT
+		(
+			RSVT_ID
+			, CUST_ID
+			, CUSTCO_ID
+			, RSVT_DT
+			, DRWI_SE_NM
+			, STLM_YN
+			, REG_DT
+			, RGTR_ID
+			, SW_RSVT_ID
+			, SW_ANLS_ID
+			, BRNCH_NM
+			, RSVT_STTS_CD
+		) VALUES (
+			#{RSVT_ID}::INTEGER
+			, #{CUST_ID}::INTEGER
+			, #{CUSTCO_ID}::INTEGER
+			, #{RSVT_DT}||'00'
+			, #{ANALYSIS_NAME}
+			, (CASE WHEN #{CUTT_STAT} LIKE '%(결제정보 O)%' THEN 'Y'
+					ELSE 'N'
+					END)
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, 1
+			, #{BOOKING_ID}
+			, #{ANALYSIS_ID}
+			, #{BRANCH_NAME}
+			, (SELECT CD_ID
+				FROM PLT_COMM_CD
+				WHERE GROUP_CD_ID = 'RSVT_RS'
+					AND CD_VL = #{BOOKING_STATUS}
+				LIMIT 1)
+		)
+
+    </insert>
+    
+    <!-- sw에서 가져온 상담예약 배분정보 insert -->
+    <insert id="getSwRsvtAltmnt" parameterType="java.util.HashMap">
+        /* getSwRsvtAltmnt - sw에서 가져온 상담예약 배분정보 insert */
+		INSERT INTO PLT_RSVT_ALTMNT
+		(
+			CUSL_ID
+			, RSVT_ID
+			, REG_DT
+			, RGTR_ID
+		) VALUES (
+			(SELECT USER_ID
+				FROM PLT_USER
+				WHERE CUSTCO_CUSL_ID = #{BOOK_USER_ID})::INTEGER
+			, #{RSVT_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, '2'::INTEGER
+		)
+
+    </insert>
+    
+    <!-- 배치상태 wait으로 변경(wait일 때만 배치 실행되기때문에) -->
+    <update id="getSwRsvtBatchStat" parameterType="java.util.HashMap">
+		
+	</update>
+	
+	<!-- 신규 예약인지 조회 -->
+	<select id="selectNewSwRsvt"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 		/* selectNewSwRsvt - 신규 예약인지 조회 */
+			PR.RSVT_ID
+			, PR.RSVT_DT
+			, PCC.CD_VL AS RSVT_STTS_CD
+			, PRA.CUSL_ID
+			, PU.CUSTCO_CUSL_ID
+		FROM PLT_RSVT PR
+		LEFT JOIN PLT_COMM_CD PCC
+			ON PCC.CD_ID = PR.RSVT_STTS_CD
+			AND GROUP_CD_ID = 'RSVT_RS'
+		LEFT JOIN PLT_RSVT_ALTMNT PRA
+			ON PRA.RSVT_ID = PR.RSVT_ID
+		LEFT JOIN PLT_USER PU
+			ON PU.USER_ID = PRA.CUSL_ID
+		WHERE PR.SW_RSVT_ID = #{BOOKING_ID}
+	</select>
+    
+    <!-- 상담예약시간 변경 UPDATE -->
+    <update id="updateSwRsvt" parameterType="java.util.HashMap">
+		/* updateSwRsvt - 상담예약시간 변경 UPDATE */
+		UPDATE PLT_RSVT
+		SET RSVT_DT = #{RSVT_DT}||'00'
+		WHERE SW_RSVT_ID = #{BOOKING_ID}
+	</update>
+    
+    <!-- 상담시간 변경으로인한 재배정 -->
+    <update id="updateSwRsvtAltmnt" parameterType="java.util.HashMap">
+		/* updateSwRsvtAltmnt - 상담시간 변경으로인한 재배정 */
+		UPDATE PLT_RSVT_ALTMNT
+		SET CUSL_ID = (SELECT PU.USER_ID
+						FROM PLT_USER PU
+						LEFT JOIN PLT_USER_AUTHRT PUA
+							ON PUA.USER_ID = PU.USER_ID
+						LEFT JOIN (SELECT COALESCE(COUNT(CUSL_ID),0) AS CNT
+										, CUSL_ID 
+									FROM PLT_RSVT_ALTMNT PRA
+									LEFT JOIN PLT_RSVT PR
+										ON PR.RSVT_ID = PRA.RSVT_ID
+									WHERE PR.RSVT_DT > TO_CHAR(NOW(), 'YYYYMMDD')||'000000' AND PR.RSVT_DT<![CDATA[ < ]]>TO_CHAR(NOW(), 'YYYYMMDD')||'235959'
+									GROUP BY CUSL_ID) PRA
+							ON PRA.CUSL_ID = PU.USER_ID
+						WHERE PU.USER_ID NOT IN (SELECT CUSL_ID
+													FROM PLT_RSVT_ALTMNT PRA
+													LEFT JOIN PLT_RSVT PR
+														ON PR.RSVT_ID = PRA.RSVT_ID
+													WHERE RSVT_DT = #{RSVT_DT}||'00')
+							AND PU.RSVT_ALTMNT_USE_YN = 'Y'
+						ORDER BY PRA.CNT NULLS FIRST, RANDOM()
+						LIMIT 1)::INTEGER
+		WHERE RSVT_ID = (SELECT RSVT_ID
+							FROM PLT_RSVT
+							WHERE SW_RSVT_ID = #{BOOKING_ID})::INTEGER
+		
+	</update>
+	
+	<!-- sw에서 가져온 배정상담원 변경 -->
+    <update id="updateSwRsvtAltmntFromSw" parameterType="java.util.HashMap">
+		/* updateSwRsvtAltmntFromSw - sw에서 가져온 배정상담원 변경 */
+		UPDATE PLT_RSVT_ALTMNT
+		SET CUSL_ID = (SELECT USER_ID
+						FROM PLT_USER
+						WHERE CUSTCO_CUSL_ID = #{BOOK_USER_ID})::INTEGER
+			, REG_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE RSVT_ID = (SELECT RSVT_ID
+							FROM PLT_RSVT
+							WHERE SW_RSVT_ID = #{BOOKING_ID})::INTEGER
+	</update>
+	
+	<!-- sw에서 가져온 배정상담원 변경이력 insert -->
+    <insert id="insertSwRsvtAltmntFromSw" parameterType="java.util.HashMap">
+		/* insertSwRsvtAltmntFromSw - sw에서 가져온 배정상담원 변경이력 insert */
+		INSERT INTO PLT_RSVT_ALTMNT_HSTRY
+		(
+			RSVT_ID
+			, BFR_CUSL_ID
+			, AFTR_CUSL_ID
+			, REG_DT
+			, RGTR_ID
+		) VALUES (
+			(SELECT RSVT_ID
+				FROM PLT_RSVT
+				WHERE SW_RSVT_ID = #{BOOKING_ID})::INTEGER
+			, (SELECT CUSL_ID
+				FROM PLT_RSVT_ALTMNT
+				WHERE RSVT_ID = (SELECT RSVT_ID
+									FROM PLT_RSVT
+									WHERE SW_RSVT_ID = #{BOOKING_ID})::INTEGER)::INTEGER
+			, (SELECT USER_ID
+				FROM PLT_USER
+				WHERE CUSTCO_CUSL_ID = #{BOOK_USER_ID})::INTEGER
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, '2'::INTEGER
+		)
+	</insert>
+	
+	<!-- 배정된 상담원 정보 가져오기 -->
+	<select id="selectAltmntCusl"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 		/* selectAltmntCusl - 배정된 상담원 정보 가져오기 */
+			PU.CUSTCO_CUSL_ID
+			, PU.USER_ID
+		FROM PLT_RSVT_ALTMNT PRA
+		LEFT JOIN PLT_USER PU
+			ON PU.USER_ID = PRA.CUSL_ID
+		WHERE PRA.RSVT_ID = (SELECT RSVT_ID
+							FROM PLT_RSVT
+							WHERE SW_RSVT_ID = #{BOOKING_ID})::INTEGER
+	</select>
+    
+    <!-- 상담예약상태 변경 UPDATE -->
+    <update id="updateSwRsvtStts" parameterType="java.util.HashMap">
+		/* updateSwRsvtStts - 상담예약상태 변경 UPDATE */
+		UPDATE PLT_RSVT
+		SET RSVT_STTS_CD = (SELECT CD_ID
+							FROM PLT_COMM_CD
+							WHERE GROUP_CD_ID = 'RSVT_RS'
+								AND CD_VL = #{BOOKING_STATUS}
+							LIMIT 1)
+		WHERE SW_RSVT_ID = #{BOOKING_ID}
+	</update>
+</mapper>

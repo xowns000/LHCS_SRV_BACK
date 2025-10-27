@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.layoutMng.tab.list.dao.LayoutMngTabListThumnailMapper">
+  <select id="selectThumnail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT PLLT.LIST_ID
+         , PLL.TAB_ID
+        , PLLT.RSPNS_ARTCL_ID
+        , PLLT.WD_SZ
+        , PLLT.HT_SZ
+        , PLLT.OUTLN_COLOR_CD
+        , PLLT.OUTLN_TYPE_CD
+        , PLLT.LN_PX
+        , PLM.LKAG_ID
+        , PLM.LKAG_NM
+        , PCC.CD_NM AS OUTLN_TYPE_NM
+        , PLRA.COL_NM
+        , PLRA.DATA_TYPE_CD
+        , PLRA2.RSPNS_ARTCL_ID AS UP_RSPNS_ARTCL_ID
+        , PLRA2.COL_NM AS UP_RSPNS_ARTCL_COL_NM
+        , PLRA2.DATA_TYPE_CD AS UP_RSPNS_DATA_CD
+    FROM PLT_LAYOUT_LIST_THUMNAIL PLLT
+    JOIN PLT_LAYOUT_LIST PLL ON PLL.LIST_ID = PLLT.LIST_ID
+    LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLLT.RSPNS_ARTCL_ID
+    LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA2 ON PLRA2.RSPNS_ARTCL_ID = PLRA.UP_ARTCL_ID
+    LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLRA.LKAG_ID
+    LEFT JOIN CUSTCO.PLT_COMM_CD pcc ON pcc.cd_id = PLLT.OUTLN_TYPE_CD
+    WHERE PLLT.LIST_ID IN
+    <foreach collection="arrListId" item="listId" open="(" separator="," close=")">
+      #{listId}::INTEGER
+    </foreach>
+  </select>
+  <insert id="insertThumnail" parameterType="java.util.HashMap">
+    INSERT
+    INTO PLT_LAYOUT_LIST_THUMNAIL (LIST_ID,
+                                   RSPNS_ARTCL_ID,
+                                   WD_SZ,
+                                   HT_SZ,
+                                   OUTLN_COLOR_CD,
+                                   OUTLN_TYPE_CD,
+                                   LN_PX,
+                                   RGTR_ID,
+                                   REG_DT)
+    VALUES (#{LIST_ID}::INTEGER,
+            #{RSPNS_ARTCL_ID}::INTEGER,
+            #{WD_SZ}::INTEGER,
+            #{HT_SZ}::INTEGER,
+            #{OUTLN_COLOR_CD},
+            #{OUTLN_TYPE_CD},
+            #{LN_PX},
+            #{USER_ID}::INTEGER,
+            TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'));
+  </insert>
+  <update id="updateThumnail" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT_LIST_THUMNAIL
+    SET RGTR_ID = #{USER_ID}::INTEGER
+    <if test="RSPNS_ARTCL_ID != '' and RSPNS_ARTCL_ID != NULL">
+      ,RSPNS_ARTCL_ID = #{RSPNS_ARTCL_ID}::INTEGER
+    </if>
+    <if test="WD_SZ != '' and WD_SZ != NULL">
+    , WD_SZ = #{WD_SZ}::INTEGER
+    </if>
+    <if test="HT_SZ != '' and HT_SZ != NULL">
+    , HT_SZ = #{HT_SZ}::INTEGER
+    </if>
+    <if test="OUTLN_COLOR_CD != '' and OUTLN_COLOR_CD != NULL">
+    , OUTLN_COLOR_CD = #{OUTLN_COLOR_CD}
+    </if>
+    <if test="OUTLN_TYPE_CD != '' and OUTLN_TYPE_CD != NULL">
+    , OUTLN_TYPE_CD = #{OUTLN_TYPE_CD}
+    </if>
+    <if test="LN_PX != '' and LN_PX != NULL">
+    , LN_PX = #{LN_PX}
+    </if>
+    WHERE LIST_ID = #{LIST_ID}::INTEGER
+  </update>
+  <delete id="deleteThumnail" parameterType="java.util.HashMap">
+    DELETE FROM PLT_LAYOUT_LIST_THUMNAIL
+    WHERE LIST_ID = #{LIST_ID}::INTEGER
+  </delete>
+</mapper>

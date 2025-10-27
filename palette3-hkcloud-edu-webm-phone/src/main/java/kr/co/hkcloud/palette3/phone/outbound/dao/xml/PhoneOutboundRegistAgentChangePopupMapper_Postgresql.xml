@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <!-- 상담유형 관리 -->
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundRegistAgentChangePopupMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="HOUSE_TEL_NO" column="HOUSE_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CO_TEL_NO" column="CO_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="MOBIL_NO" column="MOBIL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CARD_NO" column="CARD_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="ACT_NO" column="ACT_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+	<!--  배분변경 상담원 조회 -->
+<!-- 	<select id="selectObndDivChangeList" parameterType= "java.util.HashMap" resultType="java.util.HashMap"> -->
+<!-- 		<![CDATA[ -->
+<!-- 		/* selectObndDivChangeList 배분변경 상담원 조회  */ -->
+<!--    		 SELECT ROWNUM -->
+<!--    		       ,A.AGENT_ID													/*상담사ID*/ -->
+<!--                ,A.AGENT_NM -->
+<!--                ,(SELECT B.DEPT_NM -->
+<!--                    FROM ARGO.V_CM_DEPT_CD B  -->
+<!--                 WHERE A.DEPT_CD = B.DEPT_CD -->
+<!--                   AND A.TENANT_ID =  B.TENANT_ID) AS DEPT_NM				/*부서명*/ -->
+<!--                ,(SELECT B.CODE_NM -->
+<!--                    FROM ARGO.V_CM_CODE B  -->
+<!--                 WHERE A.TM_KIND = B.CODE -->
+<!--                   AND A.TENANT_ID =  B.TENANT_ID -->
+<!--                   AND B.SORT_CD = 'NOTI_GUBUN') AS TM_KIND_NM				/*업무그룹명*/ -->
+<!--                ,(SELECT B.CODE_NM -->
+<!--                    FROM ARGO.V_CM_CODE B  -->
+<!--                 WHERE A.AGENT_JIKCHK = B.CODE -->
+<!--                   AND A.TENANT_ID =  B.TENANT_ID -->
+<!--                   AND B.SORT_CD = 'AGENT_JIKCHK') AS AGENT_JIKCHK_NM   		/*직책명*/ -->
+<!--                ,(SELECT B.CODE_NM -->
+<!--                    FROM ARGO.V_CM_CODE B  -->
+<!--                   WHERE A.AGENT_JIKGUP = B.CODE -->
+<!--                     AND A.TENANT_ID =  B.TENANT_ID -->
+<!--                     AND B.SORT_CD = 'AGENT_JIKGUP') AS AGENT_JIKGUP_NM  	/*직급명*/       -->
+<!--                ,A.DAYNIGHT_GUBUN AS AGENT_DAYNIGHT_GUBUN					/* 주야구분 */ -->
+<!--                ,A.TEL_NO													/*전화번호*/ -->
+<!--                ,A.ENTER_YMD		/*입사일자*/ -->
+<!--                ,A.RETIRE_YMD	/*퇴사일자*/ -->
+<!--            FROM VW_USER_MASTER A -->
+<!-- 	      WHERE 1 = 1 -->
+<!-- 	     ]]> -->
+<!-- 			<if test="AGENT_ID != '' and AGENT_ID != null"> AND A.AGENT_ID = #{AGENT_ID} </if> -->
+<!-- 			<if test="AGENT_NM != '' and AGENT_NM != null"> AND A.AGENT_NM LIKE '%'|| #{AGENT_NM} ||'%'</if> -->
+			
+			
+<!-- 			<if test="DEPT_CD1 != '' and DEPT_CD2 == '' and DEPT_CD3 == ''">  -->
+<!-- 				AND A.DEPT_CD IN(SELECT DEPT_CD from ARGO.V_CM_DEPT_CD -->
+<!--           		WHERE PARENT_DEPT_CD = #{DEPT_CD1} -->
+<!--           		OR DEPT_CD = #{DEPT_CD1}) -->
+<!-- 			</if> -->
+<!-- 			<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 == ''">  -->
+<!-- 				AND A.DEPT_CD IN(SELECT DEPT_CD from ARGO.V_CM_DEPT_CD -->
+<!--           		WHERE PARENT_DEPT_CD = #{DEPT_CD2} -->
+<!--           		OR DEPT_CD = #{DEPT_CD2}) -->
+<!-- 			</if> -->
+<!-- 			<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 != ''">  -->
+<!-- 				AND A.DEPT_CD IN(SELECT DEPT_CD from ARGO.V_CM_DEPT_CD -->
+<!--           		WHERE PARENT_DEPT_CD = #{DEPT_CD3} -->
+<!--           		OR DEPT_CD = #{DEPT_CD3})  -->
+<!-- 			</if> -->
+<!-- 	</select> -->
+	<select id="selectObndDivChangeList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		<![CDATA[
+		/* selectObndDivChangeList 배분변경 상담원 조회  */
+   		 SELECT ROWNUM
+   		       ,A.USER_ID AS AGENT_ID													/*상담사ID*/
+               ,A.USER_NM AS AGENT_NM
+               ,(SELECT B.DEPT_NM
+                   FROM PLT_ORGZ B 
+                WHERE A.DEPT_CD = B.DEPT_CD
+                  /*AND A.TENANT_ID =  B.TENANT_ID*/
+                  ) AS DEPT_NM				/*부서명*/
+           FROM PLT_USER A
+	      WHERE 1 = 1
+	      AND A.CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+	     ]]>
+	 	 <if test="AGENT_ID!='' and AGENT_ID != null">
+	 	 	/* 인수인계를 할 때 사용자목록 사용자ID로 조회시 사용 */
+	 	 	<![CDATA[ AND A.USER_ID LIKE '%'||#{AGENT_ID}||'%' ]]>
+	 	 </if>
+	 	 <if test="AGENT_NM!='' and AGENT_NM != null">
+	 	 	/* 인수인계를 할 때 사용자목록 사용자명으로 조회시 사용 */
+	 	 	<![CDATA[ AND A.USER_NM LIKE '%'||#{AGENT_NM}||'%' ]]>
+	 	 </if>
+	</select>
+	
+	<!--  상담원 배분변경 -->
+	<update id="updateDivChange"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateObndDiv 아웃바운드배분수정   */
+		UPDATE PLT_PHN_CAMP_CUS_DST
+		  SET
+		     CSLT_ID = #{CSLT_ID},
+		     CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS'),
+		     CHNG_MAN  = #{CHNG_MAN}
+		 WHERE CUST_NO = #{CUST_NO}
+		 AND CAM_ID = #{CAM_ID}
+		]]>
+	</update>
+
+</mapper>

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneOutboundMapper">
+
+  	<select id="selectObndListPop"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectObndListPop */
+  		
+  		SELECT 
+	             CM.CAM_ID
+	            , CM.CAM_NM
+				, CM.CAM_TY 	/* 캠페인 구분 */
+	            ,( SELECT CD_NM   
+				  	FROM PLT_COMN_CD
+				  	WHERE GROUP_CD = (CASE WHEN LENGTH(CM.CAM_TY) >= 3 THEN 'RE010' ELSE 'OU001' END)
+				  	AND CD = CM.CAM_TY
+				  ) AS CAM_TY_NM
+	            , CM.CAM_BEGIN_DATE
+	            , CM.CAM_EOT_DATE
+                , CM.FISH_DATE 
+	        FROM PLT_PHN_CAMP CM 
+	        WHERE CM.USE_YN = 'Y'
+                
+                AND  CM.CAM_BEGIN_DATE  BETWEEN   REPLACE(#{DATE_FROM},'/','')   AND   REPLACE(#{DATE_TO},'/','')
+                AND CM.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+
+	     <if test="CENT_TY !='' and CENT_TY != null">
+		 	 	AND CM.CENT_TY = #{CENT_TY}
+		 </if>
+	     <if test="CAM_TY !='' and CAM_TY != null">
+		 	 	AND CM.CAM_TY = #{CAM_TY}
+		 </if>
+	     <if test="CAM_NM !='' and CAM_NM != null"> 
+		 	 
+		 	 	AND CM.CAM_NM LIKE ('%'||#{CAM_NM}||'%')
+		 </if>	        
+	        ORDER BY CM.CAM_BEGIN_DATE DESC
+    </select>
+   
+	<select id="selectObndSttcCsltList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectObndSttcCsltList */
+
+			SELECT
+				 --  DEPT_NM ,
+				      CAM_NM
+				     , (SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY})  AS ASP_NEWCUST_KEY    -- 회사명
+				     , DSTR_DATE
+				    -- , AGENT_NM
+				     , USER_NM
+				     , CSLT_ID
+				     , (ENDCNT + NOTENDCNT + CANNOTCNT + INGCNT + FINALTRYCNT + ETCCNT + EDPFCNT + EDFACNT + EDTNCNT) AS TOTCNT
+				     , ENDCNT
+				     , NOTENDCNT
+				     , CANNOTCNT
+				     , INGCNT
+				     , FINALTRYCNT
+				     , ETCCNT
+				     , EDPFCNT
+				     , EDFACNT
+				     , EDTNCNT
+				     , ROUND((ENDCNT+ CANNOTCNT)/(ENDCNT + NOTENDCNT + CANNOTCNT + INGCNT + FINALTRYCNT + ETCCNT + EDPFCNT + EDFACNT + EDTNCNT)*100, 2)  || '%'     AS RATE
+				FROM (
+				        SELECT
+				             --  T3.DEPT_NM  ,		/* 조직그룹명 */  
+				              T2.CAM_NM                                                                                                                   --1.캠페인명          1
+				             , T1.DSTR_DATE                                                                                                                 /*  배분일자 */
+				             , T3.USER_NM      /* 상담원명      */                                                                                                       --2.상담원명          2
+				             , T1.CSLT_ID    
+							 , (SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID  =  T1.CAM_ID  AND CSLT_ID = T1.CSLT_ID)					 AS TOTCNT      --3.총배분건수       3
+				             , SUM(CASE WHEN T1.FISH_TY = '00001' THEN 1 ELSE 0 END)                                                          AS ENDCNT      --4.처리건수          4  --
+				             , SUM(CASE WHEN T1.FISH_TY = '00001' THEN T1.TRY_CNT ELSE 0 END)                                                  AS ETRCNT      --5.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00002' THEN 1 ELSE 0 END)                                                          AS NOTENDCNT   --6.미처리건수       5
+				             , SUM(CASE WHEN T1.FISH_TY = '00002' AND T1.TRY_CNT = 0 THEN T1.TRY_CNT ELSE 0 END)                                AS NETRCNT     --7.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00003' THEN 1 ELSE 0 END)                                                          AS CANNOTCNT   --10.처리불가건수  6
+				             , SUM(CASE WHEN T1.FISH_TY = '00003' THEN T1.TRY_CNT ELSE 0 END)                                                  AS CNTRCNT     --11.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00004' THEN 1 ELSE 0 END)                                                          AS INGCNT      --8.처리중              7
+				             , SUM(CASE WHEN T1.FISH_TY = '00004' THEN T1.TRY_CNT ELSE 0 END)                                                  AS INGTRCNT    --9.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00005' THEN 1 ELSE 0 END)                                                          AS FINALTRYCNT --13.최종시도실패  8
+				             , SUM(CASE WHEN T1.FISH_TY = '00006' THEN 1 ELSE 0 END)                                                          AS ETCCNT --기타  9
+				             , SUM(CASE WHEN T1.FISH_TY = '00007' THEN 1 ELSE 0 END)                                                          AS EDPFCNT --처리완료 완판  14
+				             , SUM(CASE WHEN T1.FISH_TY = '00008' THEN 1 ELSE 0 END)                                                          AS EDFACNT --처리완료  불판 15
+				             , SUM(CASE WHEN T1.FISH_TY = '00009' THEN 1 ELSE 0 END)                                                          AS EDTNCNT --처리완료 10회시도  16
+
+				         FROM PLT_PHN_CAMP_CUS_DST     T1
+				             INNER JOIN  PLT_PHN_CAMP    T2    ON    T1.CAM_ID        =       T2.CAM_ID
+				             LEFT OUTER JOIN  PLT_USER  	 T3    ON   T1.CSLT_ID    =       T3.USER_ID				             
+				             LEFT OUTER JOIN  PLT_ORGZ     T4    ON   T3.DEPT_CD    =       T4.DEPT_CD
+
+				         WHERE  T2.USE_YN = 'Y'			           
+				           -- AND  T2.CENT_TY  	   =    'G'     -- 현재 공제만 사용
+						   AND T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}	-- 회사 구분명
+						   
+						<if test="DATE_FROM != null and DATE_FROM != ''">
+                          -- AND T1.DSTR_DATE BETWEEN 'FROM' AND 'TO'  -- AS-IS 기준은 통계데이터 불일치로 혼란을 가져오므로 배분일로 통일함.
+                           AND T1.CHNG_DTIM  BETWEEN  CONCAT( #{DATE_FROM} , '000000' ) AND CONCAT( #{DATE_TO} , '235959' )  -- AS-IS 기준 변경일 기준으로 고객 요청. 2020.07.01. 아웃바운드는 변동성 큰업무로서 변경일이 기준으로 되야한다고 함. 
+						</if>
+				           
+						<if test="CAM_ID != null and CAM_ID != ''">
+                           AND T1.CAM_ID                       =       #{CAM_ID}
+                        </if>
+                        <if test="AGENT_ID != null and AGENT_ID != ''">
+                           AND T1.CSLT_ID                      =       #{AGENT_ID}         
+                        </if> 
+                        <if test="USER_ATTR_A !=''">AND T3.USER_ATTR_A = #{USER_ATTR_A}</if>
+						<if test="USER_ATTR_B !=''">AND T3.USER_ATTR_B = #{USER_ATTR_B}</if>
+						<if test="USER_ATTR_C !=''">AND T3.USER_ATTR_C = #{USER_ATTR_C}</if>
+						<if test="USER_ATTR_D !=''">AND T3.USER_ATTR_D = #{USER_ATTR_D}</if>
+
+				         GROUP BY 
+				         -- T3.DEPT_NM, 
+				         T1.CSLT_ID, T3.USER_NM, T2.CAM_NM, T1.CAM_ID, T1.DSTR_DATE
+
+				       )
+
+				  ORDER BY CAM_NM, DSTR_DATE
+				  -- , AGENT_NM
+				  
+	</select>
+	
+	<select id="selectObndSttcBusiList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectObndSttcBusiList */
+
+			SELECT
+					CAM_NM
+					 ,(SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY})  AS ASP_NEWCUST_KEY    -- 회사명			
+				     ,(SELECT CD_NM  FROM PLT_COMN_CD  WHERE GROUP_CD  IN ( 'OU001', 'RE010' ) AND CD  = GO.CAM_TY)                AS CAM_TY_NM
+				     , ''                                                                                                                  AS DSTR_DATE
+				    -- , GO.AGENT_NM
+				     , GO.USER_NM																									AS USER_NM
+				     , GO.CSLT_ID                                                                                           
+				     , (SUM(GO.ENDCNT) + SUM(GO.NOTENDCNT) + SUM(GO.CANNOTCNT) + SUM(GO.INGCNT) + SUM(GO.FINALTRYCNT) + SUM(GO.ETCCNT) + SUM(GO.EDPFCNT) + SUM(GO.EDFACNT) + SUM(GO.EDTNCNT)) AS TOTCNT
+				     , SUM(GO.ENDCNT)                                                                                                        AS ENDCNT
+				     , SUM(GO.NOTENDCNT)                                                                                                     AS NOTENDCNT
+				     , SUM(GO.CANNOTCNT)                                                                                                     AS CANNOTCNT
+				     , SUM(GO.INGCNT)                                                                                                        AS INGCNT
+				     , SUM(GO.FINALTRYCNT)                                                                                                   AS FINALTRYCNT
+				     , SUM(GO.ETCCNT)                                                                                                   AS ETCCNT
+				     , SUM(GO.EDPFCNT)                                                                                                   AS EDPFCNT
+				     , SUM(GO.EDFACNT)                                                                                                   AS EDFACNT
+				     , SUM(GO.EDTNCNT)                                                                                                   AS EDTNCNT
+				     , ROUND((SUM(GO.ENDCNT)+ SUM(GO.CANNOTCNT))/(SUM(GO.ENDCNT) + SUM(GO.NOTENDCNT) + SUM(GO.CANNOTCNT) + SUM(GO.INGCNT) + SUM(GO.FINALTRYCNT) + SUM(GO.ETCCNT) + SUM(GO.EDPFCNT) + SUM(GO.EDFACNT) + SUM(GO.EDTNCNT))*100, 2)   || '%'     AS RATE
+			  FROM (
+				        SELECT
+				             --  T3.DEPT_NM  ,				             
+				              ( SELECT CAM_NM FROM PLT_PHN_CAMP WHERE CAM_ID =  T1.CAM_ID )   AS CAM_NM                                                                                                          /* 캠페인명    */
+				             , T2.CAM_TY                                                                                                              /* 캠페인구분  */
+				             , T3.USER_NM                                                                                                                    --2.상담원명          2
+				             , T1.CSLT_ID
+							 , (SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID =  T1.CAM_ID AND CSLT_ID = T1.CSLT_ID)							 AS TOTCNT      --3.총배분건수       3
+				             , SUM(CASE WHEN T1.FISH_TY = '00001' THEN 1 ELSE 0 END)                                                          AS ENDCNT      --4.처리건수          4  --
+				             , SUM(CASE WHEN T1.FISH_TY = '00001' THEN T1.TRY_CNT ELSE 0 END)                                                  AS ETRCNT      --5.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00002' THEN 1 ELSE 0 END)                                                          AS NOTENDCNT   --6.미처리건수       5
+				             , SUM(CASE WHEN T1.FISH_TY = '00002' AND T1.TRY_CNT = 0 THEN T1.TRY_CNT ELSE 0 END)                                AS NETRCNT     --7.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00003' THEN 1 ELSE 0 END)                                                          AS CANNOTCNT   --10.처리불가건수  6
+				             , SUM(CASE WHEN T1.FISH_TY = '00003' THEN T1.TRY_CNT ELSE 0 END)                                                  AS CNTRCNT     --11.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00004' THEN 1 ELSE 0 END)                                                          AS INGCNT      --8.처리중              7
+				             , SUM(CASE WHEN T1.FISH_TY = '00004' THEN T1.TRY_CNT ELSE 0 END)                                                  AS INGTRCNT    --9.시도횟수
+				             , SUM(CASE WHEN T1.FISH_TY = '00005' THEN 1 ELSE 0 END)                                                          AS FINALTRYCNT --13.최종시도실패  8
+				             , SUM(CASE WHEN T1.FISH_TY = '00006' THEN 1 ELSE 0 END)                                                          AS ETCCNT --기타  9
+				             , SUM(CASE WHEN T1.FISH_TY = '00007' THEN 1 ELSE 0 END)                                                          AS EDPFCNT --처리완료 완판  14
+				             , SUM(CASE WHEN T1.FISH_TY = '00008' THEN 1 ELSE 0 END)                                                          AS EDFACNT --처리완료  불판 15
+				             , SUM(CASE WHEN T1.FISH_TY = '00009' THEN 1 ELSE 0 END)                                                          AS EDTNCNT --처리완료 10회시도  16
+
+				          FROM PLT_PHN_CAMP_CUS_DST   T1
+				             INNER JOIN  PLT_PHN_CAMP      T2    ON   T1.CAM_ID          =       T2.CAM_ID
+				             LEFT OUTER JOIN  PLT_USER     T3   ON    T1.CSLT_ID    =       T3.USER_ID			             
+				             LEFT OUTER JOIN  PLT_ORGZ     T4    ON   T3.DEPT_CD    =       T4.DEPT_CD
+				             
+				         WHERE  T2.USE_YN = 'Y'				           
+				          -- AND T2.CENT_TY  	   =    'G'     -- 현재 공제만 사용 -- 센터값 없어짐
+				         	 AND T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}	-- 회사 구분명
+				         
+						<if test="DATE_FROM != null and DATE_FROM != ''"> 
+				            AND T1.CHNG_DTIM  BETWEEN  CONCAT( #{DATE_FROM} , '000000' ) AND CONCAT( #{DATE_TO} , '235959' )  -- AS-IS 기준 변경일 기준으로 고객 요청. 2020.07.01. 아웃바운드는 변동성 큰업무로서 변경일이 기준으로 되야한다고 함.
+						</if>
+						<if test="CAM_ID != null and CAM_ID != ''">
+                           AND T1.CAM_ID                        =       #{CAM_ID} 
+						</if>
+						<if test="AGENT_ID != null and AGENT_ID != ''">
+                           AND T1.CSLT_ID                       =       #{AGENT_ID}
+						</if>
+                        <if test="USER_ATTR_A !=''">AND T3.USER_ATTR_A = #{USER_ATTR_A}</if>
+						<if test="USER_ATTR_B !=''">AND T3.USER_ATTR_B = #{USER_ATTR_B}</if>
+						<if test="USER_ATTR_C !=''">AND T3.USER_ATTR_C = #{USER_ATTR_C}</if>
+						<if test="USER_ATTR_D !=''">AND T3.USER_ATTR_D = #{USER_ATTR_D}</if>
+				         GROUP BY T1.CSLT_ID, T3.USER_NM, T2.CAM_TY, T1.DSTR_DATE, T1.CAM_ID
+				         --T3.DEPT_NM, 
+
+				       ) GO
+
+				 GROUP BY GO.CAM_NM, GO.CAM_TY, GO.CSLT_ID, GO.USER_NM
+				 -- , GO.AGENT_NM
+
+				 ORDER BY GO.CAM_NM
+				 -- , GO.AGENT_NM
+	
+	</select>
+
+	
+	<select id="selectObndSttcCampList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectObndSttcCampList */
+		
+		SELECT
+				  CAM_NM
+				 , (SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY})  AS ASP_NEWCUST_KEY    -- 회사명
+				 , DSTR_DATE
+				 , (ENDCNT + NOTENDCNT + CANNOTCNT + INGCNT + FINALTRYCNT + ETCCNT + EDPFCNT + EDFACNT + EDTNCNT) AS TOTCNT
+				 , ENDCNT
+				 , NOTENDCNT
+				 , CANNOTCNT
+				 , INGCNT
+			     , FINALTRYCNT
+				 , ETCCNT
+			     , EDPFCNT
+			     , EDFACNT
+				 , EDTNCNT
+				 , ROUND((ENDCNT+ CANNOTCNT)/(ENDCNT + NOTENDCNT + CANNOTCNT + INGCNT + FINALTRYCNT + ETCCNT + EDPFCNT + EDFACNT + EDTNCNT)*100, 2)   || '%'        AS RATE
+		FROM (
+				SELECT
+					T2.CAM_NM                                                                                                        			 	 /* 캠페인명     */
+					, T1.DSTR_DATE 																												 	 /* 배분일자     */
+					, (SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID =  T1.CAM_ID)							             AS TOTCNT   	 /* 총배분건수   */
+					, SUM(CASE WHEN T1.FISH_TY = '00001' THEN 1 ELSE 0 END)                                                          AS ENDCNT   	 /* 처리건수     */
+                    , SUM(CASE WHEN T1.FISH_TY = '00001' THEN T1.TRY_CNT ELSE 0 END)                                                  AS ETRCNT      /* 시도횟수     */
+		            , SUM(CASE WHEN T1.FISH_TY = '00002' THEN 1 ELSE 0 END)                                                          AS NOTENDCNT    /* 미처리건수   */
+			        , SUM(CASE WHEN T1.FISH_TY = '00002' AND T1.TRY_CNT = 0 THEN T1.TRY_CNT ELSE 0 END)                                AS NETRCNT    /* 시도횟수     */
+			        , SUM(CASE WHEN T1.FISH_TY = '00003' THEN 1 ELSE 0 END)                                                          AS CANNOTCNT    /* 처리불가건수 */
+			        , SUM(CASE WHEN T1.FISH_TY = '00003' THEN T1.TRY_CNT ELSE 0 END)                                                  AS CNTRCNT     /* 시도횟수     */
+			        , SUM(CASE WHEN T1.FISH_TY = '00004' THEN 1 ELSE 0 END)                                                          AS INGCNT       /* 처리중       */
+			        , SUM(CASE WHEN T1.FISH_TY = '00004' THEN T1.TRY_CNT ELSE 0 END)                                                  AS INGTRCNT    /* 시도횟수     */
+			        , SUM(CASE WHEN T1.FISH_TY = '00005' THEN 1 ELSE 0 END)                                                          AS FINALTRYCNT /* 최종시도실패  */
+			        , SUM(CASE WHEN T1.FISH_TY = '00006' THEN 1 ELSE 0 END)                                                          AS ETCCNT  	 /* 기타   */
+			        , SUM(CASE WHEN T1.FISH_TY = '00007' THEN 1 ELSE 0 END)                                                          AS EDPFCNT 	 /* 처리완료 완판  */
+			        , SUM(CASE WHEN T1.FISH_TY = '00008' THEN 1 ELSE 0 END)                                                          AS EDFACNT 	 /* 처리완료  불판 */
+			        , SUM(CASE WHEN T1.FISH_TY = '00009' THEN 1 ELSE 0 END)                                                          AS EDTNCNT 	 /* 처리완료 10회시도  */
+			    FROM PLT_PHN_CAMP_CUS_DST   T1
+					  INNER JOIN  PLT_PHN_CAMP       T2     ON    T1.CAM_ID      =       T2.CAM_ID				          
+					  LEFT OUTER JOIN  PLT_USER  	 T3    ON   T1.CSLT_ID    =       T3.USER_ID			             
+				      LEFT OUTER JOIN  PLT_ORGZ    T4    ON   T3.DEPT_CD    =       T4.DEPT_CD
+				WHERE T2.USE_YN = 'Y'						  
+					 -- AND T2.CENT_TY  	   =    'G'     -- 현재 공제만 사용
+						AND T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}	-- 회사 구분명
+							  							  
+					<if test="DATE_FROM != null and DATE_FROM != ''">
+					    AND T1.CHNG_DTIM  BETWEEN  CONCAT( #{DATE_FROM} , '000000' ) AND CONCAT( #{DATE_TO} , '235959' )  -- AS-IS 기준 변경일 기준으로 고객 요청. 2020.07.01. 아웃바운드는 변동성 큰업무로서 변경일이 기준으로 되야한다고 함.
+					</if>
+					               
+					<if test="CAM_ID != null and CAM_ID != ''">
+                        AND T1.CAM_ID                       =      #{CAM_ID} 
+					</if>
+					<if test="USER_ATTR_A !=''">AND T3.USER_ATTR_A = #{USER_ATTR_A}</if>
+					<if test="USER_ATTR_B !=''">AND T3.USER_ATTR_B = #{USER_ATTR_B}</if>
+					<if test="USER_ATTR_C !=''">AND T3.USER_ATTR_C = #{USER_ATTR_C}</if>
+					<if test="USER_ATTR_D !=''">AND T3.USER_ATTR_D = #{USER_ATTR_D}</if>
+						    
+ 			            GROUP BY T2.CAM_NM, T1.CAM_ID, T1.DSTR_DATE
+				)
+				ORDER BY CAM_NM, DSTR_DATE
+		
+	</select>
+		
+</mapper>

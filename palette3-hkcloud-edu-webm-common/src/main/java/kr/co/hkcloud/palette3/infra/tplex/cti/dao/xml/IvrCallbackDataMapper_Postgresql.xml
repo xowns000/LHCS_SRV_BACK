@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloude.palette3.infra.tplex.cti.dao.IvrCallbackDataMapper">
+
+	<!-- 콜백저장  -->
+	<insert id="callbackRegistProcess"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_PHN_CLBK
+	(
+	  CUSTCO_ID					/*회사명*/
+	  , CLBK_ID					/*콜백번호*/
+	  , REG_DT					/* 등록일자*/
+	  , RGTR_ID					/* 등록자 */
+	  , DRWI_DT					/* 인입일자 */
+	  , DRWI_SE_NM				/* 인입구분코드 */
+	  , CLBK_PHN_NO				/* 콜백번호 */
+	  , ALTMNT_YN				/* 배정여부 */
+	  , ALTMNT_DT				/* 배정일자 */
+	  , CUST_ID 				/* 고객 ID */
+	 )
+	VALUES 
+	(
+	  #{CUSTCO_ID}::INTEGER
+	  , #{CLBK_ID}::INTEGER
+      , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+      , #{RGTR_ID}::INTEGER
+      , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+      , #{DRWI_SE_NM}
+      , #{CLBK_PHN_NO}
+      , 'N'
+	  ,''
+	  , #{CUST_ID}::INTEGER
+	)
+	</insert>
+	
+	<select id="getCustcoId"  resultType= "java.util.HashMap" >
+	SELECT CUSTCO_ID
+	FROM   PLT_CUSTCO
+	WHERE  ASP_CUST_KEY = #{ASP_CUST_KEY}
+	</select>
+
+	<select id="getSchemaId"  resultType= "java.util.HashMap" >
+	SELECT SCHEMA_ID
+	FROM   CUSTCO.PLT_CERT_CUSTCO
+	WHERE  ASP_CUST_KEY = #{ASP_CUST_KEY}
+	</select>
+	
+	<insert id="custRegPrcs"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CUST
+	(
+	  CUST_ID
+	  , CUST_NM
+	  , CUSTCO_ID
+	  , CUST_PHN_NO
+	  , REG_DT
+	  , RGTR_ID
+	 )
+	VALUES 
+	(
+	  #{CUST_ID}::INTEGER
+	  , #{CUST_NM}
+	  , #{CUSTCO_ID}::INTEGER
+	  , #{CUST_PHN_NO}
+      , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+      , #{RGTR_ID}::INTEGER
+	)
+	</insert>
+
+	<insert id="clbkCustExpsnAttrReg" parameterType="java.util.HashMap">
+		INSERT  /* 콜백등록 - 고객테이블에 존재하지 않는 고객, 고객확장속성에 고객상태 정상 강제 등록 */
+		INTO PLT_CUST_DTL_EXPSN (
+								  CUST_ID
+								, ATTR_ID
+								, ATTR_VL
+		) VALUES (
+				   #{CUST_ID}::INTEGER
+				 , (SELECT PEA.ATTR_ID
+					FROM PLT_EXPSN_ATTR PEA
+					WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+					   AND SE = 'CUSTOM'
+					   AND LNKG_ATTR_ID IS NOT NULL
+					   AND EXPSN_ATTR_COL_ID = 'CUST_STAT')
+			   , 'NOML')
+	</insert>
+	
+	<select id="custInfoProcess"  resultType= "java.util.HashMap" >
+	SELECT CUST_ID
+	FROM   PLT_CUST
+	WHERE  CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	AND    CUST_PHN_NO = #{CLBK_PHN_NO}
+	</select>
+
+
+	
+	
+	
+	<select id="callInfoProgress"  resultType= "java.util.HashMap" >
+	SELECT CUSTCO_ID
+	FROM   PLT_ASP_QUEUE
+	WHERE  QUEUE_NUM = #{QUEUE}
+	
+	</select>
+	
+	<select id="selectSendNum"  resultType= "java.util.HashMap" >
+	SELECT PHN_NO
+	FROM   PLT_ASP_CUS
+	WHERE  CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	
+	</select>
+	
+	<insert id="callbackAutoRegistProcess"  parameterType= "java.util.HashMap">
+	<![CDATA[
+INSERT INTO PLT_PHN_CLBK_ALTMNT
+				     (			
+				     CLBK_ID												/* 콜백 ID */	
+				     , CUSL_ID												/* 상담사 ID */			
+				     , REG_DT												/* 등록 일자 */
+				     , RGTR_ID												/* 등록자 ID */
+				     )
+			    VALUES
+			         (
+			         #{CLBK_ID}
+			         , (SELECT A.USER_ID 
+						FROM (SELECT  (row_number() over(ORDER BY USER_ID)) AS RN, USER_ID
+							  FROM (SELECT PU.USER_ID 
+										FROM PLT_USER PU
+										LEFT OUTER JOIN PLT_USER_OGNZ PUO
+										ON PU.USER_ID = PUO.USER_ID
+										AND PUO.USE_YN = 'Y'
+										AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+										WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+										AND PU.USE_YN ='Y'
+										AND PU.CLBK_YN = 'Y'
+									) as USER_CNT
+							  ) A
+								,(SELECT MOD(B.CB_MB_COUNT, C.CB_COUNT)+1 AS RESULT_COUNT
+									FROM
+										(SELECT count(*) AS CB_MB_COUNT
+										FROM PLT_PHN_CLBK
+										WHERE CUSTCO_ID  = #{CUSTCO_ID}::INTEGER AND DRWI_DT LIKE '%'|| TO_CHAR(NOW(),'YYYYMMDD') ||'%'
+										) B,
+											(SELECT count(*) AS CB_COUNT
+											FROM PLT_USER PU
+											LEFT OUTER JOIN PLT_USER_OGNZ PUO
+											ON PU.USER_ID = PUO.USER_ID
+											AND PUO.USE_YN = 'Y'
+											AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+											WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+											AND PU.USE_YN ='Y'
+											AND PU.CLBK_YN = 'Y'
+											) C
+								) D WHERE A.RN = D.RESULT_COUNT)
+				     , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	
+				     , #{RGTR_ID}
+				     )
+					]]>					     
+	</insert>
+	<update id="callbackAutoUpdateProcess"  parameterType= "java.util.HashMap" >
+	UPDATE PLT_PHN_CLBK
+	SET   ALTMNT_YN = 'Y'
+		 ,ALTMNT_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 , MDFR_ID = #{SYSTEM_ID}::INTEGER
+	WHERE  CLBK_ID = #{CLBK_ID}::INTEGER
+	AND    CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	
+	</update>
+
+	<select id="callbackYNCheck"  resultType= "java.util.HashMap" >
+	SELECT PU.USER_ID 
+		FROM PLT_USER PU
+		LEFT OUTER JOIN PLT_USER_OGNZ PUO
+		ON PU.USER_ID = PUO.USER_ID AND PUO.USE_YN = 'Y'
+		WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PU.CLBK_YN = 'Y'
+	</select>
+
+
+	<select id="getCallbackCustKey"  resultType= "java.util.HashMap" >
+	SELECT ETC_INFO01
+	FROM   PLT_COMN_CD
+	WHERE  CD = #{DID}
+	AND GROUP_CD = 'CUS001'
+	
+	</select>
+		
+		
+</mapper>

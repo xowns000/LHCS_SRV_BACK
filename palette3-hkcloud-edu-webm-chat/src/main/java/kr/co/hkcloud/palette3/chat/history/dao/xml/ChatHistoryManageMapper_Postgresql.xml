@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.history.dao.ChatHistoryManageMapper">
+
+<!--  CLOB SELECT -->
+<resultMap id="mapselectRtnPageConsHistClob" type="java.util.HashMap" >
+	<result property="ROW_NUMBER"				column="ROW_NUMBER"		  			jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_USER_KEY"			column="TALK_USER_KEY"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_CONTACT_ID"			column="TALK_CONTACT_ID"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="USER_ID"      			column="USER_ID"      		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="USER_NM"      			column="USER_NM"      		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="EXEC_RST_CD"          	column="EXEC_RST_CD"             	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="EXEC_RST_NM"          	column="EXEC_RST_NM"          	  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CNSL_RST_CD"         		column="CNSL_RST_CD"         	  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CNSL_RST_NM"        		column="CNSL_RST_NM"        	  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_NM"       		column="CUSTOMER_NM"       	  		jdbcType="VARCHAR" 	javaType="java.lang.String" typeHandler="ContentCipherTypeHandler"/>
+	<result property="CUSTOMER_ID"          	column="CUSTOMER_ID"             	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_PHONE_NO"		column="CUSTOMER_PHONE_NO"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_DIST_DT"				column="TALK_DIST_DT"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="GENDER_CD"				column="GENDER_CD"		  			jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_STAT_CD"			column="CUSTOMER_STAT_CD"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_STAT_NM"			column="CUSTOMER_STAT_NM"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CST_TYP_CD"				column="CST_TYP_CD"		  			jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CNSL_TYP_CD"				column="CNSL_TYP_CD"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CNSL_TYP_NM"				column="CNSL_TYP_NM"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_INQRY_NM"			column="TALK_INQRY_NM"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="QUESTION_TYPE_CD1"		column="QUESTION_TYPE_CD1"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="QUESTION_TYPE_CD2"		column="QUESTION_TYPE_CD2"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="QUESTION_TYPE_CD3"		column="QUESTION_TYPE_CD3"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="OWN_CHECK_YN"				column="OWN_CHECK_YN"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CALL_TYP_CD"				column="CALL_TYP_CD"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_QST"			 		column="TALK_QST"		  			jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_ANS"             	column="TALK_ANS"                	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CONS_DEPT_NM"         	column="CONS_DEPT_NM"            	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CONS_NM"              	column="CONS_NM"                 	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_START_DT"        	column="TALK_START_DT"           	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_END_DT"          	column="TALK_END_DT"             	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="READY_TIME" 				column="READY_TIME" 		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CNSL_TIME"  				column="CNSL_TIME"  		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TOT_TIME"   				column="TOT_TIME"   		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_TITLE" 				column="TALK_TITLE" 		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_STAT_CD"				column="TALK_STAT_CD"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_STAT_NM"				column="TALK_STAT_NM"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_BIRTH"       	column="CUSTOMER_BIRTH"          	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="EML"                	column="EML"                   	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_MEMO"        	column="CUSTOMER_MEMO"           	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="ATENT_CUSTOMER"       	column="ATENT_CUSTOMER"          	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="MEMBER_YN"				column="MEMBER_YN"		  			jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_SEQ"			 	column="CUSTOMER_SEQ"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="ORDER_NUMBER"			 	column="ORDER_NUMBER"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CHANNEL_NM"   		 	column="CHANNEL_NM"   		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_TYPE"		 	column="CUSTOMER_TYPE"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_GENDER"		 	column="CUSTOMER_GENDER"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_REGION"		 	column="CUSTOMER_REGION"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_AGE"			 	column="CUSTOMER_AGE"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_CAREER_STATUS"	column="CUSTOMER_CAREER_STATUS"  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_EDU"			 	column="CUSTOMER_EDU"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_EDU_LEV"		 	column="CUSTOMER_EDU_LEV"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_JOIN_POLICY_YN"	column="CUSTOMER_JOIN_POLICY_YN" 	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CHAT_CONTENT"	 		 	column="CHAT_CONTENT"   	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+</resultMap>                              
+
+    
+    
+<select id="selectRtnPageCnslMgmtByKaom_new" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT
+	ROW_TBL.*
+FROM (
+SELECT 
+	ROW_NUMBER() OVER(ORDER BY TALK_DIST_DT) AS ROW_NUMBER 
+	 , CC.USER_ID
+     , B01.USER_NM
+     , B01.USER_NICK
+     , '11' AS CNSL_SUPPORT
+     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TALK001' AND CD = CC.TALK_STAT_CD AND CD_TYPE = '1') AS TALK_STAT_NM
+     , CASE WHEN CC.BOT_SERVICE_NM IS NOT NULL 
+             AND CC.BOT_SERVICE_NM != ''
+            THEN CC.BOT_SERVICE_NM
+            ELSE (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = CC.TALK_INQRY_CD)
+        END            AS TALK_INQRY_NM_1
+     , CC.BOT_INQRY_NM AS TALK_INQRY_NM_2
+
+     , TO_CHAR(TO_DATE(CC.TALK_DIST_DT, 'YYYYMMDDHH24MISS' ), 'YYYY/MM/DD HH24:MI:SS') AS TALK_DIST_DT
+	 , TO_CHAR(TO_DATE(CC.TALK_START_DT, 'YYYYMMDDHH24MISS' ), 'YYYY/MM/DD HH24:MI:SS') AS TALK_START_DT
+              
+     , CASE WHEN CC.TALK_DIST_DT IS NULL 
+              OR CC.TALK_START_DT IS NULL 
+            THEN NULL 
+            ELSE 
+			     TRUNC((to_date(TALK_START_DT,'yyyymmddhh24miss')-to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24) || ':' ||
+	             TRUNC(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24,1)*60) || ':' ||
+	             TRUNC(round(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24*60,1)*60))
+        END AS WAIT_TIME
+     
+     /*hidden data column*/
+     , CC.TALK_CONTACT_ID
+     , CC.TALK_STAT_CD
+     , CC.SNDR_KEY
+     , CC.CD_NM																	AS SNDR_KEY_NM
+     , CC.TALK_USER_KEY
+     , COALESCE(CC.CUSTOMER_ID, CC.TALK_USER_KEY) AS CUSTOMER_ID
+     , CUS.CUSTOMER_NM AS CUSTOMER_NM		
+     , CASE WHEN CUS.TID = '' OR CUS.TID IS NULL THEN '비회원' ELSE '회원' END		AS CUSTOMER_MEMBER
+     , CUS.REFERENCE_CUSTOMER_KEY 												AS REFERENCE_CUSTOMER_KEY
+     , CUS.TID 		   															AS TID
+     , (CASE WHEN CUS.TID = '' OR CUS.TID IS NULL THEN ('비회원_-_-') ELSE ('회원_'|| CUS.REFERENCE_CUSTOMER_KEY || '_' || CUS.TID) END) AS CUSTOMER_NM2
+  	 , CC.CALL_TYP_CD
+  FROM (
+        SELECT  PG.TALK_CONTACT_ID
+             , PG.TALK_STAT_CD
+             , PG.TALK_DIST_DT
+             , PG.TALK_START_DT
+             , PG.USER_ID
+             , PG.SNDR_KEY
+             , PG.CD_NM
+             , PG.TALK_USER_KEY
+             , PG.CUSTOMER_ID
+             , PG.TALK_INQRY_CD
+             , PG.BOT_SERVICE_NM
+             , PG.BOT_INQRY_NM
+             , PG.CALL_TYP_CD
+          FROM (
+                SELECT CT.TALK_CONTACT_ID
+                     , CT.TALK_STAT_CD
+                     , CT.TALK_DIST_DT
+                     , CT.TALK_START_DT
+                     , CT.USER_ID
+                     , CT.SNDR_KEY
+                     , T4.DSPTCH_PRF_NM AS CD_NM
+                     , CT.TALK_USER_KEY
+                     , CT.CUSTOMER_ID
+                     , CT.TALK_INQRY_CD
+                     , CT.BOT_SERVICE_NM
+                     , CT.BOT_INQRY_NM
+                     , CT.CALL_TYP_CD
+                  FROM PLT_CHT_CUTT CT
+                  LEFT JOIN PLT_ASP_CUS_CHN T4
+					ON CT.SNDR_KEY = T4.SNDR_KEY
+                 WHERE CT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                   AND CT.TALK_DIST_DT >= #{TALK_DIST_DT_START}
+                   AND CT.TALK_STAT_CD = '12'
+        		<if test="USER_ID != '' or USER_ATTR_A != '' or USER_ATTR_B != '' or USER_ATTR_C != '' or USER_ATTR_D != ''">
+                   AND EXISTS (SELECT 1 
+                                 FROM PLT_USER 
+                                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                                  AND USER_ID = CT.USER_ID
+        						<if test="USER_ID !=''">AND USER_ID = #{USER_ID}</if>
+        						<if test="USER_ATTR_A !=''">AND USER_ATTR_A = #{USER_ATTR_A}</if>
+        						<if test="USER_ATTR_B !=''">AND USER_ATTR_B = #{USER_ATTR_B}</if>
+        						<if test="USER_ATTR_C !=''">AND USER_ATTR_C = #{USER_ATTR_C}</if>
+        						<if test="USER_ATTR_D !=''">AND USER_ATTR_D = #{USER_ATTR_D}</if>
+                               )
+        		</if>
+                 ORDER BY CT.TALK_DIST_DT DESC
+            ) PG
+        ) CC
+ JOIN PLT_USER B01
+   ON CC.USER_ID = B01.USER_ID
+ LEFT OUTER JOIN PLT_CUS CUS
+   ON CC.TALK_USER_KEY = CUS.TALK_USER_KEY
+   ORDER BY TALK_DIST_DT
+ ) ROW_TBL
+
+</select>
+    
+    
+<!-- ######################################################################### -->
+<!-- 상담이력 데이터 페이징 조회 -->
+<!-- 2018. 11. 09 kmg 페이징 처리 시 전체 데이터를 2번씩 읽는 현상이 있어 쿼리 수정 -->
+<!-- 20190910 hyg :: 
+	1. 고객대기시간 기준 변경(TALK_READ_DT -> TALK_DIST_DT).... 이후 기준시간 수정 필요
+	2. 상담종료일시 빈문자열 '' 처리 -->
+<!--
+<select id="selectRtnPageConsHist"  parameterType= "java.util.HashMap" resultMap= "mapselectRtnPageConsHistClob">
+-->
+<select id="selectRtnPageConsHist"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+
+	SELECT			/* selectRtnPageConsHist - 채팅상담이력 조회 */
+		ROW_TBL.*
+	FROM(
+		SELECT ROW_NUMBER() OVER(ORDER BY PCC.ALTMNT_RDY_REG_DT DESC) AS ROW_NUMBER
+			, PCC.CHT_CUTT_ID
+			, PCC.CUSTCO_ID
+			, PCC.CUST_ID
+			, (SELECT CHT_USER_KEY
+				FROM PLT_CHT_CUST
+				WHERE CUST_ID = PCC.CUST_ID
+					AND SNDR_KEY = PCC.SNDR_KEY)		AS CHT_USER_KEY
+			, (SELECT CUST_NM
+				FROM PLT_CUST
+				WHERE CUST_ID = PCC.CUST_ID)		AS CUST_NM
+			, PCC.SNDR_KEY
+			, (SELECT DSPTCH_PRF_NM
+				FROM PLT_CUSTCO_CHN
+				WHERE SNDR_KEY = PCC.SNDR_KEY)		AS SNDR_NM
+			, PCC.CUSL_ID
+			, (SELECT USER_NM
+				FROM PLT_USER
+				WHERE USER_ID = PCC.CUSL_ID)		AS CUSL_NM
+			, PCC.CUTT_BGNG_DT
+			, PCC.CUTT_END_DT
+			, PCC.CHN_CLSF_CD
+			, (SELECT CD_NM
+				FROM PLT_COMM_CD
+				WHERE CUSTCO_ID = PCC.CUSTCO_ID AND GROUP_CD_ID = 'CHNL_CL'
+					AND CD_ID = PCC.CHN_CLSF_CD)	AS CHN_CLSF_NM
+			, PCC.CUTT_TYPE_ID
+			, CUTT.FULL_PATH 						AS CUTT_TYPE
+			, PCC.CUTT_TTL
+			, PCC.CUTT_CN
+			, PCC.PRCS_RSLT_CD
+			, PCC.CUTT_STTS_CD
+			, (SELECT CD_NM
+				FROM PLT_COMM_CD
+				WHERE CUSTCO_ID = PCC.CUSTCO_ID AND GROUP_CD_ID = 'CUSL_STAT'
+					AND CD_ID = PCC.CUTT_STTS_CD)	AS CUTT_STTS_NM
+			, PCC.ALTMNT_RDY_REG_DT
+			, PCC.CUTT_RDY_REG_DT
+			, PCC.CUTT_HSTRY_REG_DT
+			, PCC.QSTN_TYPE_ID
+			, PCC.FORC_REG_YN
+		FROM PLT_CHT_CUTT PCC
+		LEFT OUTER JOIN (
+			WITH RECURSIVE CUTT_TREE AS (
+				SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID,  CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PLT_CUTT_TYPE.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END  AS CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_EXPLN, CUTT_TYPE_LVL, USE_YN, SORT_ORD, 1 AS LVL, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE
+				WHERE UP_CUTT_TYPE_ID IS NULL
+				AND DEL_YN = 'N'
+				AND USE_YN = 'Y'
+				AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+				UNION ALL
+				SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_NM, B.CUTT_TYPE_EXPLN, B.CUTT_TYPE_LVL, B.USE_YN, B.SORT_ORD, C.LVL + 1 AS LVL, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(C.FULL_PATH || ' > ' || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE B
+				INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+				WHERE B.DEL_YN = 'N'
+				AND B.USE_YN = 'Y'
+				AND B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+				AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			)
+			SELECT
+				CT.CUSTCO_ID
+				, CT.CUTT_TYPE_ID
+				, CT.UP_CUTT_TYPE_ID
+				, (SELECT CUTT_TYPE_NM FROM PLT_CUTT_TYPE WHERE CUTT_TYPE_ID = CT.UP_CUTT_TYPE_ID) AS UP_CUTT_TYPE_NM
+				, ROW_NUMBER() OVER(PARTITION BY CT.UP_CUTT_TYPE_ID ORDER BY CT.SORT_ORD) AS RE_SORT_ORD
+				, CT.FULL_PATH
+			FROM CUTT_TREE CT
+			LEFT OUTER JOIN PLT_COMM_CD PCC ON PCC.CUSTCO_ID = CT.CUSTCO_ID AND PCC.CD_ID = CT.CUTT_TYPE_SE_CD AND PCC.GROUP_CD_ID = 'CUSL_TP_CL'
+			WHERE CT.CUTT_TYPE_LVL <![CDATA[<=]]> (SELECT CUTT_TYPE_LMT_LVL_CD::INTEGER + 1 FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = CT.CUSTCO_ID)
+			ORDER BY CT.SORT
+		) CUTT ON CUTT.CUTT_TYPE_ID = PCC.CUTT_TYPE_ID
+		WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INT
+	<if test='SCH_MENU !="" and SCH_MENU != null and "MyHistory".equals(SCH_MENU)'>
+		AND PCC.CUSL_ID = #{USER_ID}::INTEGER
+	</if>
+			<if test="SRCH_TY == 'ALTMNT_RDY_REG_DT'"> AND ALTMNT_RDY_REG_DT <![CDATA[>=]]> #{ST_DT} AND ALTMNT_RDY_REG_DT <![CDATA[<=]]> #{END_DT} </if>
+			<if test="SRCH_TY == 'CUTT_BGNG_DT'"> AND CUTT_BGNG_DT <![CDATA[>=]]> #{ST_DT} AND CUTT_BGNG_DT <![CDATA[<=]]> #{END_DT} </if>
+			<if test="SRCH_TY == 'CUTT_END_DT'"> AND CUTT_END_DT <![CDATA[>=]]> #{ST_DT} AND CUTT_END_DT <![CDATA[<=]]> #{END_DT} </if>
+			
+			<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+				AND PCC.CHN_CLSF_CD = #{CHN_CLSF_CD}
+			</if>
+			<if test="CUTT_STTS_CD != '' and CUTT_STTS_CD != null and CUTT_STTS_CD != undefined">
+				AND PCC.CUTT_STTS_CD = #{CUTT_STTS_CD}
+			</if>
+			<if test="SNDR_KEY != '' and SNDR_KEY != null and SNDR_KEY != undefined">
+				AND PCC.SNDR_KEY = #{SNDR_KEY}::INTEGER
+			</if>
+			<if test="USER_SRCH != '' and USER_SRCH != null and USER_SRCH != undefined">
+				<choose>
+					<when test="USER_SRCH_TY == 'CUST_NM'">
+						AND PCC.CUST_ID IN (SELECT CUST_ID FROM PLT_CUST WHERE CUST_NM LIKE CONCAT(CONCAT('%', #{USER_SRCH}),'%'))
+					</when>
+					<when test="USER_SRCH_TY == 'CUST_ID'">
+						AND PCC.CUST_ID = #{USER_SRCH}::INTEGER
+					</when>
+					<when test="USER_SRCH_TY == 'CUST_PHN_NO'">
+						AND PCC.CUST_ID IN (SELECT CUST_ID FROM PLT_CUST WHERE CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{USER_SRCH}),'%'))
+					</when>
+					<when test="USER_SRCH_TY == 'LGN_ID' or USER_SRCH_TY == 'USER_NM'">
+						AND PCC.CUSL_ID IN (SELECT USER_ID
+											FROM PLT_USER
+											WHERE 
+											<choose>
+												<when test="USER_SRCH_TY == 'LGN_ID'">
+													LGN_ID LIKE '%'||#{USER_SRCH}||'%'
+												</when>
+												<otherwise>
+													USER_NM LIKE '%'||#{USER_SRCH}||'%'
+												</otherwise>
+											</choose>
+											)
+					</when>
+				</choose>
+			</if>
+			<if test="CUTT_TYPE_ID != '' and CUTT_TYPE_ID != null and CUTT_TYPE_ID != undefined">
+				AND PCC.CUTT_TYPE_ID = #{CUTT_TYPE_ID}::INTEGER
+			</if>
+		ORDER BY PCC.ALTMNT_RDY_REG_DT DESC
+	) ROW_TBL
+
+</select>
+
+<!--  CLOB SELECT -->
+<resultMap id="mapselectRtnContent" type="java.util.HashMap" >
+        <result property="TARGET"         column="TARGET" jdbcType="VARCHAR"         javaType="java.lang.String"											  />
+        <result property="CONTENT"        column="CONTENT" jdbcType="CLOB"        javaType="java.lang.String" 		typeHandler="ContentCipherTypeHandler"/>
+</resultMap>                              
+
+    
+<!-- ######################################################################### -->
+<!-- 2019. 08. 09 암복호화 채팅내용 조회 -->
+<select id="selectRtnContent"  parameterType= "java.util.HashMap" resultMap="mapselectRtnContent">
+        SELECT ( CASE WHEN SNDRCV_CD='RCV' THEN '고객 : ' 
+											WHEN SNDRCV_CD='SND' THEN '상담사 : ' END ) AS TARGET
+                        , CONTENT
+          FROM PLT_CHT_CUTT_DTL
+         WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+           AND TALK_CONTACT_ID=#{TALK_CONTACT_ID}
+           AND TYPE NOT IN ('reference', 'SKIPON', 'SKIPOFF')
+                                                                               
+</select>
+
+<!-- 상담이력 데이터 조회(데이터 중복 건 조회용) -->
+<select id="selectRtnConsHist"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT A.TALK_USER_KEY	AS TALK_USER_KEY     /* 상담톡키 */
+  FROM PLT_CHT_CUTT A
+ WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND A.TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+
+</select>
+
+<!-- 상담이력 신규등록 -->
+<insert id="insertRtnTwbTalkContact" parameterType= "java.util.HashMap">
+
+INSERT INTO PLT_CHT_CUTT 
+       ( TALK_CONTACT_ID    /* 상담이력ID */
+       , CUSTCO_ID
+       , TALK_USER_KEY      /* 카카오고객KEY */
+       , CUSTOMER_ID        /* 고객ID */
+       , TALK_START_DT      /* 상담시작일시 */
+       , TALK_END_DT        /* 상담종료일시 */
+       , TALK_SESSION_CD    /* 상담세션종료구분 */
+       , CALL_TYP_CD        /* 접수채널코드 */
+       , CNSL_TYP_CD        /* 상담유형코드 */
+       , TALK_QST           /* 상담질문 */
+       , TALK_ANS           /* 상담답변 */
+       , OWN_CHECK_YN       /* 본인확인여부 */
+       , EXEC_RST_CD        /* 처리결과코드 */
+       , CNSL_RST_CD        /* 상담완료코드 */
+       , CST_TYP_CD         /* 고객성향코드 */
+       , REGR_DEPT_CD       /* 등록자부서코드 */
+       , REGR_ID            /* 등록자ID */
+       , REG_DTTM           /* 등록일시 */
+       , AMDR_DEPT_CD       /* 수정자부서코드 */
+       , AMDR_ID            /* 수정자ID */
+       , UPD_DTTM           /* 수정일시 */
+       , PROC_ID            /* 처리자 */
+       , IT_PROCESSING      /* 전산처리일시 */
+) VALUES 
+       ( #{TALK_CONTACT_ID}
+       , NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{TALK_USER_KEY}   
+       , #{CUSTOMER_ID}     
+       , #{TALK_START_DT}   
+       , #{TALK_END_DT}     
+       , #{TALK_SESSION_CD} 
+       , #{CALL_TYP_CD}     
+       , #{CNSL_TYP_CD}     
+       , #{TALK_QST}        
+       , #{TALK_ANS}        
+       , #{OWN_CHECK_YN}    
+       , #{EXEC_RST_CD}     
+       , #{CNSL_RST_CD}
+       , #{CST_TYP_CD}      
+       , #{REGR_DEPT_CD}    
+       , #{REGR_ID}         
+       , SYSTIMESTAMP        
+       , #{AMDR_DEPT_CD}    
+       , #{AMDR_ID}         
+       , SYSTIMESTAMP        
+       , #{PROC_ID}         
+       , SYSTIMESTAMP   
+)
+
+</insert>
+
+<!-- 상담이력 수정 -->
+<update id="updateRtnTwbTalkContact" parameterType="java.util.HashMap">
+
+UPDATE PLT_CHT_CUTT 
+   SET AMDR_ID 			= #{AMDR_ID}							/* 수정자 */
+     , UPD_DTTM 		= NOW()								/* 수정일시 */
+     , EXEC_RST_CD 		= #{EXEC_RST_CD}						/* 상담결과 */
+	 , CNSL_TYP_CD      = #{CNSL_TYP_CD}						/* 상담유형1 */
+	 , CNSL_TYP_CD_2    = #{CNSL_TYP_CD_2}						/* 상담유형2 */
+	 , CNSL_TYP_CD_3    = #{CNSL_TYP_CD_3}						/* 상담유형3 */
+	 , CNSL_TYP_CD_4    = #{CNSL_TYP_CD_4}						/* 상담유형4 */
+	 , TALK_ANS      	= #{TALK_ANS}							/* 상담제목 */
+	 , TALK_QST      	= #{TALK_QST}							/* 상담내용 */
+ WHERE SNDR_KEY = #{SNDR_KEY}
+   AND TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+
+</update>
+
+<!-- 고객상담이력 삭제 -->
+<delete id="deleteRtnTwbTalkContact" parameterType="java.util.HashMap">
+
+DELETE FROM PLT_CHT_CUTT
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND TALK_CONTACT_ID IN 
+
+<if test="TALK_CONTACT_ID != null and TALK_CONTACT_ID">
+    <foreach collection="TALK_CONTACT_ID" item="userKey" open="(" separator="," close=")" >
+        #{userKey}
+    </foreach>
+</if>
+
+</delete>
+
+<!-- 고객상담이력상세 삭제 -->
+<delete id="deleteRtnTwbTalkContactDetail" parameterType="java.util.HashMap">
+
+DELETE FROM PLT_CHT_CUTT_DTL
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND TALK_CONTACT_ID IN 
+
+<if test="TALK_CONTACT_ID != null and TALK_CONTACT_ID">
+    <foreach collection="TALK_CONTACT_ID" item="userKey" open="(" separator="," close=")" >
+        #{userKey}
+    </foreach>
+</if>
+
+</delete>
+
+<!-- 저장 권한체크  -->
+<select id="selectAuthProcess" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+<![CDATA[
+
+SELECT CASE WHEN TB05.ATRT_GROUP_ID = '20151106173043466TWB14896' AND TTC.TALK_CONTACT_ID IS NULL  --상담사
+              THEN 'false'
+            ELSE 'true'
+        END AS IS_AUTH
+  FROM PLT_AUTH TB05
+ INNER JOIN PLT_USER_AUTH TB07
+    ON TB05.ATRT_GROUP_ID = TB07.ATRT_GROUP_ID
+  LEFT OUTER JOIN PLT_CHT_CUTT TTC
+    ON TTC.USER_ID = TB07.USER_ID
+   AND TTC.TALK_DIST_DT >= TO_CHAR(NOW(), 'YYYYMMDD') || '000000'
+   AND TTC.TALK_DIST_DT < TO_CHAR(NOW()+1, 'YYYYMMDD') || '000000'
+   AND TTC.TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+ WHERE TB07.USER_ID = #{PROC_ID}
+ 
+]]>
+ 
+</select>
+</mapper>

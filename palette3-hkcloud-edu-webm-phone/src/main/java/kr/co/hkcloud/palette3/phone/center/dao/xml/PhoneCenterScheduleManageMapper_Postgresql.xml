@@ -1,0 +1,458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.center.dao.PhoneCenterScheduleManageMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="RESV_TEL_NO" column="RESV_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+	<!-- 예약 콜백 현황 조회 -->
+	<select id="selectSchedulMngList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectSchedulMngList 예약 콜백 현황 조회 */
+		<![CDATA[
+			 SELECT 
+	            DEPT.HIGH_DEPT_CD
+	            ,DEPT.HIGH_DEPT_NM
+	 /*			,DEPT.PARENT_DEPT_CD
+	            ,DEPT.PARENT_DEPT_NM  */
+	            ,DEPT.DEPT_CD
+	            ,DEPT.DEPT_NM
+	            /*
+	            ,SCHE.RESV_DATE
+	            ,SCHE.RESV_TY_CODE
+	            ,SCHE.PROC_STAT_CODE
+	            ,CASE WHEN SCHE.PROC_STAT_CODE = 'NOPROC' THEN '미처리'
+	                WHEN SCHE.PROC_STAT_CODE = 'PROC' THEN '처리완료'
+	                WHEN SCHE.PROC_STAT_CODE = 'PROCING' THEN '처리중'
+	             END AS PROC_STAT_NM
+	             */
+	            , SUM(1) AS TOTAL_CNT
+	            , SUM(CASE WHEN SCHE.PROC_STAT_CODE = 'PROCING'	THEN 1 ELSE 0 END) AS PROC_ING_CNT /* 처리중 */
+	            , SUM(CASE WHEN SCHE.PROC_STAT_CODE = 'PROC'		THEN 1 ELSE 0 END) AS PROC_CNT /* 처리완료 */
+	            , SUM(CASE WHEN SCHE.PROC_STAT_CODE = 'NOPROC'		THEN 1 ELSE 0 END) AS NOPROC_CNT  /* 미처리 */
+	     ]]>  	
+	        <if test='GRP_CODE eq "CUST_DIV"'>
+				,DEPT.USER_ID
+		        ,DEPT.USER_NM	
+			</if>
+	     <![CDATA[       
+	        	
+	        FROM PLT_PHN_RESVE_SCHDUL SCHE LEFT OUTER JOIN
+	        (
+	            SELECT 
+	                T_USER.USER_ID
+	                ,T_USER.USER_NM
+	                ,T_DEPT.HIGH_DEPT_CD
+	                ,T_DEPT.HIGH_DEPT_NM
+/*                  ,T_DEPT.PARENT_DEPT_CD
+	                ,T_DEPT.PARENT_DEPT_NM */
+	                ,T_DEPT.DEPT_CD
+	                ,T_DEPT.DEPT_NM
+	            FROM PLT_USER T_USER left outer join
+	            (
+	             SELECT 
+	                    D.HIGH_DEPT_CD      /*부서코드*/
+	                   ,D.HIGH_DEPT_NM      /*부서명*/
+	        /*          ,A.PARENT_DEPT_CD */   /*부서코드*/
+	          /*         ,C.PARENT_DEPT_NM   */ /*부서명*/ 
+	                   ,A.DEPT_CD           /*부서코드*/
+	                   ,A.DEPT_NM           /*부서명*/
+	            /*        ,A.TENANT_ID */
+	               FROM PLT_ORGZ A, ( select  C.DEPT_CD, C.DEPT_NM  AS PARENT_DEPT_NM
+	                                           from PLT_ORGZ C ) C 
+	                                       , (  SELECT DEPT_CD AS HIGH_DEPT_CD				/*부서코드*/
+	                                                ,DEPT_NM	AS HIGH_DEPT_NM			/*부서명*/
+	                                              FROM PLT_ORGZ
+	                                              WHERE USE_YN = 'N'
+	                                 /*              AND DEPT_DEPTH = '0' */
+	                                          ) D
+	         /*  WHERE C.DEPT_CD = A.PARENT_DEPT_CD */
+	                WHERE A.USE_YN = 'N'
+	              /*   AND A.DEPT_DEPTH = '2' */
+	            ) T_DEPT
+	            ON T_USER.DEPT_CD = T_DEPT.DEPT_CD
+	          /*  AND T_USER.TENANT_ID =  T_DEPT.TENANT_ID */
+	        ) DEPT
+	        ON SCHE.CJOB_CSLT_ID = DEPT.USER_ID
+			
+			WHERE SCHE.RESV_DATE >= REPLACE(#{START_DATE},'-','')
+			AND SCHE.RESV_DATE <= REPLACE(#{END_DATE},'-','')
+	    ]]>
+	    
+	    <if test="USER_ATTR_A != '' and USER_ATTR_A !=null"> AND DEPT.USER_ATTR_A = #{USER_ATTR_A} /* 사용자소속A */ </if>
+		<if test="USER_ATTR_B != '' and USER_ATTR_B !=null"> AND DEPT.USER_ATTR_B = #{USER_ATTR_B} /* 사용자소속B */ </if>
+		<if test="USER_ATTR_C != '' and USER_ATTR_C !=null"> AND DEPT.USER_ATTR_C = #{USER_ATTR_C} /* 사용자소속C */ </if>
+		<if test="USER_ATTR_D != '' and USER_ATTR_D !=null"> AND DEPT.USER_ATTR_D = #{USER_ATTR_D} /* 사용자소속D */ </if>
+	    
+	    <if test="RESV_TY_CODE !='' and RESV_TY_CODE !=null">
+			AND SCHE.RESV_TY_CODE = #{RESV_TY_CODE} 
+		</if>
+	    <if test="PROC_STAT_RDO !='' and PROC_STAT_RDO !=null">
+			AND SCHE.PROC_STAT_CODE = #{PROC_STAT_RDO} 
+		</if>
+	    <if test="CSLT_ID !='' and CSLT_ID !=null">
+			AND DEPT.USER_ID = #{CSLT_ID} 
+		</if>
+			GROUP BY  DEPT.HIGH_DEPT_CD, DEPT.HIGH_DEPT_NM,  DEPT.DEPT_CD, DEPT.DEPT_NM
+			<if test='GRP_CODE eq "CUST_DIV"'>
+				,DEPT.USER_ID, DEPT.USER_NM
+			</if>
+			ORDER BY  DEPT.DEPT_CD, DEPT.DEPT_NM
+			<if test='GRP_CODE eq "CUST_DIV"'>
+				,DEPT.USER_NM
+			</if>
+	</select>
+	
+	<!-- 예약 콜백 이력 조회 -->
+	<select id="selectSchedulHisList" parameterType="java.util.HashMap" resultMap="selectHashMap">
+		/* selectSchedulHisList 예약 콜백 이력 조회 */
+		<![CDATA[
+		SELECT 
+                 SCHE.RESV_SCHE_NO /* 콜백번호 */
+                , SCHE.INDI_CORP_TY      /* 개인법인구분 */
+                ,(SELECT CD_NM
+		          FROM PLT_COMN_CD B
+		          WHERE GROUP_CD = 'BNK094'
+		          AND SCHE.INDI_CORP_TY = B.CD) AS INDI_CORP_NM	/* 개인법인구분명 */
+                , SCHE.CUST_NO      /* 고객번호 */
+                , SCHE.CUST_NM		/* 고객명 */	
+                , SCHE.RESV_TEL_NO     /* 예약전화번호 */	
+                , SCHE.CJOB_CSLT_ID AS CJOB_CSLT_ID /*담당상담원*/
+                ,(SELECT USER_NM
+                  FROM PLT_USER K
+                 WHERE SCHE.CJOB_CSLT_ID = K.USER_ID) AS CJOB_CSLT_NM    /*담당상담원*/
+                ,SCHE.RESV_TY_CODE           /*예약유형코드*/
+                ,(SELECT CD_NM
+		          FROM PLT_COMN_CD B
+		          WHERE GROUP_CD = 'CRS010'
+		          AND SCHE.RESV_TY_CODE = B.CD) AS RESV_TY_NM	/* 예약유형명 */
+                , SUBSTR(SCHE.RESV_TIME,0,2) AS RESV_TIME_HH
+                , SUBSTR(SCHE.RESV_TIME,3,2) AS RESV_TIME_MM
+                , SUBSTR(SCHE.RESV_TIME,5,2) AS RESV_TIME_SS
+                , SCHE.RESV_TIME								/* 예약시간 */
+                , SUBSTR(SCHE.RESV_TIME,0,2) || ':' || SUBSTR(SCHE.RESV_TIME,3,2) AS RESV_TIME_NM
+                , SCHE.RESV_REM /* 비고  */
+                , SCHE.PROC_DTIM /* 처리일시 */
+                , SCHE.PROC_CSLT_ID AS PROC_CSLT_ID /*처리상담원*/
+                ,(SELECT USER_NM
+                  FROM PLT_USER K
+                 WHERE SCHE.PROC_CSLT_ID = K.USER_ID) AS PROC_CSLT_NM    /*처리상담원*/
+                , SCHE.LAST_TEL_RSLT_CODE /* 최종통화결과코드*/
+                ,(SELECT CD_NM
+		          FROM PLT_COMN_CD B
+		          WHERE GROUP_CD = 'CRS002'
+		          AND SCHE.LAST_TEL_RSLT_CODE = B.CD) AS LAST_TEL_RSLT_NM	/* 최종통화결과명 */
+                , SCHE.LAST_TEL_DATE           /* 최종통화일자 */
+			    , SCHE.LAST_TEL_TIME          /* 최종통화시간 */
+                , LAST_TEL_CSLT_ID              /* 최종_통화_사용자_ID */
+                ,(SELECT USER_NM
+                  FROM PLT_USER K
+                 WHERE SCHE.LAST_TEL_CSLT_ID = K.USER_ID) AS LAST_TEL_CSLT_NM    /* 최종_통화_사용자명 */
+                , SCHE.REG_DTIM
+                , SCHE.REG_MAN
+                ,(SELECT USER_NM
+                  FROM PLT_USER K
+                 WHERE SCHE.REG_MAN = K.USER_ID) AS REG_MAN_NM    /* 등록자명 */
+                , SCHE.LAST_CNSL_HIST_NO               /* 최종상담이력번호 */
+                , SCHE.CNSL_HIST_NO               	   /* 상담이력번호 */
+                , SCHE.CSLT_ALOC_DTIM                  /* 상담사할당일시 */
+                , SCHE.SERV_CODE                         /* 서비스 코드 */
+                ,(SELECT CD_NM
+		          FROM PLT_COMN_CD B
+		          WHERE GROUP_CD = 'CRS027'
+		          AND SCHE.SERV_CODE = B.CD) AS SERV_NM	/* 서비스명 */
+                ,DEPT.USER_ID
+	            ,DEPT.USER_NM
+	            ,DEPT.HIGH_DEPT_CD
+	            ,DEPT.HIGH_DEPT_NM
+	         /*  ,DEPT.PARENT_DEPT_CD*/
+	         /*   ,DEPT.PARENT_DEPT_NM*/
+	            ,DEPT.DEPT_CD
+	            ,DEPT.DEPT_NM
+	            ,SCHE.RESV_DATE							/* 예약일자 */
+	            ,SCHE.PROC_STAT_CODE					/* 처리상태 */
+	            ,(SELECT CD_NM
+		          FROM PLT_COMN_CD B
+		          WHERE GROUP_CD = 'CRS011'
+		          AND SCHE.PROC_STAT_CODE = B.CD) AS PROC_STAT_NM	/* 처리상태명 */
+	        FROM PLT_PHN_RESVE_SCHDUL SCHE LEFT OUTER JOIN
+	        (
+	            SELECT 
+	                T_USER.USER_ID
+	                ,T_USER.USER_NM
+	                ,T_DEPT.HIGH_DEPT_CD
+	                ,T_DEPT.HIGH_DEPT_NM
+	               -- ,T_DEPT.PARENT_DEPT_CD
+	               -- ,T_DEPT.PARENT_DEPT_NM
+	                ,T_DEPT.DEPT_CD
+	                ,T_DEPT.DEPT_NM
+	            FROM PLT_USER T_USER LEFT OUTER JOIN
+	            (
+	             SELECT 
+	                    D.HIGH_DEPT_CD      /*부서코드*/
+	                   ,D.HIGH_DEPT_NM      /*부서명*/
+	                 /*,A.PARENT_DEPT_CD */   /*부서코드*/
+	                  /* ,C.PARENT_DEPT_NM  */  /*부서명*/
+	                   ,A.DEPT_CD           /*부서코드*/
+	                   ,A.DEPT_NM           /*부서명*/
+	                /*  ,A.TENANT_ID*/
+	               FROM PLT_ORGZ A, ( select  C.DEPT_CD, C.DEPT_NM  AS PARENT_DEPT_NM
+	                                           from PLT_ORGZ C ) C 
+	                                       , (  SELECT DEPT_CD AS HIGH_DEPT_CD				/*부서코드*/
+	                                                ,DEPT_NM	AS HIGH_DEPT_NM			/*부서명*/
+	                                              FROM PLT_ORGZ
+	                                              WHERE USE_YN = '0'
+	                                        /*     AND DEPT_DEPTH = '0'*/
+	                                          ) D
+	             /*WHERE C.DEPT_CD = A.PARENT_DEPT_CD*/
+	                WHERE A.USE_YN = '0'
+	         /*   AND A.DEPT_DEPTH = '2'*/
+	            ) T_DEPT
+	            --ON T_USER.DEPT_CD = T_DEPT.DEPT_CD
+	         ON T_USER.DEPT_CD = T_DEPT.DEPT_CD
+	        ) DEPT
+	        ON SCHE.CJOB_CSLT_ID = DEPT.USER_ID
+	        WHERE SCHE.RESV_DATE >= REPLACE(#{START_DATE},'-','')
+			AND SCHE.RESV_DATE <= REPLACE(#{END_DATE},'-','')
+			]]>
+			
+	        <if test="DEPT_CD1 !='' and DEPT_CD1 !=null">
+				AND DEPT.HIGH_DEPT_CD = #{DEPT_CD1} 
+			</if>
+		    <if test="DEPT_CD2 !='' and DEPT_CD2 !=null">
+				AND DEPT.PARENT_DEPT_CD = #{DEPT_CD2} 
+			</if>
+		    <if test="DEPT_CD3 !='' and DEPT_CD3 !=null">
+				AND DEPT.DEPT_CD = #{DEPT_CD3} 
+			</if>
+		    <if test="RESV_TY_CODE !='' and RESV_TY_CODE !=null">
+				AND SCHE.RESV_TY_CODE = #{RESV_TY_CODE} 
+			</if>
+		    <if test="PROC_STAT_RDO !='' and PROC_STAT_RDO !=null">
+				AND SCHE.PROC_STAT_CODE = #{PROC_STAT_RDO} 
+			</if>
+		    <if test="CSLT_ID !='' and CSLT_ID !=null">
+				AND SCHE.CJOB_CSLT_ID = #{CSLT_ID} 
+			</if>
+		    <if test="RESV_SCHE_NO !='' and RESV_SCHE_NO  !=null">
+				AND SCHE.RESV_SCHE_NO = #{RESV_SCHE_NO} 
+			</if>
+				ORDER BY  (CASE WHEN SCHE.CHNG_DTIM IS NULL THEN SCHE.REG_DTIM
+				                  ELSE SCHE.CHNG_DTIM
+				           END ) DESC, SCHE.PROC_STAT_CODE
+		
+
+	</select>
+	
+	<!-- 상담원 부서 조회 -->
+	<select id="selectUserDeptSrch" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectUserDeptSrch 상담원 부서 조회 */
+		<![CDATA[  
+		  
+		  	SELECT 
+                T_USER.AGENT_ID
+                ,T_USER.AGENT_NM
+                ,T_DEPT.HIGH_DEPT_CD
+                ,T_DEPT.HIGH_DEPT_NM
+                ,T_DEPT.PARENT_DEPT_CD
+                ,T_DEPT.PARENT_DEPT_NM
+                ,T_DEPT.DEPT_CD
+                ,T_DEPT.DEPT_NM
+            FROM VW_USER_MASTER T_USER LEFT OUTER JOIN
+            (
+             SELECT 
+                    D.HIGH_DEPT_CD      /*부서코드*/
+                   ,D.HIGH_DEPT_NM      /*부서명*/
+                   ,A.PARENT_DEPT_CD    /*부서코드*/
+                   ,C.PARENT_DEPT_NM    /*부서명*/
+                   ,A.DEPT_CD           /*부서코드*/
+                   ,A.DEPT_NM           /*부서명*/
+                   ,A.TENANT_ID
+               FROM ARGO.V_CM_DEPT_CD A, ( select C.PARENT_DEPT_CD, C.DEPT_CD, C.DEPT_NM  AS PARENT_DEPT_NM
+                                           from ARGO.V_CM_DEPT_CD C ) C 
+                                       , (  SELECT DEPT_CD AS HIGH_DEPT_CD				/*부서코드*/
+                                                ,DEPT_NM	AS HIGH_DEPT_NM			/*부서명*/
+                                              FROM ARGO.V_CM_DEPT_CD
+                                              WHERE HIDE_YN = '0'
+                                              AND DEPT_DEPTH = '0'
+                                          ) D
+              WHERE C.DEPT_CD = A.PARENT_DEPT_CD
+                AND A.HIDE_YN = '0'
+                AND A.DEPT_DEPTH = '2'
+            ) T_DEPT ON T_USER.DEPT_CD = T_DEPT.DEPT_CD
+            		AND T_USER.TENANT_ID =  T_DEPT.TENANT_ID
+            
+            WHERE T_USER.AGENT_ID = #{AGENT_ID}
+			]]>
+	</select>
+
+	<!-- 스케쥴관리 수정 -->
+	<update id="updateSchedulMng" parameterType="java.util.HashMap">
+		<![CDATA[  
+		UPDATE PLT_PHN_RESVE_SCHDUL 
+		SET CHNG_MAN    = #{CHNG_MAN}
+		    , RESV_DATE    = REPLACE(#{RESV_DATE}, '-', '')
+		    , RESV_REM    = #{RESV_REM}
+		    , RESV_TIME = #{RESV_TIME_HH} || #{RESV_TIME_MM} || '00'
+		    , CHNG_DTIM       = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		WHERE RESV_SCHE_NO = #{RESV_SCHE_NO}
+		]]>	
+	</update>
+
+	<!-- 스케쥴관리 처리상태 변경 -->
+	<update id="updateSchedulAlloc" parameterType="java.util.HashMap">
+		<![CDATA[
+		/* updateSchedulAlloc 스케쥴관리 처리상태 변경 */  
+		UPDATE PLT_PHN_RESVE_SCHDUL 
+  		SET CHNG_MAN    = #{CHNG_MAN}
+	  		, CHNG_DTIM       = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	  		, PROC_STAT_CODE = #{PROC_STAT_CODE}
+	   		, PROC_DTIM = CASE WHEN #{PROC_STAT_CODE} = 'PROC' THEN TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	   					  	   ELSE PROC_DTIM
+	   					  END
+	   		, PROC_CSLT_ID = CASE WHEN #{PROC_STAT_CODE} = 'PROC' THEN #{CHNG_MAN} ELSE PROC_CSLT_ID END
+	   		, CSLT_ALOC_DTIM = CASE WHEN #{PROC_STAT_CODE} = 'PROC' AND CSLT_ALOC_DTIM IS NULL THEN TO_CHAR(NOW(),'YYYYMMDDHH24MISS') 
+	   								ELSE CSLT_ALOC_DTIM 
+	   						   END
+	   		, RESV_DATE = REPLACE(#{RESV_DATE}, '-', '')
+			, RESV_TIME = #{RESV_TIME_HH} || #{RESV_TIME_MM} || '00'
+	 	WHERE RESV_SCHE_NO = #{RESV_SCHE_NO}
+ 		]]>	
+	</update>
+
+	<!-- 스케쥴관리 상담원재할당 상담사 변경 -->
+	<update id="updateSchedulCsltId" parameterType="java.util.HashMap">
+		<![CDATA[
+			/* updateSchedulCsltId 스케쥴관리 상담사 변경 */  
+			UPDATE PLT_PHN_RESVE_SCHDUL 
+   		  	SET CHNG_MAN		= #{CHNG_MAN}
+       		  , CHNG_DTIM		= TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+       		  , CJOB_CSLT_ID	= #{CJOB_CSLT_ID}
+       		  , CSLT_ALOC_DTIM	= TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+ 			WHERE RESV_SCHE_NO = #{RESV_SCHE_NO}
+ 		]]>	
+	</update>
+	<!-- 사용자 정보 조회 -->
+   <select id="selectRtnUserInfoPop" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT ROWNUM AS ROW_NUMBER
+             ,RE.*
+        , (SELECT LISTAGG(COALESCE(SUBSTR(BB.ATRT_GROUP_NM, 1), '권한미할당'),',') WITHIN GROUP (ORDER BY BB.ATRT_GROUP_NM) AS ATRT_GROUP_NM
+           FROM PLT_USER_AUTH AA 
+           LEFT OUTER JOIN (SELECT ATRT_GROUP_ID
+                                 , ATRT_GROUP_NM 
+                              FROM PLT_AUTH
+                            ) BB 
+                        ON AA.ATRT_GROUP_ID = BB.ATRT_GROUP_ID 
+            WHERE AA.USER_ID = RE.USER_ID ) AS ATRT_GROUP_NM  -- 권한그룹명
+        , (SELECT LISTAGG(B.INQRY_TYP_NM, ',')
+                   WITHIN GROUP (ORDER BY B.INQRY_TYP_NM) AS INQRY_TYP_NM
+             FROM PLT_CHT_USER_INQ A
+             JOIN PLT_CHT_INQ_TYP B
+               ON A.TALK_INQRY_CD = B.INQRY_TYP_CD
+            WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+              AND B.CUSTCO_ID = #{CUSTCO_ID}
+              AND A.USER_ID = RE.USER_ID
+           ) AS INQRY_TYP_NM
+         <!-- 20190509 ojw added for new user dept -->
+        , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'A' AND ATTR_DIV_CD = RE.USER_ATTR_A) AS ATTR_DIV_NM_A /* 사용자소속A */
+        , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'B' AND ATTR_DIV_CD = RE.USER_ATTR_B) AS ATTR_DIV_NM_B /* 사용자소속B */
+        , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'C' AND ATTR_DIV_CD = RE.USER_ATTR_C) AS ATTR_DIV_NM_C /* 사용자소속C */
+        , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{CUSTCO_ID} AND ATTR_CD = 'D' AND ATTR_DIV_CD = RE.USER_ATTR_D) AS ATTR_DIV_NM_D /* 사용자소속D */
+        , (SELECT (CASE WHEN LISTAGG(CASE WHEN AA.ATRT_GROUP_ID IN ('20151106173043466TWB14896'
+                                                                    ,'20190327140137132TWB3843'
+                                                                    ,'20190503054503024TWB168613')
+                                           THEN 'Y'
+                                           ELSE 'N'
+                                      END,'') WITHIN GROUP (ORDER BY AA.ATRT_GROUP_ID) LIKE '%Y%' 
+                         THEN 'Y' 
+                         ELSE 'N'
+                    END)
+           FROM PLT_USER_AUTH AA 
+            WHERE AA.USER_ID = RE.USER_ID ) AS ACCOUNT_PAY_YN
+     FROM (
+              SELECT A.USER_ID                                                                    -- 사용자ID
+                 , A.USER_NM                                                                    -- 사용자이름
+                 , A.USER_NICK                                                                  -- 사용자닉네임
+                 --, A.USE_YN                                                                     -- 사용여부
+                 , CASE WHEN A.USE_YN = 'Y' THEN '사용' ELSE '미사용' END      AS USE_YN          -- 사용여부
+                 , A.CNNCT_IP                                                                   -- 접속IP
+                 , A.ETC_INFO01                                               AS LAST_LOGIN_DT  -- 최근접속일시
+                 , A.HP_NO                                                       -- 휴대폰번호
+                 , A.PWD_FAIL_FREQ                                                -- 패스워드오류횟수
+                 , D.MAX_CHAT_AGENT                                                -- 개인채팅허용수
+               <!-- 20190509 ojw added for new user dept -->
+                    , A.USER_ATTR_A
+                    , A.USER_ATTR_B
+                    , A.USER_ATTR_C
+                    , A.USER_ATTR_D
+                   , TO_CHAR(A.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')               AS REG_DTTM      -- 등록일자
+
+                   , CASE WHEN TAC.PRODUCT_CD = 'STANDARD' AND TAC.SRVC_BGNG_DT  <![CDATA[>]]> TO_CHAR(A.REG_DTTM, 'YYYYMMDDHH24MISS')
+                            THEN  TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MISS'),'YYYY/MM/DD')
+                          WHEN TAC.PRODUCT_CD = 'STANDARD' AND TAC.SRVC_BGNG_DT  <![CDATA[<]]> TO_CHAR(A.REG_DTTM, 'YYYYMMDDHH24MISS')
+                            THEN TO_CHAR(A.REG_DTTM, 'YYYY/MM/DD')
+                          ELSE
+                            ''
+                      END                                                       AS SERVICE_CHARGE_DT -- 과금일자                       
+              FROM PLT_USER A
+              <!-- ASP 관리자 그룹 -->
+             <if test="SEARCH_GROUP == 'manager'"> 
+             INNER JOIN PLT_USER_AUTH TB7
+                ON A.USER_ID = TB7.USER_ID
+               AND TB7.ATRT_GROUP_ID IN ('20190503054503024TWB168613', '20190327140137132TWB3843')
+             </if>
+             <!-- ASP 상담사 그룹 -->
+             <if test="SEARCH_GROUP == 'agent'">
+             INNER JOIN PLT_USER_AUTH TB7
+                ON A.USER_ID = TB7.USER_ID
+               AND TB7.ATRT_GROUP_ID IN ('20151106173043466TWB14896')
+             </if>
+              LEFT OUTER JOIN PLT_CHT_USER_CHAT_SET D
+              ON A.USER_ID = D.USER_ID
+              LEFT OUTER JOIN PLT_ASP_CUS TAC
+              ON A.CUSTCO_ID = TAC.CUSTCO_ID
+             WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+            <if test="USER_ID != ''">AND A.USER_ID LIKE '%'|| #{USER_ID}|| '%'</if>
+            <if test="USER_NM != ''">AND A.USER_NM LIKE '%'|| #{USER_NM}|| '%'</if>
+            <if test="USER_NICK != ''">AND A.USER_NICK LIKE '%'|| #{USER_NICK}|| '%'</if>
+            <if test="USE_YN             != '' and USE_YN       != null">   AND A.USE_YN     = #{USE_YN}                      </if>
+            <if test="CNNCT_IP             != '' and CNNCT_IP       != null">   AND A.CNNCT_IP LIKE '%' || #{CNNCT_IP} || '%'   </if>
+            <if test="SPEC_CNSL_CD          != '' and SPEC_CNSL_CD    != null">   AND A.SPEC_CNSL_CD = #{SPEC_CNSL_CD}            </if>
+            <if test="ATRT_GROUP_ID       != '' and ATRT_GROUP_ID != null"> 
+              <choose>
+                <when test="GROUP_F = Y">
+               AND (A.USER_ID IN (SELECT USER_ID 
+                                    FROM PLT_USER_AUTH 
+                                   WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID}) 
+                    OR A.USER_ID NOT IN (SELECT USER_ID FROM PLT_USER_AUTH) )
+                </when>
+                <otherwise>
+               AND A.USER_ID IN (SELECT USER_ID 
+                                   FROM PLT_USER_AUTH 
+                                  WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID})
+                </otherwise>
+              </choose>                  
+            </if>
+            <if test="LAST_LOGIN_DT_FROM   != '' and LAST_LOGIN_DT_FROM != null">   AND TO_DATE(A.ETC_INFO01, 'YYYY/MM/DD HH24:MI:SS') >= TO_DATE(#{LAST_LOGIN_DT_FROM}||'000000', 'YYYY/MM/DD HH24:MI:SS')  </if>
+            <if test="LAST_LOGIN_DT_TO       != '' and LAST_LOGIN_DT_TO != null">  <![CDATA[ AND TO_DATE(A.ETC_INFO01, 'YYYY/MM/DD HH24:MI:SS') <= TO_DATE(#{LAST_LOGIN_DT_TO}||'235959', 'YYYY/MM/DD HH24:MI:SS') ]]>   </if>
+            
+            <!-- 20190509 ojw added for new user dept -->
+            <if test="USER_ATTR_A != '' and USER_ATTR_A !=null"> AND A.USER_ATTR_A = #{USER_ATTR_A} /* 사용자소속A */ </if>
+            <if test="USER_ATTR_B != '' and USER_ATTR_B !=null"> AND A.USER_ATTR_B = #{USER_ATTR_B} /* 사용자소속B */ </if>
+            <if test="USER_ATTR_C != '' and USER_ATTR_C !=null"> AND A.USER_ATTR_C = #{USER_ATTR_C} /* 사용자소속C */ </if>
+            <if test="USER_ATTR_D != '' and USER_ATTR_D !=null"> AND A.USER_ATTR_D = #{USER_ATTR_D} /* 사용자소속D */ </if>
+             
+            <if test="SORT_ORDR == 'USER_NM'">
+            ORDER BY USER_NM
+            </if>
+            <if test="SORT_ORDR == 'JOIN_DATE'">
+            ORDER BY COALESCE(A.ETC_INFO01, ' ') DESC
+            </if>
+           ) RE
+   </select>
+</mapper>

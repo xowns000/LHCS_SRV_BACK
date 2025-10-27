@@ -1,0 +1,907 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.statistics.chat.dao.StatisticsChatCuttMapper">
+
+	<!-- 채팅상담 현황(전체) -->
+	<select id="chatCuttTotalStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* chatCuttTotalStatistics - 채팅상담 현황(전체) */
+			COALESCE(SUM(CUSL_CNT.TOT_CNT), 0) AS TOT_CNT
+			, COALESCE(SUM(CUSL_CNT.DMND_NPSBL_CNT), 0) AS DMND_NPSBL_CNT
+			, COALESCE(SUM(CUSL_CNT.CUSL_ALTMNT_NPSBL_CNT), 0) AS CUSL_ALTMNT_NPSBL_CNT
+			, COALESCE(SUM(CUSL_CNT.ALTMNT_GIVEUP_CNT), 0) AS ALTMNT_GIVEUP_CNT
+			, COALESCE(SUM(CUSL_CNT.WAIT_GIVEUP_CNT), 0) AS WAIT_GIVEUP_CNT
+			, COALESCE(SUM(CUSL_CNT.DMND_NOCHC_CNT), 0) AS DMND_NOCHC_CNT
+			, COALESCE(SUM(CUSL_CNT.DMND_GIVEUP_CNT), 0) AS DMND_GIVEUP_CNT
+			, COALESCE(SUM(CUSL_CNT.CMPL_CNT), 0) AS CMPL_CNT
+			, COALESCE(SUM(CUSL_CNT.WAIT_CNT), 0) AS WAIT_CNT
+			, COALESCE(SUM(CUSL_CNT.ING_CNT), 0) AS ING_CNT
+			, COALESCE(SUM(CUSL_CNT.AFTPRCS_CNT), 0) AS AFTPRCS_CNT
+			, COALESCE(AVG(CUSL_CNT.CUSL_CNT), 0) AS CUSL_AVG_CNT
+			, COALESCE(SUM(CUSL_CNT.CUTT_HR), 0) AS CUTT_HR
+			, COALESCE(AVG(CUSL_CNT.CUTT_HR), 0) AS CUSL_AVG_HR
+		FROM (
+			SELECT SUM(CASE WHEN PSCCD.CUTT_RSLT_CD != 'DMND_NPSBL' AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL' AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP' AND CUTT_RSLT_CD != 'WAIT_GIVEUP' AND CUTT_RSLT_CD != 'DMND_NOCHC' AND CUTT_RSLT_CD != 'DMND_GIVEUP' THEN 1 ELSE 0 END)  AS TOT_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'DMND_NPSBL' THEN 1 ELSE 0 END)  AS DMND_NPSBL_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'CUSL_ALTMNT_NPSBL' THEN 1 ELSE 0 END)  AS CUSL_ALTMNT_NPSBL_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'ALTMNT_GIVEUP' THEN 1 ELSE 0 END)  AS ALTMNT_GIVEUP_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'WAIT_GIVEUP' THEN 1 ELSE 0 END)  AS WAIT_GIVEUP_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'DMND_NOCHC' THEN 1 ELSE 0 END)  AS DMND_NOCHC_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'DMND_GIVEUP' THEN 1 ELSE 0 END)  AS DMND_GIVEUP_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'CMPL' OR PSCCD.CUTT_RSLT_CD = 'CMPL_TRAN' THEN 1 ELSE 0 END)  AS CMPL_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'WAIT' THEN 1 ELSE 0 END)  AS WAIT_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'ING' THEN 1 ELSE 0 END)  AS ING_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD = 'AFTPRCS' THEN 1 ELSE 0 END)  AS AFTPRCS_CNT
+				, COUNT(PSCCD.CUSL_ID) AS CUSL_CNT
+				, SUM(CUTT_HR)  AS CUTT_HR
+			FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+			WHERE <choose>
+					<when test="SCH_GB == 'DAY'">
+						PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+						AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+					</when>
+					<when test="SCH_GB == 'MONTH'">
+						PSCCD.CUTT_YM = #{SCH_MONTH}
+					</when>
+					<when test="SCH_GB == 'QUARTER'">
+						PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+						AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+					</when>
+				</choose>
+				<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+					AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+				</if>
+			GROUP BY PSCCD.CUSL_ID) CUSL_CNT
+			
+	</select>
+
+	<!-- 채팅 채널별 현황 -->
+	<select id="chatCuttChnTypeStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* chatCuttChnTypeStatistics - 채팅 채널별 현황 */
+			PCC.CD_ID AS CHN_CLSF_CD
+			, PCC.CD_NM AS CHN_CLSF_NM
+			, COALESCE(CHN_CNT.CHN_CNT, 0) AS CHN_CNT
+		FROM PLT_COMM_CD PCC
+		LEFT JOIN (SELECT CHN_CLSF_CD
+						, COUNT(CHN_CLSF_CD)  AS CHN_CNT
+					FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+					WHERE <choose>
+							<when test="SCH_GB == 'DAY'">
+								PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+								AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+							</when>
+							<when test="SCH_GB == 'MONTH'">
+								PSCCD.CUTT_YM = #{SCH_MONTH}
+							</when>
+							<when test="SCH_GB == 'QUARTER'">
+								PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+								AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+							</when>
+						</choose>
+						<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+							AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+						</if>
+						AND CUTT_RSLT_CD != 'DMND_NPSBL'
+						AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL'
+						AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP'
+						AND CUTT_RSLT_CD != 'WAIT_GIVEUP'
+						AND CUTT_RSLT_CD != 'DMND_NOCHC'
+						AND CUTT_RSLT_CD != 'DMND_GIVEUP'
+					GROUP BY PSCCD.CHN_CLSF_CD) CHN_CNT ON CHN_CNT.CHN_CLSF_CD = PCC.CD_ID
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND GROUP_CD_ID = 'CHNL_CL'
+		ORDER BY PCC.SORT_ORD
+	</select>
+
+	<!-- 평균 상담시간 현황 현황 -->
+	<select id="chatCuttHrStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* chatCuttHrStatistics - 평균 상담시간 현황 현황 */
+			PCC.CD_ID
+			, PCC.CD_NM
+			, COUNT(AVG_HR_CNT.HR_CNT_CD) AS CNT
+			, PCC.SORT_ORD
+		FROM PLT_COMM_CD PCC 
+		LEFT JOIN (
+				SELECT (CASE WHEN PSCCD.CUTT_HR <![CDATA[<]]> 5 THEN '5'
+						WHEN PSCCD.CUTT_HR >= 5 AND PSCCD.CUTT_HR <![CDATA[<]]> 10 THEN '10'
+						WHEN PSCCD.CUTT_HR >= 10 AND PSCCD.CUTT_HR <![CDATA[<]]> 30 THEN '30'
+						WHEN PSCCD.CUTT_HR >= 30 AND PSCCD.CUTT_HR <![CDATA[<]]> 60 THEN '60'
+						WHEN PSCCD.CUTT_HR >= 60 AND PSCCD.CUTT_HR <![CDATA[<]]> 180 THEN '180'
+						WHEN PSCCD.CUTT_HR >= 180 AND PSCCD.CUTT_HR <![CDATA[<]]> 360 THEN '360'
+						WHEN PSCCD.CUTT_HR >= 360 AND PSCCD.CUTT_HR <![CDATA[<]]> 720 THEN '720'
+						WHEN PSCCD.CUTT_HR >= 720 AND PSCCD.CUTT_HR <![CDATA[<]]> 1440 THEN '1440'
+						ELSE '1440P' END)  AS HR_CNT_CD
+				FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE <choose>
+						<when test="SCH_GB == 'DAY'">
+							PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+							AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+						</when>
+						<when test="SCH_GB == 'MONTH'">
+							PSCCD.CUTT_YM = #{SCH_MONTH}
+						</when>
+						<when test="SCH_GB == 'QUARTER'">
+							PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+							AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+						</when>
+					</choose>
+					<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+				) AVG_HR_CNT ON AVG_HR_CNT.HR_CNT_CD = PCC.CD_ID
+		WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PCC.GROUP_CD_ID = 'CHT_SE_TP'
+		GROUP BY PCC.CD_ID, PCC.CD_NM, PCC.SORT_ORD
+		ORDER BY PCC.SORT_ORD
+	</select>
+
+	<!-- 상담 유형별 현황 현황 -->
+	<select id="chatCuttTypeStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* chatCuttTypeStatistics - 상담 유형별 현황 현황 */
+			PSCCD.CUTT_TYPE_ID
+			, COUNT(PSCCD.CUTT_TYPE_ID) AS CUTT_TYPE_CNT
+			, PCT.CUTT_TYPE_NM
+		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+		LEFT JOIN PLT_CUTT_TYPE PCT ON PCT.CUTT_TYPE_ID = PSCCD.CUTT_TYPE_ID
+		LEFT JOIN PLT_COMM_CD PCC ON PCC.CD_ID = PSCCD.CHN_CLSF_CD AND PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		WHERE <choose>
+				<when test="SCH_GB == 'DAY'">
+					PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+					AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+				</when>
+				<when test="SCH_GB == 'MONTH'">
+					PSCCD.CUTT_YM = #{SCH_MONTH}
+				</when>
+				<when test="SCH_GB == 'QUARTER'">
+					PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+					AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+				</when>
+			</choose>
+			<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+				AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+			</if>
+			AND PSCCD.CUTT_TYPE_ID IN ( SELECT CUTT_TYPE.CUTT_TYPE_ID FROM (
+											SELECT PSCCD.CUTT_TYPE_ID
+												, COUNT(PSCCD.CUTT_TYPE_ID) AS CUTT_TYPE_CNT
+												, PCT.CUTT_TYPE_NM
+											FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+											LEFT JOIN PLT_CUTT_TYPE PCT ON PCT.CUTT_TYPE_ID = PSCCD.CUTT_TYPE_ID
+											WHERE <choose>
+													<when test="SCH_GB == 'DAY'">
+														PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+														AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+													</when>
+													<when test="SCH_GB == 'MONTH'">
+														PSCCD.CUTT_YM = #{SCH_MONTH}
+													</when>
+													<when test="SCH_GB == 'QUARTER'">
+														PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+														AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+													</when>
+												</choose>
+												<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+													AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+												</if>
+												AND PSCCD.CUTT_TYPE_ID IS NOT NULL
+											GROUP BY PSCCD.CUTT_TYPE_ID, PCT.CUTT_TYPE_NM
+											ORDER BY CUTT_TYPE_CNT DESC
+											LIMIT 3) CUTT_TYPE)
+		GROUP BY PSCCD.CUTT_TYPE_ID, PCT.CUTT_TYPE_NM
+		ORDER BY CUTT_TYPE_CNT DESC
+	</select>
+
+	<!-- 월간 상담 추이 -->
+	<select id="chatCuttMonStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* chatCuttMonStatistics - 월간 상담 추이 */
+			DT.DT AS CUTT_DT
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+			, COALESCE(CUTT.CL_TYPE_CD, #{CL_TYPE_CD}) AS CL_TYPE_CD
+			</if>
+			, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+		FROM (
+			<choose>
+				<when test='SCH_GB == "DAY"'>
+				SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+				, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+				</when>
+				<when test='SCH_GB == "MONTH"'>
+				SELECT TO_CHAR(GENERATE_SERIES((#{SCH_MONTH}||'01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', (#{SCH_MONTH}||'01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+				, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+				</when>
+				<when test='SCH_GB == "QUARTER"'>
+				SELECT TO_CHAR(GENERATE_SERIES((#{SCH_ST_QUARTER}||'01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', (#{SCH_END_QUARTER}||'01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+				, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_ST_QUARTER}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_END_QUARTER}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+				</when>
+			</choose>
+		) DT
+		LEFT OUTER JOIN (
+			SELECT A.CUTT_DT
+				<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+					, A.CHN_CLSF_CD
+				</if>
+				, A.TOT_CNT
+			FROM (
+				SELECT DISTINCT PSCCD.CUTT_YMD AS CUTT_DT
+					<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+					, PSCCD.CHN_CLSF_CD
+					</if>
+					, COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID) AS TOT_CNT
+				FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE PSCCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+				<choose>
+					<when test='SCH_GB == "DAY"'>
+					AND PSCCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					</when>
+					<when test='SCH_GB == "MONTH"'>
+					AND PSCCD.CUTT_YM = #{SCH_MONTH} --월별
+					</when>
+					<when test="SCH_GB == 'QUARTER'">
+						AND PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+						AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+					</when>
+				</choose>
+				<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+				AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+				AND CUTT_RSLT_CD != 'DMND_NPSBL'
+				AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL'
+				AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP'
+				AND CUTT_RSLT_CD != 'WAIT_GIVEUP'
+				AND CUTT_RSLT_CD != 'DMND_NOCHC'
+				AND CUTT_RSLT_CD != 'DMND_GIVEUP'
+				</if>
+				GROUP BY PSCCD.CUTT_YMD<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>, PSCCD.CHN_CLSF_CD</if>
+			) A
+		) CUTT ON CUTT.CUTT_DT = DT.DT
+	</select>
+
+	<!-- 통합 생산성 현황 -->
+	<select id="chatCuttPrdctnStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* CHATCUTTPRDCTNSTATISTICS - 통합 생산성 현황 */
+			PCC.CD_ID AS PRDCTN_TP_ID
+			, PCC.CD_NM AS PRDCTN_TP
+			, (CASE WHEN TOT.TOT_CNT IS NOT NULL THEN TOT.TOT_CNT
+					WHEN CMPL.CMPL_CNT IS NOT NULL THEN CMPL.CMPL_CNT
+					WHEN CUTT.CUTT_CNT IS NOT NULL THEN CUTT.CUTT_CNT
+					WHEN TRAN.TRAN_CNT IS NOT NULL THEN TRAN.TRAN_CNT 
+				ELSE 0 END ) AS CNT
+		FROM PLT_COMM_CD PCC
+		LEFT JOIN (SELECT 'TOT' AS CNT_CD
+					, COUNT(STATS_CHT_CUTT_DTL_ID) AS TOT_CNT
+		 		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE <choose>
+						<when test="SCH_GB == 'DAY'">
+							PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+							AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+						</when>
+						<when test="SCH_GB == 'MONTH'">
+							PSCCD.CUTT_YM = #{SCH_MONTH}
+						</when>
+						<when test="SCH_GB == 'QUARTER'">
+							PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+							AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+						</when>
+					</choose>
+					<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+					AND CUTT_RSLT_CD != 'DMND_NPSBL'
+					AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL'
+					AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP'
+					AND CUTT_RSLT_CD != 'WAIT_GIVEUP'
+					AND CUTT_RSLT_CD != 'DMND_NOCHC'
+					AND CUTT_RSLT_CD != 'DMND_GIVEUP'
+				) TOT ON TOT.CNT_CD = PCC.CD_ID
+		LEFT JOIN (SELECT 'CMPL' AS CNT_CD
+					, SUM(CASE WHEN CUTT_RSLT_CD LIKE '%'|| 'CMPL' ||'%' THEN 1 ELSE 0 END) AS CMPL_CNT
+		 		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE <choose>
+						<when test="SCH_GB == 'DAY'">
+							PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+							AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+						</when>
+						<when test="SCH_GB == 'MONTH'">
+							PSCCD.CUTT_YM = #{SCH_MONTH}
+						</when>
+						<when test="SCH_GB == 'QUARTER'">
+							PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+							AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+						</when>
+					</choose>
+					<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+				) CMPL ON CMPL.CNT_CD = PCC.CD_ID
+		LEFT JOIN (SELECT 'CUTT' AS CNT_CD
+					, SUM(CASE WHEN CUTT_RSLT_CD NOT LIKE '%'|| 'GIVEUP' ||'%' AND CUTT_RSLT_CD NOT LIKE '%'|| 'NPSBL' ||'%' THEN 1 ELSE 0 END) AS CUTT_CNT
+		 		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE <choose>
+						<when test="SCH_GB == 'DAY'">
+							PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+							AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+						</when>
+						<when test="SCH_GB == 'MONTH'">
+							PSCCD.CUTT_YM = #{SCH_MONTH}
+						</when>
+						<when test="SCH_GB == 'QUARTER'">
+							PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+							AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+						</when>
+					</choose>
+					<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+				) CUTT ON CUTT.CNT_CD = PCC.CD_ID
+		LEFT JOIN (SELECT 'TRAN' AS CNT_CD
+					, SUM(CASE WHEN CUTT_RSLT_CD LIKE '%'|| 'TRAN' ||'%' THEN 1 ELSE 0 END) AS TRAN_CNT
+		 		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE <choose>
+						<when test="SCH_GB == 'DAY'">
+							PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+							AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+						</when>
+						<when test="SCH_GB == 'MONTH'">
+							PSCCD.CUTT_YM = #{SCH_MONTH}
+						</when>
+						<when test="SCH_GB == 'QUARTER'">
+							PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+							AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+						</when>
+					</choose>
+					<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+				) TRAN on TRAN.CNT_CD = PCC.CD_ID
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND GROUP_CD_ID = 'CHT_PRDCTN_TP'
+		ORDER BY PCC.SORT_ORD
+	</select>
+
+		<!-- 상담직원별 통계 (상단) -->
+		<select id="chatCuttCuslStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+			SELECT 			/* chatCuttCuslStatistics - 상담직원별 통계 (상단) */
+				COALESCE(SUM(CUSL_CNT.TOT_CNT), 0) AS TOT_CNT
+				, COALESCE(SUM(CUSL_CNT.CUTT_CNT), 0) AS CUTT_CNT
+				, COALESCE(SUM(CUSL_CNT.CMPL_CNT), 0) AS CMPL_CNT
+				, COALESCE(SUM(CUSL_CNT.TRAN_CNT), 0) AS TRAN_CNT
+				, COALESCE(AVG(CUSL_CNT.CUSL_CNT), 0) AS CUSL_AVG_CNT
+				, COALESCE(SUM(CUSL_CNT.CUTT_HR), 0) AS CUTT_HR
+				, COALESCE(AVG(CUSL_CNT.CUTT_HR), 0) AS CUSL_AVG_HR
+			FROM (
+				SELECT COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID)  AS TOT_CNT
+					, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'CMPL' || '%') THEN 1 ELSE 0 END)  AS CMPL_CNT
+					, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'ING' || '%') OR PSCCD.CUTT_RSLT_CD LIKE ('%' || 'AFTPRCS' || '%') THEN 1 ELSE 0 END)  AS CUTT_CNT
+					, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'TRAN' || '%') THEN 1 ELSE 0 END)  AS TRAN_CNT
+					, COUNT(PSCCD.CUSL_ID) AS CUSL_CNT
+					, PSCCD.CUSL_ID
+					, SUM(CUTT_HR)  AS CUTT_HR
+				FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE <choose>
+						<when test="SCH_GB == 'DAY'">
+							PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+							AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+						</when>
+						<when test="SCH_GB == 'MONTH'">
+							PSCCD.CUTT_YM = #{SCH_MONTH}
+						</when>
+						<when test="SCH_GB == 'QUARTER'">
+							PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+							AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+						</when>
+					</choose>
+					<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+					<choose>
+						<when test="USER_SRCH == 'USER_NM'">
+							AND PSCCD.CUSL_ID = (SELECT USER_ID
+													FROM PLT_USER
+													WHERE USER_NM = #{SCH_USER})::INTEGER
+						</when>
+						<when test="USER_SRCH == 'USER_ID'">
+							AND PSCCD.CUSL_ID = #{SCH_USER}::INTEGER
+						</when>
+					</choose>
+					AND CUTT_RSLT_CD != 'DMND_NPSBL'
+					AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL'
+					AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP'
+					AND CUTT_RSLT_CD != 'WAIT_GIVEUP'
+					AND CUTT_RSLT_CD != 'DMND_NOCHC'
+					AND CUTT_RSLT_CD != 'DMND_GIVEUP'
+				GROUP BY PSCCD.CUSL_ID) CUSL_CNT
+
+		</select>
+
+		<!-- 상담직원별 통계 (하단 그리드 데이터) -->
+		<select id="chatCuttCuslStatisticsList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+			SELECT 			/* chatCuttCuslStatisticsList - 상담직원별 통계 (하단 그리드 데이터) */
+				(ROW_NUMBER() OVER()) AS ROWNUM
+				, PSCCD.CUSL_ID
+				, PU.USER_NM
+				, PO.DEPT_NM
+				, COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID)  AS TOT_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'CMPL' || '%') THEN 1 ELSE 0 END)  AS CMPL_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'ING' || '%') OR PSCCD.CUTT_RSLT_CD LIKE ('%' || 'AFTPRCS' || '%') THEN 1 ELSE 0 END)  AS CUTT_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'TRAN' || '%') THEN 1 ELSE 0 END)  AS TRAN_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'GIVEUP' || '%') THEN 1 ELSE 0 END)  AS GIVEUP_CNT
+				, CANT_PCRH.SUM_CHT_HR AS OFF_HR
+				, WAIT_PCRH.SUM_CHT_HR AS ON_HR
+				, SUM(CUTT_HR)  AS CUTT_TOT_HR
+				, AVG(CASE WHEN CUTT_HR != 0 THEN CUTT_HR END)  AS CUTT_AVG_HR
+				, SUM(AFTPRCS_HR)  AS AFTPRCS_TOT_HR
+				, AVG(CASE WHEN AFTPRCS_HR != 0 THEN AFTPRCS_HR END)  AS AFTPRCS_AVG_HR
+				, SUM(PRCS_HR)  AS PRCS_TOT_HR
+				, AVG(CASE WHEN PRCS_HR != 0 THEN PRCS_HR END)  AS PRCS_AVG_HR
+			FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+			LEFT JOIN PLT_USER PU ON PU.USER_ID = PSCCD.CUSL_ID
+			LEFT JOIN PLT_USER_OGNZ PUO ON PUO.USER_ID = PSCCD.CUSL_ID AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND PUO.USE_YN = 'Y'
+			LEFT JOIN PLT_OGNZ PO ON PUO.DEPT_ID = PO.DEPT_ID  AND PO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			LEFT JOIN (SELECT SUM(EXTRACT(EPOCH FROM TO_TIMESTAMP(END_HR, 'YYYYMMDDHH24MISS') - TO_TIMESTAMP(BGNG_HR, 'YYYYMMDDHH24MISS'))) AS SUM_CHT_HR
+							, STTS_CD
+							, CUSL_ID
+						FROM PLT_CHT_RDY_HSTRY
+						WHERE STTS_CD = 'CHT_CANT'
+						GROUP BY CUSL_ID, STTS_CD) CANT_PCRH ON CANT_PCRH.CUSL_ID = PSCCD.CUSL_ID
+			LEFT JOIN (SELECT SUM(EXTRACT(EPOCH FROM TO_TIMESTAMP(END_HR, 'YYYYMMDDHH24MISS') - TO_TIMESTAMP(BGNG_HR, 'YYYYMMDDHH24MISS'))) AS SUM_CHT_HR
+							, STTS_CD
+							, CUSL_ID
+						FROM PLT_CHT_RDY_HSTRY
+						WHERE STTS_CD = 'CHT_WAIT'
+						GROUP BY CUSL_ID, STTS_CD) WAIT_PCRH ON WAIT_PCRH.CUSL_ID = PSCCD.CUSL_ID
+			WHERE
+				<choose>
+					<when test="SCH_GB == 'DAY'">
+						PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+						AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+					</when>
+					<when test="SCH_GB == 'MONTH'">
+						PSCCD.CUTT_YM = #{SCH_MONTH}
+					</when>
+					<when test="SCH_GB == 'QUARTER'">
+						PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+						AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+					</when>
+				</choose>
+				<if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+					AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+				</if>
+				<choose>
+					<when test="USER_SRCH == 'USER_NM'">
+						AND PSCCD.CUSL_ID = (SELECT USER_ID
+												FROM PLT_USER
+												WHERE USER_NM = #{SCH_USER})::INTEGER
+					</when>
+					<when test="USER_SRCH == 'USER_ID'">
+						AND PSCCD.CUSL_ID = #{SCH_USER}::INTEGER
+					</when>
+				</choose>
+				AND CUTT_RSLT_CD != 'DMND_NPSBL'
+				AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL'
+				AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP'
+				AND CUTT_RSLT_CD != 'WAIT_GIVEUP'
+				AND CUTT_RSLT_CD != 'DMND_NOCHC'
+				AND CUTT_RSLT_CD != 'DMND_GIVEUP'
+			GROUP BY PSCCD.CUSL_ID, PU.USER_NM, PO.DEPT_NM, CANT_PCRH.SUM_CHT_HR, WAIT_PCRH.SUM_CHT_HR
+			ORDER BY PSCCD.CUSL_ID
+		</select>
+	<select id="selectStatisticsByInqryType" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* 문의유형별 통계 상담 건수 kr.co.hkcloud.palette3.statistics.chat.dao.StatisticsChatCuttMapper.selectStatisticsByInqryType*/
+		ROW_NUMBER() OVER(ORDER BY QSTN.CHN_CLSF_CD,QSTN_TYPE_ID) AS ROW_NUMBER
+		, QSTN.QSTN_TYPE_ID
+		, QSTN.CHN_CLSF_CD
+		, (SELECT CD_NM FROM PLT_COMM_CD WHERE CD_ID = QSTN.CHN_CLSF_CD AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER) AS CHN_NM                 /* 채널 분류 */
+		, QSTN.CUSL_CNT                                                                                              /* 상담요청 건 수 */
+		, QSTN.GIVEUP_CNT                                                                                            /* 포기 건 수 */
+		, QSTN.BUSY_CNT                                                                                              /* busy 건 수 */
+		, COALESCE( QSTN.ING_CNT + QSTN.AFTPRCS_CNT + QSTN.TRAN_CNT + QSTN.CMPL_CNT, 0) AS TOT_PRCS_CNT              /*총 상담처리 건 수*/
+		, QSTN.ING_CNT                                                                                               /* 진행 건 수 */
+		, QSTN.AFTPRCS_CNT                                                                                           /* 후처리 건 수 */
+		, QSTN.TRAN_CNT                                                                                              /* 전달 건 수 */
+		, QSTN.CMPL_CNT                                                                                              /* 완료 건 수*/
+		, QSTN.CUTT_HR                                                                                               /* 총 상담시간*/
+		, QSTN.AVG_CUTT_HR                                                                                           /* 평균 상담시간*/
+		FROM
+		( SELECT
+		QSTN_TYPE_ID,
+		CHN_CLSF_CD,
+		COALESCE(COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID),0)  AS CUSL_CNT  													  	                            /* 총 상담 건수 - 상담요청*/
+		, COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE ('%' || 'CMPL' || '%') THEN 1 ELSE 0 end),0) AS CMPL_CNT					         /* 완료 건 수*/
+		, COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE ('%' || 'AFTPRCS' || '%') THEN 1 ELSE 0 end),0) AS AFTPRCS_CNT			        /* 후처리 건 수 */
+		, COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE ('%' || 'ING' || '%') THEN 1 ELSE 0 end),0) AS ING_CNT					            /* 진행 건 수 */
+		, COALESCE(SUM(CASE WHEN (CUTT_RSLT_CD = 'TRAN_WAIT' OR CUTT_RSLT_CD = 'CMPL_TRAN') THEN 1 ELSE 0 end),0) AS TRAN_CNT /* 전달 건 수 */
+		, COALESCE(SUM(CASE WHEN (CUTT_RSLT_CD LIKE ('%' || 'GIVEUP' || '%')) THEN 1 ELSE 0 END),0) AS GIVEUP_CNT			       /* 포기 건 수 */
+		, COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE('%' || 'NPSBL' || '%') THEN 1 ELSE 0 END),0) AS BUSY_CNT					          /* busy 건 수 */
+		, COALESCE(SUM(CUTT_HR),0)  AS CUTT_HR  																			                                       /* 총 상담시간*/
+		, COALESCE(ROUND(AVG(CUTT_HR),2),0) AS AVG_CUTT_HR
+		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND QSTN_TYPE_ID IS NOT NULL
+			<choose>
+				<when test='SCH_GB == "DAY"'>
+					AND PSCCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+				</when>
+				<when test='SCH_GB == "MONTH"'>
+					AND PSCCD.CUTT_YM = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+				</when>
+				<when test='SCH_GB == "QUARTER"'>
+					<choose>
+						<when test='SCH_QUARTER == "1"'>
+							AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+						</when>
+						<when test='SCH_QUARTER == "2"'>
+							AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+						</when>
+						<when test='SCH_QUARTER == "3"'>
+							AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+						</when>
+						<when test='SCH_QUARTER == "4"'>
+							AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+						</when>
+					</choose>
+				</when>
+			</choose>
+			<if test="SRCH_CHN_CLSF_CD != null and SRCH_CHN_CLSF_CD != ''">
+				AND CHN_CLSF_CD = #{SRCH_CHN_CLSF_CD}
+			</if>
+			AND CUTT_RSLT_CD != 'DMND_NPSBL'
+			AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL'
+			AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP'
+			AND CUTT_RSLT_CD != 'WAIT_GIVEUP'
+			AND CUTT_RSLT_CD != 'DMND_NOCHC'
+			AND CUTT_RSLT_CD != 'DMND_GIVEUP'
+		GROUP BY QSTN_TYPE_ID, CHN_CLSF_CD
+		) AS QSTN
+	</select>
+
+	<select id="selectInqryTypeTree" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* 문의유형별 통계 문의유형트리 kr.co.hkcloud.palette3.statistics.chat.dao.StatisticsChatCuttMapper.selectInqryTypeTree*/
+		WITH RECURSIVE QSTN_TYPE_TREE AS (
+			SELECT
+				QSTN_TYPE_ID,
+				UP_QSTN_TYPE_ID,
+				QSTN_TYPE_NM,
+				QSTN_TYPE_EXPLN,
+				QSTN_TYPE_CD,
+				QSTN_TYPE_SE_CD,
+				USE_YN,
+				LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT
+			FROM PLT_CHT_QSTN_TYPE
+			WHERE UP_QSTN_TYPE_ID IS NULL
+				AND DEL_YN = 'N'
+				AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND USE_YN = 'Y'
+		UNION ALL
+		SELECT B.QSTN_TYPE_ID, B.UP_QSTN_TYPE_ID, B.QSTN_TYPE_NM, B.QSTN_TYPE_EXPLN, B.QSTN_TYPE_CD, B.QSTN_TYPE_SE_CD, B.USE_YN,
+					 C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT
+		FROM PLT_CHT_QSTN_TYPE B
+					 INNER JOIN QSTN_TYPE_TREE C ON C.QSTN_TYPE_ID::INTEGER = B.UP_QSTN_TYPE_ID::INTEGER
+		WHERE B.DEL_YN = 'N'
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND B.USE_YN = 'Y'
+			)
+		SELECT QTT.QSTN_TYPE_ID
+				 , QTT.UP_QSTN_TYPE_ID
+				 , QTT.QSTN_TYPE_NM
+				 , QTT.QSTN_TYPE_CD
+				 , QTT.SORT
+		FROM QSTN_TYPE_TREE QTT
+		ORDER BY QTT.SORT, QTT.QSTN_TYPE_ID
+	</select>
+
+
+	<!-- 채팅상담유형별 통계 -->
+	<select id="selectCuttTypeStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectCuttTypeStatistics - 채팅상담유형별 통계 */
+		ROW_NUMBER() OVER(ORDER BY CUTT.SORT, A.SORT_ORD) AS ROW_NUMBER
+		, A.CUTT_TYPE_ID
+		, CUTT.CUTT_TYPE_SE_CD
+		, CUTT.UP_CUTT_TYPE_ID
+		, CUTT.FULL_PATH
+		, CUTT.FULL_CUTT_TYPE_ID
+		, A.CHN_CLSF_CD
+		, A.CHN_CLSF_NM
+		, A.TOT_CNT
+		, A.TOT_HR
+		, A.CMPL_CNT
+		, COALESCE(A.TOT_CNT - A.CMPL_CNT) AS NO_CMPL_CNT
+		, A.CMPL_RATIO
+		FROM (
+		SELECT
+		A.CUTT_TYPE_ID
+		, A.CD_ID AS CHN_CLSF_CD
+		, A.CD_NM AS CHN_CLSF_NM
+		, A.SORT_ORD
+		, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+		, COALESCE(CUTT.CUSL_CNT, 0) AS CUSL_CNT
+		, COALESCE(CUTT.TOT_HR, 0) AS TOT_HR
+		, COALESCE(CUTT.CMPL_CNT, 0) AS CMPL_CNT
+		, COALESCE(CASE WHEN TOT_CNT != 0 THEN ROUND((CUTT.CMPL_CNT::DECIMAL/CUTT.TOT_CNT::DECIMAL)*100,2) ELSE 0 END, 0) AS CMPL_RATIO
+		FROM (
+		SELECT
+		CUTT.CUTT_TYPE_ID
+		, COMM.CD_ID
+		, COMM.CD_NM
+		, COMM.SORT_ORD
+		FROM (
+		SELECT DISTINCT CUTT_TYPE_ID
+		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+		WHERE PSCCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<choose>
+			<when test="SCH_GB == 'DAY'">
+				AND PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+				AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+			</when>
+			<when test="SCH_GB == 'MONTH'">
+				AND PSCCD.CUTT_YM = #{SCH_MONTH}
+			</when>
+			<when test="SCH_GB == 'QUARTER'">
+				AND PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+				AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+			</when>
+		</choose>
+		) CUTT
+		CROSS JOIN (select PCC.CHN_CLSF_CD as CD_ID
+		, CD.CD_NM
+		, CD.SORT_ORD
+		FROM PLT_CUSTCO_CHN PCC
+		LEFT JOIN PLT_COMM_CD CD ON CD.CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'CHNL_CL' AND CD.CD_ID = PCC.CHN_CLSF_CD
+		GROUP BY PCC.CHN_CLSF_CD, CD.CD_NM, CD.SORT_ORD) COMM
+		) A
+		LEFT OUTER JOIN (
+		SELECT
+		PSCCD.CUTT_TYPE_ID
+		, PSCCD.CHN_CLSF_CD
+		, COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID) AS TOT_CNT
+		, COUNT(DISTINCT PSCCD.CUSL_ID) AS CUSL_CNT
+		, SUM(PSCCD.CUTT_HR) AS TOT_HR
+		, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE '%'||'CMPL'||'%' THEN 1 ELSE 0 END) AS CMPL_CNT
+		FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+		WHERE PSCCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<choose>
+			<when test="SCH_GB == 'DAY'">
+				AND PSCCD.CUTT_YMD >= #{SCH_ST_DT}
+				AND PSCCD.CUTT_YMD <![CDATA[<=]]> #{SCH_END_DT}
+			</when>
+			<when test="SCH_GB == 'MONTH'">
+				AND PSCCD.CUTT_YM = #{SCH_MONTH}
+			</when>
+			<when test="SCH_GB == 'QUARTER'">
+				AND PSCCD.CUTT_YM >= #{SCH_ST_QUARTER}
+				AND PSCCD.CUTT_YM <![CDATA[<=]]> #{SCH_END_QUARTER}
+			</when>
+		</choose>
+		GROUP BY  PSCCD.CUTT_TYPE_ID , PSCCD.CHN_CLSF_CD
+		) CUTT  ON A.CD_ID = CUTT.CHN_CLSF_CD AND  A.CUTT_TYPE_ID = CUTT.CUTT_TYPE_ID
+		) A
+		LEFT OUTER JOIN (
+		WITH RECURSIVE CUTT_TREE AS (
+		SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID,  CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PLT_CUTT_TYPE.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END  AS CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_EXPLN, CUTT_TYPE_LVL, USE_YN, DEL_YN, SORT_ORD, 1 AS LVL, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+		FROM PLT_CUTT_TYPE
+		WHERE UP_CUTT_TYPE_ID IS NULL
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		UNION ALL
+		SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_NM, B.CUTT_TYPE_EXPLN, B.CUTT_TYPE_LVL, B.USE_YN, B.DEL_YN, B.SORT_ORD, C.LVL + 1 AS LVL, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, C.FULL_CUTT_TYPE_ID || ' > ' || CAST(B.CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(C.FULL_PATH || ' > ' || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+		FROM PLT_CUTT_TYPE B
+		INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+		WHERE B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+		AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		)
+		SELECT
+		CT.CUSTCO_ID
+		, CT.CUTT_TYPE_SE_CD
+		, CT.CUTT_TYPE_ID
+		, CT.UP_CUTT_TYPE_ID
+		, CT.USE_YN
+		, CT.DEL_YN
+		, CT.FULL_PATH
+		, CT.FULL_CUTT_TYPE_ID
+		, CT.SORT
+		FROM CUTT_TREE CT
+		WHERE CT.CUTT_TYPE_LVL<![CDATA[<=]]>(SELECT CUTT_TYPE_LMT_LVL_CD::INTEGER + 1 FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = CT.CUSTCO_ID)
+		ORDER BY CT.SORT
+		) CUTT ON CUTT.CUTT_TYPE_ID = A.CUTT_TYPE_ID
+		WHERE (STRING_TO_ARRAY(CUTT.FULL_CUTT_TYPE_ID, ' > '))[#{LVL}::INT]::INT = #{CUTT_TYPE_ID}::INT
+		<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+			AND A.CHN_CLSF_CD = #{CHN_CLSF_CD}
+		</if>
+		-- 		ORDER BY CUTT.SORT, A.SORT_ORD
+	</select>
+
+
+	<!-- 상담일자별 통계 (상단 선 그래프) -->
+	<select id="chatCuttDateStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* chatCuttDateStatistics - 상담일자별 통계 (상단 선 그래프) */
+			DT.DT AS CUTT_DT
+			, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+		FROM (
+			SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+		) DT
+		LEFT OUTER JOIN (
+			SELECT A.CUTT_DT
+			, A.TOT_CNT
+			FROM (
+				SELECT DISTINCT PSCCD.CUTT_YMD AS CUTT_DT
+					, COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID) AS TOT_CNT
+				FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE PSCCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+					AND PSCCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+					AND CUTT_RSLT_CD != 'DMND_NPSBL'
+					AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL'
+					AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP'
+					AND CUTT_RSLT_CD != 'WAIT_GIVEUP'
+					AND CUTT_RSLT_CD != 'DMND_NOCHC'
+					AND CUTT_RSLT_CD != 'DMND_GIVEUP'
+			GROUP BY PSCCD.CUTT_YMD<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>, PSCCD.CHN_CLSF_CD</if>
+			) A
+		) CUTT ON CUTT.CUTT_DT = DT.DT
+	</select>
+
+	<!-- 상담일자별 통계 (그리드 데이터) -->
+	<select id="chatCuttDateStatisticsList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* chatCuttDateStatisticsList - 상담일자별 통계 (그리드 데이터) */
+			(ROW_NUMBER() OVER()) AS ROWNUM
+			, DT.DT AS CUTT_DT
+			, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+			, COALESCE(CUTT.DMND_GIVEUP_CNT, 0) AS DMND_GIVEUP_CNT
+			, COALESCE(CUTT.ALTMNT_GIVEUP_CNT, 0) AS ALTMNT_GIVEUP_CNT
+			, COALESCE(CUTT.WAIT_GIVEUP_CNT, 0) AS WAIT_GIVEUP_CNT
+			, COALESCE(CUTT.TRAN_WAIT_GIVEUP_CNT, 0) AS TRAN_WAIT_GIVEUP_CNT
+			, COALESCE(CUTT.DMND_NPSBL_CNT, 0) AS DMND_NPSBL_CNT
+			, COALESCE(CUTT.ALTMNT_NPSBL_CNT, 0) AS ALTMNT_NPSBL_CNT
+			, COALESCE(CUTT.DMND_NOCHC_CNT, 0) AS DMND_NOCHC_CNT
+			, COALESCE(CUTT.CUSL_ALTMNT_NPSBL_CNT, 0) AS CUSL_ALTMNT_NPSBL_CNT
+			, COALESCE(CUTT.CMPL_CNT, 0) AS CMPL_CNT
+			, COALESCE(CUTT.CUTT_CNT, 0) AS CUTT_CNT
+			, COALESCE(CUTT.TRAN_CNT, 0) AS TRAN_CNT
+			, COALESCE(CUTT.ALTMNT_AVG_HR, 0) AS ALTMNT_AVG_HR
+			, COALESCE(CUTT.CUTT_AVG_HR, 0) AS CUTT_AVG_HR
+			, COALESCE(CUTT.AFTPRCS_AVG_HR, 0) AS AFTPRCS_AVG_HR
+			, COALESCE(CUTT.PRCS_AVG_HR, 0) AS PRCS_AVG_HR
+		FROM (
+			SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+		) DT
+		LEFT OUTER JOIN (
+			SELECT A.CUTT_DT
+			, A.TOT_CNT
+			, A.DMND_GIVEUP_CNT
+			, A.ALTMNT_GIVEUP_CNT
+			, A.WAIT_GIVEUP_CNT
+			, A.TRAN_WAIT_GIVEUP_CNT
+			, A.DMND_NPSBL_CNT
+			, A.ALTMNT_NPSBL_CNT
+			, A.DMND_NOCHC_CNT
+			, A.CUSL_ALTMNT_NPSBL_CNT
+			, A.CMPL_CNT
+			, A.CUTT_CNT
+			, A.TRAN_CNT
+			, A.ALTMNT_AVG_HR
+			, A.CUTT_AVG_HR
+			, A.AFTPRCS_AVG_HR
+			, A.PRCS_AVG_HR
+			FROM (
+			SELECT DISTINCT PSCCD.CUTT_YMD AS CUTT_DT
+				--, COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID) AS TOT_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD != 'DMND_NPSBL' AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL' AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP' AND CUTT_RSLT_CD != 'WAIT_GIVEUP' AND CUTT_RSLT_CD != 'DMND_NOCHC' AND CUTT_RSLT_CD != 'DMND_GIVEUP' THEN 1 ELSE 0 END) AS TOT_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'DMND_GIVEUP' THEN 1 ELSE 0 END) as DMND_GIVEUP_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'ALTMNT_GIVEUP' THEN 1 ELSE 0 END) as ALTMNT_GIVEUP_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'WAIT_GIVEUP' THEN 1 ELSE 0 END) as WAIT_GIVEUP_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'TRAN_WAIT_GIVEUP' THEN 1 ELSE 0 END) as TRAN_WAIT_GIVEUP_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'DMND_NPSBL' THEN 1 ELSE 0 END) as DMND_NPSBL_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'ALTMNT_NPSBL' THEN 1 ELSE 0 END) as ALTMNT_NPSBL_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'DMND_NOCHC' THEN 1 ELSE 0 END) as DMND_NOCHC_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD = 'CUSL_ALTMNT_NPSBL' THEN 1 ELSE 0 END) as CUSL_ALTMNT_NPSBL_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'CMPL' || '%') THEN 1 ELSE 0 END)  AS CMPL_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'ING' || '%') OR PSCCD.CUTT_RSLT_CD LIKE ('%' || 'AFTPRCS' || '%') THEN 1 ELSE 0 END)  AS CUTT_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'TRAN' || '%') THEN 1 ELSE 0 END)  AS TRAN_CNT
+				, AVG(CASE WHEN ALTMNT_HR != 0 THEN ALTMNT_HR END)  AS ALTMNT_AVG_HR
+				, AVG(CASE WHEN CUTT_HR != 0 THEN CUTT_HR END)  AS CUTT_AVG_HR
+				, AVG(CASE WHEN AFTPRCS_HR != 0 THEN AFTPRCS_HR END)  AS AFTPRCS_AVG_HR
+				, AVG(CASE WHEN PRCS_HR != 0 THEN PRCS_HR END)  AS PRCS_AVG_HR
+			FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+			WHERE PSCCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+				AND PSCCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+				<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+					AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+				</if>
+			GROUP BY PSCCD.CUTT_YMD<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>, PSCCD.CHN_CLSF_CD</if>
+			) A
+		) CUTT ON CUTT.CUTT_DT = DT.DT
+	</select>
+
+
+	<!-- 통합생산성 통계 (상단 선 그래프) -->
+	<select id="selectCuttPrdctnStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* selectCuttPrdctnStatistics - 통합생산성 통계 (상단 선 그래프) */
+			DT.DT AS CUTT_DT
+			, COALESCE(CUTT.CUTT_AVG_HR, 0) AS CUTT_AVG_HR
+		FROM (
+			SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+		) DT
+		LEFT OUTER JOIN (
+			SELECT A.CUTT_DT
+				, A.CUTT_AVG_HR
+			FROM (
+				SELECT DISTINCT PSCCD.CUTT_YMD AS CUTT_DT
+					, AVG(CUTT_HR)  AS CUTT_AVG_HR
+				FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE PSCCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+					AND PSCCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+						AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+					</if>
+				GROUP BY PSCCD.CUTT_YMD<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>, PSCCD.CHN_CLSF_CD</if>
+			) A
+		) CUTT ON CUTT.CUTT_DT = DT.DT
+	</select>
+
+	<!-- 통합생산성 통계 (그리드 데이터) -->
+	<select id="selectCuttPrdctnStatisticsList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* selectCuttPrdctnStatisticsList - 통합생산성 통계 (그리드 데이터) */
+			(ROW_NUMBER() OVER()) AS ROWNUM
+			, DT.DT AS CUTT_DT
+			, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+			, COALESCE(CUTT.CMPL_CNT, 0) AS CMPL_CNT
+			, COALESCE(CUTT.CUTT_CNT, 0) AS CUTT_CNT
+			, COALESCE(CUTT.TRAN_CNT, 0) AS TRAN_CNT
+			, COALESCE(CUTT.ALTMNT_AVG_HR, 0) AS ALTMNT_AVG_HR
+			, COALESCE(CUTT.GIVEUP_AVG_HR, 0) AS GIVEUP_AVG_HR
+			, COALESCE(CUTT.CUTT_AVG_HR, 0) AS CUTT_AVG_HR
+			, COALESCE(CUTT.AFTPRCS_AVG_HR, 0) AS AFTPRCS_AVG_HR
+			, COALESCE(CUTT.PRCS_AVG_HR, 0) AS PRCS_AVG_HR
+		FROM (
+			SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+		) DT
+		LEFT OUTER JOIN (
+			SELECT A.CUTT_DT
+				, A.TOT_CNT
+				, A.CMPL_CNT
+				, A.CUTT_CNT
+				, A.TRAN_CNT
+				, A.ALTMNT_AVG_HR
+				, A.GIVEUP_AVG_HR
+				, A.CUTT_AVG_HR
+				, A.AFTPRCS_AVG_HR
+				, A.PRCS_AVG_HR
+			FROM (
+				SELECT DISTINCT PSCCD.CUTT_YMD AS CUTT_DT
+				--, COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID) AS TOT_CNT
+				, SUM(case when PSCCD.CUTT_RSLT_CD != 'DMND_NPSBL' AND CUTT_RSLT_CD != 'CUSL_ALTMNT_NPSBL' AND CUTT_RSLT_CD != 'ALTMNT_GIVEUP' AND CUTT_RSLT_CD != 'WAIT_GIVEUP' AND CUTT_RSLT_CD != 'DMND_NOCHC' AND CUTT_RSLT_CD != 'DMND_GIVEUP' THEN 1 ELSE 0 END) AS TOT_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'CMPL' || '%') THEN 1 ELSE 0 END)  AS CMPL_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'ING' || '%') OR PSCCD.CUTT_RSLT_CD LIKE ('%' || 'AFTPRCS' || '%') THEN 1 ELSE 0 END)  AS CUTT_CNT
+				, SUM(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'TRAN' || '%') THEN 1 ELSE 0 END)  AS TRAN_CNT
+				, AVG(CASE WHEN PSCCD.CUTT_RSLT_CD NOT LIKE ('%' || 'GIVEUP' || '%') AND RDY_HR != 0 THEN RDY_HR ELSE 0 END)  AS ALTMNT_AVG_HR
+				, AVG(CASE WHEN PSCCD.CUTT_RSLT_CD LIKE ('%' || 'GIVEUP' || '%') AND RDY_HR != 0 THEN RDY_HR ELSE 0 END)  AS GIVEUP_AVG_HR
+				, AVG(CASE WHEN CUTT_HR != 0 THEN CUTT_HR END)  AS CUTT_AVG_HR
+				, AVG(CASE WHEN AFTPRCS_HR != 0 THEN AFTPRCS_HR END)  AS AFTPRCS_AVG_HR
+				, AVG(CASE WHEN PRCS_HR != 0 THEN PRCS_HR END)  AS PRCS_AVG_HR
+				FROM PLT_STATS_CHT_CUTT_DTL PSCCD
+				WHERE PSCCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+				AND PSCCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+				<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>
+					AND PSCCD.CHN_CLSF_CD = #{CHN_CLSF_CD}
+				</if>
+				GROUP BY PSCCD.CUTT_YMD<if test='CHN_CLSF_CD != null and CHN_CLSF_CD != ""'>, PSCCD.CHN_CLSF_CD</if>
+			) A
+		) CUTT ON CUTT.CUTT_DT = DT.DT
+	</select>
+
+
+	<!-- 채팅통계 상담건수 포함항목 설정값 조회 -->
+	<select id="getStatStng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* getStatStng - 채팅통계 상담건수 포함항목 설정값 조회 */
+			STNG_CD
+			, STNG_VL 
+		FROM PLT_CHT_STNG
+		WHERE STNG_CD IN ('CUSL_ALTMNT_NPSBL', 'ALTMNT_GIVEUP', 'WAIT_GIVEUP', 'DMND_NOCHC', 'DMND_NPSBL', 'DMND_GIVEUP')
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</select>
+
+
+
+</mapper>

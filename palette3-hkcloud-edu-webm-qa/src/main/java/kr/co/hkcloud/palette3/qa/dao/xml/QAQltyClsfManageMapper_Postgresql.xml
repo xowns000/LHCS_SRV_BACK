@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.qa.dao.QAQltyClsfManageMapper">
+
+    <sql id="ColumnForClsfTreeList">HIERARCHY,TOP_QLTY_CLSF_ID,TOP_QLTY_CLSF_NM,UP_QLTY_CLSF_ID,UP_QLTY_CLSF_NM,QLTY_CLSF_ID,QLTY_CLSF_NM,USE_YN,DEL_YN,SORT_ORD,LEVEL,FULLPATH</sql>
+    <sql id="ColumnForArtclWithClsfList">HIERARCHY, CLSF.UP_QLTY_CLSF_ID, CLSF.UP_QLTY_CLSF_NM, CLSF.QLTY_CLSF_ID, CLSF.QLTY_CLSF_NM, ARTCL.EVL_ARTCL_ID, ARTCL.EVL_ARTCL_NM, ARTCL.ASSSCOR, ARTCL.SORT_ORD, ARTCL.USE_YN</sql>
+    <sql id="ColumnForEvlList">TOP_QLTY_CLSF_ID, TOP_QLTY_CLSF_NM, UP_QLTY_CLSF_ID, UP_QLTY_CLSF_NM, QLTY_CLSF_ID, QLTY_CLSF_NM, LEVEL</sql>
+    <sql id="ClsTreeList">
+    	WITH RECURSIVE CTE (<include refid="ColumnForClsfTreeList"/>) AS
+		(
+		  SELECT 
+				LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS HIERARCHY
+				,0::BIGINT AS TOP_QLTY_CLSF_ID
+				,''::VARCHAR AS TOP_QLTY_CLSF_NM
+				,UP_QLTY_CLSF_ID
+				,''::VARCHAR AS UP_QLTY_CLSF_NM
+				,QLTY_CLSF_ID
+				,QLTY_CLSF_NM
+				,USE_YN
+				,DEL_YN
+				,SORT_ORD
+				,0 AS LEVEL
+				,QLTY_CLSF_NM::VARCHAR AS FULLPATH
+				,0 AS max_assscor
+			  FROM PLT_QA_QLTY_CLSF TOP
+			 WHERE 
+			 	<choose>
+			 		<when test="UP_QLTY_CLSF_ID != null and UP_QLTY_CLSF_ID != ''"> 
+			 		UP_QLTY_CLSF_ID = #{UP_QLTY_CLSF_ID}::INTEGER 
+			 		</when>
+			 		<otherwise>
+			 		UP_QLTY_CLSF_ID IS NULL AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+			 		</otherwise>
+			 	</choose>
+			 UNION ALL
+			SELECT 
+				B.HIERARCHY || ' > ' || LPAD(CAST(A.SORT_ORD AS VARCHAR),5,'0')
+				,CASE WHEN (B.LEVEL+1) = 1 THEN A.QLTY_CLSF_ID ELSE B.TOP_QLTY_CLSF_ID END
+				,CASE WHEN (B.LEVEL+1) = 1 THEN A.QLTY_CLSF_NM ELSE B.TOP_QLTY_CLSF_NM END
+				,A.UP_QLTY_CLSF_ID
+				,B.QLTY_CLSF_NM AS UP_QLTY_CLSF_NM
+				,A.QLTY_CLSF_ID
+				,A.QLTY_CLSF_NM
+				,A.USE_YN
+				,A.DEL_YN
+				,A.SORT_ORD
+				,B.LEVEL+1
+				,(B.FULLPATH || '/' || A.QLTY_CLSF_NM)::VARCHAR
+				,C.MAX_ASSSCOR
+			  FROM PLT_QA_QLTY_CLSF A INNER JOIN CTE B ON (A.UP_QLTY_CLSF_ID = B.QLTY_CLSF_ID)
+	    	  LEFT JOIN (SELECT MAX(ASSSCOR) AS MAX_ASSSCOR
+	    	  				, QLTY_CLSF_ID
+					 	FROM PLT_QA_QLTY_EVL_ARTCL GROUP BY QLTY_CLSF_ID) C ON C.QLTY_CLSF_ID = A.QLTY_CLSF_ID
+		)
+		SELECT * FROM CTE
+    </sql>
+    
+    <!-- QA 품질 지표 분류 등록-->
+    <insert id="upsertQaQltyClsf" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_QLTY_CLSF (
+					QLTY_CLSF_ID
+					,UP_QLTY_CLSF_ID
+					,QLTY_CLSF_NM
+					,SORT_ORD
+					,USE_YN
+					,DEL_YN
+					,REG_DT
+					,RGTR_ID
+					,CUSTCO_ID
+		) VALUES (
+					#{QLTY_CLSF_ID}::INTEGER
+			 	<choose>
+			 		<when test='MAKE_TOP != null and "Y".equals(MAKE_TOP)'> 
+			 		,NULL::INTEGER
+					,(SELECT CO_NM FROM PLT_CUSTCO WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER)
+					,(SELECT (COALESCE(MAX(SORT_ORD), 0) + 1)::INTEGER FROM PLT_QA_QLTY_CLSF WHERE UP_QLTY_CLSF_ID IS NULL)
+					</when>
+			 		<otherwise>
+			 		,#{UP_QLTY_CLSF_ID}::INTEGER
+					,#{QLTY_CLSF_NM}
+					<choose>
+						<when test="SORT_ORD != '' and SORT_ORD != null and SORT_ORD != undefined">
+							,#{SORT_ORD}::INTEGER
+						</when>
+						<otherwise>
+							,(SELECT (COALESCE(MAX(SORT_ORD), 0) + 1)::INTEGER FROM PLT_QA_QLTY_CLSF WHERE UP_QLTY_CLSF_ID = #{UP_QLTY_CLSF_ID}::INTEGER)::INTEGER
+						</otherwise>
+					</choose>
+					</otherwise>
+			 	</choose>
+					,#{USE_YN}
+					,#{DEL_YN}
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					,#{USER_ID}::INTEGER
+					,#{CUSTCO_ID}::INTEGER
+		)
+		ON CONFLICT (QLTY_CLSF_ID)
+		DO
+		UPDATE SET
+					UP_QLTY_CLSF_ID = #{UP_QLTY_CLSF_ID}::INTEGER
+					,QLTY_CLSF_NM = #{QLTY_CLSF_NM}
+					,SORT_ORD = #{SORT_ORD}::INTEGER
+					,USE_YN = #{USE_YN}
+					,DEL_YN = #{DEL_YN}
+					,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					,MDFR_ID = #{USER_ID}::INTEGER
+					,CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</insert>
+	<select id="selectQaQltyClsfTree" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.*, OCD.CD_NM AS USE_YN_NM
+  		  FROM (
+				<include refid="ClsTreeList"/>
+			   ) AS A 
+    	  LEFT OUTER JOIN PLT_COMM_CD OCD
+		 	ON OCD.CUSTCO_ID = #{CUSTCO_ID}::INT AND A.USE_YN = OCD.CD_ID AND OCD.GROUP_CD_ID = 'USE_WT'
+		 ORDER BY HIERARCHY	
+	</select>
+	<delete id="deleteQaQltyClsf" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_QLTY_CLSF
+		 WHERE QLTY_CLSF_ID = #{QLTY_CLSF_ID}::INTEGER
+	</delete>
+	<select id="selectQaQltyEvlArtcl" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+		    (ROW_NUMBER() OVER(ORDER BY ARTCL.SORT_ORD ASC, ARTCL.REG_DT DESC)) AS ROW_NUMBER
+			,CLSF.TOP_QLTY_CLSF_ID
+			,CLSF.TOP_QLTY_CLSF_NM
+			,CLSF.QLTY_CLSF_NM
+			,ARTCL.EVL_ARTCL_ID
+			,ARTCL.EVL_ARTCL_NM
+			,ARTCL.QLTY_CLSF_ID
+			,ARTCL.ASSSCOR
+			,ARTCL.SORT_ORD
+			,ARTCL.USE_YN
+			,OCD.CD_NM AS USE_YN_NM
+		 FROM PLT_QA_QLTY_EVL_ARTCL AS ARTCL
+		 	LEFT OUTER JOIN PLT_COMM_CD OCD
+		 		ON OCD.CUSTCO_ID = #{CUSTCO_ID}::INT AND ARTCL.USE_YN = OCD.CD_ID AND OCD.GROUP_CD_ID = 'USE_WT'				
+		 	LEFT JOIN (
+					SELECT <include refid="ColumnForEvlList"/>
+					FROM (	
+						<include refid="ClsTreeList"/>
+					) AS QLTY
+					WHERE LEVEL = 3
+				) AS CLSF ON ARTCL.QLTY_CLSF_ID = CLSF.QLTY_CLSF_ID
+		 WHERE ARTCL.QLTY_CLSF_ID = #{QLTY_CLSF_ID}::INTEGER
+			<if test="USE_YN != null and USE_YN != ''">
+			AND ARTCL.USE_YN = #{USE_YN}
+			</if>
+			<if test="EVL_ARTCL_NM != null and EVL_ARTCL_NM != ''">
+			AND ARTCL.EVL_ARTCL_NM LIKE CONCAT('%', #{EVL_ARTCL_NM}, '%')
+			</if>
+		 ORDER BY ARTCL.SORT_ORD, ARTCL.REG_DT DESC
+	</select>
+    <insert id="upsertQaQltyEvlArtcl" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_QLTY_EVL_ARTCL (
+					EVL_ARTCL_ID
+					,QLTY_CLSF_ID
+					,EVL_ARTCL_NM
+					,ASSSCOR
+					,SORT_ORD
+					,USE_YN
+					,REG_DT
+					,RGTR_ID
+		) VALUES (
+					#{EVL_ARTCL_ID}::INTEGER
+					,#{QLTY_CLSF_ID}::INTEGER
+					,#{EVL_ARTCL_NM}
+					,#{ASSSCOR}::INTEGER
+					<choose>
+						<when test="SORT_ORD != '' and SORT_ORD != null and SORT_ORD != undefined">
+							,#{SORT_ORD}::INTEGER
+						</when>
+						<otherwise>
+							,(SELECT (COALESCE(MAX(SORT_ORD), 0) + 1)::INTEGER FROM PLT_QA_QLTY_EVL_ARTCL WHERE QLTY_CLSF_ID = #{QLTY_CLSF_ID}::INTEGER)::INTEGER
+						</otherwise>
+					</choose>
+					,#{USE_YN}
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					,#{USER_ID}::INTEGER
+		)
+		ON CONFLICT (EVL_ARTCL_ID)
+		DO
+		UPDATE SET
+					MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					<if test="USER_ID != null and USER_ID != ''">
+					,MDFR_ID = #{USER_ID}::INTEGER
+					</if>
+					<if test="QLTY_CLSF_ID != null and QLTY_CLSF_ID != ''">
+					,QLTY_CLSF_ID = #{QLTY_CLSF_ID}::INTEGER
+					</if>
+					<if test="EVL_ARTCL_NM != null and EVL_ARTCL_NM != ''">
+					,EVL_ARTCL_NM = #{EVL_ARTCL_NM}
+					</if>
+					<if test="ASSSCOR != null and ASSSCOR != ''">
+					,ASSSCOR = #{ASSSCOR}::INTEGER 
+					</if>
+					<if test="SORT_ORD != null and SORT_ORD != ''">
+					,SORT_ORD = #{SORT_ORD}::INTEGER
+					</if>
+					<if test="USE_YN != null and USE_YN != ''">
+					,USE_YN = #{USE_YN}
+					</if>
+	</insert>
+	<delete id="deleteQaQltyEvlArtcl" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_QLTY_EVL_ARTCL
+		 WHERE EVL_ARTCL_ID IN (
+				<foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+				#{ITEM.EVL_ARTCL_ID}::INTEGER
+				</foreach>   	 
+			) 
+	</delete>
+	<select id="selectEvlArtclCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(*) CNT
+		  FROM PLT_QA_QLTY_EVL_ARTCL
+		 WHERE QLTY_CLSF_ID = #{QLTY_CLSF_ID}::INTEGER
+	</select>
+	<select id="selectQaPlanQltyCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(*) CNT
+		  FROM PLT_QA_PLAN_QLTY
+		 WHERE EVL_ARTCL_ID IN (
+				<foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+				#{ITEM.EVL_ARTCL_ID}::INTEGER
+				</foreach>   	 
+		 	   )
+	</select>
+	
+	<select id="selectQaQltyClsfCode" parameterType="java.util.HashMap" resultType="java.util.HashMap">	
+		SELECT A.QLTY_CLSF_ID, A.QLTY_CLSF_NM
+		  FROM PLT_QA_QLTY_CLSF AS A
+		  LEFT JOIN PLT_QA_QLTY_CLSF AS B ON A.UP_QLTY_CLSF_ID = B.QLTY_CLSF_ID 
+		 WHERE B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		   AND B.UP_QLTY_CLSF_ID IS NULL 
+		   AND A.USE_YN = 'Y'
+		   AND A.DEL_YN = 'N'
+		 ORDER BY A.SORT_ORD ASC;	
+	</select>
+	<!-- 
+	<select id="selectQaQltyEvlArtclListWithClsf" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT <include refid="ColumnForArtclWithClsfList"/>
+  		  FROM ( 
+  		  		  	<include refid="ClsTreeList"/> 
+  		  	   ) AS CLSF LEFT OUTER JOIN PLT_QA_QLTY_EVL_ARTCL AS ARTCL
+						ON ARTCL.QLTY_CLSF_ID = CLSF.QLTY_CLSF_ID
+		ORDER BY HIERARCHY, ARTCL.SORT_ORD ASC
+	</select>
+	 -->
+	<select id="selectQaQltyEvlArtclListWithClsf" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT <include refid="ColumnForArtclWithClsfList"/>
+  		  FROM ( 
+  		  		  	<include refid="ClsTreeList"/> 
+  		  	   ) AS CLSF INNER JOIN PLT_QA_QLTY_EVL_ARTCL AS ARTCL
+						ON ARTCL.QLTY_CLSF_ID = CLSF.QLTY_CLSF_ID
+					       <if test="USE_YN != null and USE_YN != ''">
+					       AND ARTCL.USE_YN = #{USE_YN}
+						   </if>
+		ORDER BY HIERARCHY, ARTCL.SORT_ORD ASC, ARTCL.REG_DT DESC
+	</select>
+	<select id="selectQaPlanQltyList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT HIERARCHY, TMP.UP_QLTY_CLSF_ID, TMP.UP_QLTY_CLSF_NM, TMP.QLTY_CLSF_ID, TMP.QLTY_CLSF_NM, PLAN.EVL_ARTCL_ID, PLAN.EVL_ARTCL_NM, PLAN.ASSSCOR,PLAN.SORT_ORD, TMP.USE_YN 
+		  FROM PLT_QA_PLAN_QLTY AS PLAN
+					INNER JOIN (
+								SELECT <include refid="ColumnForArtclWithClsfList"/>
+						  		  FROM ( 
+						  		  		  	<include refid="ClsTreeList"/> 
+						  		  	   ) AS CLSF INNER JOIN PLT_QA_QLTY_EVL_ARTCL AS ARTCL
+												ON ARTCL.QLTY_CLSF_ID = CLSF.QLTY_CLSF_ID
+								ORDER BY HIERARCHY, ARTCL.SORT_ORD ASC
+								) AS TMP ON TMP.EVL_ARTCL_ID = PLAN.EVL_ARTCL_ID
+		 WHERE DEL_YN = #{DEL_YN}
+		   AND QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   ORDER BY HIERARCHY, PLAN.SORT_ORD ASC		
+	</select>
+	<select id="selectQaEvlSheet" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT HIERARCHY, TMP.UP_QLTY_CLSF_ID, TMP.UP_QLTY_CLSF_NM, TMP.QLTY_CLSF_ID, TMP.QLTY_CLSF_NM, PLAN.EVL_ARTCL_ID, PLAN.EVL_ARTCL_NM, PLAN.ASSSCOR,PLAN.SORT_ORD, TMP.USE_YN, RSLT.SCR
+		  FROM PLT_QA_PLAN_QLTY AS PLAN
+					INNER JOIN (
+								SELECT <include refid="ColumnForArtclWithClsfList"/>
+						  		  FROM ( 
+						  		  		  	<include refid="ClsTreeList"/> 
+						  		  	   ) AS CLSF INNER JOIN PLT_QA_QLTY_EVL_ARTCL AS ARTCL
+												ON ARTCL.QLTY_CLSF_ID = CLSF.QLTY_CLSF_ID
+								ORDER BY HIERARCHY, ARTCL.SORT_ORD ASC
+								) AS TMP ON TMP.EVL_ARTCL_ID = PLAN.EVL_ARTCL_ID
+					LEFT JOIN PLT_QA_RSLT AS RSLT
+					ON RSLT.EVL_ARTCL_ID = TMP.EVL_ARTCL_ID
+					AND RSLT.QA_PLAN_ID = PLAN.QA_PLAN_ID 
+					AND RSLT.QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER 
+					AND RSLT.QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER 
+					AND RSLT.QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+		 WHERE DEL_YN = #{DEL_YN}
+		   AND PLAN.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   ORDER BY HIERARCHY, PLAN.SORT_ORD ASC		
+	</select>
+	<update id="updateQltyClsfOrder"  parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_QLTY_CLSF AS ORG
+		   SET SORT_ORD = NEW.SORT_ORD
+			  ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			  ,MDFR_ID = #{USER_ID}::INTEGER
+		  FROM (
+				<foreach collection="LIST_DATA" item="ITEM" index="index" separator=" UNION "> 
+				SELECT #{ITEM.QLTY_CLSF_ID}::INTEGER AS QLTY_CLSF_ID, #{ITEM.SORT_ORD}::INTEGER AS SORT_ORD
+				</foreach>
+		       ) AS NEW
+		 WHERE ORG.QLTY_CLSF_ID = NEW.QLTY_CLSF_ID
+		   AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+</mapper>

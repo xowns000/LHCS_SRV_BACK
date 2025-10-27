@@ -1,0 +1,827 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.chat.setting.dao.ChatSettingMessengerConnectManageMapper">
+
+    <!-- ######################################################################### -->
+    <!-- 채널연동목록 데이터 페이징 조회 조건 파라미터 -->
+    <sql id="selectRtnPageAspCustChannelList-params">
+
+        <if test="REG_DTTM_FROM != '' and REG_DTTM_FROM != null">AND TACC.REG_DTTM >= #{REG_DTTM_FROM}</if> <!-- 조회기간 시작일자 -->
+        <if test="REG_DTTM_TO != '' and REG_DTTM_TO != null"> <![CDATA[ AND TACC.REG_DTTM <= #{REG_DTTM_TO} ]]></if> <!-- 조회기간 종료일자 -->
+        <if test="SEARCH_CO_NM != '' and SEARCH_CO_NM != null">AND TAC.CO_NM LIKE '%' || #{SEARCH_CO_NM} || '%'</if> <!-- 고객사명 시작일자 -->
+        <if test="SEARCH_CHN_NM != '' and SEARCH_CHN_NM != null">AND TABC.CHN_NM LIKE '%' || #{SEARCH_CHN_NM} || '%'
+        </if> <!-- 비즈채널명 시작일자 -->
+        <if test="SEARCH_DSPTCH_PRF_NM != '' and SEARCH_DSPTCH_PRF_NM != null">AND TACC.DSPTCH_PRF_NM LIKE '%' || #{SEARCH_DSPTCH_PRF_NM} ||
+            '%'
+        </if> <!-- 채팅채널명 시작일자 -->
+    </sql>
+
+    <!-- 채널연동목록 데이터 페이징 조회 -->
+    <select id="selectRtnPageAspCustChannelList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+        SELECT ROW_TBL.*
+        FROM (
+        SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+        , PCC.SNDR_KEY
+        , PCC.CHN_CLSF_CD
+        , (SELECT CD_NM
+        FROM PLT_COMM_CD
+        WHERE CUSTCO_ID = PCC.CUSTCO_ID AND GROUP_CD_ID = 'CHNL_CL'
+        AND CD_ID = PCC.CHN_CLSF_CD) AS CHN_CLSF_CD_NM
+        , PCC.ATALK_YN
+        , PCC.UUID
+        , PCC.CSGMT_AGRE_YN
+        , PCC.CSGMT_AGRE_DT
+        , PCC.DSPTCH_PRF_KEY
+        , PCC.DSPTCH_PRF_NM
+        , PCC.SRVC_MAINT_YN
+        , PCC.CHBT_USE_YN
+        , PCC.RGTR_ID
+        , (SELECT MBL_PHN_NO
+        FROM PLT_USER
+        WHERE USER_ID = PCC.RGTR_ID) AS CUSTCO_MNGR_PHN_NO
+        , (SELECT EML
+        FROM PLT_USER
+        WHERE USER_ID = PCC.RGTR_ID) AS CUSTCO_MNGR_EML
+        , (SELECT USER_NM
+        FROM PLT_USER
+        WHERE USER_ID = PCC.RGTR_ID) AS CUSTCO_MNGR_NM
+        , PCC.REG_DT
+        , PCC.MDFR_ID
+        , PCC.MDFCN_DT
+        FROM PLT_CUSTCO_CHN PCC
+        WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+        AND PCC.DSPTCH_PRF_NM LIKE ('%' || #{DSPTCH_PRF_NM} || '%')
+        <if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null and CHN_CLSF_CD != undefined">
+            AND PCC.CHN_CLSF_CD = #{CHN_CLSF_CD}
+        </if>
+        ORDER BY PCC.REG_DT
+        <include refid="selectRtnPageAspCustChannelList-params"/>
+        ) ROW_TBL
+
+    </select>
+
+    <!-- 채널상세 데이터 조회 -->
+    <select id="selectRtnPageAspCustChannelDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /*	selectRtnPageAspCustChannelDetail - 채널 상세정보	*/
+            PCC.SNDR_KEY
+             , PCC.CHN_CLSF_CD
+             , (SELECT CD_NM
+                FROM PLT_COMM_CD
+                WHERE CUSTCO_ID = PCC.CUSTCO_ID
+                  AND GROUP_CD_ID = 'CHNL_CL'
+                  AND CD_ID = PCC.CHN_CLSF_CD) AS CHN_CLSF_CD_NM
+             , PCC.ATALK_YN
+             , PCC.UUID
+             , PCC.CSGMT_AGRE_YN
+             , PCC.CSGMT_AGRE_DT
+             , PCC.DSPTCH_PRF_KEY
+             , PCC.DSPTCH_PRF_NM
+             , PCC.SRVC_MAINT_YN
+             , COALESCE(PCC.CHBT_USE_YN, 'N')  AS CHBT_USE_YN
+             , PCC.RGTR_ID
+             , (SELECT MBL_PHN_NO
+                FROM PLT_USER
+                WHERE USER_ID = PCC.RGTR_ID)   AS CUSTCO_MNGR_PHN_NO
+             , (SELECT EML
+                FROM PLT_USER
+                WHERE USER_ID = PCC.RGTR_ID)   AS CUSTCO_MNGR_EML
+             , (SELECT USER_NM
+                FROM PLT_USER
+                WHERE USER_ID = PCC.RGTR_ID)   AS CUSTCO_MNGR_NM
+             , PCC.REG_DT
+             , PCC.MDFR_ID
+             , PCC.MDFCN_DT
+        FROM PLT_CUSTCO_CHN PCC
+        WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+ 		AND PCC.SNDR_KEY = #{SNDR_KEY}:: INTEGER
+    </select>
+
+    <select id="selectRtnPageAspCustChannelDetailBbs" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /*	selectRtnPageAspCustChannelDetailBbs - 채널 상세정보 - 게시판 설정	*/
+            PCCBS.SNDR_KEY
+             , PCCBS.INQ_API_ID
+             , PCCBS.REG_API_ID
+             , PCCBS.ORDR_INQ_API_ID
+             , PCCBS.GDS_INQ_API_ID
+             , PCCBS.RPRS_REG_ID
+             , PCCBS.RGTR_ID
+             , PCCBS.REG_DT
+             , PCCBS.MDFR_ID
+             , PCCBS.MDFCN_DT
+             , PCCBS.CLCT_RPTT
+             , PCCBS.LKAG_MST_ID
+             , PCCBS.BBS_INQRY_TYPE_CD
+             , CJM.AFTR_JOB_BGNG_DT AS NEXT_AFTR_JOB_BGNG_DT
+        FROM PLT_CUSTCO_CHN_BBS_STNG PCCBS
+                 INNER JOIN PLT_CUSTCO_CHN PCC ON PCC.SNDR_KEY = PCCBS.SNDR_KEY AND PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+    LEFT OUTER JOIN PLT_CLCT_JOB_MNG CJM
+        ON CJM.SNDR_KEY = PCC.SNDR_KEY
+        WHERE
+            PCCBS.SNDR_KEY = #{SNDR_KEY}:: INTEGER
+    </select>
+
+    <select id="selectRtnPageAspCustChannelDetailEmail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /*	selectRtnPageAspCustChannelDetailEmail - 채널 상세정보 - 이메일 설정	*/
+            PCCES.SNDR_KEY
+             , PCCES.SRVR
+             , PCCES.PORT
+             , PCCES.ACNT
+             , CUSTCO.GEN_DECRYPT(PCCES.PSWD, #{PP_KEY_PP}, #{PP_ALG_PP}) AS PSWD
+             , PCCES.PROTOCOL_CD
+             , PCCES.SNDR_EML
+             , PCCES.SNDR_NM
+             , PCCES.RGTR_ID
+             , PCCES.REG_DT
+             , PCCES.MDFR_ID
+             , PCCES.MDFCN_DT
+             , PCCES.CLCT_RPTT
+             , PCCES.SMTP_SRVR
+             , PCCES.SMTP_PORT
+             , PCCES.SMTP_RPRS_YN
+        FROM PLT_CUSTCO_CHN_EML_STNG PCCES
+                 INNER JOIN PLT_CUSTCO_CHN PCC ON PCC.SNDR_KEY = PCCES.SNDR_KEY AND PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+        WHERE
+            PCCES.SNDR_KEY = #{SNDR_KEY}:: INTEGER
+    </select>
+
+    <!-- 카카오톡 채널 연동결과 조회 -->
+    <select id="selectRtnKaKaoConnStatus" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.*
+        FROM(
+        SELECT SNDR_KEY /*ASP_센더_키*/
+        , CUSTCO_ID /*ASP_고객사_키*/
+        , CHN_CLSF_CD /*비즈_서비스_코드*/
+        , UUID /*톡UUID*/
+        , SERV_AGREE_YN /*서비스위탁동의여부*/
+        , SERV_AGREE_DTTM /*동의일시*/
+        , DSPTCH_PRF_KEY /*TALK_센더_키*/
+        , DSPTCH_PRF_NM /*TALK_센더_명*/
+        , TALK_SENDER_ETC_INFO01 /*TALK_센더_추가정보01*/
+        , SRVC_MAINT_YN /*서비스유지여부*/
+        , TB3.CD_NM AS SERV_KEEP_NM /*서비스상태명*/
+        FROM PLT_ASP_CUS_CHN TACC
+        LEFT OUTER JOIN PLT_COMN_CD TB3
+        ON TACC.SRVC_MAINT_YN = TB3.CD
+        AND TB3.GROUP_CD = 'ASP002'
+        WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} <!-- 비즈서비스코드 -->
+        AND CHN_CLSF_CD = 'KAKAO' /* 카카오톡 채널 */
+        ORDER BY TACC.REG_DTTM DESC
+        ) A
+        WHERE ROWNUM <![CDATA[<]]>=1
+    </select>
+
+    <!-- 고객사 이용채널 데이터 조회 -->
+    <select id="selectRtnAspCustChannelInUse" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT TACC.SNDR_KEY /*ASP_센더_키*/
+        , TACC.CUSTCO_ID /*ASP_고객사_키*/
+        , TACC.CUSTCO_ID AS ASP_CUST_INFO /*ASP_고객사_키*/
+        , TACC.CHN_CLSF_CD /*비즈_서비스_코드*/
+        , TABC.CHN_NM /*비즈_서비스_명*/
+        , TABC.CHN_URI /*비즈_서비스_URI*/
+        , TACC.UUID /*톡UUID*/
+        , TACC.SERV_AGREE_YN /*서비스위탁동의여부*/
+        , TACC.SERV_AGREE_DTTM /*동의일시*/
+        , TACC.DSPTCH_PRF_KEY /*TALK_센더_키*/
+        , TACC.DSPTCH_PRF_NM /*TALK_센더_명*/
+        , TACC.TALK_SENDER_ETC_INFO01 /*TALK_센더_추가정보01*/
+        , TACC.SRVC_MAINT_YN /*서비스유지여부*/
+        , TACC.SORT_ORD /*정렬순서*/
+        FROM PLT_ASP_CUS_CHN TACC
+        LEFT OUTER JOIN PLT_CHN TABC
+        ON TACC.CHN_CLSF_CD = TABC.CHN_CLSF_CD
+        WHERE TACC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+
+        <if test="CHN_CLSF_CD != '' and CHN_CLSF_CD != null">
+            AND TACC.CHN_CLSF_CD = #{CHN_CLSF_CD}
+        </if>
+
+    </select>
+
+    <!-- 고객채널 상세정보 업데이트 -->
+    <update id="updateRtnAspCustChannelDetail" parameterType="java.util.HashMap">
+        UPDATE PLT_CUSTCO_CHN /* updateRtnAspCustChannelDetail - 고객채널 상세정보 업데이트 */
+        SET CHN_CLSF_CD    = #{CHN_CLSF_CD}
+          , ATALK_YN       = #{ATALK_YN}
+          , UUID           = #{UUID}
+          , DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+          , DSPTCH_PRF_NM  = #{DSPTCH_PRF_NM}
+          , MDFR_ID        = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+        WHERE
+            CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+          AND SNDR_KEY = #{SNDR_KEY}:: INTEGER
+
+    </update>
+
+    <update id="updateRtnAspCustChannelDetailBbs" parameterType="java.util.HashMap">
+        UPDATE PLT_CUSTCO_CHN_BBS_STNG /* updateRtnAspCustChannelDetail - 고객채널 상세정보 - 게시판 설정 업데이트 */
+        SET
+        INQ_API_ID = #{INQ_API_ID}::INTEGER
+        , REG_API_ID =
+        <choose>
+            <when test="REG_API_ID != null and REG_API_ID !=''">#{REG_API_ID}::INTEGER</when>
+            <otherwise>NULL</otherwise>
+        </choose>
+        , ORDR_INQ_API_ID =
+        <choose>
+            <when test="ORDR_INQ_API_ID != null and ORDR_INQ_API_ID !=''">#{ORDR_INQ_API_ID}::INTEGER</when>
+            <otherwise>NULL</otherwise>
+        </choose>
+        , GDS_INQ_API_ID =
+        <choose>
+            <when test="GDS_INQ_API_ID != null and GDS_INQ_API_ID !=''">#{GDS_INQ_API_ID}::INTEGER</when>
+            <otherwise>NULL</otherwise>
+        </choose>
+        , RPRS_REG_ID =
+        <choose>
+            <when test="RPRS_REG_ID != null and RPRS_REG_ID !=''">#{RPRS_REG_ID}</when>
+            <otherwise>NULL</otherwise>
+        </choose>
+        , LKAG_MST_ID = #{LKAG_MST_ID}::INTEGER
+        , BBS_INQRY_TYPE_CD = #{BBS_INQRY_TYPE_CD}
+        , CLCT_RPTT = #{CLCT_RPTT}::INTEGER
+        , MDFR_ID = #{USER_ID}::INTEGER
+        , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+        WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+    </update>
+
+    <update id="updateRtnAspCustChannelDetailEmail" parameterType="java.util.HashMap">
+        UPDATE PLT_CUSTCO_CHN_EML_STNG /* updateRtnAspCustChannelDetail - 고객채널 상세정보 - 이메일 설정 업데이트 */
+        SET SRVR = #{SRVR}
+          , PORT = #{PORT}::INTEGER
+		, ACNT = #{ACNT}
+          , PSWD = CUSTCO.GEN_ENCRYPT(#{PSWD}
+          , #{PP_KEY_PP}
+          , #{PP_ALG_PP})
+          , PROTOCOL_CD = #{PROTOCOL_CD}
+          , SNDR_EML = #{SNDR_EML}
+          , SNDR_NM = #{SNDR_NM}
+          , CLCT_RPTT = #{CLCT_RPTT}:: INTEGER
+          , SMTP_SRVR = #{SMTP_SRVR}
+          , SMTP_PORT = #{SMTP_PORT}:: INTEGER
+          , SMTP_RPRS_YN = #{SMTP_RPRS_YN}
+          , MDFR_ID = #{USER_ID}:: INTEGER
+          , MDFCN_DT = TO_CHAR(NOW()
+          , 'YYYYMMDDHH24MISS')
+        WHERE SNDR_KEY = #{SNDR_KEY}:: INTEGER
+    </update>
+
+    <!-- 고객채널 상세정보 custco테이블 업데이트 -->
+    <update id="updateRtnAspCustChannelCustcoTbl" parameterType="java.util.HashMap">
+        UPDATE CUSTCO.PLT_CERT_CUSTCO_CHN /* updateRtnAspCustChannelCustcoTbl - 고객채널 상세정보 custco테이블 업데이트 */
+        SET DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+        WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+	 	AND CERT_CUSTCO_ID=#{CERT_CUSTCO_ID}::INTEGER
+    </update>
+
+    <!-- ASP고객채널 중복체크 -->
+    <select id="chkAspCustChannel" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT count(1) as COUNT
+        FROM PLT_ASP_CUS_CHN
+        WHERE CUSTCO_ID = #{CUSTCO_ID}
+          AND CHN_CLSF_CD = #{CHN_CLSF_CD}
+    </select>
+
+    <!-- ASP고객채널 UUID중복체크 -->
+    <select id="chkUUID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT count(1) as COUNT
+        FROM PLT_ASP_CUS_CHN
+        WHERE CUSTCO_ID = #{CUSTCO_ID}
+          AND UUID = #{UUID}
+    </select>
+
+    <!-- ASP고객채널 SENDER_KEY중복체크 -->
+    <select id="chkSENDER" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT count(1) as COUNT
+        FROM PLT_ASP_CUS_CHN
+        WHERE CUSTCO_ID = #{CUSTCO_ID}
+          AND DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+    </select>
+
+    <!-- ASP고객채널 신규등록 -->
+    <insert id="insertRtnAspCustChannel" parameterType="java.util.HashMap">
+        INSERT INTO /* insertRtnAspCustChannel - ASP고객채팅채널 신규등록 */
+            PLT_CUSTCO_CHN
+        ( SNDR_KEY
+        , CUSTCO_ID
+        , CHN_CLSF_CD
+        , ATALK_YN
+        , UUID
+        , CSGMT_AGRE_YN
+        , CSGMT_AGRE_DT
+        , DSPTCH_PRF_KEY
+        , DSPTCH_PRF_NM
+        , SRVC_MAINT_YN
+        , SORT_ORD
+        , RGTR_ID
+        , REG_DT
+        , MDFR_ID
+        , MDFCN_DT)
+        VALUES ( #{SNDR_KEY}::INTEGER
+               , #{CUSTCO_ID}::INTEGER
+               , #{CHN_CLSF_CD}
+               , #{ATALK_YN}
+               , #{UUID}
+               , 'Y'
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+               , #{DSPTCH_PRF_KEY}
+               , #{DSPTCH_PRF_NM}
+               , #{SRVC_MAINT_YN}
+               , (SELECT COALESCE(MAX(SORT_ORD), 0) ::INTEGER+1
+                  FROM PLT_CUSTCO_CHN
+                  WHERE CUSTCO_ID = #{CUSTCO_ID}:: INTEGER)
+             , #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}:: INTEGER
+             , TO_CHAR(NOW()
+             , 'YYYYMMDDHH24MISS')
+            )
+
+    </insert>
+
+    <!-- 최상위 문의유형 생성 -->
+    <insert id="insertQstnType" parameterType="java.util.HashMap">
+        INSERT INTO PLT_CHT_QSTN_TYPE
+        ( QSTN_TYPE_ID
+        , QSTN_TYPE_NM
+        , QSTN_TYPE_EXPLN
+        , QSTN_TYPE_CD
+        , SNDR_KEY
+        , QSTN_TYPE_SE_CD
+        , USE_YN
+        , SORT_ORD
+        , CUSTCO_ID
+        , DEL_YN
+        , RGTR_ID
+        , REG_DT
+        , MDFR_ID
+        , MDFCN_DT)
+        VALUES ( #{QSTN_TYPE_ID}::INTEGER
+               , #{DSPTCH_PRF_NM}
+               , #{DSPTCH_PRF_NM}
+               , #{QSTN_TYPE_CD}
+               , #{SNDR_KEY}::INTEGER
+               , '0'
+               , 'Y'
+               , (SELECT COALESCE(MAX(SORT_ORD), 0) + 1
+                  FROM PLT_CHT_QSTN_TYPE
+                  WHERE CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+                     AND QSTN_TYPE_SE_CD = '0')
+             , #{CUSTCO_ID}::INTEGER
+		, 'N'
+		, #{USER_ID}:: INTEGER
+             , TO_CHAR(NOW()
+             , 'YYYYMMDDHH24MISS')
+             , #{USER_ID}:: INTEGER
+             , TO_CHAR(NOW()
+             , 'YYYYMMDDHH24MISS')
+            )
+    </insert>
+
+    <!-- 사용자 허용 채팅수 등록 -->
+    <insert id="insertChtCuttPm" parameterType="java.util.HashMap">
+        INSERT INTO PLT_CHT_CUTT_PM_STNG
+        ( CUSL_ID
+        , CHT_LMT_CNT
+        , COMM_SCRIPT_EXPSR_YN)
+        SELECT PUO.USER_ID
+             , (SELECT STNG_VL
+                FROM PLT_CHT_STNG
+                WHERE STNG_CD = 'CONT_CHATAGENT_CNT'
+                  AND CUSTCO_ID = #{CUSTCO_ID}
+            ::INTEGER)::INTEGER
+			, 'N'
+        FROM PLT_USER_OGNZ PUO
+        WHERE CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+          AND USE_YN = 'Y'
+        ON CONFLICT (CUSL_ID) DO NOTHING
+    </insert>
+
+    <!-- 채팅 고객사 등록 -->
+    <insert id="insertChtCuttCustco" parameterType="java.util.HashMap">
+        INSERT INTO PLT_CHT_CUTT_CUSTCO
+        ( CUSL_ID
+        , CUSTCO_ID)
+        SELECT USER_ID
+             , #{CUSTCO_ID}::INTEGER
+        FROM PLT_USER_OGNZ
+        WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND USE_YN = 'Y'
+        ON CONFLICT (CUSL_ID, CUSTCO_ID) DO NOTHING
+    </insert>
+
+    <!-- 채팅 고객사 테넌트 등록 -->
+    <insert id="insertCertCustco" parameterType="java.util.HashMap">
+        INSERT INTO /* insertCertCustco - 채팅 고객사 테넌트 등록 */
+            CUSTCO.PLT_CERT_CUSTCO_CHN
+        ( SNDR_KEY
+        , CERT_CUSTCO_ID
+        , DSPTCH_PRF_KEY)
+        VALUES ( #{SNDR_KEY}::INTEGER
+               , #{CERT_CUSTCO_ID}::INTEGER
+               , #{DSPTCH_PRF_KEY}
+        )
+    </insert>
+
+    <!-- 고객채널 삭제 -->
+    <delete id="deleteRtnAspCustChannelItem" parameterType="java.util.HashMap">
+        DELETE
+        FROM PLT_ASP_CUS_CHN
+        WHERE SNDR_KEY = #{SNDR_KEY}
+    </delete>
+
+
+    <!-- 비즈서비스 콤보 데이터 조회 -->
+    <select id="selectRtnAspBizChannelComboData" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+        SELECT CHN_CLSF_CD AS CD
+        , CHN_NM AS CD_NM
+        FROM PLT_CHN
+        WHERE 1=1
+        <if test="CHN_CLSF_CD !='' and CHN_CLSF_CD != null">
+            AND CHN_CLSF_CD = #{CHN_CLSF_CD}
+        </if>
+
+    </select>
+
+    <!-- 고객채널 상세정보 업데이트 -->
+    <update id="chnStatChange" parameterType="java.util.HashMap">
+        UPDATE PLT_CUSTCO_CHN /* chnStatChange - 고객채널 사용여부 업데이트 */
+        SET SRVC_MAINT_YN = #{SRVC_MAINT_YN}
+          , MDFR_ID       = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+        WHERE SNDR_KEY = #{SNDR_KEY}:: INTEGER
+    </update>
+
+    <!-- 고객채널 상세정보 업데이트 -->
+    <update id="chnChbtStatChange" parameterType="java.util.HashMap">
+        UPDATE PLT_CUSTCO_CHN /* chnChbtStatChange - 고객채널 챗봇사용여부 업데이트 */
+        SET CHBT_USE_YN = #{CHBT_USE_YN}
+          , MDFR_ID     = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+        WHERE SNDR_KEY = #{SNDR_KEY}:: INTEGER
+    </update>
+
+    <insert id="insertRtnAspCustChannelBbs" parameterType="java.util.HashMap">
+        INSERT INTO /* insertRtnAspCustChannelBbs - 게시판 채널 등록 */
+            PLT_CUSTCO_CHN_BBS_STNG ( SNDR_KEY
+                                    , INQ_API_ID
+                                    , REG_API_ID
+                                    , RPRS_REG_ID
+                                    , CLCT_RPTT
+                                    , RGTR_ID
+                                    , REG_DT
+                                    , LKAG_MST_ID
+                                    , BBS_INQRY_TYPE_CD
+                                    , ORDR_INQ_API_ID
+                                    , GDS_INQ_API_ID)
+        VALUES ( #{SNDR_KEY}::INTEGER
+               , #{INQ_API_ID}::INTEGER
+               , #{REG_API_ID}::INTEGER
+               , #{RPRS_REG_ID}
+               , #{CLCT_RPTT}::INTEGER
+               , #{USER_ID}::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+               , #{LKAG_MST_ID}::INTEGER
+               , #{BBS_INQRY_TYPE_CD}
+                <choose>
+                    <when test="ORDR_INQ_API_ID !='' and ORDR_INQ_API_ID != null">
+                        , #{ORDR_INQ_API_ID}::INTEGER
+                    </when>
+                    <otherwise>
+                        , null
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="GDS_INQ_API_ID !='' and GDS_INQ_API_ID != null">
+                        , #{GDS_INQ_API_ID}::INTEGER
+                    </when>
+                    <otherwise>
+                        , null
+                    </otherwise>
+                </choose>
+               )
+    </insert>
+
+    <insert id="insertRtnAspCustChannelEmail" parameterType="java.util.HashMap">
+        INSERT INTO /* insertRtnAspCustChannelEmail - 이메일 채널 등록 */
+            PLT_CUSTCO_CHN_EML_STNG ( SNDR_KEY
+                                    , SRVR
+                                    , PORT
+                                    , ACNT
+                                    , PSWD
+                                    , PROTOCOL_CD
+                                    , SNDR_EML
+                                    , SNDR_NM
+                                    , CLCT_RPTT
+                                    , SMTP_SRVR
+                                    , SMTP_PORT
+                                    , SMTP_RPRS_YN
+                                    , RGTR_ID
+                                    , REG_DT)
+        VALUES ( #{SNDR_KEY}::INTEGER
+               , #{SRVR}
+               , #{PORT}::INTEGER
+               , #{ACNT}
+               , CUSTCO.GEN_ENCRYPT(#{PSWD}, #{PP_KEY_PP}, #{PP_ALG_PP})
+               , #{PROTOCOL_CD}
+               , #{SNDR_EML}
+               , #{SNDR_NM}
+               , #{CLCT_RPTT}::INTEGER
+               , #{SMTP_SRVR}
+               , #{SMTP_PORT}::INTEGER
+               , #{SMTP_RPRS_YN}
+               , #{USER_ID}::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'))
+    </insert>
+
+    <!-- 게시판 문의 채널 설정 -->
+    <update id="pstChnSet" parameterType="java.util.HashMap">
+        UPDATE /* pstChnSet - 게시판 문의 채널 설정 */
+            PLT_CHT_PST_QSTN_CHN
+        SET API_URI          = #{API_URI}
+          , SELECT_API       = #{SELECT_API}
+          , DATA_PATH        = #{DATA_PATH}
+          , DATA_TYPE        = #{DATA_TYPE}
+          , PR_KEY           = #{PR_KEY}
+          , SELECT_API_KEY   = #{SELECT_API_KEY}
+          , SELECT_API_VALUE = #{SELECT_API_VALUE}
+          , INSERT_API       = #{INSERT_API}
+          , SCS_CD           = #{SCS_CD}
+          , INSERT_API_KEY   = #{INSERT_API_KEY}
+          , INSERT_API_VALUE = #{INSERT_API_VALUE}
+          , API_TY           = #{API_TY}
+          , PST_USER_KEY     = #{PST_USER_KEY}
+          , PST_TTL_KEY      = #{PST_TTL_KEY}
+          , PST_CN_KEY       = #{PST_CN_KEY}
+          , PST_DT_KEY       = #{PST_DT_KEY}
+          , MDFR_ID          = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+        WHERE SNDR_KEY = #{SNDR_KEY}:: INTEGER
+          AND CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+    </update>
+
+    <!-- 위치정보 템플릿 기본 등록 -->
+    <insert id="insertBaseTmplLocal" parameterType="java.util.HashMap">
+        INSERT INTO /* insertBaseTmplLocal - 위치정보 템플릿 기본 등록 */
+            PLT_ATALK
+        ( ATALK_ID
+        , CUSTCO_ID
+        , UUID
+        , DSPTCH_PRF_KEY
+        , TMPL_CD
+        , TMPL_IGI_STTS
+        , TMPL_CN
+        , TMPL_MSG_TYPE
+        , TMPL_EPSZ_TYPE
+        , ADD_INFO
+        , IMG
+        , IMG_LNK
+        , EPSZ_INDCT_MPIT_INFO
+        , EPSZ_INDCT_ADD_INFO
+        , HEAD
+        , ARTCL_EPSZ
+        , ARTCL_LIST
+        , SECTY_YN
+        , BTN_INFO
+        , BTN_LNKG_INFO
+        , TMPL_NM
+        , TMPL_STTS
+        , TMPL_DMCY_YN
+        , FILE_GROUP_KEY
+        , RJCT_RSN
+        , EPSZ_IMG
+        , EPSZ_IMG_LNK
+        , USE_YN
+        , RGTR_ID
+        , REG_DT
+        , MDFR_ID
+        , MDFCN_DT)
+        VALUES ( #{ATALK_ID}::INTEGER
+               , #{CUSTCO_ID}::INTEGER
+               , #{UUID}
+               , #{DSPTCH_PRF_KEY}
+               , 'BASE_TMPL_LOCAL'
+               , 'NOTREG'
+               , #{LOCAL_CN}
+               , 'BA'
+               , 'TEXT'
+               , ''
+               , NULL
+               , NULL
+               , '위치정보 안내'
+               , '위치명, 위치, 주소 안내'
+               , ''
+               , ''
+               , ''
+               , NULL
+               , ''
+               , NULL
+               , '위치정보 템플릿'
+               , 'A'
+               , 'N'
+               , ''
+               , ''
+               , NULL
+               , NULL
+               , 'Y'
+               , '2'::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+               , '2'::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'))
+    </insert>
+
+    <!-- 연락처정보 템플릿 기본 등록 -->
+    <insert id="insertBaseTmplContact" parameterType="java.util.HashMap">
+        INSERT INTO /* insertBaseTmplContact - 연락처정보 템플릿 기본 등록 */
+            PLT_ATALK
+        ( ATALK_ID
+        , CUSTCO_ID
+        , UUID
+        , DSPTCH_PRF_KEY
+        , TMPL_CD
+        , TMPL_IGI_STTS
+        , TMPL_CN
+        , TMPL_MSG_TYPE
+        , TMPL_EPSZ_TYPE
+        , ADD_INFO
+        , IMG
+        , IMG_LNK
+        , EPSZ_INDCT_MPIT_INFO
+        , EPSZ_INDCT_ADD_INFO
+        , HEAD
+        , ARTCL_EPSZ
+        , ARTCL_LIST
+        , SECTY_YN
+        , BTN_INFO
+        , BTN_LNKG_INFO
+        , TMPL_NM
+        , TMPL_STTS
+        , TMPL_DMCY_YN
+        , FILE_GROUP_KEY
+        , RJCT_RSN
+        , EPSZ_IMG
+        , EPSZ_IMG_LNK
+        , USE_YN
+        , RGTR_ID
+        , REG_DT
+        , MDFR_ID
+        , MDFCN_DT)
+        VALUES ( #{ATALK_ID}::INTEGER
+               , #{CUSTCO_ID}::INTEGER
+               , #{UUID}
+               , #{DSPTCH_PRF_KEY}
+               , 'BASE_TMPL_CONTACT'
+               , 'NOTREG'
+               , #{CONTACT_CN}
+               , 'BA'
+               , 'TEXT'
+               , ''
+               , NULL
+               , NULL
+               , '연락처정보 안내'
+               , '연락처, 지역, 담당부서, 담당업무 안내'
+               , ''
+               , ''
+               , ''
+               , NULL
+               , ''
+               , NULL
+               , '연락처정보 템플릿'
+               , 'A'
+               , 'N'
+               , ''
+               , ''
+               , NULL
+               , NULL
+               , 'Y'
+               , '2'::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+               , '2'::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'))
+    </insert>
+
+    <!-- 설문조사 링크 템플릿 기본 등록 -->
+    <insert id="insertBaseTmplSvy" parameterType="java.util.HashMap">
+        INSERT INTO /* insertBaseTmplSvy - 설문조사 링크 템플릿 기본 등록 */
+            PLT_ATALK
+        ( ATALK_ID
+        , CUSTCO_ID
+        , UUID
+        , DSPTCH_PRF_KEY
+        , TMPL_CD
+        , TMPL_IGI_STTS
+        , TMPL_CN
+        , TMPL_MSG_TYPE
+        , TMPL_EPSZ_TYPE
+        , ADD_INFO
+        , IMG
+        , IMG_LNK
+        , EPSZ_INDCT_MPIT_INFO
+        , EPSZ_INDCT_ADD_INFO
+        , HEAD
+        , ARTCL_EPSZ
+        , ARTCL_LIST
+        , SECTY_YN
+        , BTN_INFO
+        , BTN_LNKG_INFO
+        , TMPL_NM
+        , TMPL_STTS
+        , TMPL_DMCY_YN
+        , FILE_GROUP_KEY
+        , RJCT_RSN
+        , EPSZ_IMG
+        , EPSZ_IMG_LNK
+        , USE_YN
+        , RGTR_ID
+        , REG_DT
+        , MDFR_ID
+        , MDFCN_DT)
+        VALUES ( #{ATALK_ID}::INTEGER
+               , #{CUSTCO_ID}::INTEGER
+               , #{UUID}
+               , #{DSPTCH_PRF_KEY}
+               , 'BASE_TMPL_SVY'
+               , 'NOTREG'
+               , #{SVY_CN}
+               , 'BA'
+               , 'TEXT'
+               , ''
+               , NULL
+               , NULL
+               , '설문조사 링크 안내'
+               , '설문조사 URL정보'
+               , ''
+               , ''
+               , ''
+               , NULL
+               , ''
+               , NULL
+               , '설문조사 링크 템플릿'
+               , 'A'
+               , 'N'
+               , ''
+               , ''
+               , NULL
+               , NULL
+               , 'Y'
+               , '2'::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+               , '2'::INTEGER
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'))
+    </insert>
+
+    <insert id="insertBbsParamStng" parameterType="java.util.HashMap">
+        INSERT INTO PLT_CHN_BBS_PARAM_STNG
+        (SNDR_KEY, API_ID, PARAM_ARTCL_ID, ORGNL_PARAM_NM, CHG_PARAM_NM, ESNTL_YN, ANSWR_PARAM_YN, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT)
+        SELECT
+            #{SNDR_KEY}::INTEGER
+            , #{LKAG_ID}::INTEGER
+            , PARAM_ARTCL_ID
+            , COL_NM
+            , COL_NM
+            , ESNTL_YN
+            , 'N'
+            , #{USER_ID}::INTEGER
+            , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+            , #{USER_ID}::INTEGER
+            , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        FROM CUSTCO.PLT_LKAG_PARAM_ARTCL
+        WHERE DEL_YN ='N'
+        AND LKAG_ID = #{LKAG_ID}::INTEGER
+    </insert>
+    <select id="selectBbsParamStngList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            SNDR_KEY
+             , API_ID
+             , PARAM_ARTCL_ID
+             , ORGNL_PARAM_NM
+             , CHG_PARAM_NM
+             , ESNTL_YN
+             , ANSWR_PARAM_YN
+        FROM PLT_CHN_BBS_PARAM_STNG
+       WHERE 1=1
+         AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+         AND API_ID = #{API_ID}::INTEGER
+       ORDER BY PARAM_ARTCL_ID ASC
+    </select>
+    <update id="updateBbsParamAnswerYnInit" parameterType="java.util.HashMap">
+        UPDATE PLT_CHN_BBS_PARAM_STNG
+           SET ANSWR_PARAM_YN = 'N'
+         WHERE 1=1
+           AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+           AND API_ID = #{API_ID}::INTEGER
+    </update>
+    <update id="updateBbsParamStng" parameterType="java.util.HashMap">
+        UPDATE PLT_CHN_BBS_PARAM_STNG
+           SET CHG_PARAM_NM = #{CHG_PARAM_NM}
+               , ANSWR_PARAM_YN = #{ANSWR_PARAM_YN}
+         WHERE 1=1
+           AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+           AND API_ID = #{API_ID}::INTEGER
+           AND PARAM_ARTCL_ID = #{PARAM_ARTCL_ID}::INTEGER
+    </update>
+</mapper>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.km.conts.dao.KmRelContsMapper">
+
+    <select id="selectList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+		    G.KMS_REL_CONTS_ID
+		    ,G.KMS_CONTS_ID
+		    ,C.KMS_CONTS_NM
+		    ,T.FULL_PATH
+		    ,(SELECT USER_NM FROM PLT_USER WHERE USER_ID = G.RGTR_ID) AS RGTR_NM
+		    ,TO_CHAR(TO_DATE(G.REG_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD') AS REG_DT
+		    ,G.RGTR_ID
+		    ,G.DEL_YN
+		    ,ROW_NUMBER() OVER(ORDER BY G.REG_DT) ROW_NUMBER 
+		FROM PLT_KMS_REL_CONTS G
+		INNER JOIN PLT_KMS_CONTS C ON C.KMS_CONTS_ID = G.KMS_REL_CONTS_ID
+		LEFT JOIN (
+		    WITH RECURSIVE CTE_T AS (
+		        SELECT CONCAT( KMS_CLSF_NM ) AS FULL_PATH , *
+		        FROM PLT_KMS_CLSF
+		        WHERE UP_KMS_CLSF_ID IS NULL 
+		        UNION ALL 
+		        SELECT CONCAT( FULL_PATH, ' > ', S. KMS_CLSF_NM) , S.*
+		        FROM CTE_T R
+		        INNER JOIN PLT_KMS_CLSF S ON R.KMS_CLSF_ID = S.UP_KMS_CLSF_ID 
+		    ) SELECT * FROM CTE_T
+		) T ON T.KMS_CLSF_ID = C.KMS_CLSF_ID
+		WHERE 1=1
+		    AND G.DEL_YN = 'N'
+		    AND EXISTS (SELECT 1 FROM PLT_KMS_CONTS WHERE KMS_CONTS_ID = G.KMS_REL_CONTS_ID AND STTS_CD ='PBIC')
+			AND G.KMS_CONTS_ID = #{ KMS_CONTS_ID }::numeric
+		<if test="KMS_REL_CONTS_ID != null and KMS_REL_CONTS_ID != ''">
+			AND G.KMS_REL_CONTS_ID = #{ KMS_REL_CONTS_ID }::numeric
+		</if>
+		ORDER BY ROW_NUMBER DESC
+
+	</select>
+
+	<insert id="insert" parameterType="java.util.HashMap">
+		INSERT INTO PLT_KMS_REL_CONTS
+		(
+			KMS_REL_CONTS_ID
+			,KMS_CONTS_ID
+			,RGTR_ID
+			,REG_DT
+			,DEL_YN
+		)
+		VALUES
+		(
+			#{ KMS_REL_CONTS_ID }::numeric
+			,#{ KMS_CONTS_ID }::numeric
+			,#{ RGTR_ID }::numeric
+			,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			,'N'
+		)
+	</insert>
+
+	<delete id="delete" parameterType="java.util.HashMap" >
+
+		DELETE FROM PLT_KMS_REL_CONTS
+		WHERE 1=1
+			AND KMS_CONTS_ID = #{ KMS_CONTS_ID }::numeric
+			AND KMS_REL_CONTS_ID IN 
+		 <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+        	#{item}::numeric
+  		</foreach>
+
+
+	</delete>
+
+	
+</mapper>

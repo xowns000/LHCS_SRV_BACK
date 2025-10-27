@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.callback.dao.PhoneCallbackManageMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="SEND_MAN_NO" column="SEND_MAN_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CLBK_TEL_NO" column="CLBK_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+<select id="selectClbkMngList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		<!-- <![CDATA[
+		/*  selectClbkMngList 콜백관리 조회  */
+		SELECT
+			A.CLBK_NO																	/*콜백번호*/
+			, A.IN_DATE																	/*인입일자*/
+			, A.IN_TIME																	/*인입시간*/
+			, A.SEND_MAN_NO															/*발신자번호*/
+			, A.CUST_NO
+			, A.CUST_NM
+			, A.INGNO
+			, A.CLBK_TEL_NO															/*콜백전화번호*/
+			, A.DSTR_YN || ' ' AS DSTR_YN											/*배분여부*/
+			, A.DSTR_DATE																/*배분일자*/
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID  = A.DSTR_CSLT_ID) AS DSTR_CSLT_NM 														/* 배분상담원 명*/
+			, A.DSTR_CSLT_ID															/*배분상담사 ID*/
+			, A.TRY_CNT																	/*시도횟수*/
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'OU003' AND CD = A.EOT_TY AND USE_YN = 'Y') AS EOT_TY_NM                 						/*종료구분 명*/ 
+			, A.EOT_TY																	/*종료구분*/
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'RE022' AND CD = A.IN_TY AND USE_YN = 'Y' ) AS IN_TY                    						/*인입구분 */ 
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'OU005' AND CD = A.PROC_CODE AND USE_YN = 'Y') AS PROC_CODE_NM              						/* 처리코드명 */
+			, (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_NEWCUST_KEY	/*업체명*/
+			, A.CUSTCO_ID								   /*회사구분*/
+		FROM (
+				SELECT
+					A.CLBK_NO																	/*콜백번호*/
+					, A.IN_DATE																	/*인입일자*/
+					, A.IN_TIME																	/*인입시간*/
+					, A.SEND_MAN_NO															/*발신자번호*/
+					, A.CUST_NO
+					, A.CUST_NM
+					, A.INGNO
+					, A.CLBK_TEL_NO															/*콜백전화번호*/
+					, A.DSTR_YN 											/*배분여부*/
+					, A.DSTR_DATE																/*배분일자*/
+					, B.DSTR_CSLT_ID															/*배분상담사 ID*/
+					, B.TRY_CNT																	/*시도횟수*/
+					, B.EOT_TY																	/*종료구분*/
+					, A.IN_TY                    						/*인입구분 */ 
+					, B.PROC_CODE              						/* 처리코드명 */
+					, A.CUSTCO_ID	/*업체명*/
+				FROM PLT_PHN_CLBK A
+				INNER JOIN PLT_PHN_CLBK_DST B ON B.CLBK_NO = A.CLBK_NO
+				WHERE 1 = 1
+			]]> 	
+				 <if test="ASP_NEWCUST_KEY !='' and ASP_NEWCUST_KEY 	!= null"> 		 
+				 AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				 </if>
+			<![CDATA[		 
+		   		 AND A.IN_DATE >= REPLACE(#{START_DATE},'-','') 
+				 AND A.IN_DATE <= REPLACE(#{END_DATE},'-','')
+	   		 ]]>     
+	 		 <if test="DSTR_CSLT_ID !='' and DSTR_CSLT_ID 	!= null"> 
+			 	 <![CDATA[  AND B.DSTR_CSLT_ID = #{DSTR_CSLT_ID}  ]]>  
+			</if>
+	 		 <if test="EOT_TY 	!='' and EOT_TY 	!= null"> 
+			 	 <![CDATA[ AND B.EOT_TY = #{EOT_TY}  ]]>  
+			</if>
+			 <if test="IN_TY 	!='' and IN_TY != null"> 
+			  	<![CDATA[	AND A.IN_TY  =  #{IN_TY}	   ]]>
+			</if>
+			
+			<if test="USER_GROUP !='' and USER_GROUP != null"> 
+				  	AND B.DSTR_CSLT_ID IN (SELECT USER_ID
+				                              FROM PLT_USER_ATTR
+				                             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				                             AND #{USER_GROUP} LIKE ( '%' || USER_ATTR_B || '%' ))
+			</if>
+			<![CDATA[
+			)A
+	  				ORDER BY A.IN_DATE DESC, A.IN_TIME DESC
+			]]> -->
+			SELECT   /*  selectClbkMngList 콜백 조회  */
+                    ROW_NUMBER() OVER() AS ROW_NUMBER
+                    , PPCL.CLBK_ID											/* 콜백 ID */
+                    , PPCL.DRWI_DT											/* 인입일시 */
+                    , PPCL.CLBK_PHN_NO										/* 콜백전화번호 */
+                    , PPCL.ALTMNT_DT										/* 배분일시 */
+                    , PC.CUST_PHN_NO AS SNDPTY_NO							/* 발신자번호 */
+                    , PC.CUST_NM											/* 고객이름 */
+                    , PU.USER_NM as CUSL_NM									/* 상담직원 */
+                    , PU.USER_ID as CUSL_ID									/* 상담직원 ID */
+                    , (SELECT EXT_NO
+                    FROM PLT_PHN_IP_EXT
+                    WHERE CUSTCO_ID = PPCL.CUSTCO_ID
+                    AND USER_ID = PPCA.CUSL_ID ) AS EXT_NO				    /* 내선번호 */
+                    ,(SELECT COUNT(CLBK_ID) 
+					FROM PLT_PHN_DSPTCH_HSTRY 
+					WHERE CLBK_ID = PPCL.CLBK_ID) as RTRY_NOCS
+                    , CUTT.CUTT_END_DT AS CUSL_DT 						        /* 상담일 */
+                    , CUTT.CUSL_RS_CD   	           							/* 처리결과 */
+					, CUTT.CAMP_RS_CD											/* 상담결과 */
+					, CUTT.CAMP_RS_NM
+					, CUTT.CUSL_RS_NM
+              FROM PLT_PHN_CLBK PPCL
+              LEFT OUTER JOIN PLT_PHN_CLBK_ALTMNT PPCA ON PPCA.CLBK_ID = PPCL.CLBK_ID
+              LEFT OUTER JOIN PLT_CUST PC ON PC.CUST_ID = PPCL.CUST_ID
+              LEFT OUTER JOIN PLT_PHN_DSPTCH_HSTRY PPDH ON PPDH.CLBK_ID = PPCL.CLBK_ID AND PPDH.CUSL_ID = PPCA.CUSL_ID
+              LEFT OUTER JOIN PLT_USER PU ON PU.USER_ID = PPCA.CUSL_ID
+              LEFT OUTER JOIN (SELECT PPC2.PHN_CUTT_ID
+										, PPC2.CLBK_ID
+										, PEA.ATTR_ID AS CUSL_RS_ID
+										, PPCDE.ATTR_VL AS CUSL_RS_CD
+										, PPCDE2.ATTR_VL AS CAMP_RS_CD
+										, COMM.CD_NM as CUSL_RS_NM
+										, COMM2.CD_NM as CAMP_RS_NM
+										, PPC2.CUTT_END_DT
+								FROM PLT_PHN_CLBK PPCL2
+								LEFT OUTER JOIN PLT_PHN_CUTT PPC2 ON PPCL2.CLBK_ID = PPC2.CLBK_ID
+								LEFT OUTER JOIN PLT_PHN_CLBK_ALTMNT PPCA ON PPCA.CUSL_ID = PPC2.CUSL_ID AND PPCA.CLBK_ID = PPC2.CLBK_ID
+								LEFT OUTER JOIN PLT_EXPSN_ATTR PEA ON PEA.CUSTCO_ID = PPC2.CUSTCO_ID AND PEA.BSC_PVSN_ATTR_YN = 'N' AND PEA.SE = 'CONSEL' AND PEA.EXPSN_ATTR_COL_ID = 'CUSL_RS'
+								LEFT OUTER JOIN PLT_PHN_CUTT_DTL_EXPSN PPCDE ON PPCDE.PHN_CUTT_ID = PPC2.PHN_CUTT_ID AND PPCDE.ATTR_ID = PEA.ATTR_ID
+								LEFT OUTER JOIN PLT_EXPSN_ATTR PEA2 ON PEA2.CUSTCO_ID = PPC2.CUSTCO_ID AND PEA2.BSC_PVSN_ATTR_YN = 'N' AND PEA2.SE = 'CONSEL' AND PEA2.EXPSN_ATTR_COL_ID = 'CAMP_RS'--처리결과
+								LEFT OUTER JOIN PLT_PHN_CUTT_DTL_EXPSN PPCDE2 ON PPCDE2.PHN_CUTT_ID = PPC2.PHN_CUTT_ID AND PPCDE2.ATTR_ID = PEA2.ATTR_ID
+								LEFT OUTER JOIN PLT_COMM_CD COMM ON COMM.CUSTCO_ID = #{CUSTCO_ID}::INT AND COMM.CD_ID = PPCDE.ATTR_VL AND COMM.GROUP_CD_ID = 'CUSL_RS' --상담결과
+								LEFT OUTER JOIN PLT_COMM_CD COMM2 ON COMM2.CUSTCO_ID = #{CUSTCO_ID}::INT AND COMM2.CD_ID = PPCDE2.ATTR_VL AND COMM2.GROUP_CD_ID = 'CAMP_RS' -- 캠페인 결과
+								WHERE PPC2.CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+								AND (PPC2.CLBK_ID,PPC2.CUTT_END_DT)
+											IN (SELECT CLBK_ID,MAX(CUTT_END_DT::BIGINT)::TEXT AS CALL_OUT_DT FROM PLT_PHN_CUTT PPC3 WHERE PPC3.CLBK_ID = PPCL2.CLBK_ID GROUP BY CLBK_ID)
+											) CUTT ON CUTT.CLBK_ID = PPCL.CLBK_ID 
+                    WHERE PPCL.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+            <if test="DRWI_DT_START    	!= '' and	DRWI_DT_START	 != null">
+            AND ( PPCL.DRWI_DT::BIGINT
+            BETWEEN #{DRWI_DT_START}::BIGINT
+            AND #{DRWI_DT_END}::BIGINT)
+            </if>
+            <if test="USER_NM    	!= '' and	USER_NM 	 != null"> AND PU.USER_NM LIKE '%'|| #{USER_NM} ||'%'</if>
+            <if test="LGN_ID    	!= '' and	LGN_ID   	 != null"> AND PU.LGN_ID LIKE '%'|| #{LGN_ID} ||'%'</if>
+            <if test="CUSL_RS_CD    != '' and	CUSL_RS_CD	 != null"> AND CUTT.CUSL_RS_CD = #{CUSL_RS_CD}		 </if>
+            <if test="CAMP_RS_CD   	!= '' and	CAMP_RS_CD   != null"> AND CUTT.CAMP_RS_CD = #{CAMP_RS_CD}</if>
+    		ORDER BY RTRY_NOCS, CUTT.CUSL_RS_CD DESC, PPCL.ALTMNT_YN, PPCL.DRWI_DT  	
+</select>
+
+<update id="updateClbkMng"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateClbkMng 콜백 완료처리   */
+		UPDATE PLT_PHN_CLBK
+		  SET
+		       ALTMNT_YN = 'Y'													/*배분여부*/
+		     , ALTMNT_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/*배분시간*/
+		     , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	/*변경일시*/
+		     , MDFR_ID = #{USER_ID}::INTEGER 							/*변경자*/
+		 WHERE 1=1
+		AND CLBK_ID = #{CLBK_ID}
+		]]>
+</update>
+
+
+<insert id="insertClbkMngDiv"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertClbkMngDiv 콜백배분처리 등록  */
+			INSERT INTO PLT_PHN_CLBK_ALTMNT
+				     (			
+				     CLBK_ID												/* 콜백 ID */	
+				     , CUSL_ID												/* 상담사 ID */
+				     , END_SE_CD											/* 종료구분코드 */
+				     , RTRY_NOCS    										/* 재시도건수 */				
+				     , PRCS_CD												/* 처리 코드 */			
+				     , REG_DT												/* 등록 일자 */
+				     , RGTR_ID												/* 등록자 ID */
+				     )
+			    VALUES
+			         (
+			         #{CLBK_ID}::INTEGER
+			         , (SELECT REG_ID FROM PLT_PHN_CLBK WHERE CLBK_ID = #{CLBK_ID}::INTEGER)
+			         , 'ATTN'  
+				     , '0'
+				     , 'CMPTN'
+				     ,  TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	
+				     , #{USER_ID}::INTEGER
+				     )     
+		]]>				 
+</insert>
+
+<update id="updateClbkMngDiv"  parameterType= "java.util.HashMap" >
+		<![CDATA[
+		/* updateClbkMngDiv 콜백배분처리수정 */
+		UPDATE PLT_PHN_CLBK_ALTMNT
+		   SET
+		       END_SE_CD = 'ATTN'							/*종료구분*/
+		     , PRCS_CD = 'CMPTN'
+		     , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	/*변경일시*/
+		     , MDFR_ID = #{USER_ID}::INTEGER 							/*변경자*/
+		 WHERE CLBK_ID =  #{CLBK_ID}::INTEGER
+		]]>		 
+</update>
+
+<select id="selectClbkDivList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		<![CDATA[
+			/*  selectClbkDivList 콜백배분조회  */
+			SELECT 
+				COALESCE(TOT_CNT, 0) AS TOT_CNT      						/* 총 건수 */
+				,COALESCE(AMT_CNT, 0) AS AMT_CNT						 	/* 배분건수 */
+				,COALESCE((TOT_CNT - AMT_CNT ), 0) AS NOT_AMT_CNT			/* 미배분건수 */
+				,COALESCE(NOT_END_CNT, 0) AS NOT_TRY_CNT   					/* 미처리건수 */
+				,COALESCE(END_CNT, 0) AS COMPLETED_CNT							/* 완료건수 */
+			FROM 
+			(
+			SELECT
+				 COUNT(*) TOT_CNT
+				 , SUM(CASE WHEN PPCL.ALTMNT_YN = 'Y' THEN 1 ELSE 0 END) AS AMT_CNT
+				 , SUM(CASE WHEN CUTT.CUSL_RS_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS END_CNT
+				 , SUM(CASE WHEN CNT.RTRY_NOCS = '0' THEN 1 ELSE 0 END) AS NOT_END_CNT
+			 FROM PLT_PHN_CLBK PPCL 
+			 left outer join PLT_PHN_CLBK_ALTMNT PPCA on PPCA.CLBK_ID = PPCL.CLBK_ID
+			 left outer join ( SELECT PPC2.PHN_CUTT_ID
+								, PPC2.CLBK_ID
+								, PEA.ATTR_ID AS CUSL_RS_ID
+								, PPCDE.ATTR_VL AS CUSL_RS_CD
+								, COMM.CD_NM as CUSL_RS_NM
+							 FROM PLT_PHN_CUTT PPC2
+								LEFT OUTER JOIN PLT_PHN_CLBK_ALTMNT PPCA ON PPCA.CUSL_ID = PPC2.CUSL_ID AND PPCA.CLBK_ID = PPC2.CLBK_ID
+								LEFT OUTER JOIN PLT_EXPSN_ATTR PEA ON PEA.CUSTCO_ID = PPC2.CUSTCO_ID AND PEA.BSC_PVSN_ATTR_YN = 'N' AND PEA.SE = 'CONSEL' AND PEA.EXPSN_ATTR_COL_ID = 'CUSL_RS'
+								LEFT OUTER JOIN PLT_PHN_CUTT_DTL_EXPSN PPCDE ON PPCDE.PHN_CUTT_ID = PPC2.PHN_CUTT_ID AND PPCDE.ATTR_ID = PEA.ATTR_ID
+								LEFT OUTER JOIN PLT_COMM_CD COMM ON COMM.CUSTCO_ID = #{CUSTCO_ID}::INT AND COMM.CD_ID = PPCDE.ATTR_VL AND COMM.GROUP_CD_ID = 'CUSL_RS' --상담결과
+								WHERE PPC2.CUSTCO_ID = #{CUSTCO_ID}::INTEGER) CUTT ON CUTT.CLBK_ID = PPCL.CLBK_ID
+			LEFT OUTER JOIN (SELECT COUNT(PPDH.CLBK_ID) as RTRY_NOCS, PPCL.CLBK_ID
+					FROM PLT_PHN_CLBK PPCL
+					left outer join PLT_PHN_DSPTCH_HSTRY PPDH on PPCL.CLBK_ID = PPDH.CLBK_ID 
+					WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+			]]>
+					GROUP BY PPCL.CLBK_ID) CNT ON CNT.CLBK_ID = PPCL.CLBK_ID
+            WHERE PPCL.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			  <if test='DT_SRCH_YN != "N"'>
+				<if test="DRWI_DT_START   	!= '' and	DRWI_DT_START 	 != null"><![CDATA[ AND PPCL.DRWI_DT::BIGINT >= #{DRWI_DT_START}::BIGINT ]]></if>
+				<if test="DRWI_DT_END   	!= '' and	DRWI_DT_END 	 != null"><![CDATA[ AND PPCL.DRWI_DT::BIGINT <= #{DRWI_DT_END}::BIGINT ]]></if>
+			  </if>
+			 )  as CNT_TABLE
+</select>
+
+<select id="selectClbkDstrDivList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		<![CDATA[
+			/*  selectClbkDstrDivList 콜백상담원배분정보조회  */
+			SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+					, PU.USER_ID AS CUSL_ID						/* 상담사 ID*/
+			, PU.USER_NM as CUSL_NM						/* 상담사 이름 */
+			, PU.LGN_ID as CUSL_LGN_ID					/* 상담사 로그인ID */
+			, CNT.TARGET_CNT as AMT_CNT					/* 배분건수 */
+			, CNT.COMPLETED_CNT							/* 완료건수 */
+			, CNT.NOT_TRY_CNT							/* 미시도 건수 */ 
+		FROM PLT_USER PU 
+		inner join PLT_USER_OGNZ PUO on PUO.USER_ID = PU.USER_ID AND PUO.USE_YN = 'Y' AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		left outer join (
+			SELECT
+				A.CUSL_ID
+				, COUNT(*) AS TARGET_CNT  /* 배분건수 */
+				, COALESCE(SUM(A.COMPLETED_CNT), 0) AS COMPLETED_CNT
+				, COALESCE(COUNT(*) - SUM(A.COMPLETED_CNT), 0) AS NO_COMPLETED_CNT
+				, SUM(case when A.TRY_CNT = 0 then 1 else 0 END) as NOT_TRY_CNT
+			FROM (
+				SELECT
+					PPC.CUSTCO_ID, PPCA.CLBK_ID, PPCA.CUSL_ID, PPC.CUST_ID
+					, (SELECT CASE WHEN DTL.ATTR_VL = 'COMPLETED' THEN 1 ELSE 0 END FROM PLT_EXPSN_ATTR ATTR
+						LEFT OUTER JOIN PLT_PHN_CUTT_DTL_EXPSN DTL ON DTL.ATTR_ID = ATTR.ATTR_ID
+						WHERE ATTR.CUSTCO_ID = PPC.CUSTCO_ID
+						AND ATTR.BSC_PVSN_ATTR_YN = 'N' AND ATTR.SE = 'CONSEL' AND ATTR.EXPSN_ATTR_COL_ID = 'CUSL_RS' --상담 결과
+						AND DTL.PHN_CUTT_ID = (SELECT MAX(PHN_CUTT_ID) FROM PLT_PHN_CUTT WHERE CLBK_ID = PPCA.CLBK_ID AND CUSL_ID = PPCA.CUSL_ID AND CUST_ID = PPC.CUST_ID)
+					) AS COMPLETED_CNT
+					, (select case when ppdh.clbk_id = PPCA.CLBK_ID then 1 ELSE 0 END) as TRY_CNT
+					, (select case when PPCA.CLBK_ID = PPC.CLBK_ID then 1 else 0 END) as AMT_CNT
+				FROM PLT_PHN_CLBK_ALTMNT PPCA
+				INNER JOIN PLT_PHN_CLBK PPC ON PPC.CLBK_ID = PPCA.CLBK_ID
+				left outer join PLT_USER PU2 on PU2.USER_ID = PPCA.CUSL_ID
+				left outer join plt_phn_dsptch_hstry ppdh on PPDH.CLBK_ID = PPCA.CLBK_ID
+				WHERE PPC.CUSTCO_ID = #{CUSTCO_ID}::INT
+				AND PPCA.CUSL_ID = PU2.USER_ID
+			) A 
+			group by A.CUSL_ID
+		) CNT on CNT.CUSL_ID = PU.USER_ID
+		]]>
+		where  PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		and  PU.CLBK_YN ='Y'
+			<if test="USER_NM    	!= '' and	USER_NM 	 != null"> AND PU.USER_NM LIKE '%'|| #{USER_NM} ||'%'</if>
+            <if test="LGN_ID    	!= '' and	LGN_ID   	 != null"> AND PU.LGN_ID LIKE '%'|| #{LGN_ID} ||'%'</if>
+			
+</select>
+
+
+<select id="selectClbkCustList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		<![CDATA[
+			/*  selectClbkCustList 콜백고객조회  */
+			  SELECT 
+				       CLBK_ID
+			   FROM PLT_PHN_CLBK
+		       WHERE ALTMNT_YN = #{ALTMNT_YN}
+		       AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			]]>
+			   <if test='DT_SRCH_YN != "N"'>
+				<if test="DRWI_DT_START   	!= '' and	DRWI_DT_START 	 != null"><![CDATA[ AND DRWI_DT::BIGINT >= #{DRWI_DT_START}::BIGINT 	]]></if>
+				<if test="DRWI_DT_END   	!= '' and	DRWI_DT_END 	 != null"><![CDATA[ AND DRWI_DT::BIGINT <= #{DRWI_DT_END}::BIGINT	]]> </if>
+			  </if>
+			  ORDER BY CLBK_ID
+			   LIMIT #{DIV_CNT}::INTEGER
+</select>
+
+
+<insert id="insertClbkDiv"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertClbkDiv 콜백배분 등록  */
+		INSERT INTO PLT_PHN_CLBK_ALTMNT
+			(
+			  CLBK_ID					/*콜백번호*/
+			  , REG_DT					/* 등록일자*/
+			  , RGTR_ID					/* 등록자 */
+			  , CUSL_ID					/* 상담사 ID */
+			 )
+			VALUES 
+			(
+			  #{CLBK_ID}::INTEGER
+		      , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		      , #{RGTR_ID}::INTEGER
+			  , #{CUSL_ID}::INTEGER
+			)
+		]]>				 
+</insert>
+
+
+<select id="selectClbkNotEndList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		<![CDATA[
+			/*  selectClbkNotEndList 콜백미시도조회  */
+			  SELECT 
+				       b.CLBK_NO
+			   FROM PLT_PHN_CLBK a, PLT_PHN_CLBK_DST b
+		       WHERE a.CLBK_NO = b.CLBK_NO
+		       AND b.DSTR_CSLT_ID = #{DSTR_CSLT_ID}
+			   AND ROWNUM <= #{COL_CNT}
+               AND b.EOT_TY = '00002'
+			]]>
+</select>
+
+<update id="updateResiClbkCustDivYn"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateResiClbkCustDivYn  콜백 배분시 고객배분여부 수정   */
+			UPDATE PLT_PHN_CLBK
+		  SET
+		       ALTMNT_YN = #{ALTMNT_YN}						/*배분여부*/
+		     , ALTMNT_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')/*배분일시*/
+		     , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	/*수정일시*/
+		     , MDFR_ID = #{USER_ID}::INTEGER 							/*수정자*/
+		 WHERE CLBK_ID = #{CLBK_ID}::INTEGER
+		 AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		]]>
+</update>
+
+<update id="updateClbkCustDivYn"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateClbkCustDivYn  콜백 배분취소시 고객배분여부 수정   */
+		UPDATE PLT_PHN_CLBK
+		  SET
+		       ALTMNT_YN = #{ALTMNT_YN}						/*배분여부*/
+		     , ALTMNT_DT = ''								/*배분일시*/
+		     , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	/*수정일시*/
+		     , MDFR_ID = #{USER_ID}::INTEGER 							/*수정자*/
+		 WHERE CLBK_ID = #{CLBK_ID}::INTEGER
+		 AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		]]>
+</update>
+
+<update id="cancelClbkYN"  parameterType= "java.util.HashMap" >
+	 /*  cancelClbkYN  콜백배분여부 회수   */
+	UPDATE PLT_PHN_CLBK
+	SET   DSTR_YN = 'N'
+	WHERE  CLBK_NO = #{CLBK_NO}
+	AND    CUSTCO_ID = #{ASP_NEWCUST_KEY}
+</update>	
+
+
+<delete id="deleteClbkDiv" parameterType="java.util.HashMap">
+	 /*  deleteClbkDiv  콜백배분 삭제   */
+	 DELETE
+	 FROM PLT_PHN_CLBK_ALTMNT
+	 WHERE CLBK_ID = #{CLBK_ID}::INTEGER
+	 AND CUSL_ID = #{CUSL_ID}::INTEGER
+
+</delete>
+
+<delete id="updateClbDate" parameterType="java.util.HashMap">
+	 /*  updateClbDate  콜백 배분일자 수정   */
+	UPDATE PLT_PHN_CLBK
+	SET   DSTR_DATE = TO_CHAR(NOW(),'YYYYMMDD')
+	WHERE  CLBK_NO = #{CLBK_NO}
+	AND    CUSTCO_ID = #{ASP_NEWCUST_KEY}
+</delete>
+</mapper>

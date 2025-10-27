@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.setting.dao.PhoneSettingIPExtensionNumberManageMapper">
+	
+	<!-- ip내선번호관리 목록 조회 -->
+	<select id="selectRtnPhoneSettingIPExtensionNumberManage" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT A.IP_ADDR					/* IP주소 */
+		 	   ,(SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY})  AS ASP_NEWCUST_KEY    -- 회사명
+			   ,A.INLNE_NO				/* 내선번호 */
+		 	   ,A.PDS_CUST_KEY			/* PDS_고객사_KEY*/
+		 	   ,(SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.PDS_CUST_KEY)	AS PDS_CUST_NM
+			   ,A.PDS_NO				/* PDS_내선번호 */
+			   ,A.REM						/* 비고 */
+			   ,A.REG_DTIM 				/* 등록일시 */
+			   ,A.REG_MAN					/* 등록자 */
+			   ,A.CHNG_DTIM				/* 변경일시 */
+			   ,A.CHNG_MAN				/* 변경자 */
+			   ,A.USER_ID
+			   ,(SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.USER_ID) AS CSLT_NM
+ 		   FROM PLT_PHN_IP_INLN A
+ 		  WHERE 1=1
+ 		    AND A.CUSTCO_ID LIKE '%' || #{ASP_NEWCUST_KEY} || '%'
+ 		  <if test="IP_ADDR != '' and IP_ADDR != NULL"> 
+  		   	AND A.IP_ADDR LIKE '%' || #{IP_ADDR} || '%'
+  		  </if>
+ 		  <if test="PDS_CUST_KEY != '' and PDS_CUST_KEY != NULL"> 
+  		   	AND A.PDS_CUST_KEY = #{PDS_CUST_KEY}
+  		  </if>
+  		  <if test="INLNE_NO != '' and INLNE_NO != NULL"> 
+  		   	AND A.INLNE_NO LIKE '%' || #{INLNE_NO} || '%'
+  		  </if>
+  		  <if test="PDS_NO != '' and PDS_NO != NULL"> 
+  		   	AND A.PDS_NO LIKE '%' || #{PDS_NO} || '%'
+  		  </if>
+		 <if test="CSLT_ID !='' and CSLT_ID != null">
+  		   AND A.USER_ID = #{CSLT_ID}
+		 </if>
+		 <if test="CSLT_NM !='' and CSLT_NM != null">
+  		   AND A.USER_ID IN (SELECT USER_ID 
+  		                      FROM PLT_USER 
+  		                     WHERE 1 = 1
+  		                       AND USER_NM LIKE '%' || #{CSLT_NM} || '%')
+		 </if>
+	</select>
+	
+	<!-- ip내선번호관리 등록 중복체크 -->
+	<select id="insertCheckRtnPhoneSettingIPExtensionNumberManage" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT COUNT(*) AS CHECK_COUNT
+ 		   FROM PLT_PHN_IP_INLN A
+ 		  WHERE IP_ADDR = #{IP_ADDR}
+		 <if test="PDS_NO !='' and PDS_NO != null">
+  		   AND A.PDS_NO = #{PDS_NO}
+		 </if>
+		 <if test="INLNE_NO !='' and INLNE_NO != null">
+  		   AND A.INLNE_NO = #{INLNE_NO}
+		 </if>
+	</select>
+	
+	<!-- ip내선번호관리 등록 -->
+	<insert id="insertRtnPhoneSettingIPExtensionNumberManage"  parameterType= "java.util.HashMap">
+			INSERT INTO PLT_PHN_IP_INLN
+			       ( 
+			       	CUSTCO_ID            /* 고객사키 */
+			       	,IP_ADDR 				/* IP주소 */
+					,INLNE_NO 				/* 내선번호 */
+					,PDS_CUST_KEY 			/* PDS_고객사_KEY */
+					,PDS_NO 				/* 내선번호 */
+					,REM					/* 비고 */			
+					,REG_DTIM				/* 등록일시 */
+					,REG_MAN				/* 등록자 */
+					,CHNG_DTIM				/* 변경일시 */
+					,CHNG_MAN				/* 변경자 */
+					,USER_ID
+			       )
+			VALUES (
+					#{ASP_NEWCUST_KEY} 
+			       , #{IP_ADDR}
+			       , #{INLNE_NO}
+			       , #{PDS_CUST_KEY}
+			       , #{PDS_NO}
+			       , #{REM}
+			       , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			       , #{REG_MAN}
+			       , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			       , #{CHNG_MAN}
+			       , #{USER_ID}
+			       )
+	</insert>
+	
+	<!-- ip내선번호관리 수정 -->	
+	<update id="updateRtnPhoneSettingIPExtensionNumberManage"  parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_IP_INLN
+		   SET CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS') 
+			  ,CHNG_MAN = #{CHNG_MAN}     
+			  ,REM = #{REM}          
+			  ,IP_ADDR = #{IP_ADDR}
+			  ,INLNE_NO = #{INLNE_NO}   
+			  ,PDS_NO = #{PDS_NO}   
+		 WHERE USER_ID = #{USER_ID}
+		 AND CUSTCO_ID = #{CUSTCO_ID}
+	</update>
+	
+	<!-- ip내선번호관리 삭제 -->	
+	<delete id="deleteRtnPhoneSettingIPExtensionNumberManage"  parameterType="java.util.HashMap">
+		DELETE FROM PLT_PHN_IP_INLN
+  		WHERE IP_ADDR = #{IP_ADDR}
+  		AND INLNE_NO = #{BF_IN}
+  		<choose>
+  			<when test="BF_PDS !='' and BF_PDS != null">
+  				AND PDS_NO = #{BF_PDS}
+  			</when>
+  			<otherwise>
+  				AND PDS_NO IS NULL
+  			</otherwise>
+  		</choose>
+	</delete>
+	
+	<!-- ip 내선번호관리 내선번호 존재여부-->
+	<select id="insertInlneNoCheckRtnPhoneSettingIPExtensionNumberManage" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		SELECT COUNT(*) AS IS_IN
+		FROM PLT_PHN_IP_INLN
+		WHERE USER_ID = #{USER_ID}
+	</select>
+	
+	<!-- ip 내선번호관리 ip내선번호관리 해당 사용자 id에 따른 내선번호관리 자동채우기 -->
+	<select id="insertInlneNoFillRtnPhoneSettingIPExtensionNumberManage" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		SELECT INLNE_NO
+		FROM PLT_PHN_IP_INLN
+		WHERE USER_ID = #{USER_ID}
+	</select>
+	
+	<!-- ip내선번호관리 삭제 전 CUSTCO_ID에 2개 이상의 회사명이 들어가있는지 확인 -->
+	<select id="selectAspkeyCheckPhoneSettingIPExtensionNumberManage" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		SELECT CUSTCO_ID
+		FROM PLT_PHN_IP_INLN
+		WHERE IP_ADDR = #{IP_ADDR}
+		 <if test="PDS_NO !='' and PDS_NO != null">
+  		   AND PDS_NO = #{PDS_NO}
+		 </if>
+		 <if test="INLNE_NO !='' and INLNE_NO != null">
+  		   AND INLNE_NO = #{INLNE_NO}
+		 </if>
+	</select>
+	<!-- ip내선번호관리 CUSTCO_ID에 2개 이상의 회사명 업데이트 -->
+	<update id="updateAspkeyCheckPhoneSettingIPExtensionNumberManage"  parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_IP_INLN
+		   SET CUSTCO_ID = #{ASP_NEWCUST_KEY}    
+		 WHERE IP_ADDR = #{IP_ADDR}
+		 <if test="PDS_NO !='' and PDS_NO != null">
+  		   AND PDS_NO = #{PDS_NO}
+		 </if>
+		 <if test="INLNE_NO !='' and INLNE_NO != null">
+  		   AND INLNE_NO = #{INLNE_NO}
+		 </if>
+	</update>
+	
+	<!-- ip내선번호관리 큐 -->
+	<select id="selectQueueNum" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+	<![CDATA[
+		SELECT QUEUE_NUM
+		FROM PLT_ASP_QUEUE A INNER JOIN
+    		(SELECT
+    		REGEXP_SUBSTR(#{ASP_NEWCUST_KEY_IN}, '[^\,]+', 1, ROWNUM) AS CUSTCO_ID
+    		FROM   DUAL
+    		CONNECT BY ROWNUM <= LENGTH(REGEXP_REPLACE(#{ASP_NEWCUST_KEY_IN}, '[^\,]+',''))+1    
+    		)B
+    	ON A.CUSTCO_ID = B.CUSTCO_ID
+    ]]>
+	</select>
+</mapper>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.reservationcall.dao.PhoneReservationcallListMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<result property="ASP_NEWCUST_KEY"     column="ASP_NEWCUST_KEY"     jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<!-- 전체 암복호화  -->
+		<result property="RESV_TEL_NO" column="RESV_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="RESV_TEL_NO_VIEW" column="RESV_TEL_NO_VIEW" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="SEND_MAN_NO" column="SEND_MAN_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CUST_TEL_NO" column="CUST_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+		<result property="CUST_NO_VIEW" column="CUST_NO_VIEW" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+	<!-- 예약콜정보 조회
+	,(SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY -->
+	<select id="selectRtnResvCallInqInfo" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		   /* selectRtnResvCallInqInfo 예약콜정보 조회 */
+		   SELECT ROW_TBL.*
+		         , PAG_TBL.*
+		     FROM (
+					SELECT A.RESV_SEQ								/*예약일련번호*/
+						  ,A.CNSL_HIST_NO							/*상담이력번호*/
+						  ,(SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_NEWCUST_KEY
+						  ,A.RESV_DATE								/*예약일자*/
+						  ,A.RESV_TIME								/*예약시간*/
+						  ,B.CUST_NM								/*고객명*/
+						  ,(SELECT CUSTOMER_ID 
+						  	FROM PLT_CUS 
+						  	WHERE CUSTCO_ID = A.CUSTCO_ID 
+						  		AND CUSTOMER_NM = B.CUST_NM 
+						  		AND CUSTOMER_PHONE_NO = B.CUST_TEL_NO) AS CUST_NO					/*고객번호*/
+						  ,B.CUST_NO        AS 	CUST_NO_VIEW		/*고객번호*/
+						  ,B.SECU_NO								/*증권번호*/
+						  ,B.CUST_TEL_NO							/*고객전화번호*/
+						  ,A.RESV_TEL_NO							/*예약전화번호*/
+						  ,A.RESV_TEL_NO	AS	RESV_TEL_NO_VIEW	/*예약전화번호*/
+						  ,B.INGNO
+						  ,B.CNSL_BEGIN_DATE						/*최근통화일자*/
+						  ,B.CNSL_BEGIN_TIME						/*최근통화시간*/
+						  ,TO_CHAR (TRUNC(NOW()) + NUMTODSINTERVAL(B.TEL_TIME, 'second'), 'hh24:mi:ss') AS TEL_TIME      /* 통화시간*/
+						  ,DECODE(A.FISH_YN,'Y','완료','N','예약') AS FISH_YN  /*처리상태*/
+						  ,B.CSLT_ID					/*상담원번호*/
+						  ,(SELECT USER_NM
+				              FROM PLT_USER K
+				             WHERE CSLT_ID = K.USER_ID) AS CSLT_NM    /*상담원명*/
+				          ,A.CUSTCO_ID 							  /*회사구분*/
+				          ,A.TRY_CNT								 /* 시도횟수 */			
+					  FROM PLT_PHN_CNSL_RSV A, PLT_PHN_CNSL B
+					 WHERE A.CNSL_HIST_NO = B.CNSL_HIST_NO
+					   <if test="ASP_NEWCUST_KEY != '' and ASP_NEWCUST_KEY != null"> 
+					   	AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					   </if>
+					   AND A.RESV_SEQ = (SELECT MAX(RESV_SEQ) AS RESV_SEQ
+                                           FROM PLT_PHN_CNSL_RSV K
+                                          WHERE A.CNSL_HIST_NO = K.CNSL_HIST_NO)
+						<if test="RESV_STR_DT != '' and RESV_STR_DT != null"> 
+					      AND A.RESV_DATE BETWEEN REPLACE(#{RESV_STR_DT},'-','') AND REPLACE(#{RESV_END_DT},'-','')
+					    </if>
+					    <if test="FISH_YN != '' and FISH_YN != null"> 
+					      AND A.FISH_YN = #{FISH_YN} 
+					    </if>
+					    <if test="CSLT_ID != '' and CSLT_ID != null"> 
+					      AND B.CSLT_ID = #{CSLT_ID}
+					    </if>	
+					    ORDER BY A.RESV_DATE DESC, A.RESV_TIME DESC
+					    ) ROW_TBL
+					 ,(
+						SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+						  FROM PLT_PHN_CNSL_RSV A, PLT_PHN_CNSL B
+						 WHERE A.CNSL_HIST_NO = B.CNSL_HIST_NO
+						   AND A.RESV_SEQ = (SELECT MAX(RESV_SEQ) AS RESV_SEQ
+                                               FROM PLT_PHN_CNSL_RSV K
+                                              WHERE A.CNSL_HIST_NO = K.CNSL_HIST_NO)
+                            <if test="ASP_NEWCUST_KEY != '' and ASP_NEWCUST_KEY != null"> 
+						   		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+						    </if>                  
+							<if test="RESV_STR_DT != '' and RESV_STR_DT != null"> 
+						      AND A.RESV_DATE BETWEEN REPLACE(#{RESV_STR_DT},'-','') AND REPLACE(#{RESV_END_DT},'-','')
+						    </if>
+						    <if test="FISH_YN != '' and FISH_YN != null"> 
+						      AND A.FISH_YN = #{FISH_YN} 
+						    </if>
+						    <if test="CSLT_ID != '' and CSLT_ID != null"> 
+						      AND B.CSLT_ID = #{CSLT_ID}
+						    </if>
+					  ) PAG_TBL 
+	</select>
+	
+	<!-- 예약콜 완료처리 -->	
+	<update id="updateRtnResvCallInqInfo"  parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_CNSL_RSV
+		   SET CHNG_DTIM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			  ,CHNG_MAN = #{CHNG_MAN}       
+		      ,FISH_YN = 'Y'
+		      ,PROC_DATE = TO_CHAR(NOW(), 'YYYYMMDD')
+		      ,PROC_TIME = TO_CHAR(NOW(), 'HH24MISS')
+		 WHERE 1 = 1
+		   AND RESV_SEQ = #{RESV_SEQ}
+	</update>
+	
+	<!-- 예약콜 삭제 -->
+	<delete id="deleteRtnResvCallInqInfo" parameterType="java.util.HashMap">
+		 /*  deleteRtnResvCallInqInfo  예약콜 삭제   */
+		 DELETE
+		 FROM PLT_PHN_CNSL_RSV
+		 WHERE RESV_SEQ = #{RESV_SEQ}
+		 	AND CNSL_HIST_NO = #{CNSL_HIST_NO}
+		 	AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</delete>
+</mapper>

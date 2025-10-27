@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.sms.dao.PhoneAtalkTmplManageMapper">
+
+	<select id="selectSendProfileKeys" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT  SEND_PROFILE.UUID												AS UUID
+			   ,SEND_PROFILE.CHN_CLSF_CD										AS CHN_CLSF_CD 
+			   ,COMM_CD.CD_NM													AS CHN_CLSF_NM
+			   ,SEND_PROFILE.DSPTCH_PRF_NM										AS SEND_PROFILE_NM
+			   ,SEND_PROFILE.DSPTCH_PRF_KEY  									AS SEND_PROFILE_KEY
+			   ,CONCAT(SEND_PROFILE.DSPTCH_PRF_KEY, '/', SEND_PROFILE.UUID)		AS SELECTBOX_VALUE
+		  FROM  PLT_CUSTCO_CHN		AS SEND_PROFILE
+		  JOIN  PLT_COMM_CD			AS COMM_CD
+			ON  COMM_CD.CUSTCO_ID = #{CUSTCO_ID}::INT AND SEND_PROFILE.CHN_CLSF_CD = COMM_CD.CD_ID
+		   AND  SEND_PROFILE.ATALK_YN = 'Y'
+		   AND  COMM_CD.GROUP_CD_ID = 'CHNL_CL'
+		   AND  SEND_PROFILE.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	  ORDER BY  SEND_PROFILE.SORT_ORD
+	</select>
+	
+	<select id="checktmplCd"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(TMPL_CD) AS CNT 
+		FROM PLT_ATALK PA 
+		WHERE TMPL_CD = #{TMPL_CD}
+			AND DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+	</select>
+	
+	<select id="checktmplNm"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(TMPL_NM) AS CNT 
+		FROM PLT_ATALK PA 
+		WHERE TMPL_NM = #{TMPL_NM}
+			AND DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+	</select>
+	
+	<insert id="saveAtalkTmpl" parameterType="java.util.HashMap">
+		INSERT INTO PLT_ATALK(
+			 ATALK_ID
+			,CUSTCO_ID
+			,UUID
+			,DSPTCH_PRF_KEY
+			,TMPL_CD
+			,TMPL_IGI_STTS
+			,TMPL_CN
+			,TMPL_MSG_TYPE
+			,TMPL_EPSZ_TYPE
+		<if test="TMPL_EXTRA != null">
+			,ADD_INFO
+		</if>
+		<if test="MAIN_IMAGE_PATH != null">
+			,IMG
+		</if>
+		<if test="MAIN_IMAGE_LNK != null">
+			,IMG_LNK
+		</if>
+		<if test="TMPL_TITLE != null">
+			,EPSZ_INDCT_MPIT_INFO
+		</if>
+		<if test="TMPL_SUB_TITLE != null">
+			,EPSZ_INDCT_ADD_INFO
+		</if>
+		<if test="HEADER != null">
+			,HEAD
+		</if>
+		<if test="ITEM_HIGH_LIGHT != null">
+			,ARTCL_EPSZ
+		</if>
+		<if test="TMPL_ITEM != null">
+			,ARTCL_LIST
+		</if>
+<!-- 			,SECTY_YN -->
+		<if test="BUTTONS != null">
+			,BTN_INFO
+		</if>
+<!-- 			,BTN_LNKG_INFO -->
+			,TMPL_NM
+			,TMPL_STTS
+			,TMPL_DMCY_YN
+		<if test="FILE_GROUP_KEY != null">
+			,FILE_GROUP_KEY
+		</if>
+			,RJCT_RSN
+		<if test="HIGHLIGHT_IMAGE_PATH != null">
+			,EPSZ_IMG
+		</if>
+		<if test="HIGHLIGHT_IMAGE_LNK != null">
+			,EPSZ_IMG_LNK
+		</if>
+			,USE_YN
+			,RGTR_ID
+			,REG_DT
+			,MDFR_ID
+			,MDFCN_DT
+		)VALUES(
+			 #{ATALK_ID}::INTEGER
+			,#{CUSTCO_ID}::INTEGER
+			,#{UUID}
+			,#{SEND_PROFILE_KEY}
+			,#{TMPL_CD}
+			,'NOTREG'				<!-- 검수 상태 미등록 -->
+			,#{TMPL_CN}
+			,#{TMPL_MSG_TYPE}
+			,#{TMPL_EPSZ_TYPE}
+		<if test="TMPL_EXTRA != null">
+			,#{TMPL_EXTRA}
+		</if>
+		<if test="MAIN_IMAGE_PATH != null">
+			,#{MAIN_IMAGE_PATH}
+		</if>
+		<if test="MAIN_IMAGE_LNK != null">
+			,#{MAIN_IMAGE_LNK}
+		</if>
+		<if test="TMPL_TITLE != null">
+			,#{TMPL_TITLE}
+		</if>
+		<if test="TMPL_SUB_TITLE != null">
+			,#{TMPL_SUB_TITLE}
+		</if>
+		<if test="HEADER != null">
+			,#{HEADER}
+		</if>
+		<if test="ITEM_HIGH_LIGHT != null">
+			,#{ITEM_HIGH_LIGHT}
+		</if>
+		<if test="TMPL_ITEM != null">
+			,#{TMPL_ITEM}
+		</if>
+<!-- 			,? -->
+		<if test="BUTTONS != null">
+			,#{BUTTONS}
+		</if>
+<!-- 			,? -->
+			,#{TMPL_NM}
+			,'R'		<!-- 대기 -->
+			,'N'		<!-- 휴면 여부 -->
+		<if test="FILE_GROUP_KEY != null">
+			,#{FILE_GROUP_KEY}
+		</if>
+			,''			<!-- 반려 사유 -->
+		<if test="HIGHLIGHT_IMAGE_PATH != null">
+			,#{HIGHLIGHT_IMAGE_PATH}
+		</if>
+		<if test="HIGHLIGHT_IMAGE_LNK != null">
+			,#{HIGHLIGHT_IMAGE_LNK}
+		</if>
+			,'Y'
+			,#{USER_ID}::INTEGER
+			,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			,#{USER_ID}::INTEGER
+			,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	<update id="updateAtalkTmpl" parameterType="java.util.HashMap">
+		UPDATE PLT_ATALK SET
+			TMPL_CN = #{TMPL_CN}
+			,TMPL_MSG_TYPE = #{TMPL_MSG_TYPE}
+			,TMPL_EPSZ_TYPE = #{TMPL_EPSZ_TYPE}
+		<if test="TMPL_EXTRA != null">
+			,ADD_INFO = #{TMPL_EXTRA}
+		</if>
+		<if test="MAIN_IMAGE_PATH != null">
+			,IMG = #{MAIN_IMAGE_PATH}
+		</if>
+		<if test="MAIN_IMAGE_LNK != null">
+			,IMG_LNK = #{MAIN_IMAGE_LNK}
+		</if>
+		<if test="TMPL_TITLE != null">
+			,EPSZ_INDCT_MPIT_INFO = #{TMPL_TITLE}
+		</if>
+		<if test="TMPL_SUB_TITLE != null">
+			,EPSZ_INDCT_ADD_INFO = #{TMPL_SUB_TITLE}
+		</if>
+		<if test="HEADER != null">
+			,HEAD = #{HEADER}
+		</if>
+		<if test="ITEM_HIGH_LIGHT != null">
+			,ARTCL_EPSZ = #{ITEM_HIGH_LIGHT}
+		</if>
+		<if test="TMPL_ITEM != null">
+			,ARTCL_LIST = #{TMPL_ITEM}
+		</if>
+<!-- 			,SECTY_YN -->
+		<if test="BUTTONS != null">
+			,BTN_INFO = #{BUTTONS}
+		</if>
+			,TMPL_NM = #{TMPL_NM}
+		<if test="FILE_GROUP_KEY != null">
+			,FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+		</if>
+		<if test="HIGHLIGHT_IMAGE_PATH != null">
+			,EPSZ_IMG = #{HIGHLIGHT_IMAGE_PATH}
+		</if>
+		<if test="HIGHLIGHT_IMAGE_LNK != null">
+			,EPSZ_IMG_LNK = #{HIGHLIGHT_IMAGE_LNK}
+		</if>
+			,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE ATALK_ID = #{ATALK_ID}::INTEGER
+	</update>
+	
+	<select id="selectAtalkTmplListForMtsRequest" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+			SELECT  (ROW_NUMBER() OVER()) 		AS ROWNUM
+				   ,ATALK.ATALK_ID				AS ATALK_ID
+				   ,ATALK.TMPL_CD 				AS TMPL_CD
+				   ,ATALK.TMPL_STTS				AS TMPL_STTS
+				   ,ATALK.TMPL_IGI_STTS			AS TMPL_IGI_STTS
+				   ,ATALK.TMPL_DMCY_YN			AS TMPL_DMCY_YN
+			  FROM  PLT_ATALK ATALK
+			  JOIN  PLT_COMM_CD MSG_TYPE 
+				ON  MSG_TYPE.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_MSG_TYPE = MSG_TYPE.CD_ID
+			   AND  MSG_TYPE.GROUP_CD_ID = 'MTS_TMPL_MSG_TP'
+			   AND  MSG_TYPE.USE_YN = 'Y'
+			  JOIN  PLT_COMM_CD TMPL_STTS 
+				ON  TMPL_STTS.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_STTS = TMPL_STTS.CD_ID
+			   AND  TMPL_STTS.GROUP_CD_ID = 'MTS_TMPL_STAT_CD'
+			   AND  TMPL_STTS.USE_YN = 'Y'
+			  JOIN  PLT_COMM_CD ISPT_STAT 
+				ON  ISPT_STAT.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_IGI_STTS = ISPT_STAT.CD_ID
+			   AND  ISPT_STAT.GROUP_CD_ID = 'MTS_ISPT_STAT_CD'
+			   AND  ISPT_STAT.USE_YN = 'Y'
+			 WHERE  ATALK.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			   AND  ATALK.DSPTCH_PRF_KEY = #{SEND_PROFILE_KEY}
+			   AND  ATALK.USE_YN = 'Y'
+			<if test="PARAM_TMPL_IGI_STTS != ''">
+			   AND  ATALK.TMPL_IGI_STTS = #{PARAM_TMPL_IGI_STTS}
+			</if>
+			<if test="PARAM_TMPL_MSG_TYPE != ''">
+			   AND  ATALK.TMPL_MSG_TYPE = #{PARAM_TMPL_MSG_TYPE}
+			</if>
+			<if test="PARAM_TMPL_NM != ''">
+			   AND  ATALK.TMPL_NM LIKE ('%'|| #{PARAM_TMPL_NM} ||'%')
+			</if>
+
+	</select>
+		
+	<select id="selectAtalkTmplList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+			SELECT  (ROW_NUMBER() OVER()) 		AS ROWNUM
+				   ,A.*
+			  FROM (SELECT  ATALK.ATALK_ID				AS ATALK_ID
+			  			   ,DSPTCH_PRF_KEY 				AS SENDER_PROFILE_KEY
+				   		   ,ATALK.UUID					AS UUID
+				   		   ,ATALK.TMPL_CD 				AS TMPL_CD
+				   		   ,ATALK.TMPL_NM 				AS TMPL_NM
+				   		   ,ATALK.TMPL_CN 				AS TMPL_CN
+				   		   ,ATALK.ADD_INFO				AS TMPL_EXTRA
+				   		   ,ATALK.TMPL_MSG_TYPE			AS TMPL_MSG_TYPE
+				   		   ,ATALK.TMPL_EPSZ_TYPE		AS TMPL_EPSZ_TYPE  
+				   		   ,MSG_TYPE.CD_NM				AS TMPL_MSG_NM
+				   		   ,TO_CHAR(
+				   		   		  TO_TIMESTAMP(ATALK.REG_DT
+				   				, 'YYYYMMDDHH24MISS')
+				   				, 'YYYY.MM.DD')			AS REG_DT
+				   		   ,TO_CHAR(
+				   		   		  TO_TIMESTAMP(ATALK.MDFCN_DT
+				   				, 'YYYYMMDDHH24MISS')
+				   				, 'YYYY.MM.DD')			AS MDFCN_DT
+				   		   ,''							AS TMPL_STTS
+				   		   ,''							AS TMPL_STTS_NM
+				   		   ,''							AS TMPL_IGI_STTS
+				   		   ,''							AS TMPL_IGI_NM
+				   		   <!--
+				   		   ,ATALK.TMPL_STTS				AS TMPL_STTS
+				   		   ,TMPL_STTS.CD_NM				AS TMPL_STTS_NM
+				   		   ,ATALK.TMPL_IGI_STTS			AS TMPL_IGI_STTS
+				   		   ,ISPT_STAT.CD_NM				AS TMPL_IGI_NM
+				   		   -->
+						   ,ATALK.ADD_INFO				AS TMPL_EXTRA
+						   ,ATALK.FILE_GROUP_KEY		AS FILE_GROUP_KEY
+						   ,ATALK.IMG					AS IMG
+						   ,ATALK.EPSZ_IMG				AS EPSZ_IMG
+						   ,ATALK.EPSZ_INDCT_MPIT_INFO	AS TMPL_TITLE
+						   ,ATALK.EPSZ_INDCT_ADD_INFO 	AS TMPL_SUB_TITLE
+						   ,ATALK.HEAD 					AS ITEM_HEADER
+						   ,ATALK.ARTCL_EPSZ 			AS ITEM_HIGH_LIGHT
+						   ,ATALK.ARTCL_LIST 			AS TMPL_ITEM
+						   ,ATALK.BTN_INFO 				AS BUTTONS
+			  		  FROM  PLT_ATALK ATALK
+			  		  JOIN  PLT_COMM_CD MSG_TYPE 
+						ON  MSG_TYPE.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_MSG_TYPE = MSG_TYPE.CD_ID
+			   		   AND  MSG_TYPE.GROUP_CD_ID = 'MTS_TMPL_MSG_TP'
+			   		   AND  MSG_TYPE.USE_YN = 'Y'
+			  		  JOIN  PLT_COMM_CD TMPL_STTS 
+						ON  TMPL_STTS.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_STTS = TMPL_STTS.CD_ID
+			   		   AND  TMPL_STTS.GROUP_CD_ID = 'MTS_TMPL_STAT_CD'
+			   		   AND  TMPL_STTS.USE_YN = 'Y'
+			  		  JOIN  PLT_COMM_CD ISPT_STAT 
+						ON  ISPT_STAT.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_IGI_STTS = ISPT_STAT.CD_ID
+			   		   AND  ISPT_STAT.GROUP_CD_ID = 'MTS_ISPT_STAT_CD'
+			   		   AND  ISPT_STAT.USE_YN = 'Y'
+			 		 WHERE  ATALK.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			 		   AND  ATALK.USE_YN = 'Y'
+			   		   AND  ATALK.DSPTCH_PRF_KEY = #{SEND_PROFILE_KEY}
+					<if test="PARAM_TMPL_IGI_STTS != ''">
+					   AND  ATALK.TMPL_IGI_STTS = #{PARAM_TMPL_IGI_STTS}
+					</if>
+					<if test="PARAM_TMPL_MSG_TYPE != ''">
+					   AND  ATALK.TMPL_MSG_TYPE = #{PARAM_TMPL_MSG_TYPE}
+					</if>
+					<if test="PARAM_TMPL_NM != ''">
+					   AND  ATALK.TMPL_NM LIKE ('%'|| #{PARAM_TMPL_NM} ||'%')
+					</if>
+				ORDER BY ATALK.ATALK_ID DESC
+				) A
+
+	</select>
+	
+	<!-- 알림톡 템플릿 상태 업데이트 후 상태 리스트 가져오기 -->
+	<select id="selectAtalkTmplSttsList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+			SELECT  		/* selectAtalkTmplSttsList - 알림톡 템플릿 상태 업데이트 후 상태 리스트 가져오기 */
+				(ROW_NUMBER() OVER()) 		AS ROWNUM
+				   ,A.*
+			  FROM (SELECT  ATALK.ATALK_ID				AS ATALK_ID
+				   		   ,ATALK.TMPL_STTS				AS TMPL_STTS
+				   		   ,TMPL_STTS.CD_NM				AS TMPL_STTS_NM
+				   		   ,ATALK.TMPL_IGI_STTS			AS TMPL_IGI_STTS
+				   		   ,ISPT_STAT.CD_NM				AS TMPL_IGI_NM
+				   		   ,RJCT_RSN					AS RJCT_RSN
+			  		  FROM  PLT_ATALK ATALK
+			  		  JOIN  PLT_COMM_CD MSG_TYPE 
+						ON  MSG_TYPE.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_MSG_TYPE = MSG_TYPE.CD_ID
+			   		   AND  MSG_TYPE.GROUP_CD_ID = 'MTS_TMPL_MSG_TP'
+			   		   AND  MSG_TYPE.USE_YN = 'Y'
+			  		  JOIN  PLT_COMM_CD TMPL_STTS 
+						ON  TMPL_STTS.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_STTS = TMPL_STTS.CD_ID
+			   		   AND  TMPL_STTS.GROUP_CD_ID = 'MTS_TMPL_STAT_CD'
+			   		   AND  TMPL_STTS.USE_YN = 'Y'
+			  		  JOIN  PLT_COMM_CD ISPT_STAT 
+						ON  ISPT_STAT.CUSTCO_ID = #{CUSTCO_ID}::INT AND ATALK.TMPL_IGI_STTS = ISPT_STAT.CD_ID
+			   		   AND  ISPT_STAT.GROUP_CD_ID = 'MTS_ISPT_STAT_CD'
+			   		   AND  ISPT_STAT.USE_YN = 'Y'
+			 		 WHERE  ATALK.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			 		   AND  ATALK.USE_YN = 'Y'
+			   		   AND  ATALK.DSPTCH_PRF_KEY = #{SEND_PROFILE_KEY}
+					<if test="PARAM_TMPL_IGI_STTS != ''">
+					   AND  ATALK.TMPL_IGI_STTS = #{PARAM_TMPL_IGI_STTS}
+					</if>
+					<if test="PARAM_TMPL_MSG_TYPE != ''">
+					   AND  ATALK.TMPL_MSG_TYPE = #{PARAM_TMPL_MSG_TYPE}
+					</if>
+					<if test="PARAM_TMPL_NM != ''">
+					   AND  ATALK.TMPL_NM LIKE ('%'|| #{PARAM_TMPL_NM} ||'%')
+					</if>
+				ORDER BY ATALK.ATALK_ID DESC
+				) A
+
+	</select>
+	
+	<select id="selectImageList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT  upFile.ACTL_FILE_NM				AS ACTL_FILE_NM
+			   ,upFile.FILE_SZ					AS FILE_SZ
+			   ,upFile.DWNLD_CNT				AS DWNLD_CNT
+			   ,upFile.ACTL_FILE_NM				AS ACTL_FILE_NM
+			   ,upFile.FILE_GROUP_KEY			AS FILE_GROUP_KEY
+			   ,upFile.FILE_KEY					AS FILE_KEY
+			   ,upFile.TASK_TYPE_CD				AS TASK_TYPE_CD
+			   ,upFile.PATH_TYPE_CD				AS PATH_TYPE_CD
+   			   ,upFile.FILE_PATH 				AS FILE_PATH
+			   ,upFile.STRG_FILE_NM 			AS STRG_FILE_NM
+		  FROM  PLT_FILE upFile 
+		 WHERE  upFile.TASK_TYPE_CD = 'mts'
+		   AND  upFile.FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+		   AND  upFile.USE_YN = 'Y'
+	</select>
+	
+	<select id="selectAtalkTmplForMtsRegister" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT  ATALK_ID 							AS ATALK_ID
+			,DSPTCH_PRF_KEY 						AS SENDER_KEY
+			,TMPL_CD								AS TEMPLATE_CODE
+			,TMPL_NM 							AS TEMPLATE_NAME
+			,TMPL_MSG_TYPE 						AS TEMPLATE_MESSAGE_TYPE
+			,TMPL_EPSZ_TYPE 						AS TEMPLATE_EMPHASIZE_TYPE
+			,TMPL_CN 							AS TEMPLATE_CONTENT
+			,ADD_INFO 							AS TEMPLATE_EXTRA
+			,EPSZ_INDCT_MPIT_INFO 				AS TEMPLATE_TITLE
+			,EPSZ_INDCT_ADD_INFO 				AS TEMPLATE_SUB_TITLE
+			,IMG_LNK 							AS TEMPLATE_IMAGE_URL
+			,HEAD 								AS TEMPLATE_HEADER
+			,ARTCL_EPSZ 							AS TEMPLATE_ITEM_HIGHLIGHT
+			,ARTCL_LIST 							AS TEMPLATE_ITEM
+			,BTN_INFO 							AS BUTTONS
+		FROM  PLT_ATALK PA
+		WHERE  CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<choose>
+			<when test="ATALK_ID != '' and ATALK_ID != null and ATALK_ID != undefined">
+				AND  ATALK_ID IN
+				<foreach collection="ATALK_ID_LIST" item="item" open="(" separator="," close=")" >
+					#{item}::INTEGER
+				</foreach>
+				AND TMPL_IGI_STTS = 'APR'
+			</when>
+			<when test="TMPL_CD != '' and TMPL_CD != null and TMPL_CD != undefined">
+				AND TMPL_CD = #{TMPL_CD}
+			</when>
+			<otherwise>
+				AND  ATALK_ID IN
+				<foreach collection="ATALK_ID_LIST" item="item" open="(" separator="," close=")" >
+					#{item}::INTEGER
+				</foreach>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<update id="deleteAtalkTmpl" parameterType="java.util.HashMap">
+		UPDATE  PLT_ATALK 
+		   SET  USE_YN = 'N'
+			   ,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		 WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		   AND ATALK_ID IN
+	   <foreach collection="ATALK_ID_LIST" item="item" open="(" separator="," close=")" >
+	 		#{item}::INTEGER
+	 	</foreach>
+	</update>
+	
+	<!-- 검수상태 업데이트 -->
+	<update id="updateAtalkIgiStts" parameterType="java.util.HashMap">
+		UPDATE  PLT_ATALK 
+		   SET  RJCT_RSN = #{MTS_RESULT}
+		   	   ,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		<if test="TMPL_IGI_STTS != null">
+			  ,TMPL_IGI_STTS = #{TMPL_IGI_STTS}
+		</if>
+		<if test="ATALK_ID != null">
+		 WHERE ATALK_ID = #{ATALK_ID}::INTEGER
+		</if>
+		<if test="TMPL_CD != null">
+		 WHERE TMPL_CD = #{TMPL_CD}
+		</if>
+	</update>
+	
+	<!-- 공통 파일 테이블에서 fileGroupKey로 fileKey 조회 -->
+	<select id="selectFileKeyForMtsFileUpload" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT FILE_KEY AS FILE_KEY FROM PLT_FILE PF WHERE FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+	</select>
+	
+	<update id="updateFileGroupKeyForMtsHighLightImage">
+		UPDATE PLT_FILE 
+		   SET FILE_GROUP_KEY = #{IMAGE_FILE_GROUP_KEY}
+		 WHERE FILE_GROUP_KEY = #{HIGH_FILE_GROUP_KEY}
+	</update>
+	
+	<update id="updateTmplStatusWithMtsStatus" parameterType="java.util.HashMap">
+		UPDATE  PLT_ATALK
+		   SET  RJCT_RSN = #{MTS_COMMENTS}
+		   	   ,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		   <choose>
+		   	<when test="TMPL_DMCY_YN != null and TMPL_DMCY_YN == 'Y'">
+		   		,TMPL_STTS = 'D'			<!-- 휴면 상태로 변경 -->
+		   	</when>
+		   	<when test="TMPL_STTS != null">
+		   		,TMPL_STTS = #{TMPL_STTS}
+		   	</when>
+		   </choose>
+		   <if test="TMPL_IGI_STTS != null">
+			   ,TMPL_IGI_STTS = #{TMPL_IGI_STTS}
+		   </if>
+		   <if test="TMPL_DMCY_YN != null">
+			   ,TMPL_DMCY_YN = #{TMPL_DMCY_YN}
+			</if>
+		 WHERE  ATALK_ID = #{ATALK_ID}::INTEGER
+	</update>
+	
+	<select id="selectTmplStts" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT  ATALK_ID			AS ATALK_ID
+			   ,TMPL_CD				AS TMPL_CD
+			   ,DSPTCH_PRF_KEY 		AS SENDER_KEY
+			   ,TMPL_STTS 			AS TMPL_STTS
+			   ,TMPL_IGI_STTS 		AS TMPL_IGI_STTS
+		  FROM  PLT_ATALK PA
+		 WHERE  ATALK_ID = #{ATALK_ID}::INTEGER
+	</select>
+	
+</mapper>

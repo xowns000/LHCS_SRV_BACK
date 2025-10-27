@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.cron.dao.CronMapper">
+	
+	<select id="executeItgrtStatisticsRowData" parameterType="java.util.HashMap" resultType="java.util.HashMap" statementType="CALLABLE">
+		CALL custco.custcoPhnStatisticsProc()
+	</select>
+	
+	<select id="executeItgrtChatStatisticsRowData" parameterType="java.util.HashMap" resultType="java.util.HashMap" statementType="CALLABLE">
+		CALL custco.custcoSnsStatisticsProc()
+	</select>
+	
+	<select id="executePlanStatChange" parameterType="java.util.HashMap" resultType="java.util.HashMap" statementType="CALLABLE">
+		CALL custco.planStatChange()
+	</select>
+	
+	
+	<select id="selectBatchTenantList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/* selectBatchTenantList - 배치실행을 위한 테넌트 목록 조회 */
+		    PCC.SCHEMA_ID
+		FROM CUSTCO.PLT_CERT_CUSTCO_CHN PCCC
+		LEFT JOIN CUSTCO.PLT_CERT_CUSTCO PCC
+			ON PCC.CERT_CUSTCO_ID = PCCC.CERT_CUSTCO_ID
+		WHERE PCC.SRVC_STTS_CD = 'ON'
+			AND PCC.BFR_SYS_YN = 'N'
+		GROUP BY PCC.SCHEMA_ID
+	</select>
+</mapper>

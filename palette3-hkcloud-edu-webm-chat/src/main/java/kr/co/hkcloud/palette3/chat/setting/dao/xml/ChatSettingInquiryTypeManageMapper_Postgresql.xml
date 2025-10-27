@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <!-- 상담유형 관리 -->
+<mapper namespace="kr.co.hkcloud.palette3.chat.setting.dao.ChatSettingInquiryTypeManageMapper">
+
+<!-- 상담유형정보를 수정한다. -->
+<update id="updateRtnTwbTalkInqryTyp" parameterType="java.util.HashMap">
+MERGE INTO PLT_CHT_INQ_TYP T
+USING DUAL
+ON 
+(
+   T.INQRY_TYP_CD  = #{INQRY_TYP_CD}
+)
+WHEN MATCHED THEN 
+UPDATE SET
+	   	T.INQRY_TYP_NM		= #{INQRY_TYP_NM}
+	  , T.INQRY_DESC		= #{INQRY_DESC}
+	  , T.INQRY_TYPE		= #{INQRY_TYPE}
+	  , T.INQRY_USE_CHANNEL	= #{INQRY_USE_CHANNEL}
+	  , T.USE_YN			= #{USE_YN}
+	  , T.SORT_ORD	   		= #{SORT_ORD}
+      , T.AMDR_DEPT_CD 		= #{REGR_DEPT_CD}
+      , T.AMDR_ID      		= #{REGR_ID}
+      , T.UPD_DTTM     		= NOW()
+ 	  , T.PRIORITY_ROUTE_ORD  = (CASE WHEN #{PRIORITY_ROUTE_ORD} = '' THEN NULL ELSE #{PRIORITY_ROUTE_ORD} END) 
+WHEN NOT MATCHED THEN
+INSERT 
+(
+		T.CUSTCO_ID
+	  , T.INQRY_TYP_CD
+	  , T.INQRY_TYP_NM
+	  , T.INQRY_DESC
+	  , T.INQRY_TYPE
+	  , T.INQRY_USE_CHANNEL
+	  , T.SPST_INQRY_TYP_CD
+	  , T.INQRY_TYP_DIV_CD
+	  , T.USE_YN
+	  , T.SORT_ORD
+	  , T.REGR_DEPT_CD
+	  , T.REGR_ID
+	  , T.REG_DTTM
+	  , T.AMDR_DEPT_CD
+	  , T.AMDR_ID
+	  , T.UPD_DTTM
+	  , T.PROC_ID
+	  , T.IT_PROCESSING
+	  , T.PRIORITY_ROUTE_ORD
+)
+VALUES
+(
+		#{ASP_NEWCUST_KEY}
+	  , #{INQRY_TYP_CD}
+	  , #{INQRY_TYP_NM}
+	  , #{INQRY_DESC}
+	  , #{INQRY_TYPE}
+	  , #{INQRY_USE_CHANNEL}
+	  , #{SPST_INQRY_TYP_CD}
+	  , #{INQRY_TYP_DIV_CD}
+	  , #{USE_YN}
+	  , #{SORT_ORD}
+	  , #{REGR_DEPT_CD}
+	  , #{REGR_ID}
+      , NOW()
+      , #{REGR_DEPT_CD}
+      , #{REGR_ID}
+      , NOW()
+      , #{REGR_ID}
+      , NOW()
+      , (CASE WHEN #{PRIORITY_ROUTE_ORD} = '' THEN NULL ELSE #{PRIORITY_ROUTE_ORD} END) 
+)      
+ 
+</update>
+
+<!-- 문의유형 정보를 가져온다 (상세) -->	
+<select id="selectRtnChannelNodeDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT TACC.SNDR_KEY                                         AS INQRY_TYP_CD       /* 채널키 */
+     , TACC.DSPTCH_PRF_NM                                         AS INQRY_TYP_NM       /* 채널명 */
+     , TACC.SNDR_KEY                                         AS INQRY_USE_CHANNEL  /* 채널키 */
+     , CASE WHEN TACC.SORT_ORD IS NULL THEN '0'
+            ELSE TO_CHAR(TACC.SORT_ORD) END                        AS SORT_ORD           /* 채널 정렬순서 */
+     , CASE WHEN TTIT.USE_YN IS NULL THEN 'N'
+            ELSE TTIT.USE_YN END                                   AS USE_YN             /* 문의유형 사용여부 */
+     , CASE WHEN TTIT.SPST_INQRY_TYP_CD IS NULL THEN '-'
+            ELSE TTIT.SPST_INQRY_TYP_CD END                        AS SPST_INQRY_TYP_CD  /* 상위 문의유형 */
+     , TTIT.INQRY_DESC                                             AS INQRY_DESC         /* 문의유형 메시지 */
+     , CASE WHEN TTIT.INQRY_TYPE IS NULL THEN 'AGENT'
+            ELSE TTIT.INQRY_TYPE END                               AS INQRY_TYPE         /* 문의유형 타입  */
+     , COALESCE((SELECT INQRY_TYP_NM 
+                 FROM PLT_CHT_INQ_TYP
+                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                  AND INQRY_TYP_CD = TTIT.SPST_INQRY_TYP_CD), '-') AS SPST_INQRY_TYP_NM
+     , CASE WHEN TTIT.INQRY_TYP_DIV_CD IS NULL THEN '0'
+            ELSE TTIT.INQRY_TYP_DIV_CD END                         AS INQRY_TYP_DIV_CD   /* 문의유형 레벨 */
+     , TTIT.REGR_DEPT_CD
+     , TTIT.REGR_ID
+     , TO_CHAR(TTIT.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')             AS REG_DTTM
+     , TTIT.AMDR_DEPT_CD
+     , TTIT.AMDR_ID
+     , TO_CHAR(TTIT.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS')             AS UPD_DTTM
+     , TTIT.PROC_ID
+     , TO_CHAR(TTIT.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS')        AS IT_PROCESSING
+     , TTIT.INQRY_TYP_CD                                           AS CD
+     , TTIT.INQRY_TYP_NM                                           AS CD_NM
+     , TB09.FILE_KEY                                               AS FILE_KEY       /* 파일키          */
+     , TB09.FILE_GROUP_KEY                                         AS FILE_GROUP_KEY /* 파일키그룹     */
+     , TB09.TASK_TYPE_CD                                              AS TASK_TYPE_CD      /* 업무구분       */
+     , TB09.PATH_TYPE_CD                                              AS PATH_TYPE_CD      /* 파일경로       */
+     , TB09.FILE_PATH       AS FILE_PATH      /* 파일경로       */
+     , TB09.STRG_FILE_NM       AS STRG_FILE_NM      /* 파일이름       */
+     , TTIT.PRIORITY_ROUTE_ORD
+  FROM PLT_ASP_CUS_CHN TACC
+ INNER JOIN PLT_CHN TABC
+    ON TACC.CHN_CLSF_CD = TABC.CHN_CLSF_CD
+  LEFT OUTER JOIN PLT_CHT_INQ_TYP TTIT
+    ON TACC.SNDR_KEY = TTIT.INQRY_TYP_CD
+   AND TTIT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND TTIT.SPST_INQRY_TYP_CD = '-'           /* 채널의 부모 문의유형 코드는 '-'로 정의함 */
+   AND TTIT.INQRY_TYP_DIV_CD = '0'            /* 채널의 레벨은 0으로 정의함 */
+   AND TTIT.USE_YN != 'D'
+  LEFT OUTER JOIN PLT_FILE TB09
+    ON TB09.FILE_KEY = TTIT.IMAGE_FILE_KEY
+   AND TB09.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+ WHERE TACC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+
+<if test="SNDR_KEY !='' and SNDR_KEY != null">
+   AND TACC.SNDR_KEY = #{SNDR_KEY}  /* 채널의 문의유형 코드는 SNDR_KEY로 정의함 */
+</if>
+
+</select>
+
+<!-- 문의유형 정보를 가져온다 (상세) -->	
+<select id="selectRtnNodeDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT TTIT.INQRY_TYP_CD
+     , TTIT.INQRY_TYP_NM
+     , TTIT.INQRY_DESC
+     , TTIT.INQRY_TYPE
+     , TTIT.INQRY_USE_CHANNEL
+     , TTIT.SPST_INQRY_TYP_CD
+     , COALESCE((SELECT INQRY_TYP_NM 
+                 FROM PLT_CHT_INQ_TYP
+                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                  AND INQRY_TYP_CD = TTIT.SPST_INQRY_TYP_CD), '-') AS SPST_INQRY_TYP_NM
+     , TTIT.INQRY_TYP_DIV_CD
+     , TTIT.USE_YN
+     , TTIT.SORT_ORD
+     , TTIT.REGR_DEPT_CD
+     , TTIT.REGR_ID
+     , TO_CHAR(TTIT.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS REG_DTTM
+     , TTIT.AMDR_DEPT_CD
+     , TTIT.AMDR_ID
+     , TO_CHAR(TTIT.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS UPD_DTTM
+     , TTIT.PROC_ID
+     , TO_CHAR(TTIT.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+     , TTIT.INQRY_TYP_CD AS CD
+     , TTIT.INQRY_TYP_NM AS CD_NM
+     , TB09.FILE_KEY        AS FILE_KEY       /* 파일키        */
+     , TB09.FILE_GROUP_KEY  AS FILE_GROUP_KEY /* 파일그룹키  */
+     , TB09.TASK_TYPE_CD       AS TASK_TYPE_CD      /* 업무구분       */
+     , TB09.PATH_TYPE_CD       AS PATH_TYPE_CD      /* 파일경로       */
+     , TB09.FILE_PATH       AS FILE_PATH      /* 파일경로       */
+     , TB09.STRG_FILE_NM       AS STRG_FILE_NM      /* 파일이름       */
+     , TTIT.PRIORITY_ROUTE_ORD
+  FROM PLT_CHT_INQ_TYP TTIT
+  LEFT OUTER JOIN PLT_FILE TB09
+
+    ON TB09.FILE_KEY = TTIT.IMAGE_FILE_KEY
+   AND TB09.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+ WHERE TTIT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+   AND TTIT.INQRY_TYP_CD = #{INQRY_TYP_CD}
+</if>
+<if test="USE_YN !='' and USE_YN != null">
+   AND TTIT.USE_YN = #{USE_YN}
+</if>
+<if test="SPST_INQRY_TYP_CD !='' and SPST_INQRY_TYP_CD != null">
+   AND TTIT.SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+</if>
+<if test="INQRY_TYP_DIV_CD !='' and INQRY_TYP_DIV_CD != null">
+   AND TTIT.INQRY_TYP_DIV_CD = #{INQRY_TYP_DIV_CD}
+</if>
+ ORDER BY TTIT.SORT_ORD
+</select>
+
+<!-- 하위 문의유형 정보를 가져온다 -->	
+<select id="selectRtnChildrenNode"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT INQRY_TYP_CD                                    AS INQRY_TYP_CD          /* 하위 문의유형코드      */
+     , INQRY_TYP_NM                                    AS INQRY_TYP_NM          /* 하위 문의유형명        */
+     , INQRY_DESC                                      AS INQRY_DESC            /* 하위 문의유형 메시지   */
+     , INQRY_TYPE                                      AS INQRY_TYPE            /* 하위 문의유형 타입     */
+     , INQRY_USE_CHANNEL                               AS INQRY_USE_CHANNEL     /* 하위 문의유형 채널     */
+     , SPST_INQRY_TYP_CD                               AS SPST_INQRY_TYP_CD     /* 문의유형 코드          */
+     , INQRY_TYP_DIV_CD                                AS INQRY_TYP_DIV_CD      /* 문의유형 구분코드      */
+     , USE_YN                                          AS USE_YN                /* 하위 문의유형 사용여부 */
+     , SORT_ORD                                        AS SORT_ORD              /* 하위 문의유형 정렬순서 */
+     , REGR_DEPT_CD                                    AS REGR_DEPT_CD          /* 하위 문의유형          */
+     , REGR_ID                                         AS REGR_ID               /* 하위 문의유형          */
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS REG_DTTM              /* 하위 문의유형          */
+     , AMDR_DEPT_CD                                    AS AMDR_DEPT_CD          /* 하위 문의유형          */
+     , AMDR_ID                                         AS AMDR_ID               /* 하위 문의유형          */
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS UPD_DTTM              /* 하위 문의유형          */
+     , PROC_ID                                         AS PROC_ID               /* 하위 문의유형 처리자id */
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING         /* 하위 문의유형 전산처리*/
+     , INQRY_TYP_CD                                    AS CD                    /* 하위 문의유형 코드     */
+     , INQRY_TYP_NM                                    AS CD_NM                 /* 하위 문의유형 코드명   */
+  FROM PLT_CHT_INQ_TYP
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND INQRY_USE_CHANNEL = #{INQRY_USE_CHANNEL}
+   AND USE_YN = 'Y'
+<if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+   AND SPST_INQRY_TYP_CD = #{INQRY_TYP_CD}
+</if>
+<if test="SPST_INQRY_TYP_CD !='' and SPST_INQRY_TYP_CD != null">
+   AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+</if>
+ ORDER BY SORT_ORD
+</select>
+
+<select id="selectActiveInqryTypeCountIsNew" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	COUNT(*) AS CNT 
+FROM PLT_CHT_INQ_TYP
+WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+AND INQRY_USE_YN = 'Y'
+AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+</select>
+
+<select id="selectActiveInqryTypeCountIsUpdate" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	COUNT(*) AS CNT 
+FROM PLT_CHT_INQ_TYP
+WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+AND INQRY_USE_YN = 'Y'
+AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+AND INQRY_TYP_CD NOT IN (#{INQRY_TYP_CD})
+</select>
+
+
+<!-- 중복된 상담 유형 코드가 존재하는지 확인 한다.  -->	
+<select id="selectRtnDupInqryTyp"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT INQRY_TYP_CD
+  FROM PLT_CHT_INQ_TYP
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+</select>
+
+<!-- HYG 20190905 :: 트리 정렬을 위해 상위문의유형이 같은 문의유형끼리 중복된 정렬순서가 존재하는지 확인 한다.  -->	
+<select id="selectRtnDupSortOrd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT INQRY_TYP_CD
+  FROM PLT_CHT_INQ_TYP
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND INQRY_USE_CHANNEL = #{INQRY_USE_CHANNEL}
+   AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+   AND SORT_ORD = #{SORT_ORD}
+   AND INQRY_TYP_CD != #{INQRY_TYP_CD}
+   AND USE_YN != 'D'
+</select>
+
+<!-- 채널 문의유형  삭제 -->
+<delete id="deleteRtnInqryTypChannel"  parameterType= "java.util.HashMap">
+ 
+UPDATE PLT_CHT_INQ_TYP
+   SET USE_YN = 'D'
+     , IT_PROCESSING = NOW()
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND INQRY_USE_CHANNEL = #{SNDR_KEY}
+   AND INQRY_TYP_CD != '9999'
+                     
+</delete>
+
+<!-- 문의유형  삭제 -->
+<delete id="deleteRtnInqryTyp"  parameterType= "java.util.HashMap">
+ 
+UPDATE PLT_CHT_INQ_TYP
+   SET USE_YN = 'D'
+     , IT_PROCESSING = NOW()
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND INQRY_TYP_CD = #{TALK_INQRY_CD}
+   AND INQRY_TYP_CD != '9999'
+                     
+</delete>
+
+<!-- 상담유형 하위까지 모두 삭제 -->
+<update id="updateRtnInqryTypUseChannel"  parameterType= "java.util.HashMap">
+
+UPDATE PLT_CHT_INQ_TYP
+SET INQRY_USE_CHANNEL = #{INQRY_USE_CHANNEL}
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+                     
+</update>
+
+<!-- 챗봇 기준 서비스유형 코드 조회 -->
+<select id="selectInqryTypCodeByServiceName" parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT
+		INQRY_TYP_CD
+		, INQRY_TYP_ENG_NM
+	FROM PLT_CHT_INQ_TYP
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND INQRY_TYP_NM = #{SERVICE_NAME}
+</select>
+
+<!-- 챗봇 서비스 및 문의유형 명 오류 발생 시 ETC 처리 -->
+<select id="selectInqryTypCodeByServiceNameIsMappingError"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT
+		INQRY_TYP_CD
+		, INQRY_TYP_ENG_NM
+	FROM PLT_CHT_INQ_TYP
+	WHERE INQRY_USE_CHANNEL = #{SENDER_KEY}
+	AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+</select>
+
+<!-- 챗봇 기준 문의유형 코드 조회 -->
+<select id="selectInqryTypCodeByInqryName" parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT
+		INQRY_TYP_CD
+	FROM PLT_CHT_INQ_TYP
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND SPST_INQRY_TYP_CD = (
+								SELECT
+									INQRY_TYP_CD
+								FROM PLT_CHT_INQ_TYP
+								WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+								  AND INQRY_TYP_NM = #{SERVICE_NAME}
+								)
+	AND INQRY_TYP_NM = #{INQRY_NAME}
+</select>
+
+<!-- 문의유형 정보를 가져온다 (코드값) -->	
+<select id="selectRtnInqryCd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT INQRY_TYP_CD AS CD
+	     , INQRY_TYP_NM AS CD_NM
+	  FROM PLT_CHT_INQ_TYP
+	 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	<if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+	   AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+	</if>
+	<if test="USE_YN !='' and USE_YN != null">
+	   AND USE_YN = #{USE_YN}
+	</if>
+	<if test="SPST_INQRY_TYP_CD !='' and SPST_INQRY_TYP_CD != null">
+	   AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+	</if>
+	<if test="INQRY_TYP_DIV_CD !='' and INQRY_TYP_DIV_CD != null">
+	   AND INQRY_TYP_DIV_CD = #{INQRY_TYP_DIV_CD}
+	</if>
+	 ORDER BY SORT_ORD
+</select>
+
+<select id="selectRtnTwbTalkInqryTypTreeClear"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+      " " AS NODE_TITLE
+      ," " AS SORT_NUM
+      ," " AS USE_YN
+      ," " AS NODE_TYPE
+      ," " AS NODE_URL
+      ," " AS P_NODE_NO
+      ," " AS NODE_ID
+      ," " AS NODE_INQRY_USE_CHANNEL
+      ," " AS NODE_ETC
+      ," " AS C_NODE_NO
+      ," " AS NODE_LVL
+      ," " AS NODE_FULL_TITLEFN_GET_TREE_INQRY_NM
+ 
+</select>      
+
+<!-- 채널별 문의유형 트리 데이터를 조회한다. -->
+<select id="selectRtnTalkMngInqryTypeTreeViewByChannel"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	<!--
+	WITH RECURSIVE QSTN_TYPE_TREE AS (
+		SELECT QSTN_TYPE_ID, UP_QSTN_TYPE_ID, QSTN_TYPE_NM, QSTN_TYPE_EXPLN, QSTN_TYPE_CD, QSTN_TYPE_SE_CD, SNDR_KEY, FILE_GROUP_KEY, USE_YN,LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT
+		FROM PLT_CHT_QSTN_TYPE
+		WHERE UP_QSTN_TYPE_ID IS NULL
+		AND DEL_YN = 'N'
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		UNION ALL
+		SELECT B.QSTN_TYPE_ID, B.UP_QSTN_TYPE_ID, B.QSTN_TYPE_NM, B.QSTN_TYPE_EXPLN, B.QSTN_TYPE_CD, B.QSTN_TYPE_SE_CD, B.SNDR_KEY, B.FILE_GROUP_KEY, B.USE_YN, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT
+		FROM PLT_CHT_QSTN_TYPE B
+		INNER JOIN QSTN_TYPE_TREE C ON C.QSTN_TYPE_ID::INTEGER = B.UP_QSTN_TYPE_ID::INTEGER
+		WHERE B.DEL_YN = 'N'
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	)
+	SELECT QTT.QSTN_TYPE_ID
+		, QTT.UP_QSTN_TYPE_ID
+		, QTT.QSTN_TYPE_NM
+		, QTT.QSTN_TYPE_EXPLN
+		, QTT.QSTN_TYPE_CD
+		, QTT.QSTN_TYPE_SE_CD
+		, QTT.SNDR_KEY
+		, QTT.FILE_GROUP_KEY
+		, PF.FILE_KEY
+		, PF.FILE_PATH
+		, PF.STRG_FILE_NM
+		, QTT.USE_YN
+		, QTT.SORT
+	FROM QSTN_TYPE_TREE QTT
+	LEFT JOIN PLT_FILE PF
+		ON PF.FILE_GROUP_KEY = QTT.FILE_GROUP_KEY
+	ORDER BY QTT.SORT, QTT.QSTN_TYPE_ID
+	-->
+	SELECT 		/* selectRtnTalkMngInqryTypeTreeViewByChannel - 채널별 문의유형 트리 데이터를 조회한다. */
+		TREE.QSTN_TYPE_ID
+		, TREE.UP_QSTN_TYPE_ID
+		, TREE.QSTN_TYPE_NM
+		, TREE.QSTN_TYPE_EXPLN
+		, TREE.QSTN_TYPE_CD
+		, TREE.QSTN_TYPE_SE_CD
+		, TREE.SNDR_KEY
+		, TREE.FILE_GROUP_KEY
+		, TREE.FILE_KEY
+		, TREE.FILE_PATH
+		, TREE.STRG_FILE_NM
+		, TREE.USE_YN
+		, TREE.SORT
+		, TREE.CHN_CLSF_CD
+	from (WITH RECURSIVE QSTN_TYPE_TREE AS (
+			SELECT QSTN_TYPE_ID, UP_QSTN_TYPE_ID, QSTN_TYPE_NM, QSTN_TYPE_EXPLN, QSTN_TYPE_CD, QSTN_TYPE_SE_CD, SNDR_KEY, FILE_GROUP_KEY, USE_YN,LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT
+			FROM PLT_CHT_QSTN_TYPE
+			WHERE UP_QSTN_TYPE_ID IS NULL
+			AND DEL_YN = 'N'
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND (QSTN_TYPE_CD IS NULL OR QSTN_TYPE_CD != 'INFO_MSG')
+			UNION ALL
+			SELECT B.QSTN_TYPE_ID, B.UP_QSTN_TYPE_ID, B.QSTN_TYPE_NM, B.QSTN_TYPE_EXPLN, B.QSTN_TYPE_CD, B.QSTN_TYPE_SE_CD, B.SNDR_KEY, B.FILE_GROUP_KEY, B.USE_YN, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT
+			FROM PLT_CHT_QSTN_TYPE B
+			INNER JOIN QSTN_TYPE_TREE C ON C.QSTN_TYPE_ID::INTEGER = B.UP_QSTN_TYPE_ID::INTEGER
+			WHERE B.DEL_YN = 'N'
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND (B.QSTN_TYPE_CD IS NULL OR B.QSTN_TYPE_CD != 'INFO_MSG')
+		)
+		SELECT QTT.QSTN_TYPE_ID::TEXT
+			, COALESCE(QTT.UP_QSTN_TYPE_ID::TEXT, (SELECT LPAD('', PCC2.SORT_ORD, '0')
+											FROM PLT_COMM_CD PCC2 
+											WHERE PCC2.GROUP_CD_ID = 'CHNL_CL'
+											AND PCC2.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+											AND PCC2.CD_ID = PCC.CHN_CLSF_CD)) AS UP_QSTN_TYPE_ID
+			, QTT.QSTN_TYPE_NM
+			, QTT.QSTN_TYPE_EXPLN
+			, QTT.QSTN_TYPE_CD
+			, QTT.QSTN_TYPE_SE_CD
+			, QTT.SNDR_KEY
+			, QTT.FILE_GROUP_KEY
+			, PF.FILE_KEY
+			, PF.FILE_PATH
+			, PF.STRG_FILE_NM
+			, QTT.USE_YN
+			, QTT.SORT
+			, PCC.CHN_CLSF_CD
+		FROM QSTN_TYPE_TREE QTT
+		LEFT JOIN PLT_FILE PF
+			ON PF.FILE_GROUP_KEY = QTT.FILE_GROUP_KEY
+		left join plt_custco_chn PCC
+			on QTT.SNDR_KEY = PCC.SNDR_KEY
+		UNION ALL
+		SELECT LPAD('', SORT_ORD, '0') AS QSTN_TYPE_ID
+			, NULL AS UP_QSTN_TYPE_ID
+			, CD_NM AS QSTN_TYPE_NM
+			, CD_EXPLN AS QSTN_TYPE_EXPLN
+			, NULL AS QSTN_TYPE_CD
+			, NULL AS QSTN_TYPE_SE_CD
+			, NULL AS SNDR_KEY
+			, NULL AS FILE_GROUP_KEY
+			, NULL AS FILE_KEY
+			, NULL AS FILE_PATH
+			, NULL AS STRG_FILE_NM
+			, NULL AS USE_YN
+			, LPAD(CAST(SORT_ORD AS VARCHAR),6,'0') AS SORT
+			, CD_ID AS CHN_CLSF_CD
+		FROM PLT_COMM_CD PCC 
+		WHERE GROUP_CD_ID = 'CHNL_CL'
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER) TREE
+		ORDER BY TREE.CHN_CLSF_CD, TREE.SORT, TREE.QSTN_TYPE_ID
+</select>
+
+<!-- 문의유형 하위 노드 중 가장 마지막 정렬순서 조회 -->
+<select id="selectRtnInqryCdLastSortOrd" parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+SELECT INQRY_TYP_CD
+     , COALESCE((SELECT MAX(SORT_ORD) FROM PLT_CHT_INQ_TYP 
+                WHERE 1=1
+                <if test="SPST_INQRY_TYP_CD !='' and SPST_INQRY_TYP_CD != null">
+                  AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+                </if>
+                <if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+                  AND SPST_INQRY_TYP_CD = #{INQRY_TYP_CD}
+                </if>
+                ),0) AS SORT_ORD
+  FROM PLT_CHT_INQ_TYP
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="INQRY_USE_CHANNEL !='' and INQRY_USE_CHANNEL != null">
+   AND INQRY_USE_CHANNEL = #{INQRY_USE_CHANNEL}
+</if>
+<if test="SPST_INQRY_TYP_CD !='' and SPST_INQRY_TYP_CD != null">
+   AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+</if>
+<if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+   AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+</if>
+   
+ GROUP BY INQRY_TYP_CD
+</select>
+
+<!-- 문의유형 파일키 업데이트 -->
+<update id="updateRtnInqryTypImageFileKey"  parameterType= "java.util.HashMap">
+
+UPDATE PLT_CHT_INQ_TYP
+   SET IMAGE_FILE_KEY = #{FILE_KEY}
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+                     
+</update>
+
+<!-- 문의유형 수정 -->
+<update id="UPDATE_QSTN_TYPE_ID"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_QSTN_TYPE
+	SET QSTN_TYPE_NM = #{UNDER_QSTN_TYPE_NM}
+		, QSTN_TYPE_EXPLN = #{UNDER_QSTN_TYPE_EXPLN}
+		, QSTN_TYPE_CD = #{UNDER_QSTN_TYPE_CD}
+		<if test="QSTN_TYPE_ID != UNDER_QSTN_TYPE_ID">
+			, SORT_ORD = #{SORT_ORD}::INTEGER
+		</if>
+		<if test="QSTN_TYPE_ID == UNDER_QSTN_TYPE_ID">
+			, USE_YN = #{USE_YN}
+			, FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+		</if>
+		, MDFR_ID = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE QSTN_TYPE_ID = #{UNDER_QSTN_TYPE_ID}::INTEGER
+</update>
+<!-- 문의유형 삽입 -->
+<insert id="INSERT_QSTN_TYPE_ID"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_QSTN_TYPE
+	(
+		CUSTCO_ID
+		, QSTN_TYPE_ID
+		, UP_QSTN_TYPE_ID
+		, QSTN_TYPE_NM
+		, QSTN_TYPE_EXPLN
+		, QSTN_TYPE_CD
+		, SNDR_KEY
+		, QSTN_TYPE_SE_CD
+		, USE_YN
+		, DEL_YN
+		, SORT_ORD
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	)
+	VALUES(
+		#{CUSTCO_ID}::INTEGER
+		, #{UNDER_QSTN_TYPE_ID}::INTEGER
+		, #{QSTN_TYPE_ID}::INTEGER
+		, #{UNDER_QSTN_TYPE_NM}
+		, #{UNDER_QSTN_TYPE_EXPLN}
+		, #{UNDER_QSTN_TYPE_CD}
+		, #{SNDR_KEY}::INTEGER
+		, #{QSTN_TYPE_SE_CD}::INTEGER+1
+		, 'Y'
+		, 'N'
+		, #{SORT_ORD}::INTEGER
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+</insert>
+
+<!--문의유형 삭제-->
+<update id="DELETE_QSTN_TYPE"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_QSTN_TYPE
+	SET DEL_YN = 'Y'
+		, MDFR_ID = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE QSTN_TYPE_ID = #{QSTN_TYPE_ID}::INTEGER
+		OR QSTN_TYPE_ID IN (WITH RECURSIVE QSTN_TYPE_TREE AS (
+								SELECT QSTN_TYPE_ID
+								FROM PLT_CHT_QSTN_TYPE
+								WHERE UP_QSTN_TYPE_ID = #{QSTN_TYPE_ID}::INTEGER
+								AND DEL_YN = 'N'
+								UNION ALL
+								SELECT B.QSTN_TYPE_ID
+								FROM PLT_CHT_QSTN_TYPE B
+								INNER JOIN QSTN_TYPE_TREE C ON C.QSTN_TYPE_ID::INTEGER = B.UP_QSTN_TYPE_ID::INTEGER
+								WHERE B.DEL_YN = 'N'
+							)
+							SELECT QTT.QSTN_TYPE_ID
+							FROM QSTN_TYPE_TREE QTT)
+</update>
+
+
+<!-- 안내메시지 조회 -->	
+<select id="selectInfoMsg"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 		/* selectInfoMsg - 안내메시지 조회 */
+		QSTN_TYPE_ID
+	     , QSTN_TYPE_NM
+	     , QSTN_TYPE_EXPLN
+	     , QSTN_TYPE_CD
+	  FROM PLT_CHT_QSTN_TYPE
+	 WHERE UP_QSTN_TYPE_ID = #{QSTN_TYPE_ID}::INTEGER
+	 	AND QSTN_TYPE_CD = 'INFO_MSG'
+	 ORDER BY SORT_ORD
+</select>
+
+<!-- 안내메시지 신규등록 -->
+<insert id="infoMsgRegist"  parameterType= "java.util.HashMap">
+	/* infoMsgRegist - 안내메시지 신규등록 */
+	INSERT INTO PLT_CHT_QSTN_TYPE
+	(
+		CUSTCO_ID
+		, QSTN_TYPE_ID
+		, UP_QSTN_TYPE_ID
+		, QSTN_TYPE_NM
+		, QSTN_TYPE_EXPLN
+		, QSTN_TYPE_CD
+		, SNDR_KEY
+		, QSTN_TYPE_SE_CD
+		, USE_YN
+		, DEL_YN
+		, SORT_ORD
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	)
+	VALUES(
+		#{CUSTCO_ID}::INTEGER
+		, #{QSTN_TYPE_ID}::INTEGER
+		, #{UP_QSTN_TYPE_ID}::INTEGER
+		, #{QSTN_TYPE_NM}
+		, #{QSTN_TYPE_EXPLN}
+		, #{QSTN_TYPE_CD}
+		, #{SNDR_KEY}::INTEGER
+		, #{QSTN_TYPE_SE_CD}
+		, 'Y'
+		, 'N'
+		, '0'::INTEGER
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+</insert>
+
+<!-- 안내메시지 수정 -->
+<update id="infoMsgUpdate"  parameterType= "java.util.HashMap">
+	/* infoMsgUpdate - 안내메시지 수정 */
+	UPDATE PLT_CHT_QSTN_TYPE
+	SET QSTN_TYPE_NM = #{QSTN_TYPE_NM}
+		, QSTN_TYPE_EXPLN = #{QSTN_TYPE_EXPLN}
+		, MDFR_ID = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE QSTN_TYPE_ID = #{QSTN_TYPE_ID}::INTEGER
+</update>
+
+
+
+
+</mapper>

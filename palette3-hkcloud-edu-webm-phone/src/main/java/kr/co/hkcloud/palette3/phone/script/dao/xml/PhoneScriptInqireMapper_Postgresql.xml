@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.script.dao.PhoneScriptInqireMapper">
+
+<!-- 스크립트 트리 조회 -->
+<select id="selectRtnScriptTree"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+	]]>
+	<if test="REQ_TY != '' or REQ_TY != null">
+		SELECT *
+		FROM 
+		(
+	</if>
+	<![CDATA[
+	SELECT 
+      	A.SCRIPT_ID AS C_NODE_NO
+	    , A.UPPER_SCRIPT_ID AS P_NODE_NO
+	    , (SELECT B.SCRIPT_TIT FROM PLT_PHN_SCRT B where A.UPPER_SCRIPT_ID = B.SCRIPT_ID ) AS UPPER_SCRIPT_NM
+	    , A.SCRIPT_TIT
+	    , '' AS NODE_URL
+	    , A.SCRIPT_ID AS NODE_ID
+	    , A.SCRIPT_ID AS NODE_KEY
+	    , CASE WHEN EXISTS(SELECT 'X' FROM PLT_PHN_SCRT WHERE UPPER_SCRIPT_ID = A.SCRIPT_ID)  THEN 'D' ELSE 'F' END AS NODE_TYPE
+	    , A.LVL_NO AS NODE_LVL
+	    , A.ORD_SEQ AS NODE_SORT
+	    , A.USE_YN
+	    , CASE WHEN A.USE_YN ='N'
+				   	THEN '<span class="dynatree-title is-disabled">' || A.SCRIPT_TIT || '</span> <i class="tt-icon-circle-close is-red"></i>'
+				   	ELSE A.SCRIPT_TIT
+		  	END AS NODE_TITLE	/* 메뉴명 */
+		,(SELECT COUNT(*)
+              FROM(SELECT * 
+                    FROM PLT_PHN_SCRT_CHG_HST 
+                    WHERE SCRIPT_ID = A.SCRIPT_ID 
+                    AND CHNG_REQ = 'ING'))  AS CNT
+	FROM PLT_PHN_SCRT A 
+	    WHERE 1=1
+	    	AND
+			( 
+			   BEGIN_DATE <= REPLACE(REPLACE(#{START_DATE},'/'),'-') AND BEGIN_DATE <= REPLACE(REPLACE(#{END_DATE},'/'),'-') 
+               AND EOT_DATE >= REPLACE(REPLACE(#{START_DATE},'/'),'-') AND EOT_DATE >= REPLACE(REPLACE(#{END_DATE},'/'),'-')
+               OR (BEGIN_DATE BETWEEN REPLACE(REPLACE(#{START_DATE},'/'),'-') AND REPLACE(REPLACE(#{END_DATE},'/'),'-'))
+               OR (EOT_DATE BETWEEN REPLACE(REPLACE(#{START_DATE},'/'),'-') AND REPLACE(REPLACE(#{END_DATE},'/'),'-'))
+            )  
+	]]>    
+	<if test="ASP_NEWCUST_KEY !='' and ASP_NEWCUST_KEY != null">  
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}                 
+	</if>
+	<if test="USE_SRCH_YN !='' and USE_SRCH_YN != null">  
+		AND A.USE_YN = #{USE_SRCH_YN}                 
+	</if>
+	<if test="USE_TY !='' and USE_TY != null">
+		AND A.USE_TY = #{USE_TY}
+	</if>
+	
+	<if test="CNSL_DIV == 1">  
+		/* 대분류 인 경우 */
+		AND(
+			 	A.SCRIPT_ID IN (
+		        select SCRIPT_ID from PLT_PHN_SCRT
+		        where LVL_NO = 1
+		        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+		    )
+	    )
+	</if>
+	<if test="CNSL_DIV == 2">  
+		/* 중분류 인 경우 */
+		AND(
+			A.SCRIPT_ID IN (
+		        select SCRIPT_ID from PLT_PHN_SCRT
+		        where LVL_NO = 2
+		        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+		    )
+	    )                 
+	</if>
+	<if test="CNSL_DIV == 3">  
+		/* 소분류 인 경우 */
+		AND(
+		        A.SCRIPT_ID IN (
+		        SELECT SCRIPT_ID FROM PLT_PHN_SCRT
+		        where LVL_NO = 3
+		        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+		    )
+	    )                
+	</if>
+	
+	<if test="CNSL_DIV == '' or CNSL_DIV == null">  
+		<if test="SEARCH_CONT != '' and SEARCH_CONT != null">  
+		/* 전체 검색 */
+		/* 대분류 인 경우 */
+		AND(
+			(
+					 	A.SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 1
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.UPPER_SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 1
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.UPPER_SCRIPT_ID IN (
+				        SELECT SCRIPT_ID 
+				        FROM PLT_PHN_SCRT
+				        WHERE 1=1
+				        AND UPPER_SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 1
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') )
+				    )
+			)
+			 
+			 /* 중분류 인 경우 */
+			OR(
+				A.SCRIPT_ID IN (
+			        select UPPER_SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 2
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.SCRIPT_ID IN (
+			        select SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 2
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.UPPER_SCRIPT_ID IN (
+			        select SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 2
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+		    )   
+			
+			/* 소분류 인 경우 */
+			OR(
+					A.SCRIPT_ID IN (
+			        SELECT SUBSTR(SCRIPT_ID, 0, 4) FROM PLT_PHN_SCRT
+			        where LVL_NO = 3
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.SCRIPT_ID IN (
+			        SELECT SUBSTR(SCRIPT_ID, 0, 8) FROM PLT_PHN_SCRT
+			        where LVL_NO = 3
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.SCRIPT_ID IN (
+			        SELECT SCRIPT_ID FROM PLT_PHN_SCRT
+			        where LVL_NO = 3
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+		    )                 
+		)
+		</if>
+	</if>
+	
+	
+	START WITH A.UPPER_SCRIPT_ID IS NULL
+	CONNECT BY PRIOR A.SCRIPT_ID = A.UPPER_SCRIPT_ID
+	ORDER SIBLINGS BY A.ORD_SEQ ASC
+	
+    <if test="REQ_TY != '' or REQ_TY != null">
+		)
+	</if>
+	<if test="REQ_TY == 'reqY'">
+		WHERE CNT != '0'
+	</if>
+	<if test="REQ_TY == 'reqN'">
+		WHERE CNT = '0'
+	</if>
+	
+</select>	
+
+<!-- 스크립트 트리 클릭 시 해당 스크립트의 하위 스크립트 조회 -->
+<select id="selectRtnLowScript"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+	/* selectMainScriptList 스크립트 하위 스크립트 리스트 조회 */
+	]]>
+	<if test="REQ_TY != '' or REQ_TY != null">
+		SELECT *
+		FROM 
+		(
+	</if>
+	<![CDATA[
+   SELECT 
+       SCRIPT_ID
+       ,CASE WHEN LVL_NO = 1 OR LVL_NO = 2 OR LVL_NO = 3 THEN SCRIPT_NM_1
+        	ELSE 'x'
+        END AS SCRIPT_NM_1
+       ,CASE WHEN LVL_NO = 2 OR LVL_NO = 3 THEN SCRIPT_NM_2
+        	ELSE 'x'
+        END AS SCRIPT_NM_2
+       ,CASE WHEN LVL_NO = 3 THEN SCRIPT_NM_3
+            ELSE 'x' 
+        END AS SCRIPT_NM_3
+       ,SCRIPT_ID_1
+       ,SCRIPT_ID_2
+       ,SCRIPT_ID_3
+       ,UPPER_SCRIPT_ID
+       ,SCRIPT_TIT
+       ,USE_YN
+       ,LVL_NO
+       ,LVL_NO_NM
+       ,ORD_SEQ
+       ,BEGIN_DATE
+       ,EOT_DATE
+	   ,(SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY
+	   ,CNT
+    FROM 
+    (
+        SELECT 
+            A.SCRIPT_ID,
+            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_1) AS SCRIPT_NM_1,
+            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_2) AS SCRIPT_NM_2,
+            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_3) AS SCRIPT_NM_3,
+            A.SCRIPT_ID_1,
+            A.SCRIPT_ID_2,
+            A.SCRIPT_ID_3,
+            A.UPPER_SCRIPT_ID,
+            A.SCRIPT_TIT,
+            A.USE_YN,
+            A.LVL_NO,
+            A.LVL_NO_NM,
+            A.ORD_SEQ,
+            A.BEGIN_DATE,
+            A.EOT_DATE,
+            (SELECT COUNT(*)
+              FROM(SELECT * 
+                    FROM PLT_PHN_SCRT_CHG_HST 
+                    WHERE SCRIPT_ID = A.SCRIPT_ID 
+                    AND CHNG_REQ = 'ING'))  AS CNT
+         FROM   
+         (           
+         SELECT
+            SCRIPT_ID
+            , SUBSTR(SCRIPT_ID, 0, 4) AS SCRIPT_ID_1
+            , SUBSTR(SCRIPT_ID, 0, 8) AS SCRIPT_ID_2
+            , SUBSTR(SCRIPT_ID, 0, 12) AS SCRIPT_ID_3
+            , UPPER_SCRIPT_ID
+            , SCRIPT_TIT
+            , USE_YN
+            , LVL_NO
+            , CASE WHEN LVL_NO = 1 THEN '대분류'
+                   WHEN LVL_NO = 2 THEN '중분류'
+                   WHEN LVL_NO = 3 THEN '소분류'
+                   ELSE ''
+              END AS LVL_NO_NM
+            , ORD_SEQ
+            , BEGIN_DATE
+            , EOT_DATE
+        FROM
+            PLT_PHN_SCRT
+		WHERE 1=1 AND CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+	]]>
+		) A 
+		WHERE 1=1
+	<if test="USE_SRCH_YN !='' and USE_SRCH_YN != null">  
+		AND A.USE_YN = #{USE_SRCH_YN}                 
+	</if>
+	
+	)
+	 WHERE LVL_NO = #{LVL_NO} + 1
+	
+     START WITH UPPER_SCRIPT_ID = #{SCRIPT_ID}
+     CONNECT BY PRIOR SCRIPT_ID = UPPER_SCRIPT_ID
+     ORDER SIBLINGS BY  ORD_SEQ ASC        
+    <if test="REQ_TY != '' or REQ_TY != null">
+		)
+	</if>
+	<if test="REQ_TY == 'reqY'">
+		WHERE CNT != '0'
+	</if>
+	<if test="REQ_TY == 'reqN'">
+		WHERE CNT = '0'
+	</if>
+	
+</select>	
+
+<!-- 스크립트 트리 클릭 시 조회 -->
+<select id="selectRtnScriptList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+	/* selectRtnScriptList  */
+	SELECT
+		SCRIPT_ID
+		, UPPER_SCRIPT_ID
+		, SCRIPT_TIT
+		, USE_YN
+		, LVL_NO
+		, case when LVL_NO = 1 then '대분류'
+			   when LVL_NO = 2 then '중분류'
+			   when LVL_NO = 3 then '소분류'
+			   ELSE ''
+		  END AS LVL_NO_NM
+		, ORD_SEQ
+		, BEGIN_DATE
+		, EOT_DATE
+	FROM
+		PLT_PHN_SCRT
+	WHERE
+		UPPER_SCRIPT_ID = #{UPPER_SCRIPT_ID} /* 부모ID */
+		ORDER BY ORD_SEQ, SCRIPT_TIT
+	]]>
+</select>	
+
+<!-- 스크립트 리스트 조회 -->
+<select id="selectMainScriptList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+	/* selectMainScriptList 스크립트 리스트 조회 */
+	]]>
+	<if test="REQ_TY != '' or REQ_TY != null">
+		SELECT *
+		FROM 
+		(
+	</if>
+	<![CDATA[
+   SELECT
+   		ROWNUM AS ROW_NUMBER
+       , SCRIPT_ID
+       ,CASE WHEN LVL_NO = 1 OR LVL_NO = 2 OR LVL_NO = 3 THEN SCRIPT_NM_1
+        	ELSE 'x'
+        END AS SCRIPT_NM_1
+       ,CASE WHEN LVL_NO = 2 OR LVL_NO = 3 THEN SCRIPT_NM_2
+        	ELSE 'x'
+        END AS SCRIPT_NM_2
+       ,CASE WHEN LVL_NO = 3 THEN SCRIPT_NM_3
+            ELSE 'x' 
+        END AS SCRIPT_NM_3
+       ,SCRIPT_ID_1
+       ,SCRIPT_ID_2
+       ,SCRIPT_ID_3
+       ,UPPER_SCRIPT_ID
+       ,SCRIPT_TIT
+       ,USE_YN
+       ,LVL_NO
+       ,LVL_NO_NM
+       ,ORD_SEQ
+       ,BEGIN_DATE
+       ,EOT_DATE
+	   ,(SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY
+	   ,#{ASP_NEWCUST_KEY}	AS CUSTCO_ID
+	   ,USE_TY
+	   ,CNT
+	   ,NEW_SHORT_KEY
+	   ,ADD_SHORT_KEY
+	   ,SCRIPT_RMK
+    FROM 
+    (
+        SELECT 
+            A.SCRIPT_ID,
+            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_1) AS SCRIPT_NM_1,
+            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_2) AS SCRIPT_NM_2,
+            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_3) AS SCRIPT_NM_3,
+            A.SCRIPT_ID_1,
+            A.SCRIPT_ID_2,
+            A.SCRIPT_ID_3,
+            A.UPPER_SCRIPT_ID,
+            A.SCRIPT_TIT,
+            A.USE_YN,
+            A.LVL_NO,
+            A.LVL_NO_NM,
+            A.ORD_SEQ,
+            A.BEGIN_DATE,
+            A.EOT_DATE,
+            A.USE_TY,
+            (SELECT COUNT(*)
+              FROM(SELECT * 
+                    FROM PLT_PHN_SCRT_CHG_HST 
+                    WHERE SCRIPT_ID = A.SCRIPT_ID 
+                    AND CHNG_REQ = 'ING'))  AS CNT,
+            (SELECT SHORT_KEY FROM PLT_CHT_SRT_KEY WHERE CUSTCO_ID = '1040' AND SCRIPT_ID = A.SCRIPT_ID AND ACTION_TYPE = 'NEW') AS NEW_SHORT_KEY,
+            (SELECT SHORT_KEY FROM PLT_CHT_SRT_KEY WHERE CUSTCO_ID = '1040' AND SCRIPT_ID = A.SCRIPT_ID AND ACTION_TYPE = 'ADD') AS ADD_SHORT_KEY,
+            A.SCRIPT_RMK
+         FROM   
+         (           
+         SELECT
+            SCRIPT_ID
+            , SUBSTR(SCRIPT_ID, 0, 4) AS SCRIPT_ID_1
+            , SUBSTR(SCRIPT_ID, 0, 8) AS SCRIPT_ID_2
+            , SUBSTR(SCRIPT_ID, 0, 12) AS SCRIPT_ID_3
+            , UPPER_SCRIPT_ID
+            , SCRIPT_TIT
+            , USE_YN
+            , LVL_NO
+            , CASE WHEN LVL_NO = 1 THEN '대분류'
+                   WHEN LVL_NO = 2 THEN '중분류'
+                   WHEN LVL_NO = 3 THEN '소분류'
+                   ELSE ''
+              END AS LVL_NO_NM
+            , ORD_SEQ
+            , BEGIN_DATE
+            , EOT_DATE
+            , USE_TY
+            , SCRIPT_RMK
+        FROM
+            PLT_PHN_SCRT
+		WHERE 1=1 
+			AND CUSTCO_ID = #{ASP_NEWCUST_KEY}  
+			AND
+			 ( 
+			   BEGIN_DATE <= REPLACE(REPLACE(#{START_DATE},'/'),'-') AND BEGIN_DATE <= REPLACE(REPLACE(#{END_DATE},'/'),'-') 
+               AND EOT_DATE >= REPLACE(REPLACE(#{START_DATE},'/'),'-') AND EOT_DATE >= REPLACE(REPLACE(#{END_DATE},'/'),'-')
+               OR (BEGIN_DATE BETWEEN REPLACE(REPLACE(#{START_DATE},'/'),'-') AND REPLACE(REPLACE(#{END_DATE},'/'),'-'))
+               OR (EOT_DATE BETWEEN REPLACE(REPLACE(#{START_DATE},'/'),'-') AND REPLACE(REPLACE(#{END_DATE},'/'),'-'))
+             )  
+	]]>
+		) A 
+		WHERE 1=1
+	<if test="USE_SRCH_YN !='' and USE_SRCH_YN != null">  
+		AND A.USE_YN = #{USE_SRCH_YN}                 
+	</if>
+	<if test="CNSL_DIV == 1">  
+		/* 대분류 인 경우 */
+		AND(
+			 	A.SCRIPT_ID IN (
+		        select SCRIPT_ID from PLT_PHN_SCRT
+		        where LVL_NO = 1
+		        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+		    )
+	    )
+	</if>
+	<if test="CNSL_DIV == 2">  
+		/* 중분류 인 경우 */
+		AND(
+			A.SCRIPT_ID IN (
+		        select SCRIPT_ID from PLT_PHN_SCRT
+		        where LVL_NO = 2
+		        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+		    )
+	    )                 
+	</if>
+	<if test="CNSL_DIV == 3">  
+		/* 소분류 인 경우 */
+		AND(
+		        A.SCRIPT_ID IN (
+		        SELECT SCRIPT_ID FROM PLT_PHN_SCRT
+		        where LVL_NO = 3
+		        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+		    )
+	    )                
+	</if>
+	
+	<if test="CNSL_DIV == '' or CNSL_DIV == null">  
+		<if test="SEARCH_CONT != '' and SEARCH_CONT != null">  
+		/* 전체 검색 */
+		/* 대분류 인 경우 */
+		AND(
+			(
+					 	A.SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 1
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.UPPER_SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 1
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.UPPER_SCRIPT_ID IN (
+				        SELECT SCRIPT_ID 
+				        FROM PLT_PHN_SCRT
+				        WHERE 1=1
+				        AND UPPER_SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 1
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') )
+				    )
+			)
+			 
+			 /* 중분류 인 경우 */
+			OR(
+				A.SCRIPT_ID IN (
+			        select UPPER_SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 2
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.SCRIPT_ID IN (
+			        select SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 2
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.UPPER_SCRIPT_ID IN (
+			        select SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 2
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+		    )   
+			
+			/* 소분류 인 경우 */
+			OR(
+					A.SCRIPT_ID IN (
+			        SELECT SUBSTR(SCRIPT_ID, 0, 4) FROM PLT_PHN_SCRT
+			        where LVL_NO = 3
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.SCRIPT_ID IN (
+			        SELECT SUBSTR(SCRIPT_ID, 0, 8) FROM PLT_PHN_SCRT
+			        where LVL_NO = 3
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+			    OR A.SCRIPT_ID IN (
+			        SELECT SCRIPT_ID FROM PLT_PHN_SCRT
+			        where LVL_NO = 3
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+		    )                 
+		)
+		</if>
+	</if>
+	)
+	
+	<if test="USE_TY !='' and USE_TY != null">  
+		WHERE USE_TY = #{USE_TY}
+	</if>
+	<if test="CNSL_DIV == '' or CNSL_DIV == null">
+	     START WITH UPPER_SCRIPT_ID IS NULL
+	     CONNECT BY PRIOR SCRIPT_ID = UPPER_SCRIPT_ID
+	     ORDER SIBLINGS BY  ORD_SEQ ASC
+    </if>        
+    <if test="REQ_TY != '' or REQ_TY != null">
+		)
+	</if>
+	<if test="REQ_TY == 'reqY'">
+		WHERE CNT != '0'
+	</if>
+	<if test="REQ_TY == 'reqN'">
+		WHERE CNT = '0'
+	</if>
+</select>	
+
+<!-- 스크립트 상세조회 -->
+<select id="selectRtnScriptDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		A.CUSTCO_ID
+		, A.SCRIPT_ID
+		, A.UPPER_SCRIPT_ID
+		, (SELECT B.SCRIPT_TIT FROM PLT_PHN_SCRT B WHERE A.UPPER_SCRIPT_ID = B.SCRIPT_ID ) AS UPPER_SCRIPT_NM
+		, A.SCRIPT_TIT
+		, A.LVL_NO
+		, A.USE_YN
+		, A.ORD_SEQ
+		, A.FILE_GROUP_KEY
+		, DBMS_LOB.SUBSTR(A.SCRIPT_RMK, DBMS_LOB.GETLENGTH(A.SCRIPT_RMK)) AS SCRIPT_RMK
+		, A.BEGIN_DATE
+		, A.EOT_DATE
+		, #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+		, A.USE_TY
+		, (SELECT COUNT(*)
+			FROM PLT_PHN_SCRT_CHG_HST
+			WHERE SCRIPT_ID = #{SCRIPT_ID}
+			AND CHNG_REQ = 'ING')							AS REQ_ING
+	FROM
+		PLT_PHN_SCRT A JOIN PLT_ASP_CUS C ON A.CUSTCO_ID = C.CUSTCO_ID
+	WHERE
+		SCRIPT_ID = #{SCRIPT_ID} 
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+</select>	
+	
+</mapper>

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemBatchLogMapper">
+
+<!-- ######################################################################### -->
+<!-- PLT_BAT(배치정보관리) 테이블 배치정보 데이터 조회(콤보박스용) -->
+<select id="selectBatchList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT DISTINCT BATCH_KEY AS CD
+     , BATCH_NM           AS CD_NM
+  FROM PLT_BAT
+</select>
+
+<!-- TWB_BATCH_LOG(배치로그) 테이블 데이터 조회 -->
+<select id="selectRtnBatchLog"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+    SELECT ROW_TBL.*
+     FROM ( 
+			SELECT 
+				ROW_NUMBER() OVER(ORDER BY A.BATCH_KEY) AS ROW_NUMBER 
+				 , A.BATCH_KEY                     -- 배치마스터KEY
+			     , A.BATCH_ID                      -- 배치로그ID
+			     , B.BATCH_NM                      -- 배치명
+			     , A.TRNSMIT_INSTT                 -- 송신기관
+			     , A.RECPTN_INSTT                  -- 수신기관
+			     , A.BATCH_BEGIN_DE                -- 배치시작일자
+			     , A.BATCH_BEGIN_TIME              -- 배치시작시간
+			     , A.BATCH_END_DE                  -- 배치종료일자
+			     , A.BATCH_END_TIME                -- 배치종료시간
+			     , A.BATCH_TOT_CO                  -- 배치총건수
+			     , A.BATCH_SUCCES_CO               -- 배치성공건수
+			     , A.BATCH_FAILR_CO                -- 배치실패건수
+			     , A.BATCH_ERROR_LOG_FILE_NM       -- 배치오류로그파일명
+			     , A.BATCH_EXECUT_LC               -- 호출구분자
+			     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TWB005' AND CD = BATCH_STTUS) AS PROCESS_CODE_NM  -- 처리결과코드명
+			     , A.BATCH_PROCESS_RESULT          -- 배치처리결과
+			     , A.PROC_ID                       -- 처리자
+			     , TO_CHAR(A.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING                 -- 전산처리일자
+			  FROM PLT_BAT_LOG A
+			     , PLT_BAT B
+			 WHERE A.BATCH_KEY = B.BATCH_KEY
+			   AND A.BATCH_BEGIN_DE BETWEEN #{BATCH_BEGIN_DE_FROM} AND #{BATCH_BEGIN_DE_TO}
+			  <if test="BATCH_KEY				!='' and BATCH_KEY 				 != null">   AND B.BATCH_KEY				= #{BATCH_KEY} /* 배치 키 */ </if> 
+			  <if test="BATCH_ID				!='' and BATCH_ID 				 != null">   AND A.BATCH_ID					= #{BATCH_ID} /* 배치아이디 */ </if> 
+			  <if test="TRNSMIT_INSTT			!='' and TRNSMIT_INSTT 			 != null">   AND A.TRNSMIT_INSTT			= #{TRNSMIT_INSTT} /* 송신기관 */ </if> 
+			  <if test="RECPTN_INSTT			!='' and RECPTN_INSTT 			 != null">   AND A.RECPTN_INSTT				= #{RECPTN_INSTT} /* 수신기관 */ </if> 
+			  <if test="BATCH_BEGIN_TIME		!='' and BATCH_BEGIN_TIME 		 != null">   AND A.BATCH_BEGIN_TIME			= #{BATCH_BEGIN_TIME} /* 배치시작시간 */ </if> 
+			  <if test="BATCH_END_TIME			!='' and BATCH_END_TIME 		 != null">   AND A.BATCH_END_TIME			= #{BATCH_END_TIME} /* 배치종료시간 */ </if> 
+			  <if test="BATCH_TOT_CO			!='' and BATCH_TOT_CO			 != null">   AND A.BATCH_TOT_CO				= #{BATCH_TOT_CO} /* 배치총건수 */ </if> 
+			  <if test="BATCH_SUCCES_CO			!='' and BATCH_SUCCES_CO 		 != null">   AND A.BATCH_SUCCES_CO			= #{BATCH_SUCCES_CO} /* 배치성공건수 */ </if> 
+			  <if test="BATCH_FAILR_CO			!='' and BATCH_FAILR_CO 		 != null">   AND A.BATCH_FAILR_CO			= #{BATCH_FAILR_CO} /* 배치실패건수 */ </if> 
+			  <if test="BATCH_ERROR_LOG_FILE_NM	!='' and BATCH_ERROR_LOG_FILE_NM != null">	 AND A.BATCH_ERROR_LOG_FILE_NM	= #{BATCH_ERROR_LOG_FILE_NM} /* 배치오류로그파일명 */ </if> 
+			  <if test="BATCH_EXECUT_LC			!='' and BATCH_EXECUT_LC 		 != null">   AND B.BATCH_EXECUT_LC			= #{BATCH_EXECUT_LC} /* 배치실행위치 */ </if> 
+			  <if test="PROCESS_CODE			!='' and PROCESS_CODE 			 != null">   AND A.PROCESS_CODE				= #{PROCESS_CODE} /* 처리코드 */ </if> 
+			  <if test="BATCH_PROCESS_RESULT	!='' and BATCH_PROCESS_RESULT 	 != null">   AND A.BATCH_PROCESS_RESULT		= #{BATCH_PROCESS_RESULT} /* 배치처리결과 */ </if> 
+			  <if test="PROC_ID					!='' and PROC_ID 				 != null">   AND B.PROC_ID					= #{PROC_ID} /* 처리자 */ </if> 
+			 ORDER BY A.BATCH_KEY
+ 	) ROW_TBL
+ 
+ </select>
+	
+	<!-- #################################################### -->
+<!-- PLT_BAT_LOG(배치로그) 테이블 데이터 등록 -->	
+<insert id="INSERT_PLT_BAT_LOG"  parameterType="java.util.HashMap">
+INSERT INTO PLT_BAT_LOG
+       ( CUSTCO_ID
+       , BATCH_KEY                     /* --배치키 */ 
+       , BATCH_ID                      /* --배치ID */ 
+       , TRNSMIT_INSTT                 /* --송신기관 */ 
+       , RECPTN_INSTT                  /* --수신기관 */ 
+       , BATCH_BEGIN_DE                /* --배치시작일자 */ 
+       , BATCH_BEGIN_TIME              /* --배치시작시간 */ 
+       , BATCH_END_DE                  /* --배치종료일자 */ 
+       , BATCH_END_TIME                /* --배치종료시간 */ 
+       , BATCH_TOT_CO                  /* --배치총건수 */ 
+       , BATCH_SUCCES_CO               /* --배치성공건수 */ 
+       , BATCH_FAILR_CO                /* --배치실패건수 */ 
+       , BATCH_ERROR_LOG_FILE_NM       /* --배치오류로그파일명 */ 
+       , BATCH_EXECUT_LC               /* --배치실행위치 */ 
+       , PROCESS_CODE                  /* --처리코드 */ 
+       , BATCH_PROCESS_RESULT          /* --배치처리결과 */ 
+       , PROC_ID                       /* --처리자 */ 
+       , IT_PROCESSING                 /* --전산처리일시 */ 
+) VALUES ( NULLIF(#{CUSTCO_ID},'')
+       , #{BATCH_KEY}
+       , #{BATCH_ID}
+       , #{TRNSMIT_INSTT}
+       , #{RECPTN_INSTT}
+       , #{BATCH_BEGIN_DE}
+       , #{BATCH_BEGIN_TIME}
+       , #{BATCH_END_DE}
+       , #{BATCH_END_TIME}
+       , #{BATCH_TOT_CO}
+       , #{BATCH_SUCCES_CO}
+       , #{BATCH_FAILR_CO}
+       , #{BATCH_ERROR_LOG_FILE_NM}
+       , #{BATCH_EXECUT_LC}
+       , #{PROCESS_CODE}
+       , #{BATCH_PROCESS_RESULT}
+       , #{PROC_ID}
+       , NOW()
+       )
+</insert>
+	
+<!-- PLT_BAT_LOG(배치로그) 테이블 수정 -->	
+<update id="UPDATE_PLT_BAT_LOG"  parameterType="java.util.HashMap">
+UPDATE PLT_BAT_LOG
+   SET IT_PROCESSING   = NOW()
+  <if test=", TRNSMIT_INSTT				!='' and TRNSMIT_INSTT != null">			, TRNSMIT_INSTT				= #{TRNSMIT_INSTT} </if> /* --송신기관 */ 
+  <if test=", RECPTN_INSTT				!='' and RECPTN_INSTT != null">				, RECPTN_INSTT				= #{RECPTN_INSTT} </if> /* --수신기관 */ 
+  <if test=", BATCH_BEGIN_DE			!='' and BATCH_BEGIN_DE != null">			, BATCH_BEGIN_DE			= #{BATCH_BEGIN_DE} </if> /* --배치시작일자 */ 
+  <if test=", BATCH_BEGIN_TIME			!='' and BATCH_BEGIN_TIME != null">			, BATCH_BEGIN_TIME			= #{BATCH_BEGIN_TIME} </if> /* --배치시작시간 */ 
+  <if test=", BATCH_END_DE				!='' and BATCH_END_DE != null">				, BATCH_END_DE				= #{BATCH_END_DE} </if> /* --배치종료일자 */ 
+  <if test=", BATCH_END_TIME			!='' and BATCH_END_TIME != null">			, BATCH_END_TIME			= #{BATCH_END_TIME} </if> /* --배치종료시간 */ 
+  <if test=", BATCH_TOT_CO				!='' and BATCH_TOT_CO != null">				, BATCH_TOT_CO				= #{BATCH_TOT_CO} </if> /* --배치총건수 */ 
+  <if test=", BATCH_SUCCES_CO			!='' and BATCH_SUCCES_CO != null">			, BATCH_SUCCES_CO			= #{BATCH_SUCCES_CO} </if> /* --배치성공건수 */ 
+  <if test=", BATCH_FAILR_CO			!='' and BATCH_FAILR_CO != null">			, BATCH_FAILR_CO			= #{BATCH_FAILR_CO} </if> /* --배치실패건수 */ 
+  <if test=", BATCH_ERROR_LOG_FILE_NM	!='' and BATCH_ERROR_LOG_FILE_NM != null">	, BATCH_ERROR_LOG_FILE_NM	= #{BATCH_ERROR_LOG_FILE_NM} </if> /* --배치오류로그파일명 */ 
+  <if test=", BATCH_EXECUT_LC			!='' and BATCH_EXECUT_LC != nul">l			, BATCH_EXECUT_LC			= #{BATCH_EXECUT_LC} </if> /* --배치실행위치 */ 
+  <if test=", PROCESS_CODE				!='' and PROCESS_CODE != null">				, PROCESS_CODE				= #{PROCESS_CODE} </if> /* --처리코드 */ 
+  <if test=", BATCH_PROCESS_RESULT		!='' and BATCH_PROCESS_RESULT != null">		, BATCH_PROCESS_RESULT		= #{BATCH_PROCESS_RESULT} </if> /* --배치처리결과 */ 
+  <if test=", PROC_ID					!='' and PROC_ID != null">					, PROC_ID					= #{PROC_ID} </if> /* --처리자 */ 
+ WHERE 1 = 1
+   AND BATCH_KEY       = #{BATCH_KEY}
+   AND BATCH_ID        = #{BATCH_ID}
+</update>
+
+<!-- PLT_BAT_LOG(배치로그) 데이터 삭제 -->	
+<delete id="DELETE_PLT_BAT_LOG"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BAT_LOG
+ WHERE 1 = 1
+   AND BATCH_KEY       = #{BATCH_KEY}      
+   AND BATCH_ID        = #{BATCH_ID}       
+</delete>
+
+<!-- PLT_BAT_LOG(배치로그) 테이블 데이터 조회 -->	
+<select id="SELECT_PLT_BAT_LOG"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT BATCH_KEY                     /* --배치키 */ 
+     , BATCH_ID                      /* --배치ID */ 
+     , TRNSMIT_INSTT                 /* --송신기관 */ 
+     , RECPTN_INSTT                  /* --수신기관 */ 
+     , BATCH_BEGIN_DE                /* --배치시작일자 */ 
+     , BATCH_BEGIN_TIME              /* --배치시작시간 */ 
+     , BATCH_END_DE                  /* --배치종료일자 */ 
+     , BATCH_END_TIME                /* --배치종료시간 */ 
+     , BATCH_TOT_CO                  /* --배치총건수 */ 
+     , BATCH_SUCCES_CO               /* --배치성공건수 */ 
+     , BATCH_FAILR_CO                /* --배치실패건수 */ 
+     , BATCH_ERROR_LOG_FILE_NM       /* --배치오류로그파일명 */ 
+     , BATCH_EXECUT_LC               /* --배치실행위치 */ 
+     , PROCESS_CODE                  /* --처리코드 */ 
+     , BATCH_PROCESS_RESULT          /* --배치처리결과 */ 
+     , PROC_ID                       /* --처리자 */ 
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING /* --전산처리일시 */ 
+  FROM PLT_BAT_LOG
+ WHERE 1 = 1
+  <if test=", BATCH_KEY					!='' and BATCH_KEY != null">				, BATCH_KEY					= #{BATCH_KEY} </if> /* --배치 키 */ 
+  <if test=", BATCH_ID					!='' and BATCH_ID != null">					, BATCH_ID					= #{BATCH_ID} </if> /* --배치아이디 */ 
+  <if test=", TRNSMIT_INSTT				!='' and TRNSMIT_INSTT != null">			, TRNSMIT_INSTT				= #{TRNSMIT_INSTT} </if> /* --송신기관 */ 
+  <if test=", RECPTN_INSTT				!='' and RECPTN_INSTT != null">				, RECPTN_INSTT				= #{RECPTN_INSTT} </if> /* --수신기관 */ 
+  <if test=", BATCH_BEGIN_DE			!='' and BATCH_BEGIN_DE != null">			, BATCH_BEGIN_DE			= #{BATCH_BEGIN_DE} </if> /* --배치시작일자 */ 
+  <if test=", BATCH_BEGIN_TIME			!='' and BATCH_BEGIN_TIME != null">			, BATCH_BEGIN_TIME			= #{BATCH_BEGIN_TIME} </if> /* --배치시작시간 */ 
+  <if test=", BATCH_END_DE				!='' and BATCH_END_DE != null">				, BATCH_END_DE				= #{BATCH_END_DE} </if> /* --배치종료일자 */ 
+  <if test=", BATCH_END_TIME			!='' and BATCH_END_TIME != null">			, BATCH_END_TIME			= #{BATCH_END_TIME} </if> /* --배치종료시간 */ 
+  <if test=", BATCH_TOT_CO				!='' and BATCH_TOT_CO != null">				, BATCH_TOT_CO				= #{BATCH_TOT_CO} </if> /* --배치총건수 */ 
+  <if test=", BATCH_SUCCES_CO			!='' and BATCH_SUCCES_CO != null">			, BATCH_SUCCES_CO			= #{BATCH_SUCCES_CO} </if> /* --배치성공건수 */ 
+  <if test=", BATCH_FAILR_CO			!='' and BATCH_FAILR_CO != null">			, BATCH_FAILR_CO			= #{BATCH_FAILR_CO} </if> /* --배치실패건수 */ 
+  <if test=", BATCH_ERROR_LOG_FILE_NM	!='' and BATCH_ERROR_LOG_FILE_NM != null">	, BATCH_ERROR_LOG_FILE_NM	= #{BATCH_ERROR_LOG_FILE_NM} </if> /* --배치오류로그파일명 */ 
+  <if test=", BATCH_EXECUT_LC			!='' and BATCH_EXECUT_LC != nul">l			, BATCH_EXECUT_LC			= #{BATCH_EXECUT_LC} </if> /* --배치실행위치 */ 
+  <if test=", PROCESS_CODE				!='' and PROCESS_CODE != null">				, PROCESS_CODE				= #{PROCESS_CODE} </if> /* --처리코드 */ 
+  <if test=", BATCH_PROCESS_RESULT		!='' and BATCH_PROCESS_RESULT != null">		, BATCH_PROCESS_RESULT		= #{BATCH_PROCESS_RESULT} </if> /* --배치처리결과 */ 
+  <if test=", PROC_ID					!='' and PROC_ID != null">					, PROC_ID					= #{PROC_ID} </if> /* --처리자 */ 
+</select>
+	
+<!-- PLT_BAT_LOG(배치로그) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_BAT_LOG"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_TBL.*
+     FROM (                    
+              SELECT
+              		ROW_NUMBER() OVER(ORDER BY BATCH_KEY) AS ROW_NUMBER 
+                   , BATCH_KEY                     /* --배치키 */ 
+                   , BATCH_ID                      /* --배치ID */ 
+                   , TRNSMIT_INSTT                 /* --송신기관 */ 
+                   , RECPTN_INSTT                  /* --수신기관 */ 
+                   , BATCH_BEGIN_DE                /* --배치시작일자 */ 
+                   , BATCH_BEGIN_TIME              /* --배치시작시간 */ 
+                   , BATCH_END_DE                  /* --배치종료일자 */ 
+                   , BATCH_END_TIME                /* --배치종료시간 */ 
+                   , BATCH_TOT_CO                  /* --배치총건수 */ 
+                   , BATCH_SUCCES_CO               /* --배치성공건수 */ 
+                   , BATCH_FAILR_CO                /* --배치실패건수 */ 
+                   , BATCH_ERROR_LOG_FILE_NM       /* --배치오류로그파일명 */ 
+                   , BATCH_EXECUT_LC               /* --배치실행위치 */ 
+                   , PROCESS_CODE                  /* --처리코드 */ 
+                   , BATCH_PROCESS_RESULT          /* --배치처리결과 */ 
+                   , PROC_ID                       /* --처리자 */ 
+                   , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING /* --전산처리일시 */ 
+                FROM PLT_BAT_LOG
+               WHERE 1 = 1
+			  <if test=", BATCH_KEY					!='' and BATCH_KEY != null">				, BATCH_KEY					= #{BATCH_KEY} </if> /* --배치 키 */ 
+			  <if test=", BATCH_ID					!='' and BATCH_ID != null">					, BATCH_ID					= #{BATCH_ID} </if> /* --배치아이디 */ 
+			  <if test=", TRNSMIT_INSTT				!='' and TRNSMIT_INSTT != null">			, TRNSMIT_INSTT				= #{TRNSMIT_INSTT} </if> /* --송신기관 */ 
+			  <if test=", RECPTN_INSTT				!='' and RECPTN_INSTT != null">				, RECPTN_INSTT				= #{RECPTN_INSTT} </if> /* --수신기관 */ 
+			  <if test=", BATCH_BEGIN_DE			!='' and BATCH_BEGIN_DE != null">			, BATCH_BEGIN_DE			= #{BATCH_BEGIN_DE} </if> /* --배치시작일자 */ 
+			  <if test=", BATCH_BEGIN_TIME			!='' and BATCH_BEGIN_TIME != null">			, BATCH_BEGIN_TIME			= #{BATCH_BEGIN_TIME} </if> /* --배치시작시간 */ 
+			  <if test=", BATCH_END_DE				!='' and BATCH_END_DE != null">				, BATCH_END_DE				= #{BATCH_END_DE} </if> /* --배치종료일자 */ 
+			  <if test=", BATCH_END_TIME			!='' and BATCH_END_TIME != null">			, BATCH_END_TIME			= #{BATCH_END_TIME} </if> /* --배치종료시간 */ 
+			  <if test=", BATCH_TOT_CO				!='' and BATCH_TOT_CO != null">				, BATCH_TOT_CO				= #{BATCH_TOT_CO} </if> /* --배치총건수 */ 
+			  <if test=", BATCH_SUCCES_CO			!='' and BATCH_SUCCES_CO != null">			, BATCH_SUCCES_CO			= #{BATCH_SUCCES_CO} </if> /* --배치성공건수 */ 
+			  <if test=", BATCH_FAILR_CO			!='' and BATCH_FAILR_CO != null">			, BATCH_FAILR_CO			= #{BATCH_FAILR_CO} </if> /* --배치실패건수 */ 
+			  <if test=", BATCH_ERROR_LOG_FILE_NM	!='' and BATCH_ERROR_LOG_FILE_NM != null">	, BATCH_ERROR_LOG_FILE_NM	= #{BATCH_ERROR_LOG_FILE_NM} </if> /* --배치오류로그파일명 */ 
+			  <if test=", BATCH_EXECUT_LC			!='' and BATCH_EXECUT_LC != nul">l			, BATCH_EXECUT_LC			= #{BATCH_EXECUT_LC} </if> /* --배치실행위치 */ 
+			  <if test=", PROCESS_CODE				!='' and PROCESS_CODE != null">				, PROCESS_CODE				= #{PROCESS_CODE} </if> /* --처리코드 */ 
+			  <if test=", BATCH_PROCESS_RESULT		!='' and BATCH_PROCESS_RESULT != null">		, BATCH_PROCESS_RESULT		= #{BATCH_PROCESS_RESULT} </if> /* --배치처리결과 */ 
+			  <if test=", PROC_ID					!='' and PROC_ID != null">					, PROC_ID					= #{PROC_ID} </if> /* --처리자 */
+			  
+			  ORDER BY BATCH_KEY
+			   
+ 		) ROW_TBL
+	       
+ </select>
+</mapper>

@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentBelongItemManageMapper">
+
+<!-- ######################################################################### -->
+<!-- 2018.11.13 파트너스 추가로 인해 로직 추가 -->
+<!-- 사용자소속항목 조회 -->
+<select id="selectAttrView"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		  ATTR_CD
+		, ATTR_DIV_CD
+		, ATTR_DIV_NM
+		, USE_YN
+		, SORT_ORD
+		, #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+	FROM PLT_USER_BLNG
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	<if test="ATTR_CD !='' and ATTR_CD != null">
+	AND ATTR_CD = #{ATTR_CD}
+	<choose>
+		<when test="ATTR_DIV_CD != null">
+		AND ATTR_DIV_CD LIKE #{ATTR_DIV_CD}||'%'
+		</when>
+		<otherwise>
+		AND SUBSTR(ATTR_DIV_CD, 2, 1) != '9'
+		</otherwise>
+	</choose>
+	</if>
+	ORDER BY SORT_ORD
+</select>
+
+<!-- PLT_USER_BLNG(사용자소속항목) 테이블 데이터 등록 -->
+<insert id="insertAttr"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_BLNG (
+		  CUSTCO_ID
+		, ATTR_CD
+		, ATTR_DIV_CD
+		, ATTR_DIV_NM
+		, USE_YN
+		, SORT_ORD
+		, REGR_ID
+		, REG_DTTM
+		, AMDR_ID
+		, UPD_DTTM
+	) VALUES (
+		  NULLIF(#{ASP_NEWCUST_KEY},'') 
+		, #{ATTR_CD}
+		, #{ATTR_DIV_CD}
+		, #{ATTR_DIV_NM}
+		, #{USE_YN}
+		, #{SORT_ORD}
+		, #{REGR_ID}
+		, NOW()
+		, #{AMDR_ID}
+		, NOW()
+	)
+</insert>
+
+<!-- PLT_USER_BLNG(사용자소속항목) 테이블 데이터 수정 -->
+<update id="updateAttr"  parameterType= "java.util.HashMap">
+	UPDATE PLT_USER_BLNG
+	SET ATTR_DIV_NM = #{ATTR_DIV_NM}
+		, USE_YN = #{USE_YN}
+		, SORT_ORD = #{SORT_ORD}
+		, AMDR_ID = #{AMDR_ID}
+		, UPD_DTTM = NOW()
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND ATTR_CD = #{ATTR_CD}
+	AND ATTR_DIV_CD = #{ATTR_DIV_CD}
+</update>
+
+<!-- 사용자소속 정보가 존재하는지 체크한다. -->
+<select id="selectChkDeptCode"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ATTR_CD|| ATTR_DIV_CD AS ATTR
+	FROM PLT_USER_BLNG
+	WHERE CUSTCO_ID = #{CUSTCO_ID}
+	AND ATTR_CD = #{ATTR_CD}
+	AND ATTR_DIV_CD = #{ATTR_DIV_CD}
+</select>
+
+<!-- 사용자소속 정보를 삭제한다. -->
+<delete id="deleteAttr"  parameterType="java.util.HashMap">
+	DELETE FROM PLT_USER_BLNG
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND ATTR_CD = #{ATTR_CD}
+	AND ATTR_DIV_CD = #{ATTR_DIV_CD}
+</delete>
+
+<!-- 2018.11.07 kmg 신규 조직도 추가 기본 정보 -->
+<select id="selectNewDeptData" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+	#{DEPT_CD} AS NEW_SPST_DEPT_CD
+	, CASE WHEN 
+		(SELECT DEPT_DIV_CD FROM TWB_BAS02 WHERE DEPT_CD = #{DEPT_CD} GROUP BY DEPT_DIV_CD) = '03' 
+	  THEN #{DEPT_CD}||(CNT+10)
+	  ELSE 
+	  <choose>
+	  <when test="DEPT_CD == 'TOP'">
+	  TO_CHAR(((CNT+1)*10)) 
+	  </when>
+	  <otherwise>
+	  #{DEPT_CD}||(CNT+1)*10
+	  </otherwise>
+	  </choose>
+	  END 													AS NEW_DEPT_CD
+	, CASE WHEN 
+		(SELECT DEPT_DIV_CD FROM TWB_BAS02 WHERE DEPT_CD = #{DEPT_CD} GROUP BY DEPT_DIV_CD) = '03' 
+	  THEN (CNT+10+1)
+	  ELSE ((CNT+1)*10) END 															AS NEW_SORT_ORD
+	, ( SELECT LPAD(COALESCE(DEPT_DIV_CD + 1,0),2,0) FROM TWB_BAS02 WHERE DEPT_CD = #{DEPT_CD} GROUP BY DEPT_DIV_CD ) AS NEW_DEPT_DIV_CD
+FROM (
+	SELECT 
+		COUNT(*) AS CNT
+	FROM TWB_BAS02
+	WHERE SPST_DEPT_CD = #{DEPT_CD}
+)A
+</select>
+
+<!-- 2018.11.07 kmg 조직 신규 등록 -->
+<insert id="insertNewDeptInfo" parameterType= "java.util.HashMap">
+	INSERT INTO TWB_BAS02 (
+		DEPT_CD
+		, DEPT_NM
+		, SPST_DEPT_CD
+		, DEPT_DIV_CD
+		, DEPT_CRE_DT
+		, DEPT_DSUS_DT
+		, SCR_DISP_YN
+		, USE_YN
+		, SORT_ORD
+		, REGR_DEPT_CD
+		, REGR_ID
+		, REG_DTTM
+		, AMDR_DEPT_CD
+		, AMDR_ID
+		, UPD_DTTM
+		, PROC_ID
+		, IT_PROCESSING
+	) VALUES (
+		#{NEW_DEPT_CD}
+		, #{NEW_DEPT_NM}
+		, #{NEW_SPST_DEPT_CD}
+		, #{NEW_DEPT_DIV_CD}
+		, '20000101'
+		, '29991231'
+		, #{NEW_SCR_DISP_YN}
+		, 'Y'
+		, #{NEW_SORT_ORD}
+		, #{REGR_DEPT_CD}
+		, #{REGR_ID}
+		, NOW()
+		, #{REGR_DEPT_CD}
+		, #{REGR_ID}
+		, NOW()
+		, #{REGR_ID}
+		, NOW()
+	)
+</insert>
+
+<!-- ######################################################################### -->
+<!-- 조직 정보 조회(트리뷰) -->
+<select id="selectDeptTreeView"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT  TREE.*
+FROM(
+  SELECT CAST(R.DEPT_DIV_CD AS INTEGER)                                 		 AS NODE_LVL        /*--레벨*/
+	      , R.DEPT_CD                                                            AS C_NODE_NO       /*--조직코드 */
+	      , COALESCE(R.SPST_DEPT_CD,'*')                                           AS P_NODE_NO     /*  --상위조직코드 */
+	      , R.DEPT_NM                                                            AS NODE_TITLE      /*--조직명 */
+	      , R.DEPT_CD                                                            AS NODE_ID         /*--노드ID */
+	      , CASE WHEN EXISTS(SELECT 'X' FROM TWB_BAS02 WHERE SPST_DEPT_CD=R.DEPT_CD ) THEN  'D'  ELSE 'F' END             AS NODE_TYPE       /*--노드타입(모드폴더) */
+	      , '' 				   AS NODE_ETC       /* --상위부서코드리스트 */
+	      , ''                 	 AS NODE_FULL_TITLE /*--상위부서코드명리스트 */
+	      , R.DEPT_DIV_CD     
+	      , R.SORT_ORD    
+	    FROM TWB_BAS02 R
+			WHERE R.SPST_DEPT_CD='*'
+	    UNION ALL   
+	    (
+			SELECT CAST(A.DEPT_DIV_CD AS INTEGER)                                 AS NODE_LVL        /*--레벨*/
+			  , A.DEPT_CD                                                            AS C_NODE_NO       /*--조직코드 */
+			  , COALESCE(A.SPST_DEPT_CD,'*')                                           AS P_NODE_NO     /*  --상위조직코드 */
+			  , A.DEPT_NM                                                            AS NODE_TITLE      /*--조직명 */
+			  , A.DEPT_CD                                                            AS NODE_ID         /*--노드ID */
+			  , CASE WHEN EXISTS(SELECT 'X' FROM TWB_BAS02 WHERE SPST_DEPT_CD=A.DEPT_CD ) THEN  'D'  ELSE 'F' END             AS NODE_TYPE       /*--노드타입(모드폴더) */
+			  , '' 				   AS NODE_ETC       /* --상위부서코드리스트 */
+			  , ''                 AS NODE_FULL_TITLE /*--상위부서코드명리스트 */
+			  , A.DEPT_DIV_CD    
+			  , A.SORT_ORD     
+			FROM TWB_BAS02 A
+				, (SELECT DEPT_DIV_CD
+						 , DEPT_CD
+				   FROM TWB_BAS02 R
+					WHERE SPST_DEPT_CD = 'TOP'
+										
+				   ) B
+			WHERE CAST(A.DEPT_DIV_CD AS INTEGER) >= CAST(B.DEPT_DIV_CD AS INTEGER)
+			  AND A.DEPT_DIV_CD in ('01','02','03','04') 
+			  AND A.DEPT_CD LIKE B.DEPT_CD|| '%'  
+			  AND A.SCR_DISP_YN = 'Y'
+			  AND A.USE_YN = 'Y' 
+		)
+	) TREE
+	ORDER BY CASE WHEN TREE.C_NODE_NO = 'TOP' THEN '1' ELSE TREE.C_NODE_NO END , TREE.SORT_ORD
+
+</select>
+
+<!-- ######################################################################### -->
+<!-- 조직 정보 조회(트리뷰) 전체 -->
+<select id="selectDeptTreeViewAllDisplay"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT  TREE.*
+FROM(
+	  SELECT CAST(R.DEPT_DIV_CD AS INTEGER)                                 		 AS NODE_LVL        /*--레벨*/
+		      , DEPT_CD                                                            	AS C_NODE_NO       /*--조직코드 */
+		      , COALESCE(SPST_DEPT_CD,'*')                                            AS P_NODE_NO     /*  --상위조직코드 */
+		      -- , DEPT_NM                                                            	AS NODE_TITLE      /*--조직명 */
+		      , CASE WHEN SCR_DISP_YN = 'N'
+	    	    THEN  <![CDATA[ '<span class="dynatree-title is-disabled">' || DEPT_NM || '</span><i class="tt-icon-circle-close is-red"></i>']]>	    
+	    	    ELSE DEPT_NM  
+	    	    END 														        AS NODE_TITLE		/*--조직명 */
+		      , DEPT_CD                                                            	AS NODE_ID         /*--노드ID */
+		      , CASE WHEN EXISTS(SELECT 'X' FROM TWB_BAS02 WHERE SPST_DEPT_CD=R.DEPT_CD ) THEN  'D'  ELSE 'F' END             AS NODE_TYPE       /*--노드타입(모드폴더) */
+			  , '' 				   	AS NODE_ETC       /* --상위부서코드리스트 */
+		      , ''                 	AS NODE_FULL_TITLE /*--상위부서코드명리스트 */
+		      , DEPT_DIV_CD   
+		      , SORT_ORD              
+		    FROM TWB_BAS02 R
+				WHERE R.SPST_DEPT_CD='*'
+	    UNION ALL   
+	    (
+			SELECT CAST(A.DEPT_DIV_CD AS INTEGER)                                 AS NODE_LVL        /*--레벨*/
+			  , A.DEPT_CD                                                            AS C_NODE_NO       /*--조직코드 */
+			  , COALESCE(A.SPST_DEPT_CD,'*')                                           AS P_NODE_NO     /*  --상위조직코드 */
+			  -- , A.DEPT_NM                                                            AS NODE_TITLE      /*--조직명 */
+			  , CASE WHEN SCR_DISP_YN = 'N'
+	    	    THEN  <![CDATA[ '<span class="dynatree-title is-disabled">' || DEPT_NM || '</span><i class="tt-icon-circle-close is-red"></i>']]>	   
+	    	    ELSE DEPT_NM  
+	    	    END 														        AS NODE_TITLE		/*--조직명 */
+			  , A.DEPT_CD                                                            AS NODE_ID         /*--노드ID */
+			  , CASE WHEN EXISTS(SELECT 'X' FROM TWB_BAS02 WHERE SPST_DEPT_CD=A.DEPT_CD ) THEN  'D'  ELSE 'F' END             AS NODE_TYPE       /*--노드타입(모드폴더) */
+			  , '' 				   AS NODE_ETC       /* --상위부서코드리스트 */
+			  , ''                 AS NODE_FULL_TITLE /*--상위부서코드명리스트 */
+			  , A.DEPT_DIV_CD   
+			  , A.SORT_ORD       
+			FROM TWB_BAS02 A
+				, (SELECT DEPT_DIV_CD
+						 , DEPT_CD
+				   FROM TWB_BAS02 R
+					WHERE SPST_DEPT_CD = 'TOP'
+										
+				   ) B
+			WHERE CAST(A.DEPT_DIV_CD AS INTEGER) >= CAST(B.DEPT_DIV_CD AS INTEGER)
+			  AND A.DEPT_DIV_CD in ('01','02','03','04') 
+			  AND A.DEPT_CD LIKE B.DEPT_CD|| '%'  
+			  AND A.USE_YN = 'Y' 
+		)
+	) TREE
+	ORDER BY CASE WHEN TREE.C_NODE_NO = 'TOP' THEN '1' ELSE TREE.C_NODE_NO END , TREE.SORT_ORD
+	
+</select>
+
+<!-- 조직정보 상세내역 조회 -->
+<select id="selectRtnNodeDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+ SELECT A.DEPT_CD
+      , A.DEPT_NM
+      , A.SPST_DEPT_CD
+      , A.SCR_DISP_YN
+      , COALESCE(A.SORT_ORD,0) AS SORT_ORD
+      , ''     AS FULL_DEPT_NM
+      , ''     AS FULL_DEPT_CD
+   FROM TWB_BAS02 A
+   WHERE A.DEPT_CD = #{DEPT_CD}
+</select>
+
+<!-- TWB_BAS02(조직정보) 테이블 수정 -->	
+<update id="UPDATE_PLT_ORGZ"  parameterType="java.util.HashMap">
+UPDATE TWB_BAS02
+   SET IT_PROCESSING   = NOW()
+     , UPD_DTTM        = NOW()                       -- 수정일시
+<if test="DEPT_NM              !='' and DEPT_NM              != null">   , DEPT_NM                   = #{DEPT_NM}                    -- 부서명 </if>
+<if test="SPST_DEPT_CD         !='' and SPST_DEPT_CD         != null">   , SPST_DEPT_CD              = #{SPST_DEPT_CD}               -- 상위부서코드 </if>
+<if test="DEPT_DIV_CD          !='' and DEPT_DIV_CD          != null">   , DEPT_DIV_CD               = #{DEPT_DIV_CD}                -- 부서구분코드 </if>
+<if test="DEPT_CRE_DT          !='' and DEPT_CRE_DT          != null">   , DEPT_CRE_DT               = #{DEPT_CRE_DT}                -- 부서생성일자 </if>
+<if test="DEPT_DSUS_DT         !='' and DEPT_DSUS_DT         != null">   , DEPT_DSUS_DT              = #{DEPT_DSUS_DT}               -- 부서폐지일자 </if>
+<if test="SCR_DISP_YN          !='' and SCR_DISP_YN          != null">   , SCR_DISP_YN               = #{SCR_DISP_YN}                -- 화면표시여부 </if>
+<if test="USE_YN               !='' and USE_YN               != null">   , USE_YN                    = #{USE_YN}                     -- 사용여부 </if>
+<if test="SORT_ORD             !='' and SORT_ORD             != null">   , SORT_ORD                  = #{SORT_ORD}                   -- 정렬순서 </if>
+<if test="REGR_DEPT_CD         !='' and REGR_DEPT_CD         != null">   , REGR_DEPT_CD              = #{REGR_DEPT_CD}               -- 등록자부서코드 </if>
+<if test="REGR_ID              !='' and REGR_ID              != null">   , REGR_ID                   = #{REGR_ID}                    -- 등록자ID </if>
+<if test="REG_DTTM             !='' and REG_DTTM             != null">   , REG_DTTM                  = #{REG_DTTM}                   -- 등록일시 </if>
+<if test="AMDR_DEPT_CD         !='' and AMDR_DEPT_CD         != null">   , AMDR_DEPT_CD              = #{AMDR_DEPT_CD}               -- 수정자부서코드 </if>
+<if test="AMDR_ID              !='' and AMDR_ID              != null">   , AMDR_ID                   = #{AMDR_ID}                    -- 수정자ID </if>
+<if test="PROC_ID              !='' and PROC_ID              != null">   , PROC_ID                   = #{PROC_ID}                    -- 처리자 </if>
+ WHERE 1 = 1
+   AND DEPT_CD         = #{DEPT_CD}
+
+</update>
+
+<!-- 조직정보 테이블 화면표시여부 수정 -->
+<update id="updateRtnDeptYesDisplay"  parameterType= "java.util.HashMap">
+
+<![CDATA[
+
+UPDATE TWB_BAS02
+   SET IT_PROCESSING = NOW()
+     , UPD_DTTM      = NOW()
+     , AMDR_ID       = #{USER_ID}
+     , PROC_ID       = #{USER_ID}
+     , SCR_DISP_YN   = #{SCR_DISP_YN}
+ WHERE DEPT_CD IN (
+                   SELECT DEPT_CD FROM 
+                   (
+	                   SELECT A.DEPT_CD 
+	                     FROM (
+	                           SELECT A.DEPT_CD
+									FROM TWB_BAS02 A
+									, (SELECT DEPT_DIV_CD
+											 , DEPT_CD
+									   FROM TWB_BAS02 R
+										WHERE CASE WHEN #{DEPT_CD}='TOP'  
+													THEN SPST_DEPT_CD
+												ELSE DEPT_CD END = #{DEPT_CD}
+															
+									   ) B
+							    WHERE CAST(A.DEPT_DIV_CD AS INTEGER) >= CAST(B.DEPT_DIV_CD AS INTEGER)
+							      AND A.DEPT_CD LIKE B.DEPT_CD|| '%'  
+	                          ) A
+	                ) TEMP
+	    )             
+]]>          
+	   <if test="FULL_DEPT_CD_ARRAY != null and !FULL_DEPT_CD_ARRAY.isEmpty">
+         	AND DEPT_CD IN
+			<foreach collection="FULL_DEPT_CD_ARRAY" item="FULL_DEPT_CD_ARRAY" open="(" separator=", " close=")">
+		         #{FULL_DEPT_CD_ARRAY}
+		    </foreach>
+		</if>            
+      
+                   
+                   
+</update>
+
+<!-- 조직 정보 조회(페이지) -->
+<select id="selectDeptListPage"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+    SELECT  ROWNUM AS ROW_NUMBER 
+    		, ROW_TBL.*
+    FROM ( 
+			  SELECT  CAST(A.DEPT_DIV_CD AS INTEGER)                                        AS NODE_LVL        /*--레벨*/
+					  , A.DEPT_CD                                                            AS DEPT_CD       /*--조직코드 */
+					  , COALESCE(A.SPST_DEPT_CD,'*')                                           AS SPST_DEPT_CD     /*  --상위조직코드 */
+					  , A.DEPT_NM                                                            AS DEPT_NM      /*--조직명 */
+					  , A.DEPT_CD                                                            AS NODE_ID         /*--노드ID */
+					  , CASE WHEN EXISTS(SELECT 'X' FROM TWB_BAS02 WHERE SPST_DEPT_CD=A.DEPT_CD ) THEN  'D'  ELSE 'F' END             AS NODE_TYPE       /*--노드타입(모드폴더) */
+					  , ''                 AS NODE_ETC       /* --상위부서코드리스트 */
+					  , ''                    AS FULL_DEPT_NM /*--상위부서코드명리스트 */
+					  , A.DEPT_DIV_CD    
+				FROM TWB_BAS02 A
+			    WHERE SCR_DISP_YN = 'Y'
+				  AND USE_YN = 'Y'
+				  <if test="DEPT_INFO !='' and DEPT_INFO != NULL">
+				     AND A.DEPT_NM LIKE '%' || #{DEPT_INFO} || '%'
+				  </if>
+			ORDER BY CASE WHEN A.DEPT_CD = 'TOP' THEN '1' ELSE A.DEPT_CD END , A.SORT_ORD
+		) ROW_TBL        
+</select>
+
+<!-- 사용자 정보 조회 -->
+	<select id="selectRtnUserInfo" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+   		 SELECT ROW_TBL.*
+		         , PAG_TBL.*
+		     FROM (
+			   		 SELECT ROWNUM
+				           ,A.AGENT_ID													/*상담사ID*/
+				           ,A.AGENT_NM													/*상담사명*/
+				           ,(SELECT B.DEPT_NM_M
+					           FROM VW_DEPT B 
+					          WHERE A.DEPT_CD = B.DEPT_CD) AS DEPT_NM2                	/* 소속명 */
+				           ,(SELECT B.DEPT_NM
+				               FROM ARGO.V_CM_DEPT_CD B 
+				            WHERE A.DEPT_CD = B.DEPT_CD
+				              AND A.TENANT_ID =  B.TENANT_ID) AS DEPT_NM				/*부서명*/				               
+				           ,DECODE(COALESCE(B.USER_TY,'A'),'A','아르고','통합상담') AS TM_KIND_NM	/*등록시스템*/
+				           ,(SELECT B.CODE_NM
+				               FROM ARGO.V_CM_CODE B 
+				            WHERE A.AGENT_JIKCHK = B.CODE
+				              AND A.TENANT_ID =  B.TENANT_ID
+				              AND B.SORT_CD = 'AGENT_JIKCHK') AS AGENT_JIKCHK_NM   		/*직책명*/
+				           ,(SELECT B.CODE_NM
+				               FROM ARGO.V_CM_CODE B 
+				              WHERE A.AGENT_JIKGUP = B.CODE
+				                AND A.TENANT_ID =  B.TENANT_ID
+				                AND B.SORT_CD = 'AGENT_JIKGUP') AS AGENT_JIKGUP_NM  	/*직급명*/      
+				           ,A.TEL_NO													/*전화번호*/
+				           ,A.ENTER_YMD		/*입사일자*/
+				           ,A.RETIRE_YMD	/*퇴사일자*/
+				           
+				           ,COALESCE(B.CLBK_DSTR_YN,'N') AS CLBK_DSTR_YN 		/* 콜백할당여부  */
+				   		   ,COALESCE(B.CTI_USE_YN,'N') AS CTI_USE_YN     		/* CTI사용여부  */
+				   		   ,COALESCE(B.VIDEO_CNSL_YN,'N') AS VIDEO_CNSL_YN  		/* 영상상담여부  */
+				   		   ,COALESCE(B.USER_TY,'A') AS TM_KIND_CD				/*등록시스템코드*/
+				           , A.LOGIN_YN                                     /* 로그인중여부 */
+				           , A.LOGIN_IP                                     /* 로그인PC-IP */
+				           , A.LAST_LOGIN_DTIM                              /* 최종로그인일시 */
+				           , A.PSWD_ERR_CNT                                 /* 비밀번호오류횟수 */
+				           , (SELECT INLNE_NO FROM PLT_PHN_IP_INLN WHERE IP_ADDR = A.LOGIN_IP	) AS INLNE_NO	 /* 내선번호 */
+				       FROM VW_USER_MASTER A
+				       LEFT OUTER JOIN TB_USER_ADD B
+				       ON A.AGENT_ID = B.USER_ID
+				      WHERE 1 = 1
+						<if test="USER_TY != '' and USER_TY != null"> AND COALESCE(B.USER_TY,'A') = #{USER_TY} </if>
+						<if test="AGENT_ID != '' and AGENT_ID != null"> AND A.AGENT_ID = #{AGENT_ID} </if>
+						<if test="AGENT_NM != '' and AGENT_NM != null"> AND A.AGENT_NM LIKE '%'|| #{AGENT_NM} ||'%'</if>
+						<if test="DEPT_CD1 != '' and DEPT_CD2 == '' and DEPT_CD3 == ''"> 
+						</if>
+						<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 == ''"> 
+								AND A.DEPT_CD IN (SELECT K.DEPT_CD
+								                   FROM ARGO.V_CM_DEPT_CD K
+								                  WHERE K.PARENT_DEPT_CD = #{DEPT_CD2} OR K.DEPT_CD = #{DEPT_CD2})
+						</if>
+						<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 != ''"> 
+								AND A.DEPT_CD = #{DEPT_CD3} 
+						</if>
+	        			) ROW_TBL
+						, (
+								SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+								FROM VW_USER_MASTER A
+							    LEFT OUTER JOIN TB_USER_ADD B
+							    ON A.AGENT_ID = B.USER_ID
+								<if test="USER_TY != '' and USER_TY != null"> AND COALESCE(B.USER_TY,'A') = #{USER_TY} </if>
+								<if test="AGENT_ID != '' and AGENT_ID != null"> AND A.AGENT_ID = #{AGENT_ID} </if>
+								<if test="AGENT_NM != '' and AGENT_NM != null"> AND A.AGENT_NM LIKE '%'|| #{AGENT_NM} ||'%'</if>
+								<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 == ''"> 
+										AND A.DEPT_CD IN (SELECT K.DEPT_CD
+								                   FROM ARGO.V_CM_DEPT_CD K
+								                  WHERE K.PARENT_DEPT_CD = #{DEPT_CD2} OR K.DEPT_CD = #{DEPT_CD2})
+								</if>
+								<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 != ''"> 
+										AND A.DEPT_CD = #{DEPT_CD3} 
+								</if>
+						) PAG_TBL
+						ORDER BY ROW_TBL.AGENT_NM
+	</select>
+	
+	
+	<!-- 부서정보 조회(wfms) -->
+	<select id="selectRtnUserDeptCdInfo1"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT DEPT_CD AS CD				/*부서코드*/
+	     	   ,DEPT_NM	AS CD_NM			/*부서명*/
+	       FROM PLT_ORGZ
+	      WHERE SCR_DISP_YN = 'Y'
+	      --  AND DEPT_DEPTH = '0'
+	</select>
+	
+	<select id="selectRtnUserDeptCdInfo2"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT DEPT_CD AS CD				/*부서코드*/
+	     	   ,DEPT_NM	AS CD_NM			/*부서명*/
+	       FROM PLT_ORGZ
+	      WHERE SCR_DISP_YN = 'Y'
+	      --  AND SPST_DEPT_CD = #{DEPT_CD1}
+	       -- AND DEPT_DEPTH = '1'
+	</select>
+	
+	<select id="selectRtnUserDeptCdInfo3"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT DEPT_CD AS CD				/*부서코드*/
+	     	   ,DEPT_NM	AS CD_NM			/*부서명*/
+	       FROM PLT_ORGZ
+	      WHERE SCR_DISP_YN = 'Y'
+	      --  AND SPST_DEPT_CD = #{DEPT_CD2}
+	       -- AND DEPT_DEPTH = '2'
+	</select>
+
+</mapper>

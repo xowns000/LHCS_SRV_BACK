@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.cmpgn.dao.PhoneCmpgnTrgetListManageMapper">
+
+<!-- 캠페인 콤보 조회 -->
+<select id="selectRtn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+                    ,CUST_NO
+                    ,CUST_TC
+                    ,CUST_NM 
+                    ,JBCL_CD
+                    ,LAST_INTG_PRJ_NO
+                    ,LAST_DEAL_LINE_DIV
+                    ,FN_PRJ_NM(LAST_INTG_PRJ_NO, LAST_DEAL_LINE_DIV) AS PRJ_NM
+                    ,CUST_TNO
+                    ,CALL_TNO
+                    ,MOBL_TNO
+                    ,ETC1_TNO
+                    ,HPCL_TEL_DIV
+                    ,RECV_RJT_YN
+                    ,BL_YN
+                    ,MEMO
+                    ,SPF_ITEM
+                    ,FN_USER(ALLC_AGNT_ID,'') AS ALLC_AGNT_NM
+                    ,ALLC_AGNT_ID
+                    ,AGNT_ALLC_DT
+                    ,SUBSTR(AGNT_ALLC_DT,1, 8) AS AGNT_ALLC_DATE
+                    ,LAST_CALL_DT
+                    ,LAST_CONSL_LCD
+                    ,LAST_CONSL_MCD
+                    ,LAST_CONSL_SCD
+                    ,LAST_CALL_STAT_CD
+                    ,REG_DT
+                    ,FN_USER(REG_USER_ID,'') AS REG_USER_NM
+                    ,LIST_SEQ
+                    ,CAMP_SEQ
+                    ,FN_CODEBOOK('CRS002', LAST_CALL_STAT_CD) AS LAST_CALL_STAT_NM
+              FROM  UC_CMP_OBJ_LIST
+             WHERE  1=1 
+             <if test="CAMP_SEQ != ''  and CAMP_SEQ != null">      AND CAMP_SEQ = #{CAMP_SEQ} </if>
+              <if test="DATA_SEQ != ''  and DATA_SEQ != null">      AND DATA_SEQ = #{DATA_SEQ} </if>
+              <choose>
+             <when test="LAST_CALL_STAT_CD .equals('02')">AND LAST_CALL_STAT_CD IN ('03', '04', '08', '09') </when>
+              <when test="LAST_CALL_STAT_CD .equals('03')">AND (LAST_CALL_STAT_CD NOT IN ('01', '02', '05', '06', '07') OR LAST_CALL_STAT_CD IS NULL)</when>
+              <when test="LAST_CALL_STAT_CD .equals('04')"> AND (LAST_CALL_STAT_CD IN ('03', '04', '08', '09') OR LAST_CALL_STAT_CD IS NULL)</when>
+              <otherwise> </otherwise>
+              </choose>
+                <if test="LAST_CALL_STRT_DATE != ''  and LAST_CALL_STRT_DATE != null">AND LAST_CALL_DT BETWEEN #{LAST_CALL_STRT_DATE}||'000000'  </if>
+                 <if test="LAST_CALL_END_DATE != ''  and LAST_CALL_END_DATE != null">AND #{LAST_CALL_END_DATE}||'235959' </if>
+                  <if test="AGNT_ALLC_STRT_DATE != ''  and AGNT_ALLC_STRT_DATE != null">AND AGNT_ALLC_DT BETWEEN #{AGNT_ALLC_STRT_DATE}||'000000' </if>
+                    <if test="AGNT_ALLC_END_DATE != ''  and AGNT_ALLC_END_DATE != null">AND  #{AGNT_ALLC_END_DATE}||'235959'  </if>
+                     <choose>
+                     <when test="SEARCH_VAL.equals('')"></when>
+                      <when test="SEARCH_VAL.equals('02')">AND FN_USER(ALLC_AGNT_ID, '')=#{ALLC_AGNT_ID}</when>
+                     <when test="SEARCH_VAL.equals('03')">AND ALLC_AGNT_ID = #{ALLC_AGNT_ID}</when>
+                     <otherwise> </otherwise>
+                     </choose>
+                    <if test="PRJ_NO != ''  and PRJ_NO != null">AND PRJ_NO = #{PRJ_NO}</if>
+          ORDER BY ALLC_AGNT_NM DESC          
+
+</select>
+
+
+<select id="selectRtn01"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+   SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+      ,USER_ID, USER_NM, TEAM_LCD, TEAM_MCD, TEAM_SCD
+            FROM     UC_SYS_USER 
+            WHERE   USE_YN = 'Y'
+              <if test="TEAM_LCD != ''  and TEAM_LCD != null">  AND TEAM_LCD = #{TEAM_LCD} </if>
+              <if test="TEAM_MCD != ''  and TEAM_MCD != null">  AND TEAM_MCD = #{TEAM_MCD} </if>
+              <if test="TEAM_SCD != ''  and TEAM_SCD != null">  AND TEAM_SCD = #{TEAM_SCD} </if>
+              <if test="USER_ID != ''  and USER_ID != null">  AND USER_ID = #{USER_ID} </if>
+              <if test="USER_NM != ''  and USER_NM != null"> AND USER_NM LIKE '%'||#{USER_NM}||'%' </if>
+
+            ORDER BY USER_NM 
+
+
+</select>
+
+<update id="updateRtn01" parameterType= "java.util.HashMap" >
+ UPDATE UC_CMP_OBJ_LIST
+                   SET      AGNT_ALLC_DT = null
+                            , ALLC_AGNT_ID = null
+                     WHERE  CAMP_SEQ = #{CAMP_SEQ}
+                     AND    LIST_SEQ = #{LIST_SEQ}
+</update>
+
+<update id="updateRtn02" parameterType= "java.util.HashMap" >
+  UPDATE UC_CMP_OBJ_LIST
+                   SET      AGNT_ALLC_DT = UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0)
+                            , ALLC_AGNT_ID = #{ALLC_AGNT_ID}
+                     WHERE  CAMP_SEQ = #{CAMP_SEQ}
+                     AND    LIST_SEQ = #{LIST_SEQ}
+</update>
+
+
+<insert id="insertRtn01" parameterType= "java.util.HashMap" >
+ INSERT INTO UC_CMP_TRANS_HIST(CAMP_SEQ, LIST_SEQ, TRANS_HIST_SEQ, ALR_AGNT_ID, REG_DT, REG_USER_ID)
+                 (SELECT CAST(#{CAMP_SEQ} as INTEGER), CAST(#{LIST_SEQ} as INTEGER),  COALESCE(MAX(TRANS_HIST_SEQ),0) +1, COALESCE(CAST(#{TRANS_HIST_SEQ} as VARCHAR(15)),'')
+                 , UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0), CAST(#{ALLC_AGNT_ID} as VARCHAR(15))
+                    FROM  UC_CMP_TRANS_HIST
+                    WHERE  CAMP_SEQ = #{CAMP_SEQ}
+                    AND    LIST_SEQ = #{LIST_SEQ})
+</insert>
+
+
+<insert id="insertRtn02" parameterType= "java.util.HashMap" >
+  INSERT INTO UC_CMP_TRANS_HIST(CAMP_SEQ, LIST_SEQ, TRANS_HIST_SEQ, ALR_AGNT_ID, NEW_AGNT_ID, REG_DT, REG_USER_ID)
+                 (SELECT CAST(#{CAMP_SEQ} as INTEGER), CAST(#{LIST_SEQ} as INTEGER),  COALESCE(MAX(TRANS_HIST_SEQ),0) +1, 
+                 COALESCE(CAST('' as VARCHAR(15)),''), 
+                 CAST(#{NEW_AGNT_ID} as VARCHAR(15)),
+                  UF_NOW()('CURRENT', 'yyyymmddhh24miss', 0),
+                   CAST(#{REG_USER_ID}as VARCHAR(15))
+                    FROM  UC_CMP_TRANS_HIST
+                    WHERE  CAMP_SEQ = #{CAMP_SEQ}
+                    AND    LIST_SEQ = #{LIST_SEQ})
+</insert>
+
+   
+
+
+
+
+<select id="selectRtnComboBox"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT   CAMP_SEQ, CAMP_NM
+            FROM     UC_CMP_BASE 
+
+</select>
+
+<select id="selectRtnComboBox01"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT   DATA_SEQ, FILE_NM
+    FROM     UC_CMP_DATA
+    WHERE    CAMP_SEQ = #{CAMP_SEQ}
+            AND DEL_FLG IS NULL
+  
+</select>
+	
+</mapper>

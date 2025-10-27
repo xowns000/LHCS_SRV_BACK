@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemAuthorityGroupMapper">
+
+<!-- PLT_AUTH(권한그룹) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_AUTH"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_AUTHRT
+	( CUSTCO_ID
+	, AUTHRT_GROUP_ID
+	, AUTHRT_GROUP_NM
+	, GROUP_EXPLN
+	, MNGR_PM_CD
+	, USER_SE_CD
+	, SORT_ORD
+	, RGTR_ID
+	, REG_DT
+	, MDFR_ID
+	, MDFCN_DT
+) VALUES ( 
+	#{CUSTCO_ID}
+	, #{AUTHRT_GROUP_ID}
+	, #{AUTHRT_GROUP_NM}
+	, #{GROUP_EXPLN}
+	, #{MNGR_PM_CD}
+	, #{USER_SE_CD}
+	, (SELECT MAX(SORT_ORD)
+    	FROM PLT_AUTHRT) + 1
+	, #{USER_ID}
+	, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+	, #{USER_ID}
+	, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+)
+</insert>
+	
+<!-- PLT_AUTH(권한그룹) 테이블 수정 -->	
+<update id="UPDATE_PLT_AUTH"  parameterType="java.util.HashMap">		
+UPDATE PLT_AUTHRT
+   SET AUTHRT_GROUP_NM = #{AUTHRT_GROUP_NM}
+	, GROUP_EXPLN = #{GROUP_EXPLN}
+	, MNGR_PM_CD = #{MNGR_PM_CD}
+	, USER_SE_CD = #{USER_SE_CD}
+	, SORT_ORD = #{SORT_ORD}
+	, MDFR_ID = #{USER_ID}
+	, MDFCN_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+ WHERE AUTHRT_GROUP_ID   = #{AUTHRT_GROUP_ID}
+</update>	
+
+<!-- PLT_AUTH(권한그룹) 데이터 삭제 -->	
+<delete id="DELETE_PLT_AUTH"  parameterType="java.util.HashMap">
+DELETE FROM PLT_AUTHRT
+ WHERE AUTHRT_GROUP_ID IN
+	<foreach collection="arrAuthrtId" item="AUTHRT_GROUP_ID" open="(" separator="," close=")" >
+		#{AUTHRT_GROUP_ID}
+	</foreach>
+</delete>
+<!-- PLT_BTN_AUTHRT(권한그룹 버튼권한) 데이터 삭제 -->	
+<delete id="DELETE_PLT_BTN_AUTHRT"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BTN_AUTHRT
+ WHERE AUTHRT_GROUP_ID IN
+	<foreach collection="arrAuthrtId" item="AUTHRT_GROUP_ID" open="(" separator="," close=")" >
+		#{AUTHRT_GROUP_ID}
+	</foreach>
+</delete>
+
+<!-- PLT_AUTH(권한그룹) 테이블 데이터 조회 -->	
+<select id="SELECT_PLT_AUTH"  parameterType="java.util.HashMap" resultType="java.util.HashMap">			
+SELECT ROW_NUMBER() OVER() AS ROWNUM			/* 순번 */
+	, PA.AUTHRT_GROUP_ID						/* 권한그룹ID */
+	, PA.AUTHRT_GROUP_NM						/* 권한그룹명 */
+	, PA.GROUP_EXPLN							/* 권한그룹 설명 */
+	, (SELECT COUNT(PAGP.MENU_ID)
+		FROM PLT_AUTHRT_GROUP_PRGRM PAGP, PLT_MENU PM
+		WHERE PAGP.MENU_ID = PM.MENU_ID
+			AND PAGP.AUTHRT_GROUP_ID = PA.AUTHRT_GROUP_ID
+			AND PM.VIEW_TRGT = 'MAIN')	AS CNT_MAIN_MENU			/* 할당메인메뉴개수 */
+	, (SELECT COUNT(PAGP.MENU_ID)
+		FROM PLT_AUTHRT_GROUP_PRGRM PAGP, PLT_MENU PM
+		WHERE PAGP.MENU_ID = PM.MENU_ID
+			AND PAGP.AUTHRT_GROUP_ID = PA.AUTHRT_GROUP_ID
+			AND PM.VIEW_TRGT = 'LEFT')	AS CNT_LEFT_MENU			/* 할당좌측메뉴개수 */
+	, (SELECT COUNT(PAGP.MENU_ID)
+		FROM PLT_AUTHRT_GROUP_PRGRM PAGP, PLT_MENU PM
+		WHERE PAGP.MENU_ID = PM.MENU_ID
+			AND PAGP.AUTHRT_GROUP_ID = PA.AUTHRT_GROUP_ID
+			AND PM.VIEW_TRGT = 'RIGHT')	AS CNT_RIGHT_MENU			/* 할당우측메뉴개수 */
+	, PA.MNGR_PM_CD								/* 관리자여부코드 */
+	, (SELECT CD_NM
+		FROM PLT_COMM_CD PCC
+		WHERE PCC.CUSTCO_ID = PA.CUSTCO_ID AND PCC.GROUP_CD_ID = 'MNGR_WT'
+			AND PCC.CD_ID = PA.MNGR_PM_CD)			/* 관리자여부 */
+	, PA.USER_SE_CD								/* 사용자구분코드 */
+	, (SELECT CD_NM
+		FROM PLT_COMM_CD PCC
+		WHERE PCC.CUSTCO_ID = PA.CUSTCO_ID AND PCC.GROUP_CD_ID = 'USER_CL'
+			AND PCC.CD_ID = PA.USER_SE_CD)			/* 사용자구분 */
+	, PA.SORT_ORD								/* 정렬순서 */
+FROM PLT_AUTHRT PA
+WHERE CUSTCO_ID = #{CUSTCO_ID}
+ORDER BY SORT_ORD
+</select>
+	
+<!-- PLT_AUTH(권한그룹) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_AUTH"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+ SELECT ROWNUM AS ROW_NUMBER
+         , ROW_TBL.*
+     FROM (
+     		 SELECT ATRT_GROUP_ID               -- 권한그룹ID
+                        , ATRT_GROUP_NM               -- 권한그룹명
+                        , GROUP_XPLN                  -- 그룹설명
+                        , MNGR_YN                     -- 관리자여부
+                        , ETC_INFO01                  -- 기타정보01
+                        , ETC_INFO02                  -- 기타정보02
+                        , ETC_INFO03                  -- 기타정보03
+                        , PROC_ID                     -- 처리자
+                        , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING               -- 전산처리일시
+                     FROM PLT_AUTH
+                    WHERE 1 = 1
+					<if test="ATRT_GROUP_ID		!='' and ATRT_GROUP_ID		!= null"> AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID} </if>
+					<if test="ATRT_GROUP_NM		!='' and ATRT_GROUP_NM		!= null"> AND ATRT_GROUP_NM   = #{ATRT_GROUP_NM} </if> 
+					<if test="GROUP_XPLN		!='' and GROUP_XPLN			!= null"> AND GROUP_XPLN      = #{GROUP_XPLN}    </if> 
+					<if test="MNGR_YN			!='' and MNGR_YN			!= null"> AND MNGR_YN         = #{MNGR_YN}       </if> 
+					<if test="ETC_INFO01		!='' and ETC_INFO01			!= null"> AND ETC_INFO01      = #{ETC_INFO01}    </if> 
+					<if test="ETC_INFO02		!='' and ETC_INFO02			!= null"> AND ETC_INFO02      = #{ETC_INFO02}    </if> 
+					<if test="ETC_INFO03		!='' and ETC_INFO03			!= null"> AND ETC_INFO03      = #{ETC_INFO03}    </if> 
+					<if test="PROC_ID			!='' and PROC_ID			!= null"> AND PROC_ID         = #{PROC_ID}       </if> 
+                    
+      ) ROW_TBL
+	
+</select>
+
+</mapper>

@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <!-- 상담유형 관리 -->
+<mapper namespace="kr.co.hkcloud.palette3.setting.consulttype.dao.SettingConsulttypeManageMapper">
+
+<select id="selectCnslTypLevelByTopLevel" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		T.CUSTCO_ID
+    	, C.CO_NM AS ASP_NEWCUST_KEY
+		, T.CNSL_TYP_CD
+		, T.CNSL_TYP_NM
+		, T.CNSL_TYP_DIV_CD
+		, T.SPST_CNSL_TYP_CD
+		, T.USE_YN
+		, T.TEMPLATE_ID
+		, T.SORT_ORD
+	FROM PLT_CHT_CUTT_TYP T JOIN PLT_ASP_CUS C ON T.CUSTCO_ID = C.CUSTCO_ID
+	WHERE T.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND CNSL_TYP_DIV_CD = '1'
+	ORDER BY T.SORT_ORD
+</select>
+
+<select id="selectCompanyName" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		CO_NM
+	FROM PLT_ASP_CUS
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+</select>
+
+
+
+<select id="selectCnslTypByNotTopLevel" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		T.CUSTCO_ID 	
+		, C.CO_NM AS ASP_NEWCUST_KEY
+		, T.CNSL_TYP_CD
+		, T.CNSL_TYP_NM
+		, T.CNSL_TYP_DIV_CD
+		, T.SPST_CNSL_TYP_CD
+		, T.USE_YN
+		, T.TEMPLATE_ID
+		, T.SORT_ORD
+	FROM PLT_CHT_CUTT_TYP T JOIN PLT_ASP_CUS C ON T.CUSTCO_ID = C.CUSTCO_ID
+	WHERE T.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND SPST_CNSL_TYP_CD = #{CNSL_TYP_CD}
+	ORDER BY SORT_ORD
+</select>
+
+
+
+<!-- 상담유형정보를 수정한다. -->
+<update id="updateRtnTwbTalkCnslTyp" parameterType="java.util.HashMap">
+	MERGE INTO PLT_CHT_CUTT_TYP T
+	USING 
+	(
+	 SELECT
+		   NULLIF(#{ASP_NEWCUST_KEY},'') AS CUSTCO_ID
+	      , #{CNSL_TYP_CD}             AS CNSL_TYP_CD
+	      , #{CNSL_TYP_NM}             AS CNSL_TYP_NM
+	      , #{SPST_CNSL_TYP_CD}        AS SPST_CNSL_TYP_CD
+	      , #{CNSL_TYP_DIV_CD}         AS CNSL_TYP_DIV_CD
+	      , #{USE_YN}                  AS USE_YN
+	      , #{SORT_ORD}                AS SORT_ORD
+	      , #{REGR_DEPT_CD}            AS REGR_DEPT_CD
+	      , #{REGR_ID}                 AS REGR_ID
+	      , #{INQRY_USE_YN}            AS INQRY_USE_YN
+	      , #{INQRY_ALIAS_NM}          AS INQRY_ALIAS_NM
+	      , #{INQRY_DESC}              AS INQRY_DESC
+	      , #{INQRY_TYPE}              AS INQRY_TYPE
+	      , #{INQRY_USE_CHANNEL}       AS INQRY_USE_CHANNEL
+	      , #{TEMPLATE_ID}             AS TEMPLATE_ID
+	 
+	) S
+	ON 
+	(
+		    T.CUSTCO_ID  = S.CUSTCO_ID
+	        AND T.CNSL_TYP_CD  = S.CNSL_TYP_CD
+	        AND T.SPST_CNSL_TYP_CD = S.SPST_CNSL_TYP_CD
+	)
+	WHEN MATCHED THEN 
+	UPDATE SET
+	 	    T.USE_YN         	= S.USE_YN
+	      , T.SORT_ORD     		= S.SORT_ORD
+	      , T.CNSL_TYP_NM	 	= S.CNSL_TYP_NM
+	      , T.AMDR_DEPT_CD   	= S.REGR_DEPT_CD
+	      , T.AMDR_ID        	= S.REGR_ID
+	      , T.UPD_DTTM       	= NOW()
+	      , T.INQRY_USE_YN   	= S.INQRY_USE_YN
+	      , T.INQRY_ALIAS_NM 	= S.INQRY_ALIAS_NM
+	      , T.INQRY_DESC     	= S.INQRY_DESC
+	      , T.INQRY_TYPE     	= S.INQRY_TYPE
+	      , T.INQRY_USE_CHANNEL = S.INQRY_USE_CHANNEL
+	      , T.TEMPLATE_ID		= S.TEMPLATE_ID
+	WHEN NOT MATCHED THEN
+	INSERT 
+	(
+	        T.CUSTCO_ID
+	      , T.CNSL_TYP_CD
+	      , T.CNSL_TYP_NM
+	      , T.SPST_CNSL_TYP_CD
+	      , T.CNSL_TYP_DIV_CD
+	      , T.USE_YN
+	      , T.SORT_ORD
+	      , T.REGR_DEPT_CD
+	      , T.REGR_ID
+	      , T.REG_DTTM
+	      , T.AMDR_DEPT_CD
+	      , T.AMDR_ID
+	      , T.UPD_DTTM
+	      , T.PROC_ID
+	      , T.IT_PROCESSING
+	      , T.INQRY_USE_YN
+	      , T.INQRY_ALIAS_NM
+	      , T.INQRY_DESC
+	      , T.INQRY_TYPE
+	      , T.INQRY_USE_CHANNEL
+	      , T.TEMPLATE_ID
+	)
+	VALUES
+	(
+	        NULLIF(S.CUSTCO_ID,'')
+	      , S.CNSL_TYP_CD
+	      , S.CNSL_TYP_NM
+	      , S.SPST_CNSL_TYP_CD
+	      , S.CNSL_TYP_DIV_CD
+	      , S.USE_YN
+	      , S.SORT_ORD
+	      , S.REGR_DEPT_CD
+	      , S.REGR_ID
+	      , NOW()
+	      , S.REGR_DEPT_CD
+	      , S.REGR_ID
+	      , NOW()
+	      , S.REGR_ID
+	      , NOW()
+	      , S.INQRY_USE_YN
+	      , S.INQRY_ALIAS_NM
+	      , S.INQRY_DESC
+	      , S.INQRY_TYPE
+	      , S.INQRY_USE_CHANNEL
+	      , S.TEMPLATE_ID
+	)      
+ 
+ <!-- 
+ INSERT INTO PLT_CHT_CUTT_TYP 
+(
+        CUSTCO_ID
+      , CNSL_TYP_CD
+      , CNSL_TYP_NM
+      , SPST_CNSL_TYP_CD
+      , CNSL_TYP_DIV_CD
+      , USE_YN
+      , SORT_ORD
+      , REGR_DEPT_CD
+      , REGR_ID
+      , REG_DTTM
+      , AMDR_DEPT_CD
+      , AMDR_ID
+      , UPD_DTTM
+      , PROC_ID
+      , IT_PROCESSING
+      , INQRY_USE_YN
+      , INQRY_ALIAS_NM
+      , INQRY_DESC
+      , INQRY_TYPE
+      , INQRY_USE_CHANNEL
+      , TEMPLATE_ID
+)
+VALUES
+(
+        NULLIF(#{CUSTCO_ID},'')
+      , #{CNSL_TYP_CD}
+      , #{CNSL_TYP_NM}
+      , #{SPST_CNSL_TYP_CD}
+      , #{CNSL_TYP_DIV_CD}
+      , #{USE_YN}
+      , #{SORT_ORD}
+      , #{REGR_DEPT_CD}
+      , #{REGR_ID}
+      , NOW()
+      , #{REGR_DEPT_CD}
+      , #{REGR_ID}
+      , NOW()
+      , #{REGR_ID}
+      , NOW()
+      , #{INQRY_USE_YN}
+      , #{INQRY_ALIAS_NM}
+      , #{INQRY_DESC}
+      , #{INQRY_TYPE}
+      , #{INQRY_USE_CHANNEL}
+      , #{TEMPLATE_ID}
+)      
+ON DUPLICATE KEY UPDATE
+ 	    CNSL_TYP_CD		= #{CNSL_TYP_CD}
+ 	  , USE_YN         	= #{USE_YN}
+      , SORT_ORD     	= #{SORT_ORD}
+      , CNSL_TYP_NM	 	= #{CNSL_TYP_NM}
+      , AMDR_DEPT_CD   	= #{REGR_DEPT_CD}
+      , AMDR_ID        	= #{REGR_ID}
+      , UPD_DTTM       	= NOW()
+      , INQRY_USE_YN   	= #{INQRY_USE_YN}
+      , INQRY_ALIAS_NM 	= #{INQRY_ALIAS_NM}
+      , INQRY_DESC     	= #{INQRY_DESC}
+      , INQRY_TYPE     	= #{INQRY_TYPE}
+      , INQRY_USE_CHANNEL = #{INQRY_USE_CHANNEL}
+      , TEMPLATE_ID		= #{TEMPLATE_ID}
+       -->
+</update>
+
+<!-- 상담유형 정보를 가져온다 (상세) -->	
+<select id="selectRtnNodeDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT 
+	T.CUSTCO_ID
+	, C.CO_NM AS ASP_NEWCUST_KEY
+    , T.CNSL_TYP_CD
+    , T.CNSL_TYP_NM
+    , T.SPST_CNSL_TYP_CD
+    , T.CNSL_TYP_DIV_CD
+    , T.USE_YN
+    , T.SORT_ORD
+    , T.REGR_DEPT_CD
+    , T.REGR_ID
+    , TO_CHAR(T.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+    , T.AMDR_DEPT_CD
+    , T.AMDR_ID
+    , TO_CHAR(T.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM
+    , T.PROC_ID
+    , TO_CHAR(T.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+    , T.CNSL_TYP_CD AS CD
+    , T.CNSL_TYP_NM AS CD_NM
+     <!-- , TEMPLATE_ID  -->
+  	FROM PLT_CHT_CUTT_TYP T JOIN PLT_ASP_CUS C ON T.CUSTCO_ID = C.CUSTCO_ID
+WHERE T.CUSTCO_ID = #{ASP_NEWCUST_KEY} --회사구분
+
+<if test="CNSL_TYP_CD !='' and CNSL_TYP_CD != null">
+   AND CNSL_TYP_CD = #{CNSL_TYP_CD}
+</if>
+<if test="USE_YN !='' and USE_YN != null">
+   AND USE_YN = #{USE_YN}
+</if>
+<if test="SPST_CNSL_TYP_CD !='' and SPST_CNSL_TYP_CD != null">
+   AND SPST_CNSL_TYP_CD = #{SPST_CNSL_TYP_CD}
+</if>
+<if test="CNSL_TYP_DIV_CD !='' and CNSL_TYP_DIV_CD != null">
+   AND CNSL_TYP_DIV_CD = #{CNSL_TYP_DIV_CD}
+</if>
+ ORDER BY SORT_ORD
+</select>
+
+
+<!-- 중복된 상담 유형 코드가 존재하는지 확인 한다.  -->	
+<select id="selectRtnDupCnslTyp"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT #{ASP_NEWCUST_KEY} AS CUSTCO_ID
+      ,CNSL_TYP_CD
+  FROM PLT_CHT_CUTT_TYP
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND CNSL_TYP_CD = #{CNSL_TYP_CD}
+</select>
+
+<!-- 상담유형 하위까지 모두 삭제 -->
+<delete id="deleteRtnCnslTyp"  parameterType= "java.util.HashMap">
+                   
+DELETE FROM PLT_CHT_CUTT_TYP
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+   AND CNSL_TYP_CD = #{CNSL_TYP_CD}
+                      
+</delete>
+
+<!-- 상담유형 정보를 가져온다 (코드값) -->	
+<select id="selectRtnInqryCd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+	SELECT CUSTCO_ID
+	     , CNSL_TYP_CD AS CD
+	     , INQRY_ALIAS_NM AS CD_NM
+	  FROM PLT_CHT_CUTT_TYP
+	 WHERE CUSTCO_ID = #{CUSTCO_ID}
+	
+	<if test="CNSL_TYP_CD !='' and CNSL_TYP_CD != null">
+	   AND CNSL_TYP_CD = #{CNSL_TYP_CD}
+	</if>
+	<if test="USE_YN !='' and USE_YN != null">
+	   AND USE_YN = #{USE_YN}
+	</if>
+	<if test="SPST_CNSL_TYP_CD !='' and SPST_CNSL_TYP_CD != null">
+	   AND SPST_CNSL_TYP_CD = #{SPST_CNSL_TYP_CD}
+	</if>
+	<if test="CNSL_TYP_DIV_CD !='' and CNSL_TYP_DIV_CD != null">
+	   AND CNSL_TYP_DIV_CD = #{CNSL_TYP_DIV_CD}
+	</if>
+	<if test="INQRY_USE_YN !='' and INQRY_USE_YN != null">
+	   AND INQRY_USE_YN = #{INQRY_USE_YN}
+	</if>
+	 ORDER BY SORT_ORD
+
+</select>
+
+<!-- 상담유형 미표시로 수정 -->
+<update id="updateCnslTypUseNo" parameterType="java.util.HashMap">
+	UPDATE PLT_CHT_CUTT_TYP SET 
+		USE_YN = 'N'
+      	, UPD_DTTM      = NOW()
+	WHERE CUSTCO_ID = #{CUSTCO_ID}
+	  AND CNSL_TYP_CD = #{CNSL_TYP_CD}
+</update>
+
+
+</mapper>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.statistics.chat.dao.StatisticsChatCounselByInquiryTypeMapper">
+
+<!--  <select id="selectStatisticsByInqryType" parameterType="java.util.HashMap" resultType="java.util.HashMap">-->
+<!--SELECT /* 문의유형별 통계 상담 CNT kr.co.hkcloud.palette3.statistics.chat.dao.StatisticsChatCounselByInquiryTypeMapper.selectStatisticsByInqryType*/-->
+<!--    ROW_NUMBER() OVER(ORDER BY QSTN.CHN_CLSF_CD,QSTN_TYPE_ID) AS ROW_NUMBER-->
+<!--    , QSTN.QSTN_TYPE_ID-->
+<!--    , (SELECT CD_NM FROM PLT_COMM_CD WHERE CD_ID = QSTN.CHN_CLSF_CD AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER) AS CHN_NM                 /* 채널 분류 */-->
+<!--    , QSTN.CUSL_CNT                                                                                              /* 상담요청 건 수 */-->
+<!--    , QSTN.GIVEUP_CNT                                                                                            /* 포기 건 수 */-->
+<!--    , QSTN.BUSY_CNT                                                                                              /* busy 건 수 */-->
+<!--    , COALESCE( QSTN.ING_CNT + QSTN.AFTPRCS_CNT + QSTN.TRAN_CNT + QSTN.CMPL_CNT, 0) AS TOT_PRCS_CNT              /*총 상담처리 건 수*/-->
+<!--    , QSTN.ING_CNT                                                                                               /* 진행 건 수 */-->
+<!--    , QSTN.AFTPRCS_CNT                                                                                           /* 후처리 건 수 */-->
+<!--    , QSTN.TRAN_CNT                                                                                              /* 전달 건 수 */-->
+<!--    , QSTN.CMPL_CNT                                                                                              /* 완료 건 수*/-->
+<!--    , QSTN.CUTT_HR                                                                                               /* 총 상담시간*/-->
+<!--    , QSTN.AVG_CUTT_HR                                                                                           /* 평균 상담시간*/-->
+<!--    FROM-->
+<!--    ( SELECT-->
+<!--    QSTN_TYPE_ID,-->
+<!--    CHN_CLSF_CD,-->
+<!--    COALESCE(COUNT(PSCCD.STATS_CHT_CUTT_DTL_ID),0)  AS CUSL_CNT  													  	                            /* 총 상담 건수 - 상담요청*/-->
+<!--    , COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE ('%' || 'CMPL' || '%') THEN 1 ELSE 0 end),0) AS CMPL_CNT					         /* 완료 건 수*/-->
+<!--    , COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE ('%' || 'AFTPRCS' || '%') THEN 1 ELSE 0 end),0) AS AFTPRCS_CNT			        /* 후처리 건 수 */-->
+<!--    , COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE ('%' || 'ING' || '%') THEN 1 ELSE 0 end),0) AS ING_CNT					            /* 진행 건 수 */-->
+<!--    , COALESCE(SUM(CASE WHEN (CUTT_RSLT_CD = 'TRAN_WAIT' OR CUTT_RSLT_CD = 'CMPL_TRAN') THEN 1 ELSE 0 end),0) AS TRAN_CNT /* 전달 건 수 */-->
+<!--    , COALESCE(SUM(CASE WHEN (CUTT_RSLT_CD LIKE ('%' || 'GIVEUP' || '%')) THEN 1 ELSE 0 END),0) AS GIVEUP_CNT			       /* 포기 건 수 */-->
+<!--    , COALESCE(SUM(CASE WHEN CUTT_RSLT_CD LIKE('%' || 'NPSBL' || '%') THEN 1 ELSE 0 END),0) AS BUSY_CNT					          /* busy 건 수 */-->
+<!--    , COALESCE(SUM(CUTT_HR),0)  AS CUTT_HR  																			                                       /* 총 상담시간*/-->
+<!--    , COALESCE(ROUND(AVG(CUTT_HR),2),0) AS AVG_CUTT_HR-->
+<!--    FROM PLT_STATS_CHT_CUTT_DTL PSCCD-->
+<!--    WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER-->
+<!--    AND QSTN_TYPE_ID IS NOT NULL-->
+<!--    <choose>-->
+<!--      <when test='SCH_GB == "DAY"'>-->
+<!--        AND PSCCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} &#45;&#45;일별-->
+<!--      </when>-->
+<!--      <when test='SCH_GB == "MONTH"'>-->
+<!--        AND PSCCD.CUTT_YM = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) &#45;&#45;월별-->
+<!--      </when>-->
+<!--      <when test='SCH_GB == "QUARTER"'>-->
+<!--        <choose>-->
+<!--          <when test='SCH_QUARTER == "1"'>-->
+<!--            AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') &#45;&#45;1분기-->
+<!--          </when>-->
+<!--          <when test='SCH_QUARTER == "2"'>-->
+<!--            AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') &#45;&#45;2분기-->
+<!--          </when>-->
+<!--          <when test='SCH_QUARTER == "3"'>-->
+<!--            AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') &#45;&#45;3분기-->
+<!--          </when>-->
+<!--          <when test='SCH_QUARTER == "4"'>-->
+<!--            AND PSCCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') &#45;&#45;4분기-->
+<!--          </when>-->
+<!--        </choose>-->
+<!--      </when>-->
+<!--    </choose>-->
+<!--    <if test="SRCH_CHN_CLSF_CD != null and SRCH_CHN_CLSF_CD != ''">-->
+<!--      AND CHN_CLSF_CD = #{SRCH_CHN_CLSF_CD}-->
+<!--    </if>-->
+<!--    GROUP BY QSTN_TYPE_ID, CHN_CLSF_CD-->
+<!--    ) AS QSTN-->
+<!--  </select>-->
+
+<!--  <select id="selectInqryTypeTree" parameterType="java.util.HashMap" resultType="java.util.HashMap">-->
+<!--    WITH RECURSIVE QSTN_TYPE_TREE AS (-->
+<!--      SELECT-->
+<!--        QSTN_TYPE_ID,-->
+<!--        UP_QSTN_TYPE_ID,-->
+<!--        QSTN_TYPE_NM,-->
+<!--        QSTN_TYPE_EXPLN,-->
+<!--        QSTN_TYPE_CD,-->
+<!--        QSTN_TYPE_SE_CD,-->
+<!--        USE_YN,-->
+<!--        LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT-->
+<!--      FROM PLT_CHT_QSTN_TYPE-->
+<!--      WHERE UP_QSTN_TYPE_ID IS NULL-->
+<!--        AND DEL_YN = 'N'-->
+<!--        AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER-->
+<!--      AND USE_YN = 'Y'-->
+<!--    UNION ALL-->
+<!--    SELECT B.QSTN_TYPE_ID, B.UP_QSTN_TYPE_ID, B.QSTN_TYPE_NM, B.QSTN_TYPE_EXPLN, B.QSTN_TYPE_CD, B.QSTN_TYPE_SE_CD, B.USE_YN,-->
+<!--           C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT-->
+<!--    FROM PLT_CHT_QSTN_TYPE B-->
+<!--           INNER JOIN QSTN_TYPE_TREE C ON C.QSTN_TYPE_ID::INTEGER = B.UP_QSTN_TYPE_ID::INTEGER-->
+<!--    WHERE B.DEL_YN = 'N'-->
+<!--      AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER-->
+<!--      AND B.USE_YN = 'Y'-->
+<!--      )-->
+<!--    SELECT QTT.QSTN_TYPE_ID-->
+<!--         , QTT.UP_QSTN_TYPE_ID-->
+<!--         , QTT.QSTN_TYPE_NM-->
+<!--         , QTT.QSTN_TYPE_CD-->
+<!--         , QTT.SORT-->
+<!--    FROM QSTN_TYPE_TREE QTT-->
+<!--    ORDER BY QTT.SORT, QTT.QSTN_TYPE_ID-->
+<!--  </select>-->
+
+
+
+</mapper>

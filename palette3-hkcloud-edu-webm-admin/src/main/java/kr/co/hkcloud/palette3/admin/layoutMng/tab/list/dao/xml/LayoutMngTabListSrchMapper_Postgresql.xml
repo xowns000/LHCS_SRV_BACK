@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.layoutMng.tab.list.dao.LayoutMngTabListSrchMapper">
+  <select id="selectUsableParams" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT
+      PLPA.PARAM_ARTCL_ID
+         , PLPA.LKAG_ID
+         , PLPA.COL_NM
+         , PLPA.ARTCL_NM
+         , PLPA.DATA_TYPE_CD
+         , PLPA.ESNTL_YN
+         , PLPA.LKAG_GROUP_CD_ID
+         , LKAG_NM
+         , CERT_CUSTCO_LKAG_ID
+         ,(CASE WHEN PLPA.DATA_TYPE_CD = 'LPIT_DATETIME_S' OR PLPA.DATA_TYPE_CD = 'LPIT_DATETIME_E' THEN TRUE ELSE FALSE END) AS USE_SRCH_DT_YN
+         ,(CASE WHEN PLPA.DATA_TYPE_CD = 'LPIT_GROUP_CD_ID' THEN TRUE ELSE FALSE END ) AS USE_SRCH_STTS_YN
+         ,(CASE WHEN PLPA.DATA_TYPE_CD = 'LPIT_INPUT_STRING' THEN TRUE ELSE FALSE END ) AS USE_SRCH_TEXT_YN
+    FROM CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA
+           LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLPA.LKAG_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_MST PLMS ON PLM.LKAG_MST_ID = PLMS.LKAG_MST_ID
+           LEFT JOIN CUSTCO.PLT_CERT_CUSTCO_LKAG PCCL ON PCCL.LKAG_ID = PLPA.LKAG_ID
+    WHERE PLPA.USE_YN = 'Y' AND PLPA.DEL_YN = 'N'
+      AND ( PLPA.DATA_TYPE_CD = 'LPIT_DATETIME_S' OR PLPA.DATA_TYPE_CD = 'LPIT_DATETIME_E' OR PLPA.DATA_TYPE_CD = 'LPIT_GROUP_CD_ID' OR PLPA.DATA_TYPE_CD = 'LPIT_INPUT_STRING')
+      AND PLPA.LKAG_ID = #{LKAG_ID}::INTEGER
+      AND PCCL.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+  </select>
+  <select id="selectSrch" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+      SELECT PLL.TAB_ID
+      , PLLS.LIST_ID
+      , PLLS.SORT_ORD
+      , PLM.LKAG_ID
+      , PLM.LKAG_MST_ID
+      , PLM.LKAG_NM
+      , PLPA.COL_NM
+      , PLPA.ESNTL_YN
+      , PLPA.LKAG_GROUP_CD_ID
+      , PLPA.BSC_VL
+      , PLPA.DATA_TYPE_CD
+      , PLPA.PARAM_ARTCL_ID
+      , PLPA2.PARAM_ARTCL_ID AS UP_PARAM_ARTCL_ID
+      , PLPA2.COL_NM AS UP_COL_NM
+      FROM PLT_LAYOUT_LIST_SRCH PLLS
+      JOIN PLT_LAYOUT_LIST PLL ON PLL.LIST_ID = PLLS.LIST_ID
+      LEFT JOIN CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA ON PLPA.PARAM_ARTCL_ID = PLLS.PARAM_ARTCL_ID
+      LEFT JOIN CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA2 ON PLPA2.PARAM_ARTCL_ID = PLPA.UP_ARTCL_ID
+      LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLPA.LKAG_ID
+      WHERE PLLS.LIST_ID IN
+      <foreach collection="arrListId" item="listId" open="(" separator="," close=")" >
+        #{listId}::INTEGER
+      </foreach>
+  </select>
+  <insert id="insertSrch" parameterType="java.util.HashMap">
+    INSERT INTO PLT_LAYOUT_LIST_SRCH
+    (
+      LIST_ID
+    , PARAM_ARTCL_ID
+    , GROUP_CD_ID
+    , SORT_ORD
+    , RGTR_ID
+    , REG_DT
+    )
+    VALUES(
+            #{LIST_ID}::INTEGER
+          , #{PARAM_ARTCL_ID}::INTEGER
+          , #{LKAG_GROUP_CD_ID}
+          , #{SORT_ORD}::INTEGER
+          , #{USER_ID}::INTEGER
+          , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'));
+  </insert>
+  <delete id="deleteSrch" parameterType="java.util.HashMap">
+    DELETE
+    FROM PLT_LAYOUT_LIST_SRCH
+    WHERE LIST_ID IN (SELECT LIST_ID
+                      FROM PLT_LAYOUT_LIST_SRCH PLLS
+                      WHERE LIST_ID IN (SELECT LIST_ID
+                                        FROM PLT_LAYOUT_LIST PLL
+                                        WHERE PLL.LIST_ID = PLLS.LIST_ID
+                                          AND TAB_ID = #{TAB_ID}:: INTEGER)
+                     )
+  </delete>
+  <delete id="deleteSrchById" parameterType="java.util.HashMap">
+    DELETE
+    FROM PLT_LAYOUT_LIST_SRCH
+    WHERE LIST_ID = #{LIST_ID}::INTEGER
+  </delete>
+</mapper>

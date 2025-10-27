@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.campaign.dao.PhoneCampaignPlanMapper">
+
+	<!--  캠페인 계획 조회 -->
+	<select id="selectCpiPlan" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	 /* selectCpiPlan 캠페인 계획 조회 */
+				 ROW_NUMBER() OVER(ORDER BY A.CPI_END_DT DESC, A.CPI_ID) AS ROW_NUMBER
+				,A.CPI_ID
+				,A.CPI_NM
+				,SUBSTR(A.CPI_BGNG_DT, 1, 4) || '-' || SUBSTR(A.CPI_BGNG_DT, 5, 2) || '-' || SUBSTR(A.CPI_BGNG_DT, 7, 2) AS CPI_BGNG_DT
+				,SUBSTR(A.CPI_END_DT, 1, 4) || '-' || SUBSTR(A.CPI_END_DT, 5, 2) || '-' || SUBSTR(A.CPI_END_DT, 7, 2) AS CPI_END_DT
+				,(SELECT (CASE WHEN COUNT(X.CUSL_ID) > 0 THEN 'Y' ELSE 'N' END) FROM PLT_OBD_CPI_CUST_ALTMNT X WHERE X.CPI_ID = A.CPI_ID) AS ALTMNT_YN
+				,A.PLAN_SE_CD
+				,B.CD_NM AS PLAN_SE_NM
+				,(SELECT COUNT(X.CPI_ID) FROM PLT_OBD_CPI_CUST X WHERE X.CPI_ID = A.CPI_ID) AS CUST_CNT
+				,(SELECT COUNT(DISTINCT PPC.CUST_ID)
+					FROM PLT_PHN_CUTT PPC
+					WHERE PPC.CPI_ID = A.CPI_ID
+				) AS CPI_TRY_CNT
+				,(SELECT COUNT(DISTINCT PPC.CUST_ID)
+					FROM PLT_PHN_CUTT PPC
+<!--					INNER JOIN PLT_OBD_CPI_CUST POCC ON POCC.CPI_ID = PPC.CPI_ID AND POCC.CUST_ID = PPC.CUST_ID-->
+					LEFT OUTER JOIN PLT_EXPSN_ATTR PEA ON PEA.CUSTCO_ID = PPC.CUSTCO_ID AND PEA.BSC_PVSN_ATTR_YN = 'N' AND PEA.SE = 'CONSEL' AND PEA.EXPSN_ATTR_COL_ID = 'CUSL_RS' --상담 결과
+<!--					LEFT OUTER JOIN PLT_PHN_CUTT_DTL_EXPSN PPCDE ON PPCDE.PHN_CUTT_ID = PPC.PHN_CUTT_ID AND PPCDE.ATTR_ID = PEA.ATTR_ID-->
+					WHERE PPC.CPI_ID = A.CPI_ID AND (SELECT PPCDE.ATTR_VL FROM PLT_PHN_CUTT_DTL_EXPSN PPCDE WHERE PPCDE.PHN_CUTT_ID = PPC.PHN_CUTT_ID AND PPCDE.ATTR_ID = PEA.ATTR_ID) = 'COMPLETED'
+				) AS COMPLETED_CNT
+				,(SELECT COUNT(DISTINCT CUSL_ID) FROM PLT_OBD_CPI_CUST_ALTMNT WHERE CPI_ID = A.CPI_ID) AS CUSL_CNT
+				,A.PLAN_CYCL
+				,A.PRGRS_STTS_CD
+				,C.CD_NM AS PRGRS_STTS_NM
+				,TO_DATE(A.REG_DT,'YYYYMMDDHH24MISS')::TEXT AS REG_DT
+				,D.USER_NM AS RGTR_ID
+				,A.CUSTCO_ID
+				,A.CMPTN_YN
+				,A.CMPTN_DT
+				,A.RMRK
+		FROM PLT_OBD_CPI A
+		LEFT OUTER JOIN PLT_COMM_CD B
+			ON A.PLAN_SE_CD = B.CD_ID AND B.GROUP_CD_ID = 'CMPN_CL' AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		LEFT OUTER JOIN PLT_COMM_CD C
+			ON A.PRGRS_STTS_CD = C.CD_ID AND C.GROUP_CD_ID = 'CMPN_ST' AND C.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		LEFT OUTER JOIN PLT_USER D
+			ON A.RGTR_ID = D.USER_ID
+		WHERE 	A.CUSTCO_ID 	= #{CUSTCO_ID}::INTEGER
+		AND 	A.USE_YN 		= 'Y'
+		<if test="CPI_YR != null and CPI_YR != ''">
+			<![CDATA[
+			AND 	A.CPI_BGNG_DT >= #{CPI_YR} || '0000000000'
+			AND 	A.CPI_END_DT <= (#{CPI_YR}::INTEGER +1)::TEXT || '0000000000'
+			]]>
+		</if>
+		<if test="PRGRS_STTS_CD != null and PRGRS_STTS_CD != ''">
+			AND 	A.PRGRS_STTS_CD = #{PRGRS_STTS_CD}
+		</if>
+		<if test="PLAN_SE_CD != null and PLAN_SE_CD != ''">
+			AND 	A.PLAN_SE_CD = #{PLAN_SE_CD}
+		</if>
+		<if test="CPI_NM != null and CPI_NM != ''">
+			AND 	A.CPI_NM LIKE '%' || #{CPI_NM} || '%'
+		</if>
+		ORDER BY A.CPI_END_DT DESC, A.CPI_ID
+	</select>
+
+	<!--  상태가 준비중인것인지 체크 -->
+	<select id="cpiPlanSttsChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* cpiPlanSttsChk 상태가 준비중인것인지 체크 */
+				COUNT(A.CPI_ID) AS CNT
+		FROM	PLT_OBD_CPI	A
+		WHERE 	A.CPI_ID = #{CPI_ID}::INTEGER
+		AND 	A.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND 	A.PRGRS_STTS_CD != 'PRPARG'
+	</select>
+
+	<!--  배분되어 있는지 체크 -->
+	<select id="cpiPlanAltChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* cpiPlanAltChk 배분되어 있는지 체크 */
+				COUNT(A.CPI_ID) AS CNT
+		FROM	PLT_OBD_CPI_CUST_ALTMNT	A
+		WHERE 	A.CPI_ID = #{CPI_ID}::INTEGER
+	</select>
+
+	<!--  상태가 진행중인것인지 체크 -->
+	<select id="cpiPlanCloseChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* cpiPlanCloseChk 상태가 진행중인것인지 체크 */
+				COUNT(A.CPI_ID) AS CNT
+		FROM	PLT_OBD_CPI	A
+		WHERE 	A.CPI_ID = #{CPI_ID}::INTEGER
+		AND 	A.PRGRS_STTS_CD != 'ONGONG'
+	</select>
+
+	<!--  계획 저장 -->
+	<insert id="insertCpiPlan" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_OBD_CPI(
+				/* insertCpiPlan 계획 저장 */
+				CPI_ID 				-- 캠페인_ID
+				,CUSTCO_ID 			-- 고객사_ID
+				,CPI_NM 			-- 캠페인_명
+				,PLAN_SE_CD 		-- 계획_구분_코드
+				,CPI_BGNG_DT 		-- 캠페인_시작_일시
+				,CPI_END_DT 		-- 캠페인_종료_일시
+				,PLAN_CYCL 			-- 계획_차수
+				,CMPTN_YN 			-- 완료_여부
+				,RMRK 				-- 비고
+				,USE_YN 			-- 사용_여부
+				,REG_DT 			-- 등록_일시
+				,RGTR_ID 			-- 등록자_ID
+				,MDFCN_DT 			-- 수정일시
+				,MDFR_ID 			-- 수정자
+				,PRGRS_STTS_CD 		-- 진행_상태_코드
+		) VALUES (
+				#{CPI_ID}::INTEGER
+				,#{CUSTCO_ID}::INTEGER
+				,#{CPI_NM}
+				,#{PLAN_SE_CD}
+				,#{CPI_BGNG_DT}
+				,#{CPI_END_DT}
+				,#{PLAN_CYCL}::INTEGER
+				,'N'
+				,#{RMRK}
+				,'Y'
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,'PRPARG'
+		)
+	</insert>
+
+	<!--  상담사 저장 -->
+	<insert id="insertCuslCpiPlan" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_OBD_CPI_CUSL
+		SELECT 	 /* insertCuslCpiPlan 상담사 저장 */
+				 Z.USER_ID
+				,'1'
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{CPI_ID}::INTEGER
+		FROM PLT_USER Z
+		LEFT OUTER JOIN PLT_USER_AUTHRT Q
+			ON Z.USER_ID = Q.USER_ID
+		LEFT OUTER JOIN PLT_AUTHRT T
+			ON Q.AUTHRT_GROUP_ID = T.AUTHRT_GROUP_ID
+		LEFT OUTER JOIN plt_user_ognz X
+			ON Z.USER_ID = X.USER_ID
+			AND X.USE_YN = 'Y'
+			AND X.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+<!--		WHERE 	Q.AUTHRT_GROUP_ID = 6-->
+		WHERE 	Q.AUTHRT_GROUP_ID IN (2, 3, 4, 5, 6)
+		AND 	Z.USE_YN = 'Y'
+		AND		X.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</insert>
+
+	<!--  계획수정 -->
+	<update id="updateCpiPlan" parameterType= "java.util.HashMap">
+		UPDATE  /* updateCpiPlan 계획수정 */
+				PLT_OBD_CPI
+		SET   	CPI_NM = #{CPI_NM}
+				,PLAN_SE_CD = #{PLAN_SE_CD}
+				,CPI_BGNG_DT = #{CPI_BGNG_DT}
+				,CPI_END_DT = #{CPI_END_DT}
+				,PLAN_CYCL = #{PLAN_CYCL}::INTEGER
+				,RMRK = #{RMRK}
+				,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+		WHERE   CPI_ID = #{CPI_ID}::INTEGER
+		AND 	CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+
+	<!--  계획수정시 등록된 상담사 삭제 후 다시 INSERT한다. (새로운 정보가 있을 수 있기 때문) -->
+	<delete id="deleteCuslCpiPlan" parameterType= "java.util.HashMap">
+		DELETE /* deleteCuslCpiPlan 계획수정시 등록된 상담사 삭제 후 다시 INSERT한다. (새로운 정보가 있을 수 있기 때문) */
+		FROM PLT_OBD_CPI_CUSL
+		WHERE   CPI_ID = #{CPI_ID}::INTEGER
+	</delete>
+
+	<!--  계획삭제 -->
+	<update id="deleteCpiPlan" parameterType= "java.util.HashMap">
+		UPDATE  /* deleteCpiPlan 계획삭제 */
+				PLT_OBD_CPI
+		SET   	USE_YN = 'N'
+		WHERE   CPI_ID = #{CPI_ID}::INTEGER
+		AND 	CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+
+	<!--  계획종료 -->
+	<update id="closeCpiPlan" parameterType= "java.util.HashMap">
+		UPDATE  /* closeCpiPlan 계획종료 */
+				PLT_OBD_CPI
+		SET   	CMPTN_YN = 'Y'
+				,PRGRS_STTS_CD = 'TERMIAT'
+				,CMPTN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,CPI_END_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,MDFR_ID = #{USER_ID}::INTEGER
+		WHERE   CPI_ID = #{CPI_ID}::INTEGER
+		AND 	CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+	
+	<!--  계획회차 도달여부 체크 -->
+	<select id="cpiPlanLmtChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* cpiPlanLmtChk 계획회차 도달여부 체크 */
+			COUNT(A.CALL_TRY_CNT) AS CNT
+		FROM (SELECT COUNT(PHN_CUTT_ID) AS CALL_TRY_CNT FROM PLT_PHN_CUTT WHERE CPI_ID = #{CPI_ID}::INTEGER) A
+		WHERE EXISTS ( SELECT 1
+					    FROM PLT_OBD_CPI B
+					    WHERE A.CALL_TRY_CNT >= #{PLAN_CYCL}::INTEGER
+					)
+	</select>
+
+	<!--  캠페인 계획 즉시진행 -->
+	<update id="cpiPlanStrtNow" parameterType= "java.util.HashMap">
+		UPDATE PLT_OBD_CPI		 /* cpiPlanStrtNow - 계획즉시진행 */
+		SET PRGRS_STTS_CD = 'ONGONG'
+			,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		WHERE CPI_ID = #{CPI_ID}::INTEGER
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+	
+</mapper>

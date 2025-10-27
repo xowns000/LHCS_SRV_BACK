@@ -1,0 +1,1091 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCnsltTyMapper">
+
+    <sql id="pre-type-group-cnt">
+    
+    SELECT 
+  		
+  		CLAS_NM_L
+  		, CNSL_TY_LCLS
+  		<if test="TYPE_GBN eq 'MDCLS'">
+        , CLAS_NM_M
+        , CNSL_TY_MDCLS
+        </if>
+        , SUM( SUM_TOT )  AS  SUM_TOT
+	    , SUM( SUM_AVG )  AS  SUM_AVG
+        <choose>
+		    <when test="SEARCH_TY eq 'TM'">
+		    , SUM( SUM_0 ) AS SUM_0  /* 0시 */
+			, SUM( SUM_1 ) AS SUM_1  /* 1시 */
+		    , SUM( SUM_2 ) AS SUM_2  /* 2시 */
+		    , SUM( SUM_3 ) AS SUM_3  /* 3시 */
+		    , SUM( SUM_4 ) AS SUM_4  /* 4시 */
+		    , SUM( SUM_5 ) AS SUM_5  /* 5시 */
+		    , SUM( SUM_6 ) AS SUM_6  /* 6시 */
+		    , SUM( SUM_7 ) AS SUM_7  /* 7시 */
+		    , SUM( SUM_8 ) AS SUM_8  /* 8시 */
+		    , SUM( SUM_9 ) AS SUM_9  /* 9시 */
+		    , SUM( SUM_10 ) AS SUM_10
+			, SUM( SUM_11 ) AS SUM_11
+		    , SUM( SUM_12 ) AS SUM_12
+		    , SUM( SUM_13 ) AS SUM_13
+		    , SUM( SUM_14 ) AS SUM_14
+		    , SUM( SUM_15 ) AS SUM_15
+		    , SUM( SUM_16 ) AS SUM_16
+		    , SUM( SUM_17 ) AS SUM_17
+		    , SUM( SUM_18 ) AS SUM_18
+		    , SUM( SUM_19 ) AS SUM_19
+		    , SUM( SUM_20 ) AS SUM_20
+			, SUM( SUM_21 ) AS SUM_21
+		    , SUM( SUM_22 ) AS SUM_22
+		    , SUM( SUM_23 ) AS SUM_23
+		    </when>
+		    <when test="SEARCH_TY eq 'MT'">
+			, SUM( SUM_1 ) AS SUM_1   /* 1월 */
+			, SUM( SUM_2 ) AS SUM_2   /* 2월 */
+			, SUM( SUM_3 ) AS SUM_3   /* 3월 */
+			, SUM( SUM_4 ) AS SUM_4   /* 4월 */
+			, SUM( SUM_5 ) AS SUM_5   /* 5월 */
+			, SUM( SUM_6 ) AS SUM_6   /* 6월 */
+			, SUM( SUM_7 ) AS SUM_7   /* 7월 */
+			, SUM( SUM_8 ) AS SUM_8   /* 8월 */
+			, SUM( SUM_9 ) AS SUM_9   /* 9월 */
+			, SUM( SUM_10 ) AS SUM_10 /* 10월 */
+			, SUM( SUM_11 ) AS SUM_11 /* 11월 */
+			, SUM( SUM_12 ) AS SUM_12 /* 12월 */            
+		    </when>
+			<when test="SEARCH_TY eq 'YR'" >
+			, SUM( SUM_1 ) AS SUM_1   /* 당해년도 */
+			, SUM( SUM_2 ) AS SUM_2   /* 2년 */
+			, SUM( SUM_3 ) AS SUM_3   /* 3일 */
+		                
+			</when>
+			<otherwise>  
+	         
+		        , SUM( SUM_1 ) AS SUM_1
+		        , SUM( SUM_2 ) AS SUM_2   /* 2일 */
+				, SUM( SUM_3 ) AS SUM_3   /* 3일 */
+				, SUM( SUM_4 ) AS SUM_4   /* 4일 */
+				, SUM( SUM_5 ) AS SUM_5   /* 5일 */
+				, SUM( SUM_6 ) AS SUM_6   /* 6일 */
+		        , SUM( SUM_7 ) AS SUM_7   /* 7일 */
+		        , SUM( SUM_8 ) AS SUM_8   /* 8일 */
+		        , SUM( SUM_9 ) AS SUM_9   /* 9일 */
+		        , SUM( SUM_10 ) AS SUM_10 /* 10일 */
+		        , SUM( SUM_11 ) AS SUM_11
+		        , SUM( SUM_12 ) AS SUM_12
+		        , SUM( SUM_13 ) AS SUM_13
+		        , SUM( SUM_14 ) AS SUM_14
+		        , SUM( SUM_15 ) AS SUM_15
+		        , SUM( SUM_16 ) AS SUM_16
+		        , SUM( SUM_17 ) AS SUM_17
+		        , SUM( SUM_18 ) AS SUM_18
+		        , SUM( SUM_19 ) AS SUM_19
+		        , SUM( SUM_20 ) AS SUM_20
+		        , SUM( SUM_21 ) AS SUM_21
+		        , SUM( SUM_22 ) AS SUM_22
+		        , SUM( SUM_23 ) AS SUM_23
+		        , SUM( SUM_24 ) AS SUM_24
+		        , SUM( SUM_25 ) AS SUM_25
+		        , SUM( SUM_26 ) AS SUM_26
+		        , SUM( SUM_27 ) AS SUM_27
+		        , SUM( SUM_28 ) AS SUM_28
+		        , SUM( SUM_29 ) AS SUM_29
+		        , SUM( SUM_30 ) AS SUM_30
+		        , SUM( SUM_31 ) AS SUM_31
+		 </otherwise>
+	</choose>
+       
+    FROM 
+    
+     ( 
+    
+    
+    
+    </sql>
+    
+    <sql id="post-type-group">
+    
+	    ) GTTS 
+	    
+	    
+	    <if test="TYPE_GBN eq 'LCLS'">
+	          
+	    	GROUP BY   CLAS_NM_L, CNSL_TY_LCLS
+	          
+	        ORDER BY  CNSL_TY_LCLS
+    	</if>
+
+	    <if test="TYPE_GBN eq 'MDCLS'">
+	          
+	        GROUP  BY   CLAS_NM_L, CLAS_NM_M, CNSL_TY_LCLS,  CNSL_TY_MDCLS
+	          
+	        ORDER BY  CNSL_TY_LCLS, CNSL_TY_MDCLS
+    	</if>
+    		
+    </sql>
+    
+    
+    <sql id="pre-type-group-call">
+    	
+    SELECT	
+    	
+    	CLAS_NM_L
+  		, CNSL_TY_LCLS
+  		<if test="TYPE_GBN eq 'MDCLS'">
+        , CLAS_NM_M
+        , CNSL_TY_MDCLS        
+		</if>
+		, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_TOT)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_TOT)/(60*60)),2,0), FLOOR(SUM(R_SUM_TOT)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_TOT)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_TOT),60)),2,0), '00') AS SUM_TOT    /* 합계  */
+		, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_AVG)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_AVG)/(60*60)),2,0), FLOOR(SUM(R_SUM_AVG)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_AVG)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_AVG),60)),2,0), '00') AS SUM_AVG    /* 평균 */
+							   
+		<choose>
+		    <when test="SEARCH_TY eq 'TM'">    
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_0)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_0)/(60*60)),2,0), FLOOR(SUM(R_SUM_0)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_0)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_0),60)),2,0), '00') AS SUM_0  /* 0시 */
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_1)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_1)/(60*60)),2,0), FLOOR(SUM(R_SUM_1)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_1)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_1),60)),2,0), '00') AS SUM_1  /* 1시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_2)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_2)/(60*60)),2,0), FLOOR(SUM(R_SUM_2)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_2)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_2),60)),2,0), '00') AS SUM_2  /* 2시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_3)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_3)/(60*60)),2,0), FLOOR(SUM(R_SUM_3)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_3)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_3),60)),2,0), '00') AS SUM_3  /* 3시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_4)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_4)/(60*60)),2,0), FLOOR(SUM(R_SUM_4)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_4)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_4),60)),2,0), '00') AS SUM_4  /* 4시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_5)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_5)/(60*60)),2,0), FLOOR(SUM(R_SUM_5)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_5)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_5),60)),2,0), '00') AS SUM_5  /* 5시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_6)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_6)/(60*60)),2,0), FLOOR(SUM(R_SUM_6)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_6)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_6),60)),2,0), '00') AS SUM_6  /* 6시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_7)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_7)/(60*60)),2,0), FLOOR(SUM(R_SUM_7)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_7)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_7),60)),2,0), '00') AS SUM_7  /* 7시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_8)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_8)/(60*60)),2,0), FLOOR(SUM(R_SUM_8)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_8)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_8),60)),2,0), '00') AS SUM_8  /* 8시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_9)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_9)/(60*60)),2,0), FLOOR(SUM(R_SUM_9)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_9)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_9),60)),2,0), '00') AS SUM_9  /* 9시 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_10)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_10)/(60*60)),2,0), FLOOR(SUM(R_SUM_10)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_10)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_10),60)),2,0), '00') AS SUM_10
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_11)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_11)/(60*60)),2,0), FLOOR(SUM(R_SUM_11)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_11)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_11),60)),2,0), '00') AS SUM_11
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_12)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_12)/(60*60)),2,0), FLOOR(SUM(R_SUM_12)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_12)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_12),60)),2,0), '00') AS SUM_12
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_13)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_13)/(60*60)),2,0), FLOOR(SUM(R_SUM_13)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_13)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_13),60)),2,0), '00') AS SUM_13
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_14)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_14)/(60*60)),2,0), FLOOR(SUM(R_SUM_14)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_14)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_14),60)),2,0), '00') AS SUM_14
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_15)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_15)/(60*60)),2,0), FLOOR(SUM(R_SUM_15)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_15)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_15),60)),2,0), '00') AS SUM_15
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_16)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_16)/(60*60)),2,0), FLOOR(SUM(R_SUM_16)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_16)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_16),60)),2,0), '00') AS SUM_16
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_17)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_17)/(60*60)),2,0), FLOOR(SUM(R_SUM_17)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_17)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_17),60)),2,0), '00') AS SUM_17
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_18)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_18)/(60*60)),2,0), FLOOR(SUM(R_SUM_18)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_18)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_18),60)),2,0), '00') AS SUM_18
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_19)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_19)/(60*60)),2,0), FLOOR(SUM(R_SUM_19)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_19)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_19),60)),2,0), '00') AS SUM_19
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_20)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_20)/(60*60)),2,0), FLOOR(SUM(R_SUM_20)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_20)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_20),60)),2,0), '00') AS SUM_20
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_21)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_21)/(60*60)),2,0), FLOOR(SUM(R_SUM_21)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_21)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_21),60)),2,0), '00') AS SUM_21
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_22)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_22)/(60*60)),2,0), FLOOR(SUM(R_SUM_22)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_22)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_22),60)),2,0), '00') AS SUM_22
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_23)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_23)/(60*60)),2,0), FLOOR(SUM(R_SUM_23)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_23)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_23),60)),2,0), '00') AS SUM_23
+	       
+		    </when>
+		    <when test="SEARCH_TY eq 'MT'">
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_1)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_1)/(60*60)),2,0), FLOOR(SUM(R_SUM_1)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_1)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_1),60)),2,0), '00') AS SUM_1  /* 1월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_2)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_2)/(60*60)),2,0), FLOOR(SUM(R_SUM_2)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_2)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_2),60)),2,0), '00') AS SUM_2  /* 2월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_3)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_3)/(60*60)),2,0), FLOOR(SUM(R_SUM_3)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_3)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_3),60)),2,0), '00') AS SUM_3  /* 3월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_4)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_4)/(60*60)),2,0), FLOOR(SUM(R_SUM_4)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_4)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_4),60)),2,0), '00') AS SUM_4  /* 4월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_5)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_5)/(60*60)),2,0), FLOOR(SUM(R_SUM_5)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_5)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_5),60)),2,0), '00') AS SUM_5  /* 5월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_6)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_6)/(60*60)),2,0), FLOOR(SUM(R_SUM_6)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_6)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_6),60)),2,0), '00') AS SUM_6  /* 6월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_7)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_7)/(60*60)),2,0), FLOOR(SUM(R_SUM_7)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_7)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_7),60)),2,0), '00') AS SUM_7  /* 7월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_8)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_8)/(60*60)),2,0), FLOOR(SUM(R_SUM_8)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_8)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_8),60)),2,0), '00') AS SUM_8  /* 8월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_9)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_9)/(60*60)),2,0), FLOOR(SUM(R_SUM_9)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_9)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_9),60)),2,0), '00') AS SUM_9  /* 9월 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_10)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_10)/(60*60)),2,0), FLOOR(SUM(R_SUM_10)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_10)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_10),60)),2,0), '00') AS SUM_10 /* 10월  */
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_11)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_11)/(60*60)),2,0), FLOOR(SUM(R_SUM_11)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_11)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_11),60)),2,0), '00') AS SUM_11
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_12)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_12)/(60*60)),2,0), FLOOR(SUM(R_SUM_12)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_12)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_12),60)),2,0), '00') AS SUM_12
+		 
+		    </when>
+		    <when test="SEARCH_TY eq 'YR'" >
+		    , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_1)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_1)/(60*60)),2,0), FLOOR(SUM(R_SUM_1)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_1)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_1),60)),2,0), '00') AS SUM_1  /* 기준년 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_2)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_2)/(60*60)),2,0), FLOOR(SUM(R_SUM_2)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_2)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_2),60)),2,0), '00') AS SUM_2  /* 기준년 + 1년 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_3)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_3)/(60*60)),2,0), FLOOR(SUM(R_SUM_3)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_3)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_3),60)),2,0), '00') AS SUM_3  /* 기준년 + 2년 */    
+		    </when>
+		    <otherwise>
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_TOT)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_TOT)/(60*60)),2,0), FLOOR(SUM(R_SUM_TOT)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_TOT)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_TOT),60)),2,0), '00') AS SUM_TOT    /* 합계  */
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_AVG)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_AVG)/(60*60)),2,0), FLOOR(SUM(R_SUM_AVG)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_AVG)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_AVG),60)),2,0), '00') AS SUM_AVG    /* 평균 */
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_1)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_1)/(60*60)),2,0), FLOOR(SUM(R_SUM_1)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_1)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_1),60)),2,0), '00') AS SUM_1  /* 1일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_2)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_2)/(60*60)),2,0), FLOOR(SUM(R_SUM_2)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_2)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_2),60)),2,0), '00') AS SUM_2  /* 2일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_3)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_3)/(60*60)),2,0), FLOOR(SUM(R_SUM_3)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_3)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_3),60)),2,0), '00') AS SUM_3  /* 3일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_4)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_4)/(60*60)),2,0), FLOOR(SUM(R_SUM_4)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_4)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_4),60)),2,0), '00') AS SUM_4  /* 4일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_5)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_5)/(60*60)),2,0), FLOOR(SUM(R_SUM_5)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_5)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_5),60)),2,0), '00') AS SUM_5  /* 5일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_6)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_6)/(60*60)),2,0), FLOOR(SUM(R_SUM_6)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_6)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_6),60)),2,0), '00') AS SUM_6  /* 6일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_7)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_7)/(60*60)),2,0), FLOOR(SUM(R_SUM_7)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_7)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_7),60)),2,0), '00') AS SUM_7  /* 7일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_8)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_8)/(60*60)),2,0), FLOOR(SUM(R_SUM_8)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_8)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_8),60)),2,0), '00') AS SUM_8  /* 8일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_9)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_9)/(60*60)),2,0), FLOOR(SUM(R_SUM_9)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_9)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_9),60)),2,0), '00') AS SUM_9  /* 9일 */
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_10)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_10)/(60*60)),2,0), FLOOR(SUM(R_SUM_10)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_10)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_10),60)),2,0), '00') AS SUM_10 /* 10일 */
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_11)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_11)/(60*60)),2,0), FLOOR(SUM(R_SUM_11)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_11)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_11),60)),2,0), '00') AS SUM_11
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_12)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_12)/(60*60)),2,0), FLOOR(SUM(R_SUM_12)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_12)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_12),60)),2,0), '00') AS SUM_12
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_13)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_13)/(60*60)),2,0), FLOOR(SUM(R_SUM_13)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_13)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_13),60)),2,0), '00') AS SUM_13
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_14)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_14)/(60*60)),2,0), FLOOR(SUM(R_SUM_14)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_14)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_14),60)),2,0), '00') AS SUM_14
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_15)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_15)/(60*60)),2,0), FLOOR(SUM(R_SUM_15)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_15)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_15),60)),2,0), '00') AS SUM_15
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_16)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_16)/(60*60)),2,0), FLOOR(SUM(R_SUM_16)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_16)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_16),60)),2,0), '00') AS SUM_16
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_17)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_17)/(60*60)),2,0), FLOOR(SUM(R_SUM_17)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_17)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_17),60)),2,0), '00') AS SUM_17
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_18)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_18)/(60*60)),2,0), FLOOR(SUM(R_SUM_18)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_18)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_18),60)),2,0), '00') AS SUM_18
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_19)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_19)/(60*60)),2,0), FLOOR(SUM(R_SUM_19)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_19)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_19),60)),2,0), '00') AS SUM_19
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_20)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_20)/(60*60)),2,0), FLOOR(SUM(R_SUM_20)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_20)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_20),60)),2,0), '00') AS SUM_20
+			, COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_21)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_21)/(60*60)),2,0), FLOOR(SUM(R_SUM_21)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_21)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_21),60)),2,0), '00') AS SUM_21
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_22)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_22)/(60*60)),2,0), FLOOR(SUM(R_SUM_22)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_22)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_22),60)),2,0), '00') AS SUM_22
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_23)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_23)/(60*60)),2,0), FLOOR(SUM(R_SUM_23)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_23)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_23),60)),2,0), '00') AS SUM_23
+		    , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_24)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_24)/(60*60)),2,0), FLOOR(SUM(R_SUM_24)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_24)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_24),60)),2,0), '00') AS SUM_24
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_25)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_25)/(60*60)),2,0), FLOOR(SUM(R_SUM_25)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_25)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_25),60)),2,0), '00') AS SUM_25
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_26)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_26)/(60*60)),2,0), FLOOR(SUM(R_SUM_26)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_26)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_26),60)),2,0), '00') AS SUM_26
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_27)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_27)/(60*60)),2,0), FLOOR(SUM(R_SUM_27)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_27)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_27),60)),2,0), '00') AS SUM_27
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_28)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_28)/(60*60)),2,0), FLOOR(SUM(R_SUM_28)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_28)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_28),60)),2,0), '00') AS SUM_28
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_29)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_29)/(60*60)),2,0), FLOOR(SUM(R_SUM_29)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_29)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_29),60)),2,0), '00') AS SUM_29
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_30)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_30)/(60*60)),2,0), FLOOR(SUM(R_SUM_30)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_30)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_30),60)),2,0), '00') AS SUM_30
+	        , COALESCE(DECODE(LENGTH(FLOOR(SUM(R_SUM_31)/(60*60))), 1, LPAD(FLOOR(SUM(R_SUM_31)/(60*60)),2,0), FLOOR(SUM(R_SUM_31)/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((SUM(R_SUM_31)/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(SUM(R_SUM_31),60)),2,0), '00') AS SUM_31 
+   
+		    </otherwise>      
+		  </choose>
+    	
+    	FROM 
+    
+     	( 
+    	
+    </sql>
+    
+   
+    <select id="selectCnslTypeCntSttcList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+    	/* selectCnslTypeCntSttcList - 상담유형(건수)통계 리스트  */
+    	
+    	<if test="TYPE_GBN neq 'SCLS'">
+    		<include refid="pre-type-group-cnt"/>
+    	</if>
+    	
+	    SELECT  
+	       		CASE WHEN  STTC.CNSL_TY_CODE IS NOT NULL THEN   '미등록'   ELSE '합계'  END   AS CLAS_NM_L           /*  상담유형대분류명  */
+                , CASE WHEN  STTC.CNSL_TY_CODE IS NOT NULL THEN '미등록'  ELSE '합계'  END   AS CLAS_NM_M           /*  상담유형중분류명  */
+                , CASE WHEN  STTC.CNSL_TY_CODE IS NOT NULL THEN   '미등록'  ELSE '합계'  END   AS CLAS_NM_S           /*  상담유형소분류명  */
+                , VTY.CNSL_TY_LCLS                          /*  상담유형대분류    */
+                , VTY.CNSL_TY_MDCLS                         /*  상담유형중분류    */
+                , VTY.CNSL_TY_SCLS                          /*  상담유형소분류    */
+                , STTC.SUM_TOT                              /*  합계  */
+				, CASE WHEN STTC.CNT <![CDATA[ <= ]]> 0 THEN  0
+								   ELSE ROUND( ( STTC.SUM_TOT / STTC.CNT) , 0 ) END AS SUM_AVG    /* 평균 */ 
+								   
+				<choose>
+		                <when test="SEARCH_TY eq 'TM'">       
+						
+						, COALESCE( STTC.SUM_0, 0 ) AS SUM_0  /* 0시 */
+						, COALESCE( STTC.SUM_1, 0 ) AS SUM_1  /* 1시 */
+		                , COALESCE( STTC.SUM_2, 0 ) AS SUM_2  /* 2시 */
+		                , COALESCE( STTC.SUM_3, 0 ) AS SUM_3  /* 3시 */
+		                , COALESCE( STTC.SUM_4, 0 ) AS SUM_4  /* 4시 */
+		                , COALESCE( STTC.SUM_5, 0 ) AS SUM_5  /* 5시 */
+		                , COALESCE( STTC.SUM_6, 0 ) AS SUM_6  /* 6시 */
+		                , COALESCE( STTC.SUM_7, 0 ) AS SUM_7  /* 7시 */
+		                , COALESCE( STTC.SUM_8, 0 ) AS SUM_8  /* 8시 */
+		                , COALESCE( STTC.SUM_9, 0 ) AS SUM_9  /* 9시 */
+		                , COALESCE( STTC.SUM_10, 0 ) AS SUM_10
+						, COALESCE( STTC.SUM_11, 0 ) AS SUM_11
+		                , COALESCE( STTC.SUM_12, 0 ) AS SUM_12
+		                , COALESCE( STTC.SUM_13, 0 ) AS SUM_13
+		                , COALESCE( STTC.SUM_14, 0 ) AS SUM_14
+		                , COALESCE( STTC.SUM_15, 0 ) AS SUM_15
+		                , COALESCE( STTC.SUM_16, 0 ) AS SUM_16
+		                , COALESCE( STTC.SUM_17, 0 ) AS SUM_17
+		                , COALESCE( STTC.SUM_18, 0 ) AS SUM_18
+		                , COALESCE( STTC.SUM_19, 0 ) AS SUM_19
+		                , COALESCE( STTC.SUM_20, 0 ) AS SUM_20
+						, COALESCE( STTC.SUM_21, 0 ) AS SUM_21
+		                , COALESCE( STTC.SUM_22, 0 ) AS SUM_22
+		                , COALESCE( STTC.SUM_23, 0 ) AS SUM_23
+		                </when>
+		                <when test="SEARCH_TY eq 'MT'">
+		                , COALESCE( STTC.SUM_1, 0 ) AS SUM_1   /* 1월 */
+		                , COALESCE( STTC.SUM_2, 0 ) AS SUM_2   /* 2월 */
+		                , COALESCE( STTC.SUM_3, 0 ) AS SUM_3   /* 3월 */
+		                , COALESCE( STTC.SUM_4, 0 ) AS SUM_4   /* 4월 */
+		                , COALESCE( STTC.SUM_5, 0 ) AS SUM_5   /* 5월 */
+		                , COALESCE( STTC.SUM_6, 0 ) AS SUM_6   /* 6월 */
+		                , COALESCE( STTC.SUM_7, 0 ) AS SUM_7   /* 7월 */
+		                , COALESCE( STTC.SUM_8, 0 ) AS SUM_8   /* 8월 */
+		                , COALESCE( STTC.SUM_9, 0 ) AS SUM_9   /* 9월 */
+		                , COALESCE( STTC.SUM_10, 0 ) AS SUM_10 /* 10월 */
+						, COALESCE( STTC.SUM_11, 0 ) AS SUM_11 /* 11월 */
+		                , COALESCE( STTC.SUM_12, 0 ) AS SUM_12 /* 12월 */
+		                
+		                </when>
+		                <when test="SEARCH_TY eq 'YR'" >
+		                , COALESCE( STTC.SUM_1, 0 ) AS SUM_1   /* 당해년도 */
+		                , COALESCE( STTC.SUM_2, 0 ) AS SUM_2   /* 2년 */
+		                , COALESCE( STTC.SUM_3, 0 ) AS SUM_3   /* 3일 */
+		                
+		                </when>
+		                <otherwise>
+		                , COALESCE( STTC.SUM_1, 0 ) AS SUM_1   /* 1일 */
+		                , COALESCE( STTC.SUM_2, 0 ) AS SUM_2   /* 2일 */
+		                , COALESCE( STTC.SUM_3, 0 ) AS SUM_3   /* 3일 */
+		                , COALESCE( STTC.SUM_4, 0 ) AS SUM_4   /* 4일 */
+		                , COALESCE( STTC.SUM_5, 0 ) AS SUM_5   /* 5일 */
+		                , COALESCE( STTC.SUM_6, 0 ) AS SUM_6   /* 6일 */
+		                , COALESCE( STTC.SUM_7, 0 ) AS SUM_7   /* 7일 */
+		                , COALESCE( STTC.SUM_8, 0 ) AS SUM_8   /* 8일 */
+		                , COALESCE( STTC.SUM_9, 0 ) AS SUM_9   /* 9일 */
+		                , COALESCE( STTC.SUM_10, 0 ) AS SUM_10 /* 10일 */
+						, COALESCE( STTC.SUM_11, 0 ) AS SUM_11
+		                , COALESCE( STTC.SUM_12, 0 ) AS SUM_12
+		                , COALESCE( STTC.SUM_13, 0 ) AS SUM_13
+		                , COALESCE( STTC.SUM_14, 0 ) AS SUM_14
+		                , COALESCE( STTC.SUM_15, 0 ) AS SUM_15
+		                , COALESCE( STTC.SUM_16, 0 ) AS SUM_16
+		                , COALESCE( STTC.SUM_17, 0 ) AS SUM_17
+		                , COALESCE( STTC.SUM_18, 0 ) AS SUM_18
+		                , COALESCE( STTC.SUM_19, 0 ) AS SUM_19
+		                , COALESCE( STTC.SUM_20, 0 ) AS SUM_20
+						, COALESCE( STTC.SUM_21, 0 ) AS SUM_21
+		                , COALESCE( STTC.SUM_22, 0 ) AS SUM_22
+		                , COALESCE( STTC.SUM_23, 0 ) AS SUM_23
+		                , COALESCE( STTC.SUM_24, 0 ) AS SUM_24
+		                , COALESCE( STTC.SUM_25, 0 ) AS SUM_25
+		                , COALESCE( STTC.SUM_26, 0 ) AS SUM_26
+		                , COALESCE( STTC.SUM_27, 0 ) AS SUM_27
+		                , COALESCE( STTC.SUM_28, 0 ) AS SUM_28
+		                , COALESCE( STTC.SUM_29, 0 ) AS SUM_29
+		                , COALESCE( STTC.SUM_30, 0 ) AS SUM_30
+		                , COALESCE( STTC.SUM_31, 0 ) AS SUM_31
+		                
+		                </otherwise>
+		            </choose>				   
+		            
+				FROM   PLT_PHN_CNSL_TYP_SCLS  VTY  
+          
+                 RIGHT OUTER JOIN     -- 안에서 있는 유형만 한번 걸러줬기때문에  OUTER 를 사용해도 무관( ROLLUP 을 위함)				   
+		   
+		
+		    (
+		
+		    SELECT
+		                ATC.CNSL_TY_CODE
+                        , SUM(CNT) AS SUM_TOT
+		         	<choose>
+		                <when test="SEARCH_TY eq 'TM'">
+		                       
+		                , COUNT(DISTINCT ATC.CNSL_TIME ) AS CNT   --  누적이 발생한 건만 카운트함, 평균을 구하기 위한 수치임( AS-IS 기준)
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='00' THEN CNT ELSE 0 END) AS SUM_0
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='01' THEN CNT ELSE 0 END) AS SUM_1
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='02' THEN CNT ELSE 0 END) AS SUM_2
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='03' THEN CNT ELSE 0 END) AS SUM_3
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='04' THEN CNT ELSE 0 END) AS SUM_4
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='05' THEN CNT ELSE 0 END) AS SUM_5
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='06' THEN CNT ELSE 0 END) AS SUM_6
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='07' THEN CNT ELSE 0 END) AS SUM_7
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='08' THEN CNT ELSE 0 END) AS SUM_8
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='09' THEN CNT ELSE 0 END) AS SUM_9
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='10' THEN CNT ELSE 0 END) AS SUM_10
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='11' THEN CNT ELSE 0 END) AS SUM_11
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='12' THEN CNT ELSE 0 END) AS SUM_12
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='13' THEN CNT ELSE 0 END) AS SUM_13
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='14' THEN CNT ELSE 0 END) AS SUM_14
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='15' THEN CNT ELSE 0 END) AS SUM_15
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='16' THEN CNT ELSE 0 END) AS SUM_16
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='17' THEN CNT ELSE 0 END) AS SUM_17
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='18' THEN CNT ELSE 0 END) AS SUM_18
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='19' THEN CNT ELSE 0 END) AS SUM_19
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='20' THEN CNT ELSE 0 END) AS SUM_20
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='21' THEN CNT ELSE 0 END) AS SUM_21
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='22' THEN CNT ELSE 0 END) AS SUM_22
+		                , SUM(CASE WHEN ATC.CNSL_TIME ='23' THEN CNT ELSE 0 END) AS SUM_23
+		                        
+		                </when>
+		                        
+		                <when test="SEARCH_TY eq 'MT'">
+		                , COUNT(SUBSTR(ATC.CNSL_DATE, 5, 2) ) AS CNT   --  누적이 발생한 건만 카운트함, 평균을 구하기 위한 수치임( AS-IS 기준)
+		                , SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='01' THEN CNT ELSE 0 END) AS SUM_1
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='02' THEN CNT ELSE 0 END) AS SUM_2
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='03' THEN CNT ELSE 0 END) AS SUM_3
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='04' THEN CNT ELSE 0 END) AS SUM_4
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='05' THEN CNT ELSE 0 END) AS SUM_5
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='06' THEN CNT ELSE 0 END) AS SUM_6
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='07' THEN CNT ELSE 0 END) AS SUM_7
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='08' THEN CNT ELSE 0 END) AS SUM_8
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='09' THEN CNT ELSE 0 END) AS SUM_9
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='10' THEN CNT ELSE 0 END) AS SUM_10
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='11' THEN CNT ELSE 0 END) AS SUM_11
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='12' THEN CNT ELSE 0 END) AS SUM_12
+		                        
+		                </when>
+		                        
+						<when test="SEARCH_TY eq 'YR'">
+						, COUNT( SUBSTR(ATC.CNSL_DATE, 0, 4) ) AS CNT   --  누적이 발생한 건만 카운트함, 평균을 구하기 위한 수치임( AS-IS 기준)
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) THEN CNT ELSE 0 END) AS SUM_1
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) + 1 THEN CNT ELSE 0 END) AS SUM_2
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) + 2 THEN CNT ELSE 0 END) AS SUM_3
+																	
+						</when>	
+								
+						<otherwise>
+						, COUNT( SUBSTR(ATC.CNSL_DATE, 7, 2) ) AS CNT   --  누적이 발생한 건만 카운트함, 평균을 구하기 위한 수치임( AS-IS 기준)
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='01' THEN CNT ELSE 0 END) AS SUM_1
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='02' THEN CNT ELSE 0 END) AS SUM_2
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='03' THEN CNT ELSE 0 END) AS SUM_3
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='04' THEN CNT ELSE 0 END) AS SUM_4
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='05' THEN CNT ELSE 0 END) AS SUM_5
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='06' THEN CNT ELSE 0 END) AS SUM_6
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='07' THEN CNT ELSE 0 END) AS SUM_7
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='08' THEN CNT ELSE 0 END) AS SUM_8
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='09' THEN CNT ELSE 0 END) AS SUM_9
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='10' THEN CNT ELSE 0 END) AS SUM_10
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='11' THEN CNT ELSE 0 END) AS SUM_11
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='12' THEN CNT ELSE 0 END) AS SUM_12
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='13' THEN CNT ELSE 0 END) AS SUM_13
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='14' THEN CNT ELSE 0 END) AS SUM_14
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='15' THEN CNT ELSE 0 END) AS SUM_15
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='16' THEN CNT ELSE 0 END) AS SUM_16
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='17' THEN CNT ELSE 0 END) AS SUM_17
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='18' THEN CNT ELSE 0 END) AS SUM_18
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='19' THEN CNT ELSE 0 END) AS SUM_19
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='20' THEN CNT ELSE 0 END) AS SUM_20
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='21' THEN CNT ELSE 0 END) AS SUM_21
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='22' THEN CNT ELSE 0 END) AS SUM_22
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='23' THEN CNT ELSE 0 END) AS SUM_23
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='24' THEN CNT ELSE 0 END) AS SUM_24
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='25' THEN CNT ELSE 0 END) AS SUM_25
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='26' THEN CNT ELSE 0 END) AS SUM_26
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='27' THEN CNT ELSE 0 END) AS SUM_27
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='28' THEN CNT ELSE 0 END) AS SUM_28
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='29' THEN CNT ELSE 0 END) AS SUM_29
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='30' THEN CNT ELSE 0 END) AS SUM_30
+						, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='31' THEN CNT ELSE 0 END) AS SUM_31
+						</otherwise> 
+		            </choose>
+		                
+				FROM	(
+		
+		                SELECT 
+                        	
+                        	SCT.*  
+                        
+                 			FROM	PLT_PHN_STS_CALL_TY SCT  
+                 				
+                 				LEFT OUTER JOIN  PLT_ORGZ VDP   ON   SCT.ORGZ_ID   =   VDP.DEPT_CD 
+                 				LEFT OUTER JOIN  PLT_USER A   ON   SCT.USER_ID   =   A.USER_ID
+                 			<if test='TYPE_EXT eq "Y"'>
+                 				INNER JOIN PLT_PHN_CNSL_TYP_SCLS CTY ON SCT.CNSL_TY_CODE = CTY.CNSL_TY_CODE    -- 실제 존재하는 유형만 집계하기 위함
+							</if>
+                        		WHERE 	SCT.CENT_TY = #{CENT_TY}
+		                   		
+		                   		/*  각 조건들의 최종셋팅 
+		                   		   AND  ( SCT.CNSL_DATE, SCT.CNSL_TIME , SCT.USER_ID , SCT.TEL_TY_CODE, SCT.CNSL_TY_CODE, SCT.VER_NO  ) IN ( SELECT CNSL_DATE, CNSL_TIME , USER_ID , TEL_TY_CODE, CNSL_TY_CODE, MAX(VER_NO)  
+                                                                                               FROM  CALUSR.TB_STS_CALL_TY 
+                                                                                                    WHERE  CNSL_DATE = SCT.CNSL_DATE   AND CNSL_TIME = SCT.CNSL_TIME AND USER_ID = SCT.USER_ID AND TEL_TY_CODE = SCT.TEL_TY_CODE AND CNSL_TY_CODE = SCT.CNSL_TY_CODE
+                                                                                                        GROUP BY  CNSL_DATE, CNSL_TIME , USER_ID , TEL_TY_CODE, CNSL_TY_CODE )    
+		 						*/
+		 							
+		 							AND  SCT.VER_NO  = ( SELECT MAX(VER_NO) FROM   PLT_PHN_STS_CALL_TY   WHERE  CNSL_DATE = SCT.CNSL_DATE  AND  CENT_TY = #{CENT_TY} ) -- 일별 최종버전만을 위한 셋팅
+		 							
+		                            
+		                            AND SCT.CNSL_DATE BETWEEN  #{DATE_FROM}  AND   #{DATE_TO}
+		                            
+		                            <if test="arrTelTy != null and arrTelTy.size != 0">
+							
+										AND SCT.TEL_TY_CODE      		IN 
+										( <foreach collection="arrTelTy" item="item" separator=",">#{item}</foreach> ) /* 인입구분 */
+							
+									</if>
+									<if test="USER_ATTR_A !=''">AND A.USER_ATTR_A = #{USER_ATTR_A}</if>
+									<if test="USER_ATTR_B !=''">AND A.USER_ATTR_B = #{USER_ATTR_B}</if>
+									<if test="USER_ATTR_C !=''">AND A.USER_ATTR_C = #{USER_ATTR_C}</if>
+									<if test="USER_ATTR_D !=''">AND A.USER_ATTR_D = #{USER_ATTR_D}</if>
+									<if test="AGENT_ID != null and AGENT_ID != ''">
+										AND SCT.USER_ID      	=       #{AGENT_ID}       	 /* 상담사ID */
+									</if>
+									<choose>
+										<when test="arrLclsCd != null and arrLclsCd.size != 0">
+							
+										AND SCT.CNSL_TY_LCLS      		IN 
+										( <foreach collection="arrLclsCd" item="item" separator=",">#{item}</foreach> ) /* 상담유형 대분류 다중선택 */
+										</when>
+										
+										<otherwise>
+											<if test="CNSL_TY_LCLS != null and CNSL_TY_LCLS != ''">
+												AND SCT.CNSL_TY_LCLS = #{CNSL_TY_LCLS} 			 	 /* 대분류 상담 코드 */
+											</if>
+											<if test="CNSL_TY_MDCLS != null and CNSL_TY_MDCLS != ''">
+												AND SCT.CNSL_TY_MDCLS = #{CNSL_TY_MDCLS} 			 /* 중분류 상담 코드 */
+											</if>
+											<if test="CNSL_TY_SCLS != null and CNSL_TY_SCLS != ''">
+												AND SCT.CNSL_TY_SCLS =  #{CNSL_TY_SCLS} 			 /* 소분류 상담 코드 */
+											</if>
+										</otherwise>
+									</choose>
+		                        
+		                ) ATC 
+		                
+		                 	GROUP BY  ROLLUP( ATC.CNSL_TY_CODE )
+		                 	
+		          )  STTC    ON    STTC.CNSL_TY_CODE = VTY.CNSL_TY_CODE 
+		          
+		          
+		          ORDER BY  VTY.CNSL_TY_LCLS, VTY.CNSL_TY_MDCLS, VTY.CNSL_TY_SCLS, STTC.CNSL_TY_CODE
+    	
+    	<if test="TYPE_GBN neq 'SCLS'">
+    		<include refid="post-type-group"/>
+    	</if>
+    	
+    </select>
+   
+    <select id="selectCnslTypeCallSttcList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+    	/* selectCnslTypeCallSttcList - 상담유형(통화량)통계 리스트  */
+    	
+    	<if test="TYPE_GBN neq 'SCLS'">
+    		<include refid="pre-type-group-call"/>
+    	</if>
+    	
+	    SELECT  
+	       		CASE WHEN  STTC.CNSL_TY_CODE IS NOT NULL THEN    COALESCE( VTY.CLAS_NM_L, '미등록')   ELSE '합계'  END   AS CLAS_NM_L           /*  상담유형대분류명  */
+                , CASE WHEN  STTC.CNSL_TY_CODE IS NOT NULL THEN  COALESCE( VTY.CLAS_NM_M , '미등록')  ELSE '합계'  END   AS CLAS_NM_M           /*  상담유형중분류명  */
+                , CASE WHEN  STTC.CNSL_TY_CODE IS NOT NULL THEN  COALESCE( VTY.CLAS_NM_S , '미등록')  ELSE '합계'  END   AS CLAS_NM_S           /*  상담유형소분류명  */
+                , VTY.CNSL_TY_LCLS                          /*  상담유형대분류    */
+                , VTY.CNSL_TY_MDCLS                         /*  상담유형중분류    */
+                , VTY.CNSL_TY_SCLS                          /*  상담유형소분류    */
+                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_TOT/(60*60))), 1, LPAD(FLOOR(STTC.SUM_TOT/(60*60)),2,0), FLOOR(STTC.SUM_TOT/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_TOT/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_TOT,60)),2,0), '00') AS SUM_TOT    /* 합계  */
+				, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_AVG/(60*60))), 1, LPAD(FLOOR(STTC.SUM_AVG/(60*60)),2,0), FLOOR(STTC.SUM_AVG/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_AVG/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_AVG,60)),2,0), '00') AS SUM_AVG    /* 평균 */
+				, STTC.SUM_TOT AS R_SUM_TOT
+				, STTC.SUM_AVG AS R_SUM_AVG
+								   
+				<choose>
+		           <when test="SEARCH_TY eq 'TM'">    
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_0/(60*60))), 1, LPAD(FLOOR(STTC.SUM_0/(60*60)),2,0), FLOOR(STTC.SUM_0/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_0/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_0,60)),2,0), '00') AS SUM_0  /* 0시 */
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_1/(60*60))), 1, LPAD(FLOOR(STTC.SUM_1/(60*60)),2,0), FLOOR(STTC.SUM_1/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_1/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_1,60)),2,0), '00') AS SUM_1  /* 1시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_2/(60*60))), 1, LPAD(FLOOR(STTC.SUM_2/(60*60)),2,0), FLOOR(STTC.SUM_2/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_2/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_2,60)),2,0), '00') AS SUM_2  /* 2시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_3/(60*60))), 1, LPAD(FLOOR(STTC.SUM_3/(60*60)),2,0), FLOOR(STTC.SUM_3/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_3/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_3,60)),2,0), '00') AS SUM_3  /* 3시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_4/(60*60))), 1, LPAD(FLOOR(STTC.SUM_4/(60*60)),2,0), FLOOR(STTC.SUM_4/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_4/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_4,60)),2,0), '00') AS SUM_4  /* 4시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_5/(60*60))), 1, LPAD(FLOOR(STTC.SUM_5/(60*60)),2,0), FLOOR(STTC.SUM_5/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_5/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_5,60)),2,0), '00') AS SUM_5  /* 5시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_6/(60*60))), 1, LPAD(FLOOR(STTC.SUM_6/(60*60)),2,0), FLOOR(STTC.SUM_6/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_6/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_6,60)),2,0), '00') AS SUM_6  /* 6시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_7/(60*60))), 1, LPAD(FLOOR(STTC.SUM_7/(60*60)),2,0), FLOOR(STTC.SUM_7/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_7/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_7,60)),2,0), '00') AS SUM_7  /* 7시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_8/(60*60))), 1, LPAD(FLOOR(STTC.SUM_8/(60*60)),2,0), FLOOR(STTC.SUM_8/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_8/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_8,60)),2,0), '00') AS SUM_8  /* 8시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_9/(60*60))), 1, LPAD(FLOOR(STTC.SUM_9/(60*60)),2,0), FLOOR(STTC.SUM_9/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_9/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_9,60)),2,0), '00') AS SUM_9  /* 9시 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_10/(60*60))), 1, LPAD(FLOOR(STTC.SUM_10/(60*60)),2,0), FLOOR(STTC.SUM_10/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_10/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_10,60)),2,0), '00') AS SUM_10
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_11/(60*60))), 1, LPAD(FLOOR(STTC.SUM_11/(60*60)),2,0), FLOOR(STTC.SUM_11/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_11/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_11,60)),2,0), '00') AS SUM_11
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_12/(60*60))), 1, LPAD(FLOOR(STTC.SUM_12/(60*60)),2,0), FLOOR(STTC.SUM_12/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_12/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_12,60)),2,0), '00') AS SUM_12
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_13/(60*60))), 1, LPAD(FLOOR(STTC.SUM_13/(60*60)),2,0), FLOOR(STTC.SUM_13/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_13/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_13,60)),2,0), '00') AS SUM_13
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_14/(60*60))), 1, LPAD(FLOOR(STTC.SUM_14/(60*60)),2,0), FLOOR(STTC.SUM_14/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_14/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_14,60)),2,0), '00') AS SUM_14
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_15/(60*60))), 1, LPAD(FLOOR(STTC.SUM_15/(60*60)),2,0), FLOOR(STTC.SUM_15/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_15/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_15,60)),2,0), '00') AS SUM_15
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_16/(60*60))), 1, LPAD(FLOOR(STTC.SUM_16/(60*60)),2,0), FLOOR(STTC.SUM_16/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_16/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_16,60)),2,0), '00') AS SUM_16
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_17/(60*60))), 1, LPAD(FLOOR(STTC.SUM_17/(60*60)),2,0), FLOOR(STTC.SUM_17/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_17/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_17,60)),2,0), '00') AS SUM_17
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_18/(60*60))), 1, LPAD(FLOOR(STTC.SUM_18/(60*60)),2,0), FLOOR(STTC.SUM_18/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_18/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_18,60)),2,0), '00') AS SUM_18
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_19/(60*60))), 1, LPAD(FLOOR(STTC.SUM_19/(60*60)),2,0), FLOOR(STTC.SUM_19/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_19/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_19,60)),2,0), '00') AS SUM_19
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_20/(60*60))), 1, LPAD(FLOOR(STTC.SUM_20/(60*60)),2,0), FLOOR(STTC.SUM_20/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_20/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_20,60)),2,0), '00') AS SUM_20
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_21/(60*60))), 1, LPAD(FLOOR(STTC.SUM_21/(60*60)),2,0), FLOOR(STTC.SUM_21/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_21/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_21,60)),2,0), '00') AS SUM_21
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_22/(60*60))), 1, LPAD(FLOOR(STTC.SUM_22/(60*60)),2,0), FLOOR(STTC.SUM_22/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_22/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_22,60)),2,0), '00') AS SUM_22
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_23/(60*60))), 1, LPAD(FLOOR(STTC.SUM_23/(60*60)),2,0), FLOOR(STTC.SUM_23/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_23/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_23,60)),2,0), '00') AS SUM_23
+	                , STTC.SUM_0   AS R_SUM_0
+			        , STTC.SUM_1   AS R_SUM_1
+			        , STTC.SUM_2   AS R_SUM_2
+			        , STTC.SUM_3   AS R_SUM_3
+			        , STTC.SUM_4   AS R_SUM_4
+			        , STTC.SUM_5   AS R_SUM_5
+			        , STTC.SUM_6   AS R_SUM_6
+			        , STTC.SUM_7   AS R_SUM_7
+			        , STTC.SUM_8   AS R_SUM_8
+			        , STTC.SUM_9   AS R_SUM_9
+			        , STTC.SUM_10  AS R_SUM_10
+			        , STTC.SUM_11  AS R_SUM_11
+			        , STTC.SUM_12  AS R_SUM_12
+			        , STTC.SUM_13  AS R_SUM_13
+			        , STTC.SUM_14  AS R_SUM_14
+			        , STTC.SUM_15  AS R_SUM_15
+			        , STTC.SUM_16  AS R_SUM_16
+			        , STTC.SUM_17  AS R_SUM_17
+			        , STTC.SUM_18  AS R_SUM_18
+			        , STTC.SUM_19  AS R_SUM_19
+			        , STTC.SUM_20  AS R_SUM_20
+			        , STTC.SUM_21  AS R_SUM_21
+			        , STTC.SUM_22  AS R_SUM_22
+			        , STTC.SUM_23  AS R_SUM_23
+		            </when>
+		            <when test="SEARCH_TY eq 'MT'">
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_1/(60*60))), 1, LPAD(FLOOR(STTC.SUM_1/(60*60)),2,0), FLOOR(STTC.SUM_1/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_1/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_1,60)),2,0), '00') AS SUM_1  /* 1월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_2/(60*60))), 1, LPAD(FLOOR(STTC.SUM_2/(60*60)),2,0), FLOOR(STTC.SUM_2/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_2/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_2,60)),2,0), '00') AS SUM_2  /* 2월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_3/(60*60))), 1, LPAD(FLOOR(STTC.SUM_3/(60*60)),2,0), FLOOR(STTC.SUM_3/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_3/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_3,60)),2,0), '00') AS SUM_3  /* 3월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_4/(60*60))), 1, LPAD(FLOOR(STTC.SUM_4/(60*60)),2,0), FLOOR(STTC.SUM_4/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_4/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_4,60)),2,0), '00') AS SUM_4  /* 4월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_5/(60*60))), 1, LPAD(FLOOR(STTC.SUM_5/(60*60)),2,0), FLOOR(STTC.SUM_5/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_5/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_5,60)),2,0), '00') AS SUM_5  /* 5월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_6/(60*60))), 1, LPAD(FLOOR(STTC.SUM_6/(60*60)),2,0), FLOOR(STTC.SUM_6/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_6/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_6,60)),2,0), '00') AS SUM_6  /* 6월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_7/(60*60))), 1, LPAD(FLOOR(STTC.SUM_7/(60*60)),2,0), FLOOR(STTC.SUM_7/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_7/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_7,60)),2,0), '00') AS SUM_7  /* 7월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_8/(60*60))), 1, LPAD(FLOOR(STTC.SUM_8/(60*60)),2,0), FLOOR(STTC.SUM_8/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_8/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_8,60)),2,0), '00') AS SUM_8  /* 8월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_9/(60*60))), 1, LPAD(FLOOR(STTC.SUM_9/(60*60)),2,0), FLOOR(STTC.SUM_9/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_9/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_9,60)),2,0), '00') AS SUM_9  /* 9월 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_10/(60*60))), 1, LPAD(FLOOR(STTC.SUM_10/(60*60)),2,0), FLOOR(STTC.SUM_10/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_10/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_10,60)),2,0), '00') AS SUM_10 /* 10월  */
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_11/(60*60))), 1, LPAD(FLOOR(STTC.SUM_11/(60*60)),2,0), FLOOR(STTC.SUM_11/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_11/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_11,60)),2,0), '00') AS SUM_11
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_12/(60*60))), 1, LPAD(FLOOR(STTC.SUM_12/(60*60)),2,0), FLOOR(STTC.SUM_12/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_12/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_12,60)),2,0), '00') AS SUM_12
+			        , STTC.SUM_1   AS R_SUM_1
+			        , STTC.SUM_2   AS R_SUM_2
+			        , STTC.SUM_3   AS R_SUM_3
+			        , STTC.SUM_4   AS R_SUM_4
+			        , STTC.SUM_5   AS R_SUM_5
+			        , STTC.SUM_6   AS R_SUM_6
+			        , STTC.SUM_7   AS R_SUM_7
+			        , STTC.SUM_8   AS R_SUM_8
+			        , STTC.SUM_9   AS R_SUM_9
+			        , STTC.SUM_10  AS R_SUM_10
+			        , STTC.SUM_11  AS R_SUM_11
+			        , STTC.SUM_12  AS R_SUM_12
+		            </when>
+		            <when test="SEARCH_TY eq 'YR'" >
+		            , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_1/(60*60))), 1, LPAD(FLOOR(STTC.SUM_1/(60*60)),2,0), FLOOR(STTC.SUM_1/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_1/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_1,60)),2,0), '00') AS SUM_1  /* 기준년 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_2/(60*60))), 1, LPAD(FLOOR(STTC.SUM_2/(60*60)),2,0), FLOOR(STTC.SUM_2/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_2/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_2,60)),2,0), '00') AS SUM_2  /* 기준년 + 1년 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_3/(60*60))), 1, LPAD(FLOOR(STTC.SUM_3/(60*60)),2,0), FLOOR(STTC.SUM_3/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_3/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_3,60)),2,0), '00') AS SUM_3  /* 기준년 + 2년 */
+		            , STTC.SUM_1   AS R_SUM_1
+			        , STTC.SUM_2   AS R_SUM_2
+			        , STTC.SUM_3   AS R_SUM_3    
+		            </when>
+		            <otherwise>
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_1/(60*60))), 1, LPAD(FLOOR(STTC.SUM_1/(60*60)),2,0), FLOOR(STTC.SUM_1/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_1/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_1,60)),2,0), '00') AS SUM_1  /* 1일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_2/(60*60))), 1, LPAD(FLOOR(STTC.SUM_2/(60*60)),2,0), FLOOR(STTC.SUM_2/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_2/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_2,60)),2,0), '00') AS SUM_2  /* 2일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_3/(60*60))), 1, LPAD(FLOOR(STTC.SUM_3/(60*60)),2,0), FLOOR(STTC.SUM_3/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_3/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_3,60)),2,0), '00') AS SUM_3  /* 3일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_4/(60*60))), 1, LPAD(FLOOR(STTC.SUM_4/(60*60)),2,0), FLOOR(STTC.SUM_4/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_4/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_4,60)),2,0), '00') AS SUM_4  /* 4일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_5/(60*60))), 1, LPAD(FLOOR(STTC.SUM_5/(60*60)),2,0), FLOOR(STTC.SUM_5/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_5/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_5,60)),2,0), '00') AS SUM_5  /* 5일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_6/(60*60))), 1, LPAD(FLOOR(STTC.SUM_6/(60*60)),2,0), FLOOR(STTC.SUM_6/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_6/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_6,60)),2,0), '00') AS SUM_6  /* 6일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_7/(60*60))), 1, LPAD(FLOOR(STTC.SUM_7/(60*60)),2,0), FLOOR(STTC.SUM_7/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_7/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_7,60)),2,0), '00') AS SUM_7  /* 7일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_8/(60*60))), 1, LPAD(FLOOR(STTC.SUM_8/(60*60)),2,0), FLOOR(STTC.SUM_8/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_8/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_8,60)),2,0), '00') AS SUM_8  /* 8일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_9/(60*60))), 1, LPAD(FLOOR(STTC.SUM_9/(60*60)),2,0), FLOOR(STTC.SUM_9/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_9/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_9,60)),2,0), '00') AS SUM_9  /* 9일 */
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_10/(60*60))), 1, LPAD(FLOOR(STTC.SUM_10/(60*60)),2,0), FLOOR(STTC.SUM_10/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_10/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_10,60)),2,0), '00') AS SUM_10 /* 10일 */
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_11/(60*60))), 1, LPAD(FLOOR(STTC.SUM_11/(60*60)),2,0), FLOOR(STTC.SUM_11/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_11/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_11,60)),2,0), '00') AS SUM_11
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_12/(60*60))), 1, LPAD(FLOOR(STTC.SUM_12/(60*60)),2,0), FLOOR(STTC.SUM_12/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_12/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_12,60)),2,0), '00') AS SUM_12
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_13/(60*60))), 1, LPAD(FLOOR(STTC.SUM_13/(60*60)),2,0), FLOOR(STTC.SUM_13/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_13/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_13,60)),2,0), '00') AS SUM_13
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_14/(60*60))), 1, LPAD(FLOOR(STTC.SUM_14/(60*60)),2,0), FLOOR(STTC.SUM_14/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_14/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_14,60)),2,0), '00') AS SUM_14
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_15/(60*60))), 1, LPAD(FLOOR(STTC.SUM_15/(60*60)),2,0), FLOOR(STTC.SUM_15/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_15/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_15,60)),2,0), '00') AS SUM_15
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_16/(60*60))), 1, LPAD(FLOOR(STTC.SUM_16/(60*60)),2,0), FLOOR(STTC.SUM_16/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_16/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_16,60)),2,0), '00') AS SUM_16
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_17/(60*60))), 1, LPAD(FLOOR(STTC.SUM_17/(60*60)),2,0), FLOOR(STTC.SUM_17/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_17/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_17,60)),2,0), '00') AS SUM_17
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_18/(60*60))), 1, LPAD(FLOOR(STTC.SUM_18/(60*60)),2,0), FLOOR(STTC.SUM_18/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_18/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_18,60)),2,0), '00') AS SUM_18
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_19/(60*60))), 1, LPAD(FLOOR(STTC.SUM_19/(60*60)),2,0), FLOOR(STTC.SUM_19/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_19/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_19,60)),2,0), '00') AS SUM_19
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_20/(60*60))), 1, LPAD(FLOOR(STTC.SUM_20/(60*60)),2,0), FLOOR(STTC.SUM_20/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_20/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_20,60)),2,0), '00') AS SUM_20
+					, COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_21/(60*60))), 1, LPAD(FLOOR(STTC.SUM_21/(60*60)),2,0), FLOOR(STTC.SUM_21/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_21/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_21,60)),2,0), '00') AS SUM_21
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_22/(60*60))), 1, LPAD(FLOOR(STTC.SUM_22/(60*60)),2,0), FLOOR(STTC.SUM_22/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_22/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_22,60)),2,0), '00') AS SUM_22
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_23/(60*60))), 1, LPAD(FLOOR(STTC.SUM_23/(60*60)),2,0), FLOOR(STTC.SUM_23/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_23/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_23,60)),2,0), '00') AS SUM_23
+		            , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_24/(60*60))), 1, LPAD(FLOOR(STTC.SUM_24/(60*60)),2,0), FLOOR(STTC.SUM_24/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_24/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_24,60)),2,0), '00') AS SUM_24
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_25/(60*60))), 1, LPAD(FLOOR(STTC.SUM_25/(60*60)),2,0), FLOOR(STTC.SUM_25/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_25/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_25,60)),2,0), '00') AS SUM_25
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_26/(60*60))), 1, LPAD(FLOOR(STTC.SUM_26/(60*60)),2,0), FLOOR(STTC.SUM_26/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_26/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_26,60)),2,0), '00') AS SUM_26
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_27/(60*60))), 1, LPAD(FLOOR(STTC.SUM_27/(60*60)),2,0), FLOOR(STTC.SUM_27/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_27/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_27,60)),2,0), '00') AS SUM_27
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_28/(60*60))), 1, LPAD(FLOOR(STTC.SUM_28/(60*60)),2,0), FLOOR(STTC.SUM_28/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_28/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_28,60)),2,0), '00') AS SUM_28
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_29/(60*60))), 1, LPAD(FLOOR(STTC.SUM_29/(60*60)),2,0), FLOOR(STTC.SUM_29/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_29/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_29,60)),2,0), '00') AS SUM_29
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_30/(60*60))), 1, LPAD(FLOOR(STTC.SUM_30/(60*60)),2,0), FLOOR(STTC.SUM_30/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_30/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_30,60)),2,0), '00') AS SUM_30
+	                , COALESCE(DECODE(LENGTH(FLOOR(STTC.SUM_31/(60*60))), 1, LPAD(FLOOR(STTC.SUM_31/(60*60)),2,0), FLOOR(STTC.SUM_31/(60*60))), '00') || ':' || COALESCE(LPAD(FLOOR(MOD((STTC.SUM_31/60),60)),2,0), '00') || ':' || COALESCE(LPAD(FLOOR(MOD(STTC.SUM_31,60)),2,0), '00') AS SUM_31
+	                , STTC.SUM_1   AS R_SUM_1
+			        , STTC.SUM_2   AS R_SUM_2
+			        , STTC.SUM_3   AS R_SUM_3
+			        , STTC.SUM_4   AS R_SUM_4
+			        , STTC.SUM_5   AS R_SUM_5
+			        , STTC.SUM_6   AS R_SUM_6
+			        , STTC.SUM_7   AS R_SUM_7
+			        , STTC.SUM_8   AS R_SUM_8
+			        , STTC.SUM_9   AS R_SUM_9
+			        , STTC.SUM_10  AS R_SUM_10
+			        , STTC.SUM_11  AS R_SUM_11
+			        , STTC.SUM_12  AS R_SUM_12
+			        , STTC.SUM_13  AS R_SUM_13
+			        , STTC.SUM_14  AS R_SUM_14
+			        , STTC.SUM_15  AS R_SUM_15
+			        , STTC.SUM_16  AS R_SUM_16
+			        , STTC.SUM_17  AS R_SUM_17
+			        , STTC.SUM_18  AS R_SUM_18
+			        , STTC.SUM_19  AS R_SUM_19
+			        , STTC.SUM_20  AS R_SUM_20
+			        , STTC.SUM_21  AS R_SUM_21
+			        , STTC.SUM_22  AS R_SUM_22
+			        , STTC.SUM_23  AS R_SUM_23
+			        , STTC.SUM_24  AS R_SUM_24
+			        , STTC.SUM_25  AS R_SUM_25
+			        , STTC.SUM_26  AS R_SUM_26
+			        , STTC.SUM_27  AS R_SUM_27
+			        , STTC.SUM_28  AS R_SUM_28
+			        , STTC.SUM_29  AS R_SUM_29
+			        , STTC.SUM_30  AS R_SUM_30
+			        , STTC.SUM_31  AS R_SUM_31
+		            </otherwise>      
+		        </choose>				   
+		            
+				FROM   CALUSR.VW_CNSL_TY_CD  VTY  
+          
+                 RIGHT OUTER JOIN     -- 안에서 있는 유형만 한번 걸러줬기때문에  OUTER 를 사용해도 무관( ROLLUP 을 위함 )
+		
+		    (
+		
+		    SELECT
+		                ATC.CNSL_TY_CODE
+                        
+		         	<choose>
+		         		<when test="DATA_VAL eq 'CALL'">
+		         		, SUM(ATC.TOT_TEL_TIME_S ) AS SUM_TOT
+                        , SUM(ATC.AVER_TEL_TIME_S ) AS SUM_AVG
+		         		
+			                <if test="SEARCH_TY eq 'TM'">
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='00' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_0
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='01' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_1
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='02' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_2
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='03' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_3
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='04' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_4
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='05' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_5
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='06' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_6
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='07' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_7
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='08' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_8
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='09' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_9
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='10' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_10
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='11' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_11
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='12' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_12
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='13' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_13
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='14' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_14
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='15' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_15
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='16' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_16
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='17' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_17
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='18' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_18
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='19' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_19
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='20' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_20
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='21' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_21
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='22' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_22
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='23' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_23
+			                        
+			                </if>
+			                        
+			                <if test="SEARCH_TY eq 'MT'">
+			                , SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='01' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_1
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='02' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_2
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='03' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_3
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='04' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_4
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='05' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_5
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='06' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_6
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='07' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_7
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='08' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_8
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='09' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_9
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='10' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_10
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='11' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_11
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='12' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_12
+			                        
+			                </if>
+			                        
+							<if test="SEARCH_TY eq 'YR'">
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_1
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) + 1 THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_2
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) + 2 THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_3											
+							</if>	
+									
+							<if test="SEARCH_TY eq 'DT'">
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='01' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_1
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='02' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_2
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='03' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_3
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='04' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_4
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='05' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_5
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='06' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_6
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='07' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_7
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='08' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_8
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='09' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_9
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='10' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_10
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='11' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_11
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='12' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_12
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='13' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_13
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='14' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_14
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='15' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_15
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='16' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_16
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='17' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_17
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='18' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_18
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='19' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_19
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='20' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_20
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='21' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_21
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='22' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_22
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='23' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_23
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='24' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_24
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='25' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_25
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='26' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_26
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='27' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_27
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='28' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_28
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='29' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_29
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='30' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_30
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='31' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_31
+							</if>
+						</when>
+						
+						<when test="DATA_VAL eq 'ACW'">
+						, SUM(ATC.TOT_AF_PROC_TIME_S ) AS SUM_TOT
+                        , SUM(ATC.AVER_AF_PROC_TIME_S ) AS SUM_AVG
+			                <if test="SEARCH_TY eq 'TM'">
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='00' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_0
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='01' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_1
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='02' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_2
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='03' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_3
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='04' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_4
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='05' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_5
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='06' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_6
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='07' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_7
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='08' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_8
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='09' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_9
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='10' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_10
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='11' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_11
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='12' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_12
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='13' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_13
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='14' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_14
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='15' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_15
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='16' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_16
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='17' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_17
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='18' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_18
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='19' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_19
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='20' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_20
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='21' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_21
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='22' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_22
+			                , SUM(CASE WHEN ATC.CNSL_TIME ='23' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_23
+			                        
+			                </if>
+			                        
+			                <if test="SEARCH_TY eq 'MT'">
+			                , SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='01' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_1
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='02' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_2
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='03' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_3
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='04' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_4
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='05' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_5
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='06' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_6
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='07' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_7
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='08' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_8
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='09' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_9
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='10' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_10
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='11' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_11
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 5, 2)='12' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_12
+			                        
+			                </if>
+			                        
+							<if test="SEARCH_TY eq 'YR'">
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_1
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) + 1 THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_2
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 0, 4)= SUBSTR( #{DATE_FROM}, 0, 4) + 2 THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_3											
+							</if>	
+									
+							<if test="SEARCH_TY eq 'DT'">
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='01' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_1
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='02' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_2
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='03' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_3
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='04' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_4
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='05' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_5
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='06' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_6
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='07' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_7
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='08' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_8
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='09' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_9
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='10' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_10
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='11' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_11
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='12' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_12
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='13' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_13
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='14' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_14
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='15' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_15
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='16' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_16
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='17' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_17
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='18' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_18
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='19' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_19
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='20' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_20
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='21' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_21
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='22' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_22
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='23' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_23
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='24' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_24
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='25' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_25
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='26' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_26
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='27' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_27
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='28' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_28
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='29' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_29
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='30' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_30
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='31' THEN ATC.TOT_AF_PROC_TIME_S ELSE 0 END) AS SUM_31
+							</if>
+						</when>
+						<otherwise>
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='01' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_1
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='02' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_2
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='03' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_3
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='04' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_4
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='05' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_5
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='06' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_6
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='07' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_7
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='08' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_8
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='09' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_9
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='10' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_10
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='11' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_11
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='12' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_12
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='13' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_13
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='14' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_14
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='15' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_15
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='16' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_16
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='17' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_17
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='18' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_18
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='19' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_19
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='20' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_20
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='21' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_21
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='22' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_22
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='23' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_23
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='24' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_24
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='25' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_25
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='26' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_26
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='27' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_27
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='28' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_28
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='29' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_29
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='30' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_30
+							, SUM(CASE WHEN SUBSTR(ATC.CNSL_DATE, 7, 2)='31' THEN ATC.TOT_TEL_TIME_S ELSE 0 END) AS SUM_31
+						</otherwise>
+		            </choose>
+		                
+				FROM	(
+		
+		                SELECT 
+                        	
+                        	SIS.*
+                        	, CASE WHEN  SIS.TOT_TEL_TIME <![CDATA[ < ]]> 0  THEN  0  ELSE SIS.TOT_TEL_TIME  END  AS TOT_TEL_TIME_S
+                            , CASE WHEN  SIS.AVER_TEL_TIME <![CDATA[ < ]]> 0  THEN  0  ELSE SIS.AVER_TEL_TIME END  AS AVER_TEL_TIME_S
+                            , CASE WHEN  SIS.TOT_AF_PROC_TIME  <![CDATA[ < ]]> 0  THEN  0  ELSE SIS.TOT_AF_PROC_TIME END  AS TOT_AF_PROC_TIME_S
+                            , CASE WHEN  SIS.AVER_AF_PROC_TIME  <![CDATA[ < ]]> 0  THEN  0  ELSE SIS.AVER_AF_PROC_TIME END  AS AVER_AF_PROC_TIME_S  
+                        
+                 			FROM	CALUSR.TB_STS_IN_STAT SIS  
+                 				
+                 				LEFT OUTER JOIN  CALUSR.VW_DEPT VDP   ON   SIS.ORGZ_ID   =   VDP.DEPT_CD 
+                 				
+                 			<if test='TYPE_EXT eq "Y"'>
+                 				
+                 				INNER JOIN CALUSR.VW_CNSL_TY_CD CTY   ON   SIS.CNSL_TY_CODE  =  CTY.CNSL_TY    -- 실제 존재하는 유형만 집계하기 위함
+							</if>
+							
+                        		WHERE 	SIS.CENT_TY = #{CENT_TY}
+		 							
+		 							AND  SIS.VER_NO  = ( SELECT MAX(VER_NO) FROM   CALUSR.TB_STS_IN_STAT   WHERE  CNSL_DATE = SIS.CNSL_DATE  AND  CENT_TY = #{CENT_TY} ) -- 일별 최종버전만을 위한 셋팅
+		                            
+		                            AND  SIS.CNSL_DATE BETWEEN #{DATE_FROM}  AND   #{DATE_TO}
+		                            
+		                            <if test="arrTelTy != null and arrTelTy.size != 0">
+							
+										AND SIS.TEL_TY_CODE      		IN 
+										( <foreach collection="arrTelTy" item="item" separator=",">#{item}</foreach> ) /* 인입구분 */
+							
+									</if>
+								    <if test="DEPT_CD1 != null and DEPT_CD1 != ''">
+										AND VDP.DEPT_LCD       		=       #{DEPT_CD1}      	 	  /* 상담사부서코드-대 */
+				                    </if>
+									
+									<if test="DEPT_CD2 != null and DEPT_CD2 != ''">
+										AND VDP.DEPT_MCD       		=       #{DEPT_CD2}      	 	  /* 상담사부서코드-중 */
+									</if> 
+									
+				                    <if test="DEPT_CD3 != null and DEPT_CD3 != ''">
+										AND VDP.DEPT_SCD       		=       #{DEPT_CD3} 			  /* 상담사부서코드-소 */
+									</if>
+									<if test="AGENT_ID != null and AGENT_ID != ''">
+										AND SIS.USER_ID      	=       #{AGENT_ID}       	 /* 상담사ID */
+									</if>
+									
+									<choose>
+										<when test="arrLclsCd != null and arrLclsCd.size != 0">
+							
+										AND SIS.CNSL_TY_LCLS      		IN 
+										( <foreach collection="arrLclsCd" item="item" separator=",">#{item}</foreach> ) /* 상담유형 대분류 다중선택 */
+										</when>
+										
+										<otherwise>
+											<if test="CNSL_TY_LCLS != null and CNSL_TY_LCLS != ''">
+												AND SIS.CNSL_TY_LCLS = #{CNSL_TY_LCLS} 			 	 /* 대분류 상담 코드 */
+											</if>
+											<if test="CNSL_TY_MDCLS != null and CNSL_TY_MDCLS != ''">
+												AND SIS.CNSL_TY_MDCLS = #{CNSL_TY_MDCLS} 			 /* 중분류 상담 코드 */
+											</if>
+											<if test="CNSL_TY_SCLS != null and CNSL_TY_SCLS != ''">
+												AND SIS.CNSL_TY_SCLS =  #{CNSL_TY_SCLS} 			 /* 소분류 상담 코드 */
+											</if>
+										</otherwise>
+									</choose>
+									
+		                ) ATC 
+		                
+		                 	GROUP BY  ROLLUP( ATC.CNSL_TY_CODE )
+		                 	
+		          )  STTC    ON    STTC.CNSL_TY_CODE = VTY.CNSL_TY 
+		          
+		          
+		          ORDER BY  VTY.CNSL_TY_LCLS, VTY.CNSL_TY_MDCLS, VTY.CNSL_TY_SCLS, STTC.CNSL_TY_CODE	
+		          
+		          
+		<if test="TYPE_GBN neq 'SCLS'">
+    		<include refid="post-type-group"/>
+    	</if>
+		          
+    
+    </select>
+   
+	<select id="selectCnslTypeTypeSttcList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectCnslTypeTypeSttcList - 상담유형유형별통계 리스트  AS-IS 공제 전용 */
+
+			SELECT
+				       T3.DEPT_NM
+				     , T3.AGENT_NM
+                     , ( SELECT CLAS_NM FROM CALUSR.PLT_PHN_CNSL_TYP_LCLS WHERE CNSL_TY_LCLS = T2.CNSL_TY_LCLS )   AS CNSL_TY_LCLS
+				     , ( SELECT CLAS_NM FROM CALUSR.PLT_PHN_CNSL_TYP_MCLS WHERE CNSL_TY_LCLS = T2.CNSL_TY_LCLS AND CNSL_TY_MDCLS = T2.CNSL_TY_MDCLS ) AS CNSL_TY_MDCLS
+				     , ( SELECT CLAS_NM FROM CALUSR.PLT_PHN_CNSL_TYP_MCLS WHERE CNSL_TY_LCLS = T2.CNSL_TY_LCLS AND CNSL_TY_MDCLS = T2.CNSL_TY_MDCLS AND CNSL_TY_SCLS = T2.CNSL_TY_SCLS) AS CNSL_TY_SCLS
+                     
+				     , SUM(1)                                           AS CNT
+				 FROM  CALUSR.PLT_PHN_CNSL         T1,
+				       CALUSR.PLT_PHN_CNSL_DTL     T2,
+				       CALUSR.VW_USER   T3
+				 WHERE T1.CNSL_HIST_NO   =       T2.CNSL_HIST_NO
+				   AND T1.CSLT_ID     =       T3.AGENT_ID     
+				   
+                    <if test="DATE_FROM != null and DATE_FROM != ''">
+                    	AND T1.CNSL_BEGIN_DATE      BETWEEN #{DATE_FROM} AND #{DATE_TO}     /* 상담시작일자-종료일자 */
+                    </if>
+				   	<if test="PASTGJ != null and PASTGJ != ''">
+                    	AND TRIM(#{PASTGJ})    !=      '' 
+                   	</if>
+                    <if test="RDWT_SEND_YN != null and RDWT_SEND_YN != ''">
+				    	AND T1.RDWT_SEND_YN     =       #{RDWT_SEND_YN}      /* 녹취전송여부 */
+                    </if>
+				    <if test="CALL_TY != null and CALL_TY != ''"> 
+	                  	AND T1.CALL_TY      	=       #{CALL_TY}           /* 콜유형 */
+                    </if>
+				    <if test="DEPT_CD != null and DEPT_CD != ''">
+						AND T3.DEPT_CD      	=       #{DEPT_CD}      	 /* 상담사부서코드 */
+                    </if>
+					<if test="AGENT_ID != null and AGENT_ID != ''">
+						AND T1.CSLT_ID      	=       #{AGENT_ID}       	 /* 상담사ID */
+					</if>
+					<if test="CNSL_TY_LCLS != null and CNSL_TY_LCLS != ''">
+						AND T2.CNSL_TY_LCLS = #{CNSL_TY_LCLS} 			 	 /* 대분류 상담 코드 */
+					</if>
+					<if test="CNSL_TY_MDCLS != null and CNSL_TY_MDCLS != ''">
+						AND T2.CNSL_TY_MDCLS = #{CNSL_TY_MDCLS} 			 /* 중분류 상담 코드 */
+					</if>
+					<if test="CNSL_TY_SCLS != null and CNSL_TY_SCLS != ''">
+						AND T2.CNSL_TY_SCLS = #{CNSL_TY_SCLS} 			 	 /* 소분류 상담 코드 */
+					</if>
+					
+				 GROUP BY T3.DEPT_NM, T3.AGENT_NM , T2.CNSL_TY_LCLS, T2.CNSL_TY_MDCLS, T2.CNSL_TY_SCLS
+				 
+				 ORDER BY DEPT_NM, AGENT_NM , CNSL_TY_LCLS, CNSL_TY_MDCLS, CNSL_TY_SCLS
+		
+	</select>
+		<!-- CALUSR.TB_BATCH(배치관리) 테이블 데이터 조회 -->
+<select id="SELECT_TWB_BTCB01_MNG"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT 	A.BATCH_KEY                     -- 배치아이디
+	     , A.BATCH_NM                       -- 배치명
+	     , A.BATCH_EXECUT_CLASS            -- 배치실행클래스
+	     , A.BATCH_EXECUT_CYCLE            -- 배치실행주기
+	     , A.BATCH_STTUS                   -- 배치상태
+	     , A.USE_YN                        -- 배치사용여부
+	     , A.BATCH_EXECUT_LC               -- 배치실행위치
+	     , A.BATCH_PARAMTR_SMPLE           -- 배치파라미터샘플    
+	     , TO_CHAR(A.LAST_EXECUT_DT, 'YYYY/MM/DD HH24:MI:SS')  AS LAST_EXECUT_DT  -- 마지막실행일시
+	     , A.PROC_ID                       -- 처리자
+	     , TO_CHAR(A.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일자
+	     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TWB002' AND CD = A.BATCH_STTUS) AS BATCH_STTUS_NM
+	     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TWB001' AND CD = A.USE_YN) AS USE_YN_NM
+	     , CASE WHEN BB.PROCESS_CODE = '00' OR BB.PROCESS_CODE = '99' 
+	            THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TWB005' AND CD = BB.PROCESS_CODE)
+	            ELSE '-' END AS PROCESS_NM
+FROM PLT_BAT A
+LEFT OUTER JOIN  
+	(
+        SELECT A.BATCH_KEY
+             , A.PROCESS_CODE
+          FROM PLT_BAT_LOG A
+             , (
+                SELECT BATCH_KEY
+                     , MAX(BATCH_ID) AS BATCH_ID 
+                  FROM PLT_BAT_LOG 
+                 GROUP BY BATCH_KEY 
+               ) B
+         WHERE A.BATCH_KEY = B.BATCH_KEY
+           AND A.BATCH_ID = B.BATCH_ID 
+       ) BB
+ ON A.BATCH_KEY = BB.BATCH_KEY
+ WHERE 1=1
+  <if test="BATCH_KEY			!='' and BATCH_KEY !=null">				AND A.BATCH_KEY				LIKE '%' || #{BATCH_KEY} || '%' </if>   /* --배치명 */ 
+  <if test="BATCH_NM			!='' and BATCH_NM !=null">				AND A.BATCH_NM				LIKE '%' || #{BATCH_NM} || '%'</if>   /* --배치명 */ 
+  <if test="BATCH_EXECUT_CLASS	!='' and BATCH_EXECUT_CLASS !=null">	AND A.BATCH_EXECUT_CLASS	= #{BATCH_EXECUT_CLASS} </if>   /* --배치실행클래스 */ 
+  <if test="BATCH_EXECUT_CYCLE	!='' and BATCH_EXECUT_CYCLE !=null">	AND A.BATCH_EXECUT_CYCLE	= #{BATCH_EXECUT_CYCLE} </if>   /* --배치실행주기 */ 
+  <if test="BATCH_STTUS			!='' and BATCH_STTUS !=null">			AND A.BATCH_STTUS			= #{BATCH_STTUS} </if>   /* --배치상태코드 */ 
+  <if test="BATCH_EXECUT_LC		!='' and BATCH_EXECUT_LC !=null">		AND A.BATCH_EXECUT_LC		= #{BATCH_EXECUT_LC} </if>   /* --배치실행위치 */ 
+  <if test="BATCH_PARAMTR_SMPLE	!='' and BATCH_PARAMTR_SMPLE !=null">	AND A.BATCH_PARAMTR_SMPLE	= #{BATCH_PARAMTR_SMPLE} </if>   /* --배치파라미터샘플 */ 
+  <if test="USE_YN				!='' and USE_YN !=null">				AND A.USE_YN				= #{USE_YN} </if>   /* --사용여부 */ 
+  <if test="LAST_EXECUT_DT		!='' and LAST_EXECUT_DT !=null">		AND A.LAST_EXECUT_DT		= #{LAST_EXECUT_DT} </if>   /* --마지막실행일시 */ 
+  <if test="PROC_ID				!='' and PROC_ID !=null">				AND A.PROC_ID				= #{PROC_ID} </if>   /* --처리자 */ 
+  ORDER BY A.BATCH_NM ASC
+
+</select>
+		
+</mapper>

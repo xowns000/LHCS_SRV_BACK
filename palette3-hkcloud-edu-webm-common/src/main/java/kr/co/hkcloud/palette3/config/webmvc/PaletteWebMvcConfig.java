@@ -1,0 +1,47 @@
+package kr.co.hkcloud.palette3.config.webmvc;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+/**
+ * Web MVC 관련 설정
+ * 
+ * @author Orange
+ *
+ */
+@Configuration
+public class PaletteWebMvcConfig implements WebMvcConfigurer
+{
+    @Autowired
+    Environment environment;
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry)
+    {
+        registry.addMapping("/**").allowedOrigins("*")
+            //.allowedMethods("GET", "POST", "PUT", "HEAD", "PATCH")
+            .allowedMethods("GET", "POST").maxAge(3000);
+    }
+
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry)
+    {
+        if( environment.getProperty("file.repository.root-dir").startsWith("/") ) {
+            registry.addResourceHandler("/upload/images/**").addResourceLocations("file:" + environment.getProperty("file.repository.root-dir") + "/images/");
+        }else {
+            registry.addResourceHandler("/upload/images/**").addResourceLocations("file:/" + environment.getProperty("file.repository.root-dir") + "/images/");
+        }
+        
+        
+        if( environment.getProperty("file.repository.root-dir").startsWith("/") ) {
+            registry.addResourceHandler("/upload/videos/**").addResourceLocations("file:" + environment.getProperty("file.repository.root-dir") + "/videos/");
+        }else {
+            registry.addResourceHandler("/upload/videos/**").addResourceLocations("file:/" + environment.getProperty("file.repository.root-dir") + "/videos/");
+        }
+    }
+}

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.board.dao.CommentMapper">
+  <select id="hasPostPermission" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT EXISTS (SELECT 1
+                   FROM PLT_USER_AUTHRT PUA
+                          JOIN PLT_AUTHRT_GROUP_PRGRM PAGP ON PUA.AUTHRT_GROUP_ID = PAGP.AUTHRT_GROUP_ID
+                   WHERE PUA.USER_ID = #{USER_ID}::INTEGER
+                     AND PAGP.MENU_ID = 39 -- 게시글 관리 권한
+    ) AS HAS_POST_PERMISSION;
+  </select>
+  <!-- 게시글 댓글 조회 -->
+  <select id="selectPostComments" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    WITH RECURSIVE COMMENT_HIERARCHY AS (SELECT BBS_ID,
+                                                PST_ID,
+                                                CMNT_ID,
+                                                HIGR_CMNT_ID,
+                                                CMNT,
+                                                RGTR_ID,
+                                                REG_DT,
+                                                CUSTCO_ID,
+                                                USE_YN,
+                                                MDFCN_DT,
+                                                MDFR_ID
+                                         FROM PLT_PST_CMNT
+                                         WHERE HIGR_CMNT_ID IS NULL -- 부모 댓글
+                                           AND BBS_ID = #{BBS_ID}:: INTEGER
+      AND PST_ID = #{PST_ID}:: INTEGER
+      AND CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+      AND USE_YN = 'Y'
+
+    UNION ALL
+
+    -- 대댓글 가져오기
+    SELECT CHILD.BBS_ID,
+           CHILD.PST_ID,
+           CHILD.CMNT_ID,
+           CHILD.HIGR_CMNT_ID,
+           CHILD.CMNT,
+           CHILD.RGTR_ID,
+           CHILD.REG_DT,
+           CHILD.CUSTCO_ID,
+           CHILD.USE_YN,
+           CHILD.MDFCN_DT,
+           CHILD.MDFR_ID
+    FROM PLT_PST_CMNT CHILD
+           INNER JOIN
+         COMMENT_HIERARCHY PARENT
+         ON
+           CHILD.HIGR_CMNT_ID = PARENT.CMNT_ID
+             AND CHILD.USE_YN = 'Y')
+    SELECT CH.BBS_ID,
+           CH.PST_ID,
+           CH.CUSTCO_ID,
+           CH.CMNT_ID,
+           CH.HIGR_CMNT_ID,
+           CH.CMNT,
+           (SELECT USER_NM FROM PLT_USER WHERE USER_ID = CH.RGTR_ID)
+             AS USER_NM,
+           CH.RGTR_ID,
+           CH.REG_DT,
+           CH.USE_YN,
+           CH.MDFCN_DT,
+           CH.MDFR_ID
+    FROM COMMENT_HIERARCHY CH
+    ORDER BY CH.HIGR_CMNT_ID IS NULL DESC,                              -- 댓글을 먼저 정렬
+             CASE WHEN CH.HIGR_CMNT_ID IS NULL THEN CH.REG_DT END DESC, -- 댓글은 최신순으로 정렬
+             CH.HIGR_CMNT_ID,                                           -- 대댓글을 정렬
+             CASE WHEN CH.HIGR_CMNT_ID IS NOT NULL THEN CH.REG_DT END ASC -- 대댓글은 작성된 순서로 정렬
+  </select>
+
+  <!-- 게시글 댓글 등록 -->
+  <insert id="insertPostComment" parameterType="java.util.HashMap">
+    INSERT INTO PLT_PST_CMNT (BBS_ID,
+                              PST_ID,
+                              CUSTCO_ID,
+                              CMNT_ID,
+    <if test='HIGR_CMNT_ID != null and HIGR_CMNT_ID != ""'>
+                              HIGR_CMNT_ID,
+    </if>
+                              CMNT,
+                              USE_YN,
+                              RGTR_ID,
+                              REG_DT)
+    VALUES (#{BBS_ID}::INTEGER,
+            #{PST_ID}::INTEGER,
+            #{CUSTCO_ID}::INTEGER,
+            #{CMNT_ID}::INTEGER,
+    <if test='HIGR_CMNT_ID != null and HIGR_CMNT_ID != ""'>
+            #{HIGR_CMNT_ID}::INTEGER,
+    </if>
+            #{CMNT},
+            'Y',
+            #{USER_ID}::INTEGER,
+            TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'))
+  </insert>
+
+  <!-- 게시글 댓글 수정 -->
+  <update id="updatePostComment" parameterType="java.util.HashMap">
+    UPDATE PLT_PST_CMNT
+    SET CMNT    = #{CMNT},
+        MDFR_ID = #{USER_ID}::INTEGER,
+        MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+    WHERE BBS_ID = #{BBS_ID}:: INTEGER
+      AND PST_ID = #{PST_ID}:: INTEGER
+      AND CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+      AND CMNT_ID = #{CMNT_ID}:: INTEGER
+      AND RGTR_ID = #{USER_ID}:: INTEGER
+  </update>
+
+  <!-- 게시글 댓글 삭제 -->
+  <delete id="deletePostComment" parameterType="java.util.HashMap">
+    UPDATE PLT_PST_CMNT
+    SET USE_YN = 'N',
+    MDFR_ID = #{USER_ID}::INTEGER,
+    MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+    WHERE BBS_ID = #{BBS_ID}::INTEGER
+    AND PST_ID = #{PST_ID}::INTEGER
+    AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+    AND CMNT_ID = #{CMNT_ID}::INTEGER
+    <if test='HAS_POST_PERMISSION == null or HAS_POST_PERMISSION == false'>
+      AND RGTR_ID = #{USER_ID}::INTEGER
+    </if>
+  </delete>
+
+  <!--부모 댓글 작성자 ID 조회-->
+  <select id="selectParentCommentAuthor" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT RGTR_ID
+    FROM PLT_PST_CMNT
+    WHERE BBS_ID = #{BBS_ID}::INTEGER
+      AND CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+      AND PST_ID = #{PST_ID}:: INTEGER
+      AND CMNT_ID = #{CMNT_ID}:: INTEGER
+  </select>
+
+</mapper>

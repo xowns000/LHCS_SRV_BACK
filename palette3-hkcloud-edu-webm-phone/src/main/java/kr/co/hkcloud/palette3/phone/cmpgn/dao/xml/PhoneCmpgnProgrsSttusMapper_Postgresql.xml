@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.cmpgn.dao.PhoneCmpgnProgrsSttusMapper">
+
+<!--  캠페인진행현황 콤보조회 -->
+<select id = "selectRtnCombo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT   CAMP_SEQ, CAMP_NM
+            FROM   UC_CMP_BASE 
+
+
+</select>
+
+<!--  캠페인 데이타 조회  -->
+<select id="selectRtnData"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+     ,A.DATA_SEQ , A.CAMP_SEQ , VALUE(A.DEL_FLG,'N') DEL_FLG
+     ,MAX(FILE_NM) FILE_NM
+     ,FN_CODEBOOK('CMP005', MAX(DATA_TC)) AS DATA_TC_NM
+     ,MAX(DATA_CNT) AS DATA_CNT
+     ,MAX(EXTR_CNT) AS EXTR_CNT
+	 ,MAX(ERR_CNT) AS ERR_CNT
+     ,MAX(A.REG_DT) AS REG_DT
+     ,FN_USER(MAX(A.REG_USER_ID),'') AS REG_USER_NM
+     ,SUM(CASE WHEN ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '' THEN 0 ELSE 1 END ) AS ALLC_CNT
+     ,SUM(CASE WHEN ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '' THEN 1 ELSE 0 END ) AS NO_ALLC_CNT
+ FROM  UC_CMP_DATA A LEFT OUTER JOIN UC_CMP_OBJ_LIST B ON A.CAMP_SEQ = B.CAMP_SEQ AND  A.DATA_SEQ = B.DATA_SEQ
+ WHERE  A.CAMP_SEQ = #{CAMP_SEQ} 
+	AND A.DEL_FLG IS NULL 
+ GROUP BY	A.CAMP_SEQ, A.DATA_SEQ , A.DEL_FLG
+ ORDER BY	MAX(A.REG_DT) DESC
+
+</select>
+
+<select id="selectRtnComboBox"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT   CAMP_SEQ, CAMP_NM
+            FROM     UC_CMP_BASE 
+
+</select>
+
+
+<select id="selectRtnStep01"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT   LAST_CALL_STAT_CD, COUNT(*) CNT
+        FROM            UC_CMP_OBJ_LIST
+        WHERE       CAMP_SEQ  = #{CAMP_SEQ}
+        AND       LAST_CALL_STAT_CD IS NOT NULL
+        GROUP BY LAST_CALL_STAT_CD
+ 
+</select>
+
+<select id="selectRtnStep02"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+       SELECT    ALLC_AGNT_ID, MAX(USER_NM) ALLC_AGNT_NM, COUNT(*) TOT_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '01' THEN 1 ELSE 0 END) S01_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '02' THEN 1 ELSE 0 END) S02_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '03' THEN 1 ELSE 0 END) S03_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '04' THEN 1 ELSE 0 END) S04_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '05' THEN 1 ELSE 0 END) S05_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '06' THEN 1 ELSE 0 END) S06_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '07' THEN 1 ELSE 0 END) S07_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '08' THEN 1 ELSE 0 END) S08_CNT
+                                ,SUM(CASE WHEN LAST_CALL_STAT_CD = '09' THEN 1 ELSE 0 END) S09_CNT
+        FROM           UC_CMP_OBJ_LIST A, UC_SYS_USER B
+        WHERE       CAMP_SEQ  = #{CAMP_SEQ}
+        AND       A.ALLC_AGNT_ID IS NOT NULL
+        AND       A.ALLC_AGNT_ID = B.USER_ID
+        AND       A.AGNT_ALLC_DT BETWEEN #{STRT_DT} AND #{END_DT}
+           <if test="TEAM_LCD != ''    and TEAM_LCD != null">AND TEAM_LCD = #{TEAM_LCD}</if>
+        <if test="TEAM_MCD != ''    and TEAM_MCD != null">AND TEAM_MCD = #{TEAM_MCD}</if>
+         <if test="TEAM_SCD != ''    and TEAM_SCD != null">AND TEAM_SCD = #{TEAM_SCD}</if>
+         <if test="USER_ID != ''        and USER_ID !=null"> AND USER_ID = #{USER_ID}</if>
+         <if test="USER_NM != ''        and USER_NM !=null"> AND USER_NM = #{USER_NM}</if>
+          <if test="LAST_CALL_STAT_CD != ''    and LAST_CALL_STAT_CD != null"> AND LAST_CALL_STAT_CD IS NOT NULL</if>      
+                GROUP BY  ALLC_AGNT_ID
+
+</select>
+	
+	
+<!-- UC_CMP_OBJ_LIST(캠페인할당) 테이블 데이터 등록 -->
+<insert id="INSERT_UC_CMP_OBJ_LIST"  parameterType= "java.util.HashMap">
+  		INSERT INTO UC_CMP_OBJ_LIST 
+  		(
+  			 CAMP_SEQ
+  			,LIST_SEQ
+  			,DATA_SEQ
+  			,CUST_NO
+  			,CUST_TC
+  			,CUST_NM
+  			,JBCL_CD
+  			,LAST_INTG_PRJ_NO
+			,LAST_DEAL_LINE_DIV
+			,PRJ_NO
+			,HO_NO
+  			,CUST_TNO
+  			,CALL_TNO
+  			,MOBL_TNO
+  			,ETC1_TNO
+  			,HPCL_TEL_DIV
+  			,RECV_RJT_YN
+  			,BL_YN
+  			,MEMO
+  			,SPF_ITEM
+  			,REG_DT
+  			,REG_USER_ID
+  			,CHG_DT
+  			,CHG_USER_ID
+			,ACPT_NO
+  		)
+  		VALUES
+  		(
+  			 #{CAMP_SEQ}
+  			,#{LIST_SEQ}
+  			,#{DATA_SEQ}
+  			,#{CUST_NO}
+  			,#{CUST_TC}
+  			,#{CUST_NM}
+  			,#{JBCL_CD}
+  			,#{LAST_INTG_PRJ_NO}
+			,#{LAST_DEAL_LINE_DIV}
+			,#{PRJ_NO}
+			,#{HO_NO}
+  			,#{CUST_TNO}
+  			,#{CALL_TNO}
+  			,#{MOBL_TNO}
+  			,#{ETC1_TNO}
+  			,#{HPCL_TEL_DIV}
+  			,#{RECV_RJT_YN}
+  			,#{BL_YN}
+  			,#{MEMO}
+  			,#{SPF_ITEM}
+  			,UF_NOW()('CURRENT', 'YYYYMMDDHH24MISS', 0)
+  			,#{REG_USER_ID}
+  			,UF_NOW()('CURRENT', 'YYYYMMDDHH24MISS', 0)
+  			,#{CHG_USER_ID}
+			,#{ACPT_NO}
+  		)
+</insert>
+
+<!--  UC_CMP_대상_리스트  조회   -->
+<delete id="DELETE_UC_CMP_OBJ_LIST"  parameterType= "java.util.HashMap" >
+DELETE FROM UC_CMP_OBJ_LIST
+WHERE CAMP_SEQ = #{CAMP_SEQ}
+AND   DATA_SEQ = #{DATA_SEQ}
+</delete>
+
+</mapper>

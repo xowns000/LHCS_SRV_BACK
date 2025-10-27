@@ -1,0 +1,1149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper">
+
+<select id="phoneCuttTotalStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT	/*전화상담 종합 - 전화상담 현황(전체) (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttTotalStatistics)*/
+		A.TOT_CNT
+    	<if test='SCH_GB == "MONTH"'>, A.CUTT_MON</if>
+    	<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>, A.CL_TYPE_CD</if>
+		, COALESCE(A.COMPLETED_CNT, 0) AS COMPLETED_CNT
+		, COALESCE(A.TOT_CNT - A.COMPLETED_CNT, 0) AS NOT_COMPLETED_CNT
+		, CASE WHEN A.TOT_CNT > 0 THEN ROUND((A.COMPLETED_CNT::DECIMAL/ A.TOT_CNT::DECIMAL) * 100, 2) ELSE 0 END AS COMPLETED_RATE
+		, CASE WHEN A.CUSL_CNT > 0 THEN A.TOT_CNT / A.CUSL_CNT ELSE 0 END AS CUSL_AVG_CNT
+		, COALESCE(A.TOT_PHN_HR, 0) AS TOT_PHN_HR
+		, CASE WHEN A.CUSL_CNT > 0 THEN A.TOT_PHN_HR / A.CUSL_CNT ELSE 0 END AS CUSL_AVG_PHN_HR
+		, A.CUSL_CNT
+	FROM (
+		SELECT <if test='SCH_GB == "MONTH"'>DISTINCT PSPCD.CUTT_YM AS CUTT_MON,</if>
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+			PSPCD.CL_TYPE_CD,
+			</if>
+			COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+			, SUM(CASE WHEN PSPCD.CUTT_RSLT_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS COMPLETED_CNT
+			, COUNT(DISTINCT PSPCD.CUSL_ID) AS CUSL_CNT
+			, SUM(PSPCD.PHN_HR) AS TOT_PHN_HR
+		FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+		WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<choose>
+			<when test='SCH_GB == "DAY"'>
+			AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+			</when>
+			<when test='SCH_GB == "MONTH"'>
+			AND PSPCD.CUTT_YM = #{CUTT_YMD} --월별
+			</when>
+		</choose>
+		<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+		AND PSPCD.CL_TYPE_CD = #{CL_TYPE_CD}
+		</if>
+		<choose>
+			<when test='SCH_GB == "DAY"'>
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>GROUP BY PSPCD.CL_TYPE_CD</if>
+			</when>
+			<when test='SCH_GB == "MONTH"'>
+			GROUP BY PSPCD.CUTT_YM<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>, PSPCD.CL_TYPE_CD</if>
+			</when>
+		</choose>
+	) A
+</select>
+
+<select id="phoneCuttClTypeStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT	/*전화상담 종합 - 콜 유형별 현황 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttClTypeStatistics)*/
+		COALESCE(A.TOT_CNT, 0) AS TOT_CNT
+		<if test='SCH_GB == "MONTH"'>, COALESCE(A.CUTT_MON , #{CUTT_YMD}) AS CUTT_MON</if>
+		, PCC.CD_ID AS CL_TYPE_CD
+	FROM PLT_COMM_CD PCC
+	LEFT OUTER JOIN (
+		SELECT <if test='SCH_GB == "MONTH"'>DISTINCT PSPCD.CUTT_YM AS CUTT_MON,</if>
+			PSPCD.CL_TYPE_CD
+			, COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+		FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+		WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<choose>
+			<when test='SCH_GB == "DAY"'>
+			AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+			</when>
+			<when test='SCH_GB == "MONTH"'>
+			AND PSPCD.CUTT_YM = #{CUTT_YMD} --월별
+			</when>
+		</choose>
+		GROUP BY <if test='SCH_GB == "MONTH"'>PSPCD.CUTT_YM,</if> PSPCD.CL_TYPE_CD
+	) A ON A.CL_TYPE_CD = PCC.CD_ID
+	WHERE GROUP_CD_ID = 'CALL_TP'
+	AND CUSTCO_ID = #{CUSTCO_ID}::INT
+	ORDER BY SORT_ORD
+</select>
+
+<select id="phoneCuttPhnHrStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT	/*전화상담 종합 - 통화 시간별 추이 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttPhnHrStatistics)*/
+		COALESCE(CUTT.CUTT_MON, #{CUTT_YMD}) AS CUTT_MON
+		<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+		, COALESCE(CUTT.CL_TYPE_CD, 'IN') AS CL_TYPE_CD
+		</if>
+		, PCC.CD_ID AS PHN_HR_SE_CD
+		, PCC.CD_NM AS PHN_HR_SE_NM
+		, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+	FROM PLT_COMM_CD PCC
+	LEFT OUTER JOIN (
+		SELECT A.CUTT_MON
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+			, A.CL_TYPE_CD
+			</if>
+			, A.PHN_HR_SE_CD
+			, A.TOT_CNT
+		FROM (
+			SELECT DISTINCT PSPCD.CUTT_YM AS CUTT_MON
+				<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+				, PSPCD.CL_TYPE_CD
+				</if>
+				, PSPCD.PHN_HR_SE_CD
+				, COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+			FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+			WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+			AND PSPCD.CUTT_YM = #{CUTT_YMD}
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+			AND PSPCD.CL_TYPE_CD = #{CL_TYPE_CD}
+			</if>
+			GROUP BY PSPCD.CUTT_YM, PSPCD.PHN_HR_SE_CD<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>, PSPCD.CL_TYPE_CD</if>
+		) A
+	) CUTT ON CUTT.PHN_HR_SE_CD = PCC.CD_ID
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INT AND PCC.GROUP_CD_ID = 'PHN_SE_TP'
+	ORDER BY PCC.SORT_ORD
+</select>
+
+<select id="phoneCuttIvrStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT	/*전화상담 종합 - 문의 유형별 현황 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttIvrStatistics)*/
+		A.CUTT_MON
+		, A.DRWI_SE_NM
+		, A.TOT_CNT
+	FROM (
+		SELECT DISTINCT PSPCD.CUTT_YM AS CUTT_MON
+			, PSPCD.DRWI_SE_NM
+			, COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+		FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+		WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND PSPCD.CUTT_YM = #{CUTT_YMD}
+		AND PSPCD.CL_TYPE_CD = 'IN'
+		GROUP BY PSPCD.CUTT_YM, PSPCD.DRWI_SE_NM
+	) A
+	ORDER BY A.DRWI_SE_NM
+</select>
+
+<select id="phoneCuttMonStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT	/*전화상담 종합 - 월간 상담 추이 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttMonStatistics)*/
+		DT.DT AS CUTT_DT
+		<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+		, COALESCE(CUTT.CL_TYPE_CD, #{CL_TYPE_CD}) AS CL_TYPE_CD
+		</if>
+		, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+	FROM (
+		<choose>
+			<when test='SCH_GB == "DAY"'>
+			SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+			</when>
+			<when test='SCH_GB == "MONTH"'>
+			SELECT TO_CHAR(GENERATE_SERIES((#{CUTT_YMD}||'01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', (#{CUTT_YMD}||'01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{CUTT_YMD}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{CUTT_YMD}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+			</when>
+		</choose>
+	) DT
+	LEFT OUTER JOIN (
+		SELECT A.CUTT_DT
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+			, A.CL_TYPE_CD
+			</if>
+			, A.TOT_CNT
+		FROM (
+			SELECT DISTINCT PSPCD.CUTT_YMD AS CUTT_DT
+				<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+				, PSPCD.CL_TYPE_CD
+				</if>
+				, COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+			FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+			WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+			<choose>
+				<when test='SCH_GB == "DAY"'>
+				AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+				</when>
+				<when test='SCH_GB == "MONTH"'>
+				AND PSPCD.CUTT_YM = #{CUTT_YMD} --월별
+				</when>
+			</choose>
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+			AND PSPCD.CL_TYPE_CD = #{CL_TYPE_CD}
+			</if>
+			GROUP BY PSPCD.CUTT_YMD<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>, PSPCD.CL_TYPE_CD</if>
+		) A
+	) CUTT ON CUTT.CUTT_DT = DT.DT
+</select>
+
+<select id="phoneCuttDeptCuslStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT	/*부서/개인별 통계 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttDeptCuslStatistics)*/
+		<choose>
+			<when test='STATISTICS_ST == "DEPT"'>
+			A.DEPT_ID
+			, A.DEPT_NM
+			</when>
+			<when test='STATISTICS_ST == "CUSL"'>
+			A.CUSL_ID
+			, A.USER_NM
+			</when>
+		</choose>
+		, A.CL_TYPE_CD
+		, A.CL_TYPE_NM
+		, A.TOT_CNT
+		, A.COMPLETED_CNT
+		, A.TOT_CNT - A.COMPLETED_CNT AS NOT_COMPLETED_CNT
+		, CASE WHEN A.TOT_CNT > 0 THEN ROUND((A.COMPLETED_CNT::DECIMAL/ A.TOT_CNT::DECIMAL) * 100, 2) ELSE 0 END AS COMPLETED_RATE
+		, A.TOT_PHN_HR
+		, CASE WHEN A.DAY_CNT > 0 THEN ROUND((A.TOT_CNT::DECIMAL/ A.DAY_CNT::DECIMAL), 2) ELSE 0 END AS DAY_AVG_CNT
+		, CASE WHEN A.DAY_CNT > 0 THEN A.TOT_PHN_HR / A.DAY_CNT ELSE 0 END AS DAY_AVG_PHN_HR
+	FROM (
+		SELECT
+			<choose>
+				<when test='STATISTICS_ST == "DEPT"'>
+				A.DEPT_ID
+				, (SELECT DEPT_NM FROM PLT_OGNZ WHERE DEPT_ID = A.DEPT_ID) AS DEPT_NM
+				</when>
+				<when test='STATISTICS_ST == "CUSL"'>
+				A.CUSL_ID
+				, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.CUSL_ID) AS USER_NM
+				</when>
+			</choose>
+			, A.CD_ID AS CL_TYPE_CD
+			, A.CD_NM AS CL_TYPE_NM
+			, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+			, COALESCE(CUTT.COMPLETED_CNT, 0) AS COMPLETED_CNT
+			, COALESCE(CUTT.CUSL_CNT, 0) AS CUSL_CNT
+			, COALESCE(CUTT.TOT_PHN_HR, 0) AS TOT_PHN_HR
+			, (
+				SELECT
+					COUNT(*)
+				FROM (
+			<choose>
+				<when test='SCH_GB == "DAY"'>
+				SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+				, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+				</when>
+				<when test='SCH_GB == "MONTH"'>
+				SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+				, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+				</when>
+				<when test='SCH_GB == "QUARTER"'>
+					<choose>
+						<when test='SCH_QUARTER == "1"'>
+						SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+						, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+						</when>
+						<when test='SCH_QUARTER == "2"'>
+						SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+						, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+						</when>
+						<when test='SCH_QUARTER == "3"'>
+						SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+						, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+						</when>
+						<when test='SCH_QUARTER == "4"'>
+						SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+						, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+						</when>
+					</choose>
+				</when>
+			</choose>
+				) DT
+				WHERE YOIL NOT IN (6, 7) --토요일, 일요일 제외
+			) AS DAY_CNT
+		FROM (
+			SELECT
+				<choose><when test='STATISTICS_ST == "DEPT"'>CUTT.DEPT_ID</when><when test='STATISTICS_ST == "CUSL"'>CUTT.CUSL_ID</when></choose>
+				, COMM.CD_ID
+				, COMM.CD_NM
+			FROM (
+				SELECT DISTINCT <choose><when test='STATISTICS_ST == "DEPT"'>DEPT_ID</when><when test='STATISTICS_ST == "CUSL"'>CUSL_ID</when></choose>
+				FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+				WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+				<choose>
+					<when test='SCH_GB == "DAY"'>
+					AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					</when>
+					<when test='SCH_GB == "MONTH"'>
+					AND PSPCD.CUTT_YM = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+					</when>
+					<when test='SCH_GB == "QUARTER"'>
+						<choose>
+							<when test='SCH_QUARTER == "1"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+							</when>
+							<when test='SCH_QUARTER == "2"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+							</when>
+							<when test='SCH_QUARTER == "3"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+							</when>
+							<when test='SCH_QUARTER == "4"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+							</when>
+						</choose>
+					</when>
+				</choose>
+			) CUTT
+			CROSS JOIN (SELECT * FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'CALL_TP') COMM
+		) A
+		LEFT OUTER JOIN (
+			SELECT
+				<choose><when test='STATISTICS_ST == "DEPT"'>PSPCD.DEPT_ID</when><when test='STATISTICS_ST == "CUSL"'>PSPCD.CUSL_ID</when></choose>
+				, PSPCD.CL_TYPE_CD
+				, COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+				, SUM(CASE WHEN PSPCD.CUTT_RSLT_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS COMPLETED_CNT
+				, COUNT(DISTINCT PSPCD.CUSL_ID) AS CUSL_CNT
+				, SUM(PSPCD.PHN_HR) AS TOT_PHN_HR
+			FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+			WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+			<choose>
+				<when test='SCH_GB == "DAY"'>
+				AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+				</when>
+				<when test='SCH_GB == "MONTH"'>
+				AND PSPCD.CUTT_YM = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+				</when>
+				<when test='SCH_GB == "QUARTER"'>
+					<choose>
+						<when test='SCH_QUARTER == "1"'>
+						AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+						</when>
+						<when test='SCH_QUARTER == "2"'>
+						AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+						</when>
+						<when test='SCH_QUARTER == "3"'>
+						AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+						</when>
+						<when test='SCH_QUARTER == "4"'>
+						AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+						</when>
+					</choose>
+				</when>
+			</choose>
+			GROUP BY <choose><when test='STATISTICS_ST == "DEPT"'>PSPCD.DEPT_ID</when><when test='STATISTICS_ST == "CUSL"'>PSPCD.CUSL_ID</when></choose>, PSPCD.CL_TYPE_CD
+		) CUTT  ON A.CD_ID = CUTT.CL_TYPE_CD AND <choose><when test='STATISTICS_ST == "DEPT"'>A.DEPT_ID = CUTT.DEPT_ID</when><when test='STATISTICS_ST == "CUSL"'>A.CUSL_ID = CUTT.CUSL_ID</when></choose>
+		<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+		WHERE A.CD_ID = #{CL_TYPE_CD}
+		</if>
+	) A
+</select>
+
+<select id="phoneCuttTypetatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /*상담유형별 통계 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttTypetatistics)*/
+		A.CUTT_TYPE_ID
+		, CUTT.CUTT_TYPE_SE_CD
+		, CUTT.UP_CUTT_TYPE_ID
+		, CUTT.FULL_PATH
+		, CUTT.FULL_CUTT_TYPE_ID
+		, A.CL_TYPE_CD
+		, A.CL_TYPE_NM
+		, A.TOT_CNT
+		, A.COMPLETED_CNT
+		, A.TOT_CNT - A.COMPLETED_CNT AS NOT_COMPLETED_CNT
+		, CASE WHEN A.TOT_CNT > 0 THEN ROUND((A.COMPLETED_CNT::DECIMAL/ A.TOT_CNT::DECIMAL) * 100, 2) ELSE 0 END AS COMPLETED_RATE
+		, A.TOT_PHN_HR
+		, CASE WHEN A.DAY_CNT > 0 THEN ROUND((A.TOT_CNT::DECIMAL/ A.DAY_CNT::DECIMAL), 2) ELSE 0 END AS DAY_AVG_CNT
+		, CASE WHEN A.DAY_CNT > 0 THEN A.TOT_PHN_HR / A.DAY_CNT ELSE 0 END AS DAY_AVG_PHN_HR
+	FROM (
+			SELECT
+				A.CUTT_TYPE_ID
+				, A.CD_ID AS CL_TYPE_CD
+				, A.CD_NM AS CL_TYPE_NM
+				, A.SORT_ORD
+				, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+				, COALESCE(CUTT.COMPLETED_CNT, 0) AS COMPLETED_CNT
+				, COALESCE(CUTT.CUSL_CNT, 0) AS CUSL_CNT
+				, COALESCE(CUTT.TOT_PHN_HR, 0) AS TOT_PHN_HR
+				, (
+					SELECT
+						COUNT(*)
+					FROM (
+				<choose>
+					<when test='SCH_GB == "DAY"'>
+					SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+					, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+					</when>
+					<when test='SCH_GB == "MONTH"'>
+					SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+					, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+					</when>
+					<when test='SCH_GB == "QUARTER"'>
+						<choose>
+							<when test='SCH_QUARTER == "1"'>
+							SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+							, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+							</when>
+							<when test='SCH_QUARTER == "2"'>
+							SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+							, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+							</when>
+							<when test='SCH_QUARTER == "3"'>
+							SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+							, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+							</when>
+							<when test='SCH_QUARTER == "4"'>
+							SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+							, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+							</when>
+						</choose>
+					</when>
+				</choose>
+					) DT
+					WHERE YOIL NOT IN (6, 7) --토요일, 일요일 제외
+				) AS DAY_CNT
+			FROM (
+				SELECT
+					 CUTT.CUTT_TYPE_ID 
+					, COMM.CD_ID
+					, COMM.CD_NM
+					, COMM.SORT_ORD
+				FROM (
+					SELECT DISTINCT CUTT_TYPE_ID 
+					FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+					WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+					<choose>
+						<when test='SCH_GB == "DAY"'>
+						AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+						</when>
+						<when test='SCH_GB == "MONTH"'>
+						AND PSPCD.CUTT_YM = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+						</when>
+						<when test='SCH_GB == "QUARTER"'>
+							<choose>
+								<when test='SCH_QUARTER == "1"'>
+								AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+								</when>
+								<when test='SCH_QUARTER == "2"'>
+								AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+								</when>
+								<when test='SCH_QUARTER == "3"'>
+								AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+								</when>
+								<when test='SCH_QUARTER == "4"'>
+								AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+								</when>
+							</choose>
+						</when>
+					</choose>
+				) CUTT
+				CROSS JOIN (SELECT * FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'CALL_TP') COMM
+			) A
+			LEFT OUTER JOIN (
+				SELECT
+					 PSPCD.CUTT_TYPE_ID 
+					, PSPCD.CL_TYPE_CD
+					, COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+					, SUM(CASE WHEN PSPCD.CUTT_RSLT_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS COMPLETED_CNT
+					, COUNT(DISTINCT PSPCD.CUSL_ID) AS CUSL_CNT
+					, SUM(PSPCD.PHN_HR) AS TOT_PHN_HR
+				FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+				WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+				<choose>
+					<when test='SCH_GB == "DAY"'>
+					AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					</when>
+					<when test='SCH_GB == "MONTH"'>
+					AND PSPCD.CUTT_YM = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+					</when>
+					<when test='SCH_GB == "QUARTER"'>
+						<choose>
+							<when test='SCH_QUARTER == "1"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+							</when>
+							<when test='SCH_QUARTER == "2"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+							</when>
+							<when test='SCH_QUARTER == "3"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+							</when>
+							<when test='SCH_QUARTER == "4"'>
+							AND PSPCD.CUTT_YM BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+							</when>
+						</choose>
+					</when>
+				</choose>
+				GROUP BY  PSPCD.CUTT_TYPE_ID , PSPCD.CL_TYPE_CD
+			) CUTT  ON A.CD_ID = CUTT.CL_TYPE_CD AND  A.CUTT_TYPE_ID = CUTT.CUTT_TYPE_ID
+	) A
+	LEFT OUTER JOIN (
+		WITH RECURSIVE CUTT_TREE AS (
+			SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID,  CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PLT_CUTT_TYPE.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END  AS CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_EXPLN, CUTT_TYPE_LVL, USE_YN, DEL_YN, SORT_ORD, 1 AS LVL, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+			FROM PLT_CUTT_TYPE
+			WHERE UP_CUTT_TYPE_ID IS NULL
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			UNION ALL
+			SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_NM, B.CUTT_TYPE_EXPLN, B.CUTT_TYPE_LVL, B.USE_YN, B.DEL_YN, B.SORT_ORD, C.LVL + 1 AS LVL, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, C.FULL_CUTT_TYPE_ID || ' > ' || CAST(B.CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(C.FULL_PATH || ' > ' || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+			FROM PLT_CUTT_TYPE B
+			INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+			WHERE B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+			AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			)
+			SELECT
+				CT.CUSTCO_ID
+				, CT.CUTT_TYPE_SE_CD
+				, CT.CUTT_TYPE_ID
+				, CT.UP_CUTT_TYPE_ID
+				, CT.USE_YN
+				, CT.DEL_YN
+				, CT.FULL_PATH
+				, CT.FULL_CUTT_TYPE_ID
+				, CT.SORT
+			FROM CUTT_TREE CT
+		WHERE CT.CUTT_TYPE_LVL<![CDATA[<=]]>(SELECT CUTT_TYPE_LMT_LVL_CD::INTEGER + 1 FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = CT.CUSTCO_ID)
+		ORDER BY CT.SORT
+	) CUTT ON CUTT.CUTT_TYPE_ID = A.CUTT_TYPE_ID
+	WHERE (STRING_TO_ARRAY(CUTT.FULL_CUTT_TYPE_ID, ' > '))[#{LVL}::INT]::INT = #{CUTT_TYPE_ID}::INT
+	<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>
+	AND A.CL_TYPE_CD = #{CL_TYPE_CD}
+	</if>
+	ORDER BY CUTT.SORT, A.SORT_ORD
+</select>
+
+<select id="phoneCuttDailyStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /*일자별 통계 현황 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttDailyStatistics)*/
+		A.CUTT_YMD
+		, A.CUSL_CNT
+		, A.TOT_CNT
+		, A.COMPLETED_CNT
+		, A.TOT_CNT - A.COMPLETED_CNT AS NOT_COMPLETED_CNT
+		, CASE WHEN A.TOT_CNT > 0 THEN ROUND((A.COMPLETED_CNT::DECIMAL/ A.TOT_CNT::DECIMAL) * 100, 2) ELSE 0 END AS COMPLETED_RATE
+		, A.TOT_PHN_HR
+		, CASE WHEN A.CUSL_CNT > 0 THEN ROUND((A.TOT_CNT::DECIMAL/ A.CUSL_CNT::DECIMAL), 2) ELSE 0 END AS DAY_AVG_CNT
+		, CASE WHEN A.CUSL_CNT > 0 THEN A.TOT_PHN_HR / A.CUSL_CNT ELSE 0 END AS DAY_AVG_PHN_HR
+	FROM (
+		SELECT
+			DT.DT AS CUTT_YMD
+			, COALESCE(CUTT.TOT_CNT, 0) AS TOT_CNT
+			, COALESCE(CUTT.COMPLETED_CNT, 0) AS COMPLETED_CNT
+			, COALESCE(CUTT.CUSL_CNT, 0) AS CUSL_CNT
+			, COALESCE(CUTT.TOT_PHN_HR, 0) AS TOT_PHN_HR
+		FROM (
+			SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+		) DT
+		LEFT OUTER JOIN (
+			SELECT
+				 PSPCD.CUTT_YMD AS CUTT_YMD
+				, COUNT(PSPCD.STATS_PHN_CUTT_DTL_ID) AS TOT_CNT
+				, SUM(CASE WHEN PSPCD.CUTT_RSLT_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS COMPLETED_CNT
+				, COUNT(DISTINCT PSPCD.CUSL_ID) AS CUSL_CNT
+				, SUM(PSPCD.PHN_HR) AS TOT_PHN_HR
+			FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+			WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+			AND PSPCD.CUTT_YMD BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT}
+			<if test='CL_TYPE_CD != null and CL_TYPE_CD != ""'>AND PSPCD.CL_TYPE_CD = #{CL_TYPE_CD}</if>
+			GROUP BY PSPCD.CUTT_YMD
+		) CUTT ON CUTT.CUTT_YMD = DT.DT
+	--	WHERE DT.YOIL NOT IN (6, 7) --토,일 제외
+	) A
+</select>
+
+
+<select id="phoneClbkTermStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT   /* 콜백 통계 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneClbkTermStatistics)*/
+			RS.TOT_CLBK								/* 콜백건수 */
+			, RS.AMT_CLBK							/* 배분건수 */
+			, RS.NO_AMT_CLBK						/* 미배분건수 */
+			, RS.TOT_PHN_HR						/* 총 콜백 상담시간*/
+			, COALESCE(RS.TOT_PHN_HR/RS.DAY_CNT, 0) AS DAY_PHN_HR /* 일일 콜백 상담시간*/
+			, RS.COMPLETED_CNT
+			, COALESCE(RS.TOT_CLBK - RS.COMPLETED_CNT, 0) AS NOT_COMPLETED_CNT
+			, CASE WHEN RS.TOT_CLBK > 0 AND RS.COMPLETED_CNT > 0 THEN ROUND((RS.COMPLETED_CNT::DECIMAL/ RS.AMT_CLBK::DECIMAL) * 100, 2) ELSE 0 END AS COMPLETED_RATE /* 콜백 처리율*/
+	FROM ( 
+			SELECT COALESCE(CLBK.TOT_CLBK, 0) AS TOT_CLBK   						/* 총 콜백 건수  */
+					, COALESCE(CLBK.AMT_CLBK, 0) AS AMT_CLBK						/* 배분 건수  */
+					, COALESCE(CLBK.TOT_CLBK - CLBK.AMT_CLBK , 0) AS NO_AMT_CLBK	/* 미배분 건수 */
+					, ( SELECT 
+							COUNT(*)
+						FROM (
+						<choose>
+							<when test='SCH_GB == "DAY"'>
+							SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+							, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL 
+							</when>
+							<when test='SCH_GB == "MONTH"'>
+							SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+							, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+							</when>
+							<when test='SCH_GB == "QUARTER"'>
+								<choose>
+									<when test='SCH_QUARTER == "1"'>
+									SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+									, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+									</when>
+									<when test='SCH_QUARTER == "2"'>
+									SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+									, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+									</when>
+									<when test='SCH_QUARTER == "3"'>
+									SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+									, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+									</when>
+									<when test='SCH_QUARTER == "4"'>
+									SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+									, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+									</when>
+								</choose>
+							</when>
+						</choose>
+						)DT 
+						WHERE YOIL NOT IN (6, 7)
+					  ) AS DAY_CNT
+					  , COALESCE(CUTT.COMPLETED_CNT, 0 ) AS COMPLETED_CNT
+					  , COALESCE(CUTT.TOT_PHN_HR, 0 ) AS TOT_PHN_HR
+			FROM (
+				SELECT COUNT(CLBK_ID) AS TOT_CLBK
+						, SUM(CASE WHEN ALTMNT_YN ='Y' THEN 1 ELSE 0 END) AS AMT_CLBK
+				FROM PLT_PHN_CLBK
+				WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+				<choose>
+					<when test='SCH_GB == "DAY"'>
+					AND SUBSTRING(DRWI_DT, 1, 8) BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					</when>
+					<when test='SCH_GB == "MONTH"'>
+					AND SUBSTRING(DRWI_DT, 1, 6) = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+					</when>
+					<when test='SCH_GB == "QUARTER"'>
+						<choose>
+							<when test='SCH_QUARTER == "1"'>
+							AND DRWI_DT BETWEEN CONCAT(CONCAT(#{SCH_YEAR},'01'), '01000000') AND CONCAT(CONCAT(#{SCH_YEAR},'03'), '31235959') --1분기
+							</when>
+							<when test='SCH_QUARTER == "2"'>
+							AND DRWI_DT BETWEEN CONCAT(CONCAT(#{SCH_YEAR},'04'), '01000000') AND CONCAT(CONCAT(#{SCH_YEAR},'06'), '30235959') --2분기
+							</when>
+							<when test='SCH_QUARTER == "3"'>
+							AND DRWI_DT BETWEEN CONCAT(CONCAT(#{SCH_YEAR},'07'), '01000000') AND CONCAT(CONCAT(#{SCH_YEAR},'09'), '30235959') --3분기
+							</when>
+							<when test='SCH_QUARTER == "4"'>
+							AND DRWI_DT BETWEEN CONCAT(CONCAT(#{SCH_YEAR},'10'), '01000000') AND CONCAT(CONCAT(#{SCH_YEAR},'12'), '31235959') --4분기
+							</when>
+						</choose>
+					</when>
+				</choose>
+				) CLBK
+			CROSS JOIN (SELECT 
+							SUM(CASE WHEN CLBK_ID IS NOT NULL AND CUTT_RSLT_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS COMPLETED_CNT
+							, SUM(PHN_HR) AS TOT_PHN_HR
+						FROM PLT_STATS_PHN_CUTT_DTL
+						WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+						AND CLBK_ID IS NOT NULL
+				<choose>
+					<when test='SCH_GB == "DAY"'>
+					AND SUBSTRING(CUTT_YMD, 1, 8) BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					</when>
+					<when test='SCH_GB == "MONTH"'>
+					AND SUBSTRING(CUTT_YMD, 1, 6) = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+					</when>
+					<when test='SCH_GB == "QUARTER"'>
+						<choose>
+							<when test='SCH_QUARTER == "1"'>
+							AND SUBSTRING(CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+							</when>
+							<when test='SCH_QUARTER == "2"'>
+							AND SUBSTRING(CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+							</when>
+							<when test='SCH_QUARTER == "3"'>
+							AND SUBSTRING(CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+							</when>
+							<when test='SCH_QUARTER == "4"'>
+							AND SUBSTRING(CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+							</when>
+						</choose>
+					</when>
+				</choose>
+				) AS CUTT
+		) AS RS
+
+</select> 
+
+<select id="phoneClbkDayStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT   /* 콜백통계 요일별 현황 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneClbkDayStatistics)*/
+		 DEF.YOIL
+		, COALESCE (DAY_CNT.CLBK_CNT, 0) AS CLBK_CNT
+FROM (SELECT EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES('20230807'::DATE , '20230813'::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL) DEF 
+LEFT JOIN (
+			SELECT
+					 YOIL
+					,COUNT(CLBK_ID) AS CLBK_CNT
+			FROM (		
+				SELECT  CLBK_ID
+					, EXTRACT(ISODOW FROM SUBSTRING(DRWI_DT,1,8)::DATE ) AS YOIL
+				FROM PLT_PHN_CLBK
+				WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			<choose>
+					<when test='SCH_GB == "DAY"'>
+					AND SUBSTRING(DRWI_DT, 1, 8) BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+					</when>
+					<when test='SCH_GB == "MONTH"'>
+					AND SUBSTRING(DRWI_DT, 1, 6) = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+					</when>
+					<when test='SCH_GB == "QUARTER"'>
+						<choose>
+							<when test='SCH_QUARTER == "1"'>
+							AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+							</when>
+							<when test='SCH_QUARTER == "2"'>
+							AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+							</when>
+							<when test='SCH_QUARTER == "3"'>
+							AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+							</when>
+							<when test='SCH_QUARTER == "4"'>
+							AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+							</when>
+						</choose>
+					</when>
+				</choose>
+			) AS CNT
+					GROUP BY YOIL
+					ORDER BY YOIL
+	) DAY_CNT ON DAY_CNT.YOIL = DEF.YOIL
+</select>
+
+<select id="phoneClbkQueueStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.DRWI_SE_NM /* 콜백통계 큐별 현황 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneClbkQueueStatistics)*/
+							, COALESCE(A.TOT_CLBK, 0 ) AS TOT_CLBK  																								/* 총 콜백 수 */
+							, COALESCE(A.AMT_CLBK, 0 ) AS AMT_CLBK  																								/* 배분건수 */
+							, COALESCE(B.COMPLETED_CNT, 0) AS COMPLETED_CNT																							/* 완료건수 */
+							, COALESCE(CASE WHEN A.AMT_CLBK > 0 THEN (A.AMT_CLBK- COALESCE(B.COMPLETED_CNT, 0)) ELSE 0 END, 0) AS NO_COMPLETED_CNT					/* 미완료건수 */
+							, COALESCE(B.DRWI_SE_HR, 0) AS DRWI_SE_HR																								/* 인입구분 별 상담시간 */
+							, COALESCE(CASE WHEN A.AMT_CLBK > 0 THEN ROUND((B.COMPLETED_CNT::DECIMAL/ A.AMT_CLBK::DECIMAL) * 100, 2) ELSE 0 END, 0) AS COMPLETED_RATE /* 콜백 처리율*/
+							, COALESCE(CASE WHEN A.AMT_CLBK > 0 THEN ROUND((B.COMPLETED_CNT::DECIMAL/ DT.DAY_CNT::DECIMAL), 2) ELSE 0 END, 0) AS DAY_COMPLETED		 /* 일평균 처리건수*/			
+							, COALESCE(CASE WHEN A.AMT_CLBK > 0 THEN ROUND((B.DRWI_SE_HR::DECIMAL / DT.DAY_CNT::DECIMAL), 2) ELSE 0 END, 0) AS DAY_CUSL				 /* 일평균 상담시간*/		 																
+					FROM (
+						SELECT DISTINCT PPC.DRWI_SE_NM
+							, COUNT(PPC.CLBK_ID) AS TOT_CLBK
+							, SUM(CASE WHEN PPC.ALTMNT_YN ='Y' THEN 1 ELSE 0 END) AS AMT_CLBK
+						FROM PLT_PHN_CLBK PPC
+						WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+						<choose>
+							<when test='SCH_GB == "DAY"'>
+							AND SUBSTRING(DRWI_DT, 1, 8) BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+							</when>
+							<when test='SCH_GB == "MONTH"'>
+							AND SUBSTRING(DRWI_DT, 1, 6) = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+							</when>
+							<when test='SCH_GB == "QUARTER"'>
+								<choose>
+									<when test='SCH_QUARTER == "1"'>
+									AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+									</when>
+									<when test='SCH_QUARTER == "2"'>
+									AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+									</when>
+									<when test='SCH_QUARTER == "3"'>
+									AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+									</when>
+									<when test='SCH_QUARTER == "4"'>
+									AND SUBSTRING(DRWI_DT, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+									</when>
+								</choose>
+							</when>
+						</choose>
+						GROUP BY PPC.DRWI_SE_NM
+						ORDER BY COUNT(PPC.CLBK_ID) DESC
+					) A
+					LEFT JOIN  ( SELECT PSPCD.DRWI_SE_NM 
+											, COUNT(PSPCD.CLBK_ID) AS COMPLETED_CNT
+											, HR.DRWI_SE_HR
+								FROM PLT_STATS_PHN_CUTT_DTL PSPCD 
+								LEFT OUTER JOIN (SELECT DRWI_SE_NM,SUM(CASE WHEN CLBK_ID IS NOT NULL THEN PHN_HR ELSE 0 END) AS DRWI_SE_HR 
+												FROM PLT_STATS_PHN_CUTT_DTL
+												WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+												GROUP BY DRWI_SE_NM) HR
+								ON HR.DRWI_SE_NM = PSPCD.DRWI_SE_NM
+								WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+								AND PSPCD.CUTT_RSLT_CD ='COMPLETED'
+								<choose>
+									<when test='SCH_GB == "DAY"'>
+									AND SUBSTRING(PSPCD.CUTT_YMD, 1, 8) BETWEEN #{SCH_ST_DT} AND #{SCH_END_DT} --일별
+									</when>
+									<when test='SCH_GB == "MONTH"'>
+									AND SUBSTRING(PSPCD.CUTT_YMD, 1, 6) = CONCAT(#{SCH_YEAR}, #{SCH_MONTH}) --월별
+									</when>
+									<when test='SCH_GB == "QUARTER"'>
+										<choose>
+											<when test='SCH_QUARTER == "1"'>
+											AND SUBSTRING(PSPCD.CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'01') AND CONCAT(#{SCH_YEAR},'03') --1분기
+											</when>
+											<when test='SCH_QUARTER == "2"'>
+											AND SUBSTRING(PSPCD.CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'04') AND CONCAT(#{SCH_YEAR},'06') --2분기
+											</when>
+											<when test='SCH_QUARTER == "3"'>
+											AND SUBSTRING(PSPCD.CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'07') AND CONCAT(#{SCH_YEAR},'09') --3분기
+											</when>
+											<when test='SCH_QUARTER == "4"'>
+											AND SUBSTRING(PSPCD.CUTT_YMD, 1, 6) BETWEEN CONCAT(#{SCH_YEAR},'10') AND CONCAT(#{SCH_YEAR},'12') --4분기
+											</when>
+										</choose>
+									</when>
+								</choose>
+								GROUP BY PSPCD.DRWI_SE_NM, HR.DRWI_SE_HR 
+								) B
+					ON B.DRWI_SE_NM = A.DRWI_SE_NM
+						CROSS JOIN (SELECT COUNT(*) AS DAY_CNT 
+									FROM (
+										<choose>
+											<when test='SCH_GB == "DAY"'>
+											SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+											, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+											</when>
+											<when test='SCH_GB == "MONTH"'>
+											SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+											, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+											</when>
+											<when test='SCH_GB == "QUARTER"'>
+												<choose>
+													<when test='SCH_QUARTER == "1"'>
+													SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+													, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+													</when>
+													<when test='SCH_QUARTER == "2"'>
+													SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+													, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+													</when>
+													<when test='SCH_QUARTER == "3"'>
+													SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+													, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+													</when>
+													<when test='SCH_QUARTER == "4"'>
+													SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+													, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+													</when>
+												</choose>
+											</when>
+										</choose>
+											) DT
+											WHERE YOIL NOT IN (6, 7) --토요일, 일요일 제외
+										) DT
+				 ORDER BY COALESCE(A.TOT_CLBK, 0 )
+</select>
+
+<select id="phoneCuttCpiSeStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /* 캠페인 유형별 타겟 통계 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttCpiSeStatistics)*/
+		COALESCE(CPI.CPI_YEAR, #{CPI_YR}) AS CPI_YEAR
+		, PCC.CD_ID
+		, PCC.CD_NM
+		, COALESCE(CPI.CUST_CNT, 0) AS CUST_CNT
+	FROM PLT_COMM_CD PCC
+	LEFT OUTER JOIN (
+		SELECT PLAN_SE_CD, SUM(COALESCE(CUST_CNT, 0)) AS CUST_CNT, CPI_YEAR
+		FROM (
+			SELECT
+				POC.PLAN_SE_CD
+				, (SELECT COUNT(*) FROM PLT_OBD_CPI_CUST WHERE CPI_ID = POC.CPI_ID) AS CUST_CNT
+				, SUBSTRING(POC.CPI_BGNG_DT, 1, 4) AS CPI_YEAR
+			FROM PLT_OBD_CPI POC
+			WHERE POC.CUSTCO_ID = #{CUSTCO_ID}::INT
+			AND POC.USE_YN = 'Y'
+			AND POC.PRGRS_STTS_CD = 'TERMIAT'
+			AND SUBSTRING(POC.CPI_BGNG_DT, 1, 4) = #{CPI_YR}
+		) A GROUP BY PLAN_SE_CD, CPI_YEAR
+	) CPI ON CPI.PLAN_SE_CD = PCC.CD_ID
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INT
+	AND PCC.GROUP_CD_ID = 'CMPN_CL'
+	AND PCC.USE_YN = 'Y'
+	AND PCC.DEL_YN = 'N'
+	ORDER BY PCC.SORT_ORD
+</select> 
+
+<select id="phoneCuttCpiProcRstList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /* 캠페인 진행 결과 현황 목록 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.phoneCuttCpiProcRstList)*/
+		PCC.CD_ID
+		, PCC.CD_NM
+		, COALESCE(CPI.CNT, 0) AS CNT
+		, CASE WHEN COALESCE(CPI.CNT, 0) > 0 THEN ROUND((CPI.CNT::DECIMAL/(SELECT COUNT(STATS_PHN_CUTT_DTL_ID) FROM PLT_STATS_PHN_CUTT_DTL WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND CPI_ID = #{CPI_ID}::INT)::DECIMAL)*100, 2) ELSE 0 END AS RATE
+		, COALESCE(CPI.PHN_HR, 0) AS PHN_HR
+		, COALESCE(CPI.CUST_CNT, 0) AS CUST_CNT
+	FROM PLT_COMM_CD PCC
+	LEFT OUTER JOIN (
+		SELECT
+			PSPCD.PRCS_RSLT_CD
+			, COUNT(PSPCD.PRCS_RSLT_CD) AS CNT
+			, SUM(PSPCD.PHN_HR) AS PHN_HR
+			, COUNT(PSPCD.CUST_ID) AS CUST_CNT
+		FROM PLT_STATS_PHN_CUTT_DTL PSPCD
+		WHERE PSPCD.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND PSPCD.CPI_ID = #{CPI_ID}::INT
+		GROUP BY PSPCD.PRCS_RSLT_CD
+	) CPI ON CPI.PRCS_RSLT_CD = PCC.CD_ID
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INT
+	AND PCC.GROUP_CD_ID = 'CAMP_RS'
+	AND PCC.USE_YN = 'Y'
+	AND PCC.DEL_YN = 'N'
+	ORDER BY PCC.SORT_ORD
+</select> 
+
+<select id="qaStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /* QA 유형별 현황 및 QA 평가 건수 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.qaStatistics)*/
+		PQQC.QLTY_CLSF_ID
+		, PQQC.UP_QLTY_CLSF_ID
+		, PQQC.QLTY_CLSF_NM
+		, (
+			SELECT COUNT(*)
+			FROM PLT_QA_PLAN PQP
+			INNER JOIN PLT_QA_TRGT_SLCTN PQTS ON PQTS.QA_PLAN_ID = PQP.QA_PLAN_ID
+			INNER JOIN PLT_CUTT_ITGRT_HSTRY PCIH ON PCIH.ITGRT_HSTRY_ID = PQTS.ITGRT_HSTRY_ID
+			INNER JOIN PLT_PHN_CUTT PPC ON PPC.PHN_CUTT_ID = PCIH.PHN_CUTT_ID
+			WHERE PQP.CUSTCO_ID = #{CUSTCO_ID}::INT
+			AND PQP.DEL_YN = 'N'
+			AND PQP.PRGRS_STTS_CD = 'TERMIAT'
+			AND PQP.ENFC_SE_CD = PQQC.QLTY_CLSF_ID::VARCHAR
+			AND PQP.ENFC_YR = #{ENFC_YR}
+<!--			<if test='ENFC_SE_CD != null and ENFC_SE_CD != ""'>AND PQP.ENFC_SE_CD = #{ENFC_SE_CD}</if>-->
+		) AS CNT
+	FROM PLT_QA_QLTY_CLSF PQQC
+	WHERE EXISTS (SELECT 1 FROM PLT_QA_QLTY_CLSF WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND UP_QLTY_CLSF_ID IS NULL AND QLTY_CLSF_ID = PQQC.UP_QLTY_CLSF_ID)
+	AND PQQC.USE_YN = 'Y'
+	AND PQQC.DEL_YN = 'N'
+	ORDER BY PQQC.SORT_ORD
+</select>
+
+<select id="selectQaPlan"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /* QA 평가 현황 목록 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.selectQaPlan)*/
+		P.QA_PLAN_ID
+		, P.CUSTCO_ID
+		, P.PLAN_NM
+		, P.EVL_BGNG_YMD
+		, P.EVL_END_YMD
+		, P.OBJC_APLY_YN
+		, OCD.CD_NM AS OBJC_APLY_NM
+		, P.PRGRS_STTS_CD
+		, PCD.CD_NM AS PRGRS_STTS_NM
+		, P.EVL_CL_ADD_YN
+		, P.EVL_CHN_CD
+		, P.EXPLN
+		, TO_DATE(P.REG_DT,'YYYYMMDDHH24MISS') AS REG_DT
+		, P.RGTR_ID
+		, P.MDFCN_DT
+		, P.MDFR_ID
+		, P.ENFC_YR
+		, P.ENFC_SE_CD
+		, ECD.QLTY_CLSF_NM AS ENFC_SE_NM
+		, U.USER_NM AS RGTR_ID_NM
+		, (SELECT COUNT(*) 
+			FROM PLT_QA_MNGR M
+			WHERE M.QA_PLAN_ID = P.QA_PLAN_ID ) QA_MNGR_CNT
+		,TO_DATE(P.EVL_END_YMD::TEXT ,'YYYYMMDDHH24MISS') - CURRENT_DATE DIFF_DAY
+		, (
+			SELECT ARRAY_TO_JSON(ARRAY_AGG(C))
+			FROM PLT_QA_CYCL C 
+			WHERE C.QA_PLAN_ID = P.QA_PLAN_ID
+		) CYCL_LIST
+		, (SELECT COUNT(DISTINCT QA_CYCL_ID) FROM PLT_QA_RSLT WHERE QA_PLAN_ID = P.QA_PLAN_ID) AS CYCL_CNT
+		, (SELECT COUNT(DISTINCT QA_MNGR_ID) FROM PLT_QA_MNGR WHERE QA_PLAN_ID = P.QA_PLAN_ID) AS QA_MNGR_CNT
+		, (SELECT COUNT(DISTINCT QA_TRGT_ID) FROM PLT_QA_TRGT_SLCTN WHERE QA_PLAN_ID = P.QA_PLAN_ID) AS QA_TRGT_CNT
+		, (SELECT COUNT(DISTINCT QA_TRGT_ID) FROM PLT_QA_TRGT_ALTMNT WHERE QA_PLAN_ID = P.QA_PLAN_ID) AS QA_ALTMNT_CNT
+	FROM PLT_QA_PLAN P
+	LEFT OUTER JOIN PLT_USER U ON P.RGTR_ID = U.USER_ID
+	LEFT OUTER JOIN PLT_COMM_CD OCD ON OCD.CUSTCO_ID = P.CUSTCO_ID AND P.OBJC_APLY_YN = OCD.CD_ID AND OCD.GROUP_CD_ID = 'QAOJ_WT'				
+	LEFT OUTER JOIN PLT_COMM_CD PCD ON PCD.CUSTCO_ID = P.CUSTCO_ID AND P.PRGRS_STTS_CD = PCD.CD_ID AND PCD.GROUP_CD_ID = 'QATS_ST'				
+	LEFT OUTER JOIN (
+		SELECT A.QLTY_CLSF_ID, A.QLTY_CLSF_NM, A.UP_QLTY_CLSF_ID
+		FROM PLT_QA_QLTY_CLSF A
+		LEFT OUTER JOIN PLT_QA_QLTY_CLSF B ON A.UP_QLTY_CLSF_ID = B.QLTY_CLSF_ID 	
+		WHERE  B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+		AND B.UP_QLTY_CLSF_ID IS NULL
+	) ECD ON P.ENFC_SE_CD = ECD.QLTY_CLSF_ID::VARCHAR
+	WHERE P.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	AND P.DEL_YN <![CDATA[<>]]> 'Y'
+	<if test="ENFC_YR != null and ENFC_YR != ''">
+	AND P.ENFC_YR = #{ENFC_YR}
+	</if>
+	<if test="PRGRS_STTS_CD != null and PRGRS_STTS_CD != ''">
+	AND P.PRGRS_STTS_CD = #{PRGRS_STTS_CD}
+	</if>
+	<if test='ENFC_SE_CD != null and ENFC_SE_CD != ""'>
+	AND P.ENFC_SE_CD = #{ENFC_SE_CD}
+	</if>
+</select>
+
+<select id="qaScorStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /* QA 상담평가 차수별 점수 통계 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.qaScorStatistics)*/
+		ROUND(AVG(TOT_SCR), 2) AS AVG_SCR
+		, MAX(TOT_SCR) AS MAX_SCR
+		, MIN(TOT_SCR) AS MIN_SCR
+	FROM (
+		SELECT
+			PQR.QA_TRGT_ID
+			, SUM(SCR) AS TOT_SCR
+		FROM PLT_QA_RSLT PQR
+		WHERE PQR.QA_PLAN_ID = #{QA_PLAN_ID}::INT
+		AND PQR.QA_CYCL_ID = #{QA_CYCL_ID}::INT
+		GROUP BY PQR.QA_TRGT_ID
+	) A
+</select>
+
+<select id="qaDtlStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	WITH RECURSIVE QLTY_TREE  /* QA 상담평가 차수별 결과 통계 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.qaDtlStatistics)*/
+	AS (
+		SELECT CUSTCO_ID, UP_QLTY_CLSF_ID, QLTY_CLSF_ID, QLTY_CLSF_NM, 1 AS LVL, SORT_ORD, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(QLTY_CLSF_NM AS TEXT) AS FULL_PATH
+		FROM PLT_QA_QLTY_CLSF
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND UP_QLTY_CLSF_ID = #{UP_QLTY_CLSF_ID}::INT
+		AND USE_YN = 'Y'
+		AND DEL_YN = 'N'
+		UNION ALL
+		SELECT B.CUSTCO_ID, B.UP_QLTY_CLSF_ID, B.QLTY_CLSF_ID, B.QLTY_CLSF_NM, LVL+1 AS LVL, B.SORT_ORD, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, C.FULL_PATH || ' > ' || B.QLTY_CLSF_NM AS FULL_PATH
+		FROM PLT_QA_QLTY_CLSF B
+		INNER JOIN QLTY_TREE C ON B.UP_QLTY_CLSF_ID = C.QLTY_CLSF_ID
+		WHERE B.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND B.USE_YN = 'Y'
+		AND B.DEL_YN = 'N'
+	)
+	SELECT
+		A.UP_QLTY_CLSF_ID
+		, A.UP_QLTY_CLSF_NM
+		, A.QLTY_CLSF_ID
+		, A.QLTY_CLSF_NM
+		, A.EVL_ARTCL_ID
+		, A.EVL_ARTCL_NM
+		, A.ASSSCOR
+		, A.CNT
+		, A.RANK_NUM
+		, A.TRGT_CNT
+		, CASE WHEN A.TRGT_CNT > 0 THEN ROUND((A.CNT::DECIMAL/A.TRGT_CNT::DECIMAL) * 100, 2) ELSE 0 END AS RATE
+	FROM (
+		SELECT
+			PQPQ.QA_PLAN_ID
+			, PQC.QA_CYCL_ID
+			, QT.UP_QLTY_CLSF_ID
+			, (SELECT QLTY_CLSF_NM FROM PLT_QA_QLTY_CLSF WHERE QLTY_CLSF_ID = QT.UP_QLTY_CLSF_ID) AS UP_QLTY_CLSF_NM
+			, QT.QLTY_CLSF_ID
+			, QT.QLTY_CLSF_NM
+			, PQQEA.EVL_ARTCL_ID
+			, PQPQ.EVL_ARTCL_NM
+			, PQPQ.ASSSCOR
+			, (SELECT COUNT(DISTINCT QA_TRGT_ID) FROM PLT_QA_RSLT WHERE QA_PLAN_ID = PQPQ.QA_PLAN_ID AND EVL_ARTCL_ID = PQPQ.EVL_ARTCL_ID AND QA_CYCL_ID = PQC.QA_CYCL_ID) AS CNT
+			, (SELECT COUNT(DISTINCT QA_TRGT_ID) FROM PLT_QA_RSLT WHERE QA_PLAN_ID = PQPQ.QA_PLAN_ID AND QA_CYCL_ID = PQC.QA_CYCL_ID) AS TRGT_CNT
+			, QT.SORT
+			, COALESCE(PQPQ.SORT_ORD, 0) AS SORT_ORD
+			, QT.FULL_PATH
+			, ROW_NUMBER() OVER(PARTITION BY QT.QLTY_CLSF_ID ORDER BY PQPQ.ASSSCOR DESC) AS RANK_NUM
+		FROM QLTY_TREE QT
+		INNER JOIN PLT_QA_QLTY_EVL_ARTCL PQQEA ON PQQEA.QLTY_CLSF_ID = QT.QLTY_CLSF_ID AND PQQEA.USE_YN = 'Y'
+		INNER JOIN PLT_QA_PLAN_QLTY PQPQ ON PQPQ.EVL_ARTCL_ID = PQQEA.EVL_ARTCL_ID AND PQPQ.DEL_YN = 'N' AND PQPQ.QA_PLAN_ID = #{QA_PLAN_ID}::INT
+		INNER JOIN PLT_QA_PLAN PQP ON PQP.QA_PLAN_ID = PQPQ.QA_PLAN_ID
+		INNER JOIN PLT_QA_CYCL PQC ON PQC.QA_PLAN_ID = PQP.QA_PLAN_ID AND PQC.QA_CYCL_ID = #{QA_CYCL_ID}::INT
+		ORDER BY QT.SORT, ROW_NUMBER() OVER(PARTITION BY QT.QLTY_CLSF_ID ORDER BY PQPQ.ASSSCOR DESC)
+	) A
+</select>
+
+<select id="itgrtMsgStatistics"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /* 통합 메시지 통계 (kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCuttMapper.itgrtMsgStatistics)*/
+		DT.DT
+		, DT.YOIL
+		, COALESCE(STAT.ATALK, 0) AS ATALK
+		, COALESCE(STAT.ATALK_READY, 0) AS ATALK_READY
+		, COALESCE(STAT.ATALK_SUCCESS, 0) AS ATALK_SUCCESS
+		, COALESCE(STAT.ATALK_FAIL, 0) AS ATALK_FAIL
+		, COALESCE(STAT.ATALK_TRAN, 0) AS ATALK_TRAN
+		, COALESCE(STAT.ATALK_TRAN_SMS_SUCCESS, 0) AS ATALK_TRAN_SMS_SUCCESS
+		, COALESCE(STAT.ATALK_TRAN_LMS_SUCCESS, 0) AS ATALK_TRAN_LMS_SUCCESS
+		, COALESCE(STAT.ATALK_TRAN_FAIL, 0) AS ATALK_TRAN_FAIL
+		, COALESCE(STAT.SMS, 0) AS SMS
+		, COALESCE(STAT.SMS_READY, 0) AS SMS_READY
+		, COALESCE(STAT.SMS_SUCCESS, 0) AS SMS_SUCCESS
+		, COALESCE(STAT.SMS_FAIL, 0) AS SMS_FAIL
+		, COALESCE(STAT.LMS, 0) AS LMS
+		, COALESCE(STAT.LMS_READY, 0) AS LMS_READY
+		, COALESCE(STAT.LMS_SUCCESS, 0) AS LMS_SUCCESS
+		, COALESCE(STAT.LMS_FAIL, 0) AS LMS_FAIL
+		, COALESCE(STAT.MMS, 0) AS MMS
+		, COALESCE(STAT.MMS_READY, 0) AS MMS_READY
+		, COALESCE(STAT.MMS_SUCCESS, 0) AS MMS_SUCCESS
+		, COALESCE(STAT.MMS_FAIL, 0) AS MMS_FAIL
+	FROM 
+		(
+		<choose>
+			<when test='SCH_GB == "DAY"'>
+			SELECT TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(#{SCH_ST_DT}::DATE , #{SCH_END_DT}::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+			</when>
+			<when test='SCH_GB == "MONTH"'>
+			SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+			, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, #{SCH_MONTH}), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+			</when>
+			<when test='SCH_GB == "QUARTER"'>
+				<choose>
+					<when test='SCH_QUARTER == "1"'>
+					SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+					, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '01'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '03'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+					</when>
+					<when test='SCH_QUARTER == "2"'>
+					SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+					, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '04'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '06'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+					</when>
+					<when test='SCH_QUARTER == "3"'>
+					SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+					, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '07'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '09'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+					</when>
+					<when test='SCH_QUARTER == "4"'>
+					SELECT TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DT
+					, EXTRACT(ISODOW FROM CAST(TO_CHAR(GENERATE_SERIES(CONCAT(CONCAT(#{SCH_YEAR}, '10'), '01')::DATE , TO_CHAR((DATE_TRUNC('MONTH', CONCAT(CONCAT(#{SCH_YEAR}, '12'), '01')::DATE) + INTERVAL '1 MONTH - 1 day')::DATE, 'YYYYMMDD')::DATE, '1 DAY'::INTERVAL)::DATE, 'YYYYMMDD') AS DATE)) AS YOIL
+					</when>
+				</choose>
+			</when>
+		</choose>
+		) DT 
+		LEFT OUTER JOIN (
+			SELECT
+				SUBSTRING(SNDNG_DT,1,8) SEND_DT,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' THEN 1 ELSE 0 END) ATALK,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' AND RSLT_CD = '0000' THEN 1 ELSE 0 END) ATALK_READY,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' AND RSLT_CD = '1000' THEN 1 ELSE 0 END) ATALK_SUCCESS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' AND RSLT_CD NOT IN('0000','1000') THEN 1 ELSE 0 END) ATALK_FAIL,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' AND ATALK_TRAN_SNDNG_YN = 'Y' THEN 1 ELSE 0 END) ATALK_TRAN,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' AND ATALK_TRAN_SNDNG_YN = 'Y' AND ATALK_TRAN_SNDNG_RSLT_CD = '1000' AND ATALK_TRAN_SNDNG_CD = 'S' THEN 1 ELSE 0 END) ATALK_TRAN_SMS_SUCCESS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' AND ATALK_TRAN_SNDNG_YN = 'Y' AND ATALK_TRAN_SNDNG_RSLT_CD = '1000' AND ATALK_TRAN_SNDNG_CD = 'L' THEN 1 ELSE 0 END) ATALK_TRAN_LMS_SUCCESS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'ATALK' AND ATALK_TRAN_SNDNG_YN = 'Y' AND ATALK_TRAN_SNDNG_RSLT_CD != '1000' THEN 1 ELSE 0 END) ATALK_TRAN_FAIL,
+				SUM(CASE WHEN SNDNG_SE_CD = 'SMS' THEN 1 ELSE 0 END) SMS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'SMS' AND RSLT_CD = '0000' THEN 1 ELSE 0 END) SMS_READY,
+				SUM(CASE WHEN SNDNG_SE_CD = 'SMS' AND RSLT_CD = '1000' THEN 1 ELSE 0 END) SMS_SUCCESS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'SMS' AND RSLT_CD NOT IN('0000','1000') THEN 1 ELSE 0 END) SMS_FAIL,
+				SUM(CASE WHEN SNDNG_SE_CD = 'LMS' THEN 1 ELSE 0 END) LMS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'LMS' AND RSLT_CD = '0000' THEN 1 ELSE 0 END) LMS_READY,
+				SUM(CASE WHEN SNDNG_SE_CD = 'LMS' AND RSLT_CD = '1000' THEN 1 ELSE 0 END) LMS_SUCCESS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'LMS' AND RSLT_CD NOT IN('0000','1000') THEN 1 ELSE 0 END) LMS_FAIL,
+				SUM(CASE WHEN SNDNG_SE_CD = 'MMS' THEN 1 ELSE 0 END) MMS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'MMS' AND RSLT_CD = '0000' THEN 1 ELSE 0 END) MMS_READY,
+				SUM(CASE WHEN SNDNG_SE_CD = 'MMS' AND RSLT_CD = '1000' THEN 1 ELSE 0 END) MMS_SUCCESS,
+				SUM(CASE WHEN SNDNG_SE_CD = 'MMS' AND RSLT_CD NOT IN('0000','1000') THEN 1 ELSE 0 END) MMS_FAIL
+			FROM PLT_MTS_SNDNG_HSTRY PMSH 
+			WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			<choose>
+				<when test='SCH_GB == "DAY"'>
+					AND SNDNG_DT BETWEEN #{SCH_ST_DT}||'000000' AND #{SCH_END_DT}||'235959'
+				</when>
+				<when test='SCH_GB == "MONTH"'>
+					AND SUBSTRING(SNDNG_DT, 1, 6) = CONCAT(#{SCH_YEAR}, #{SCH_MONTH})
+				</when>
+				<when test='SCH_GB == "QUARTER"'>
+					<choose>
+						<when test='SCH_QUARTER == "1"'>
+							AND SNDNG_DT BETWEEN CONCAT(#{SCH_YEAR},'0101000000') AND CONCAT(#{SCH_YEAR},'0331235959')
+						</when>
+						<when test='SCH_QUARTER == "2"'>
+							AND SNDNG_DT BETWEEN CONCAT(#{SCH_YEAR},'0401000000') AND CONCAT(#{SCH_YEAR},'0630235959')
+						</when>
+						<when test='SCH_QUARTER == "3"'>
+							AND SNDNG_DT BETWEEN CONCAT(#{SCH_YEAR},'0701000000') AND CONCAT(#{SCH_YEAR},'0930235959')
+						</when>
+						<when test='SCH_QUARTER == "4"'>
+							AND SNDNG_DT BETWEEN CONCAT(#{SCH_YEAR},'1001000000') AND CONCAT(#{SCH_YEAR},'1231235959')
+						</when>
+					</choose>
+				</when>
+			</choose>
+			GROUP BY SEND_DT
+			ORDER BY SEND_DT
+		) STAT ON DT.DT = STAT.SEND_DT
+	ORDER BY DT.DT
+</select>
+
+</mapper>

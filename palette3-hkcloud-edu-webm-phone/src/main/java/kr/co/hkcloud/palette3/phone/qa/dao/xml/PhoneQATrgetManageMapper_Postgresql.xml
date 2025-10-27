@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.qa.dao.PhoneQATrgetManageMapper">
+
+<!-- 상담이력조회 -->
+<select id="selectRtn" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+<![CDATA[
+SELECT 
+	NVL2(TQE.QA_ID,'Y','N')  AS QA_ID_YN											/*등록여부*/
+	,TQE.QA_ID 				 AS QA_ID												/*QAID*/
+	,TQE.QA_FIN 			 AS QA_FIN												/*QAID*/
+	,TQE.QA_END 			 AS QA_END												/*QAID*/
+	,TAC.CENT_TY			 AS CENT_TY												/*센터구분*/
+	,TAC.CUST_NM  		 AS CUST_NM													/*고객명*/
+	,TAC.CNSL_HIST_NO			 AS CNSL_ID											/*상담이력ID*/
+	,(TAC.CNSL_BEGIN_DATE ||	TAC.CNSL_BEGIN_TIME) AS  CNSL_BEGIN_DTIM			/*상담시작일시*/
+	,(TAC.CNSL_EOT_DATE ||	TAC.CNSL_EOT_TIME) AS  CNSL_EOT_DTIM					/*상담종료일시*/
+	,TAC.RDWT_ID 			AS 	RDWT_ID												/*녹취ID*/
+	,TAC.REG_MAN				AS USER_MAN											/*등록자ID*/
+	,TAC.REG_MAN				AS USER_ID											/*등록자ID*/
+	,NVL2(TAC.RDWT_ID ,'<button type="button" class="tt-btn is-icon"><i class="tt-icon-play"></i></button>','')  AS RDWT_ICON		/*녹취ID*/
+FROM PLT_PHN_CNSL TAC 
+LEFT JOIN PLT_PHN_QA_EVAL TQE ON TQE.CNSL_ID  = TAC.CNSL_HIST_NO			/*QA평가*/ 
+LEFT JOIN PLT_USER A		  ON TAC.CSLT_ID  = A.USER_ID					/*사용자 아이디*/
+WHERE TAC.DEL_YN = 'N'
+ ]]>
+<!--  조회기간 -->
+ <if test="SEARCH_FROM	!='' and SEARCH_FROM	!= null and SEARCH_TO	!='' and SEARCH_TO	!= null ">
+ 	 <![CDATA[
+ 	  	AND   TAC.CNSL_BEGIN_DATE  >=   TO_CHAR(CAST(#{SEARCH_FROM} AS INTEGER)-1)  
+      	AND   TAC.CNSL_BEGIN_DATE <=  #{SEARCH_TO}   
+	 ]]> 	 
+ </if>
+<!-- 상담상태  -->
+ <if test="CNSL_PROG_STCD	!='' and CNSL_PROG_STCD != null">
+ 	AND TAC.CNSL_PROG_STCD = #{CNSL_PROG_STCD}
+ </if>
+<!--  안내유형 -->
+ <if test="INFO_TYPE_CD	!='' and INFO_TYPE_CD != null">
+ 	AND TAC.INFO_TYPE_CD = #{INFO_TYPE_CD}
+ </if>
+<!--  안내상세유형 -->
+<if test="INFO_TYPE_DTCD	!='' and INFO_TYPE_DTCD != null">
+ 	AND TAC.INFO_TYPE_DTCD = #{INFO_TYPE_DTCD}
+</if>
+
+<if test="CSLT_ID != ''">
+	   	/*사용자ID*/
+		AND A.USER_ID LIKE '%'|| #{CSLT_ID}|| '%'		
+</if>
+<if test="CSLT_NM != ''">
+	   	/*사용자명*/
+		AND A.USER_NM LIKE '%'|| #{CSLT_NM}|| '%'		
+</if>
+<if test="CSLT_NICK != ''">
+	   	/*사용자닉네임*/
+		AND A.USER_NICK LIKE '%'|| #{CSLT_NICK}|| '%'		
+</if>
+
+<!-- 소속A  -->
+ <if test="USER_ATTR_A	!='' and USER_ATTR_A != null">
+ 	AND A.USER_ATTR_A = #{USER_ATTR_A}
+ </if>
+ <!-- 소속B  -->
+ <if test="USER_ATTR_B	!='' and USER_ATTR_B != null">
+ 	AND A.USER_ATTR_B = #{USER_ATTR_B}
+ </if>
+ <!-- 소속C  -->
+ <if test="USER_ATTR_C	!='' and USER_ATTR_C != null">
+ 	AND A.USER_ATTR_C = #{USER_ATTR_C}
+ </if>
+ <!-- 소속D  -->
+ <if test="USER_ATTR_D	!='' and USER_ATTR_D != null">
+ 	AND A.USER_ATTR_D = #{USER_ATTR_D}
+ </if>
+
+ ORDER BY QA_ID ASC
+
+</select>
+
+<!-- 상담이력상세조회 -->
+<select id="selectRtnDetails" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	NVL2(TQE.QA_ID,'Y','N')  AS QA_ID		/*등록여부*/
+	,TQE.QA_SEQ				AS QA_SEQ		/*QA회차*/
+	,TAC.CUST_NM  		 AS CUST_NM	/*고객명*/
+	,TAC.CNSL_HIST_NO			 AS CNSL_ID		/*상담이력ID*/
+	,TAC.REG_MAN	    AS 	REG_MAN					/*등록자*/
+	,(TAC.CNSL_BEGIN_DATE ||	TAC.CNSL_BEGIN_TIME) AS  CNSL_BEGIN_DTIM			/*상담시작일시*/
+	,(TAC.CNSL_EOT_DATE ||	TAC.CNSL_EOT_TIME) AS  CNSL_EOT_DTIM					/*상담종료일시*/
+	,TAC.RDWT_ID 			AS 	RDWT_ID												/*녹취ID*/
+	,TAC.AF_PROC_TIME		AS AF_PROC_TIME											/*후처리시간*/
+	,TAC.CUST_TEL_NO			AS CUST_TEL_NO							/*전화번호*/
+	,TAC.TEL_TIME			AS TEL_TIME												/*통화시간*/
+	,TAC.REG_DTIM			AS REG_DTIM												/*등록일시*/
+  	,TAC.CHNG_MAN     		AS CHNG_MAN                     
+	,TAC.CHNG_DTIM			AS CHNG_DTIM											/*수정일시*/
+FROM PLT_PHN_CNSL TAC
+LEFT JOIN PLT_PHN_QA_EVAL_RST TQE ON TQE.CNSL_ID  = TAC.CNSL_HIST_NO 
+WHERE TAC.CNSL_HIST_NO = #{CNSL_ID}
+  AND TAC.DEL_YN = 'N'
+</select>
+
+
+<!-- QA대상 삭제 -->
+<delete id="deleteRtn" parameterType= "java.util.HashMap">
+DELETE 
+  FROM PLT_PHN_QA_EVAL
+ WHERE   CNSL_ID = #{CNSL_ID}
+</delete>
+
+<!-- 평가등록 -->
+<insert id="insertRtn" parameterType= "java.util.HashMap">
+INSERT INTO PLT_PHN_QA_EVAL
+(
+	 QA_ID					/*QA_ID*/
+	,QA_YM					/*QA_년월*/
+	,QA_SEQ					/*QA회차*/
+	,USER_ID				/*상담원ID*/
+	,CNSL_ID				/*상담ID*/
+	,CUSTCO_ID			/*ASP_고객사_키*/
+	,CENT_TY				/*센터구분*/
+	,QA_USER_ID				/*평가자ID*/
+	,QA_CN					/*QA의견*/
+	,QA_EXT_CHK				/*QA추출대상*/
+	,QA_END					/*QA추출마감*/
+	,QA_NOTIN				/*QA제외대상*/
+	,QA_FIN					/*QA평가마감*/
+	,REG_DTIM				/*등록일시*/
+	,REG_ID					/*등록자ID*/
+	,CHNG_DTIM				/*변경일시*/
+	,CHNG_ID				/*변경자ID*/
+)
+VALUES
+(
+	 #{QA_ID}
+	,#{QA_YM}					/*QA_년월*/
+	,#{QA_SEQ}					/*QA회차*/
+	,#{USER_ID}				/*상담원ID*/
+	,#{CNSL_ID}				/*상담ID*/
+	,#{CUSTCO_ID}			/*ASP_고객사_키*/
+	,#{CENT_TY}				/*센터구분*/
+	,#{QA_USER_ID}				/*평가자ID*/
+	,#{QA_CN}					/*QA의견*/
+	,#{QA_EXT_CHK}				/*QA추출대상*/
+	,#{QA_END}					/*QA추출마감*/
+	,#{QA_NOTIN}				/*QA제외대상*/
+	,'N'					/*QA평가마감*/
+	,TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')				/*등록일시*/
+	,#{REG_ID}					/*등록자ID*/
+	,TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')				/*변경일시*/
+	,#{REG_ID}				/*변경자ID*/
+)
+</insert>
+
+
+<!-- 등록 (같은 QA_ID가 있을때)-->
+<update id="updateRtnInsert" parameterType= "java.util.HashMap">
+UPDATE PLT_PHN_QA_EVAL
+SET 
+ QA_YM  = #{QA_YM}						/*QA_년월*/
+ ,USER_ID = #{USER_ID}					/*상담원ID*/
+ ,QA_USER_ID = #{QA_USER_ID}			/*평가자ID*/
+ ,QA_CN =#{QA_CN}						/*QA의견*/
+ ,QA_EXT_CHK = #{QA_EXT_CHK}			/*QA추출대상*/
+ ,QA_END = #{QA_END}					/*QA추출마감*/
+ ,QA_NOTIN = #{QA_NOTIN}				/*QA제외대상*/
+ ,QA_FIN = #{QA_FIN}					/*QA평가마감*/
+  WHERE CUSTCO_ID = #{CUSTCO_ID}
+AND CNSL_ID = #{CNSL_ID}
+</update>
+
+<!-- QA 등록 ID 조회 -->
+<select id="selectRtnQA_ID" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+ SELECT QA_ID FROM PLT_PHN_QA_EVAL_RST
+ WHERE CNSL_ID = #{CNSL_ID}
+</select>
+
+<!-- QA 등록 ID 조회 -->
+<select id="selectRtnQA_ID_Seq" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+ SELECT MAX(QA_ID) AS SEQ FROM PLT_PHN_QA_EVAL
+</select>
+
+
+<!-- 등록마감 AMDR_ID session ID사용-->
+<update id="updateRtn"  parameterType= "java.util.HashMap">
+UPDATE PLT_PHN_QA_EVAL
+   SET
+   	  CHNG_ID = #{REG_ID}
+     , CHNG_DTIM = TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')	/*수정일시*/
+     , QA_END = 'Y' 
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+ AND QA_ID = #{QA_ID}
+</update>
+
+<!-- 등록마감 AMDR_ID session ID사용-->
+<update id="processRtnExtractClose"  parameterType= "java.util.HashMap">
+UPDATE PLT_PHN_QA_EVAL
+   SET 
+      CHNG_DTIM = TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')	/*수정일시*/
+     , QA_END = 'Y' 
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+ AND QA_ID = #{QA_ID}
+</update>
+
+
+<select id="selectHaveExtractClose" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT COALESCE( MAX(QA_END),'N') AS HAVE_EXTRACT_CLOSE
+  FROM PLT_PHN_QA_EVAL
+ WHERE CUSTCO_ID = 'KOTIS'
+   AND QA_YM = #{QA_YM}
+   AND QA_SEQ = #{QA_SEQ}
+</select>
+
+<select id="selectRtnCheckYN" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	   CASE WHEN MAX(QA_USER_ID) IS NOT NULL AND QA_USER_ID IS NOT NULL THEN 'Y' ELSE 'N' END HAVE_EVALUATED_YN
+  FROM PLT_PHN_QA_EVAL
+ WHERE CUSTCO_ID = 'KOTIS'
+  AND QA_ID = #{QA_ID}
+GROUP BY QA_USER_ID
+</select>
+
+<!-- 1330 안내유형 -->
+<select id="selectRtnCnslCode"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT  
+		CNSL_TYP_CD  		 AS CD					/*코드*/
+		,CNSL_TYP_NM 		 AS CD_NM				/*코드명*/
+	FROM PLT_CHT_CUTT_TYP
+	WHERE USE_YN='Y'
+	AND CNSL_TYP_DIV_CD = '1'
+	ORDER BY SORT_ORD
+</select>   
+
+<!-- 1330 안내상세유형 -->
+<select id="selectRtnCnslCodeDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT  
+	 CNSL_TYP_CD  		 AS CD					/*코드*/
+    ,CNSL_TYP_NM 		 AS CD_NM				/*코드명*/
+    ,SPST_CNSL_TYP_CD	 AS SPST_CNSL_TYP_CD	/*상위코드명*/
+	FROM PLT_CHT_CUTT_TYP
+	WHERE USE_YN ='Y'
+	ORDER BY SORT_ORD
+</select>  
+
+</mapper>
+
+

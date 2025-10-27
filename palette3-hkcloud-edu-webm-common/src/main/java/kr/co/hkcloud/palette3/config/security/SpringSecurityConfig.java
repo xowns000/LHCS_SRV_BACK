@@ -1,0 +1,127 @@
+package kr.co.hkcloud.palette3.config.security;
+
+import java.util.Arrays;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.security.web.firewall.StrictHttpFirewall;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.CorsUtils;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import kr.co.hkcloud.palette3.config.jwt.JwtAuthenticationEntryPoint;
+import kr.co.hkcloud.palette3.config.jwt.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+@EnableWebSecurity
+public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+
+        http.httpBasic().disable().csrf().disable().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED).and().cors() //
+            .and().authorizeRequests().requestMatchers(CorsUtils::isPreFlightRequest).permitAll().antMatchers("/").permitAll() //
+            .antMatchers("/secured/ws-stomp/**", "/topic/**/**", "/queue/**/**", "/app/**/**", "Repository/**/**").permitAll() // Socket JS
+            .antMatchers("/api/property/common/prpty-js/inqry").permitAll()
+            .antMatchers("/auth-api/password/modify").permitAll() // 비밀번호 수정
+            .antMatchers("/auth-api/password-encpt/process").permitAll() // 비밀번호 암호화키 생성
+            .antMatchers("/api/infra/tplex/cti/callback-regist/process").permitAll()//
+            .antMatchers("/chat-api/main/ntTalk-regist/process").permitAll()//
+            .antMatchers("/api/palette-main/setOmnioneKey").permitAll()//
+            .antMatchers("/api/file-ipcc-rec/**").permitAll()
+            .antMatchers("/api/sse-api/**").permitAll()
+            .antMatchers("/intgr-api/commerce/v2/**").permitAll()   //외부연동 OAUTH2호출용
+            .antMatchers("/auth-api/secondaryCert/publishNo").permitAll()
+            .antMatchers("/phone-api/main/sms/**").permitAll()//mts서비스 서버에서 전송x 개발서버에서 전송
+            .antMatchers("/phone-api/sms/**").permitAll()//sms -- mts서비스 서버에서 전송x 개발서버에서 전송
+            .antMatchers("/chat-api/alrim/**").permitAll()//alrim -- mts서비스 서버에서 전송x 개발서버에서 전송
+            .antMatchers("/api/statistics/chat/counsel-alrim-sms/**").permitAll()//통계 -- mts서비스 서버에서 전송x 개발서버에서 전송
+            .antMatchers("/healthz", "/api/welcome", "/auth-api/welcome", "/chat-api/welcome", "/phone-api/welcome", "/intgr-api/welcome").permitAll() // welcome
+            .antMatchers("/stt").permitAll() // STT 관련.
+            .antMatchers("/auth-api/login", "/v3-api/auth/login").permitAll() // 로그인
+            .antMatchers("/admin-api/custco/cert-custco-manage/tenant").permitAll() //멀티테넌시(multitenancy) 처리 : 로그인 ID로 custco 스키마의 인증고객사 ASP_CUST_KEY 조회
+            .antMatchers("/api/editor/imageUpload.do").permitAll() //ckeditor image upload.
+            .antMatchers("/auth-api/setting/system/cert-custco-manage/tenant").permitAll() //멀티테넌시(multitenancy) 처리 : 로그인 ID로 custco 스키마의 인증고객사 ASP_CUST_KEY 조회
+            .antMatchers("/api/helloenv", "/actuator", "/actuator/health", "/actuator/info").permitAll()
+            .antMatchers("/upload/images/**", "/upload/videos/**").permitAll()   //kr.co.hkcloud.palette3.config.webmvc.PaletteWebMvcConfig 에 외부리소스 URI정의
+            .antMatchers("/swagger-resources/**").permitAll()
+            .antMatchers("/v2/api-docs", "/configuration/ui", "/swagger-resources", "/configuration/security", "/swagger-ui.html", "/webjars/**", "/swagger/**")
+            .permitAll().antMatchers("/api/svy/preview/aesurldecrypt").permitAll() //설문 참여 URL Param 복호화
+            .antMatchers("/message/navertalktalk/**").permitAll()	//네이버 톡톡 메시지 수신
+            .antMatchers("/**").hasRole(TeletalkAuthority.CODES.MEMBER).anyRequest().authenticated().and().exceptionHandling()
+            .authenticationEntryPoint(new JwtAuthenticationEntryPoint()).and()
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        //// iframe 이슈
+        // - 관련 header : X-Frame-Options : ClickJacking 방어
+        http.headers().frameOptions().sameOrigin().httpStrictTransportSecurity().disable();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.addAllowedOrigin("*");
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-v3-authorization", "Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me", "cert-custco-tenant-id", "cert-custco-id"));
+
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+
+
+    /**
+     * Security Filter ignoring
+     */
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.httpFirewall(strictHttpFirewall()).ignoring().antMatchers("/")
+            .antMatchers("/message", "/reference", "/expired_session", "/message_bot", "swagger-ui.html").antMatchers("/message/**/").antMatchers("/error*/**").antMatchers("/message/navertalktalk/**")
+            .antMatchers("/swagger-ui/**").antMatchers("/v2/**");
+    }
+
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        RoleHierarchyImpl roleHierarchy = new RoleHierarchyImpl();
+
+        String strHierarchy = new StringBuffer().append(TeletalkAuthority.ROLES.SYSTEM).append(" > ").append(TeletalkAuthority.ROLES.ADMIN).append("\n")
+            .append(TeletalkAuthority.ROLES.ADMIN).append(" > ").append(TeletalkAuthority.ROLES.MANAGER).append("\n").append(TeletalkAuthority.ROLES.MANAGER)
+            .append(" > ").append(TeletalkAuthority.ROLES.MEMBER).toString();
+
+        roleHierarchy.setHierarchy(strHierarchy);
+        return roleHierarchy;
+    }
+
+    /**
+     *
+     */
+    @Bean
+    public HttpFirewall strictHttpFirewall() {
+        StrictHttpFirewall strictHttpFirewall = new StrictHttpFirewall();
+
+        // HTTP Method White List
+        strictHttpFirewall.setAllowedHttpMethods(
+            Arrays.asList(HttpMethod.GET.name(), HttpMethod.POST.name(), HttpMethod.PUT.name(), HttpMethod.DELETE.name(), HttpMethod.OPTIONS.name(), HttpMethod.HEAD.name()));
+        return strictHttpFirewall;
+
+    }
+}

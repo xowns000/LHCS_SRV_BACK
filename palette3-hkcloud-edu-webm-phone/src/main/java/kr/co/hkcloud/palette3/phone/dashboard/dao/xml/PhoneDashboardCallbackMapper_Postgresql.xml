@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.dashboard.dao.PhoneDashboardCallbackMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="SEND_MAN_NO" column="SEND_MAN_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CLBK_TEL_NO" column="CLBK_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+ <!-- <select id="selectClbkMntrList"  parameterType= "java.util.HashMap" resultMap="selectHashMap" >  -->  
+	<select id="selectClbkMntrList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+			<![CDATA[
+			/* selectClbkMntrList 콜백 모니터링 */			
+			SELECT
+			       t1.CLBK_NO
+			     , t1.IN_DATE                                                              
+			     , t1.IN_TIME                                                            
+			     , t1.SEND_MAN_NO                                                                 
+			     , t1.CUST_NM                                                            
+			     , t1.INGNO    	/*인가번호*/
+			     , t1.CUST_NO	/*고객번호*/
+			     , t1.CLBK_TEL_NO
+			     , t1.DSTR_YN 					     /* 배분여부 */                                           
+			     , t1.DSTR_DATE       				 /* 배분일자 */                                                        
+			     , t3.USER_NM  AS DSTR_CSLT_NM      /* 배분상담원 */
+			     , t2.TRY_CNT                        /* 시도횟수 */                                    
+			     , t2.EOT_TY                         /* 종료구분 */                                      
+			     , (SELECT CD_NM FROM PLT_COMN_CD
+                    WHERE GROUP_CD = 'OU003'
+                    AND CD = t2.EOT_TY
+                    AND USE_YN = 'Y') AS EOT_TY_NM   /*종료구분 명*/
+			     , t1.DSTR_TIME						 /* 배분시간 */
+			     , t2.DSTR_CSLT_ID					/* 배분상담원ID */
+			     , t3.DEPT_CD						/* 부서코드 */
+			     ,(SELECT DEPT_NM FROM PLT_ORGZ t4 
+			       WHERE t3.DEPT_CD = t4.DEPT_CD
+			       -- AND t3.TENANT_ID =  t4.TENANT_ID
+			       ) AS DEPT_NM
+			 FROM PLT_PHN_CLBK t1 , PLT_PHN_CLBK_DST t2, PLT_USER t3
+			 WHERE t1.CLBK_NO = t2.CLBK_NO
+			   AND t2.DSTR_CSLT_ID  = t3.USER_ID
+			   AND t1.IN_DATE >= REPLACE(REPLACE(#{START_DATE},'/'),'-') 
+			   AND t1.IN_DATE <= REPLACE(REPLACE(#{END_DATE},'/'),'-')
+			]]>
+			<if test="CENT_TY !='' and CENT_TY != null"> 
+			  	<![CDATA[ AND t1.CENT_TY  =  #{CENT_TY}	   ]]>
+			</if>
+			<if test="DEPT_CD !='' and DEPT_CD != null"> 
+			  	<![CDATA[ AND t3.DEPT_CD  =  #{DEPT_CD}	   ]]>
+			</if>
+			<if test="CSLT_ID !='' and CSLT_ID != null"> 
+			  	<![CDATA[ AND t2.DSTR_CSLT_ID  =  #{CSLT_ID}	   ]]>
+			</if>
+			<if test="EOT_TY !='' and EOT_TY != null"> 
+			  	<![CDATA[ AND t2.EOT_TY  =  #{EOT_TY}	   ]]>
+			</if>
+			ORDER BY IN_DATE DESC
+	</select>
+
+
+</mapper>

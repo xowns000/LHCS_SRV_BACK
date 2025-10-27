@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper">
+  <select id="selectCustByPhnNo" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT CUST_ID /*고객 기본 정보 조회 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.selectCustByPhnNo)*/
+             , CUST_NM
+             , CUST_STTS_CD
+        FROM PLT_CUST
+        WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+        AND CUST_PHN_NO = #{CUST_PHN_NO}
+  </select>
+  <select id="selectExpsnAttrColId" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /*고객사 사용 확장속성 조회 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.selectExpsnAttrColId)*/
+            EXPSN_ATTR_COL_ID
+        FROM PLT_EXPSN_ATTR PEA
+        WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+        AND DEL_YN = 'N'
+        AND BSC_PVSN_ATTR_YN ='N'
+	      AND SE = 'CUSTOM'
+  </select>
+  <update id="updateCustDefaultInfo" parameterType="java.util.HashMap">
+    UPDATE PLT_CUST /*고객 기본 정보 수정 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.updateCustDefaultInfo)*/
+    SET MDFCN_DT = #{MDFCN_DT}
+    , MDFR_ID = #{USER_ID}::INTEGER
+    <if test='CUST_STAT != null and CUST_STAT != ""'>, CUST_STTS_CD = #{CUST_STAT}</if>
+    <if test='CUST_NM != null and CUST_NM != ""'>, CUST_NM = #{CUST_NM}</if>
+    <if test='CUST_PHN_NO != null and CUST_PHN_NO != ""'>, CUST_PHN_NO = #{CUST_PHN_NO}</if>
+    WHERE CUST_ID = #{CUST_ID}::INTEGER
+  </update>
+
+  <insert id="insertCustInfoChgHist"  parameterType= "java.util.HashMap">
+    INSERT /*고객 정보 변경 이력 저장 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.updateCustDefaultInfo.custInfoChgHist)*/
+    INTO PLT_CUST_INFO_CHG_HSTRY (CUST_CHG_HSTRY_ID, CUST_ID, CHG_REG_DT, CHG_RGTR_ID)
+    VALUES(#{CUST_CHG_HSTRY_ID}::INT, #{CUST_ID}::INT, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'), #{USER_ID}::INT)
+  </insert>
+  <insert id="insertCustInfoChgHistDtl"  parameterType= "java.util.HashMap">
+    INSERT /*고객 정보 변경 이력 상세 저장 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.updateCustDefaultInfo.custInfoChgHistDtl)*/
+    INTO PLT_CUST_INFO_CHG_DTL_EXPSN ( CUST_CHG_HSTRY_ID
+                                     , ATTR_ID
+                                     , ATTR_VL)
+    VALUES ( #{CUST_CHG_HSTRY_ID}::INTEGER
+           , (SELECT ATTR_ID
+              FROM PLT_EXPSN_ATTR PEA
+              WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}:: INTEGER
+               AND SE = 'CUSTOM'
+               AND BSC_PVSN_ATTR_YN ='N'
+               AND EXPSN_ATTR_COL_ID = #{ATTR_ID})::INTEGER
+		       , #{ATTR_VL}
+      )
+  </insert>
+
+  <insert id="insertCustTelNo"  parameterType= "java.util.HashMap">
+    INSERT /*고객 전화번호 저장 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.updateCustDefaultInfo.insertCustTelNoReg)*/
+    INTO PLT_CUST_TELNO ( CUST_TELNO_ID
+                        , CUSTCO_ID
+                        , CUST_PHN_NO
+                        , RGTR_ID
+                        , REG_DT
+    )
+    VALUES ( #{CUST_TELNO_ID}::INT
+           , #{CUSTCO_ID}::INT
+           , REPLACE(#{CUST_PHN_NO}, '-', '')
+           , #{USER_ID}::INT
+           , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+           )
+  </insert>
+<insert id="insertCust" parameterType="java.util.HashMap">
+  INSERT /*고객 기본 정보 저장 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.custReg)*/
+  INTO PLT_CUST ( CUST_ID
+                , CUSTCO_ID
+                , CUST_NM
+                , CUST_PHN_NO
+                , CAUTION_CUST_YN
+                , RGTR_ID
+                , REG_DT
+                , MDFR_ID
+                , MDFCN_DT
+                , CUST_STTS_CD
+                , DEL_YN
+  )
+  VALUES ( #{CUST_ID}::INT
+         , #{CUSTCO_ID}::INT
+         , COALESCE(#{CUST_NM}, '성명미상')
+         , REPLACE(#{CUST_PHN_NO}, '-', '')
+         , 'N'
+         , #{USER_ID}::INT
+         , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+         , #{USER_ID}::INT
+         , #{MDFCN_DT}
+         , COALESCE(#{CUST_STAT}, 'NOML')
+         , 'N'
+         )
+</insert>
+  <insert id="insertCustTelNoItgrt" parameterType="java.util.HashMap">
+    INSERT /*고객 전화번호 통합 저장 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.insertCustTelNoItgrtReg)*/
+    INTO PLT_CUST_TELNO_ITGRT ( CUST_TELNO_ID
+                              , CUST_ID
+                              , RGTR_ID
+                              , REG_DT
+    )
+    VALUES ( #{CUST_TELNO_ID}::INT
+           , #{CUST_ID}::INT
+           , #{USER_ID}::INT
+           , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+           )
+  </insert>
+  <insert id="insertCustItgrtHstry" parameterType="java.util.HashMap">
+    INSERT /*고객 통합 이력 저장 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.insertCustItgrtHstryReg)*/
+    INTO PLT_CUST_ITGRT_HSTRY ( CUST_ITGRT_HSTRY_ID
+                              , CUST_TELNO_ID
+                              , CUST_ID
+                              , CHG_SE_CD
+                              , RGTR_ID
+                              , REG_DT
+    )
+    VALUES ( #{CUST_ITGRT_HSTRY_ID}::INT
+           , #{CUST_TELNO_ID}::INT
+           , #{CUST_ID}::INT
+           , 'NEW'
+           , #{USER_ID}::INT
+           , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+           )
+  </insert>
+  <insert id="insertCustExpsnAttr" parameterType="java.util.HashMap">
+    INSERT  /*고객테이블에 존재하지 않는 고객, 고객확장속성에 고객상태 정상 강제 등록 (kr.co.hkcloud.palette3.v3.customer.dao.V3GwmMapper.insertCustItgrtHstryReg)*/
+    INTO PLT_CUST_DTL_EXPSN (
+                              CUST_ID
+                            , ATTR_ID
+                            , ATTR_VL
+    ) VALUES (
+               #{CUST_ID}::INTEGER
+             , (SELECT PEA.ATTR_ID
+                FROM PLT_EXPSN_ATTR PEA
+                WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+                 AND SE = 'CUSTOM'
+                 AND BSC_PVSN_ATTR_YN ='N'
+                 AND EXPSN_ATTR_COL_ID = #{ATTR_ID})
+           , #{ATTR_VL})
+  </insert>
+  <delete id="deleteCustExpsnAttr" parameterType="java.util.HashMap">
+    DELETE FROM PLT_CUST_DTL_EXPSN
+    WHERE CUST_ID = #{CUST_ID}::INT
+			AND ATTR_ID = (SELECT PEA.ATTR_ID
+					FROM PLT_EXPSN_ATTR PEA
+					WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+      AND SE = 'CUSTOM'
+      AND BSC_PVSN_ATTR_YN ='N'
+      AND EXPSN_ATTR_COL_ID = #{ATTR_ID})
+  </delete>
+  <select id="selectCustomer"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+      SELECT
+      PC.CUST_ID
+      , PC.CUST_NM
+      , PC.CUST_PHN_NO
+      , PC.REG_DT
+      , PC.MDFCN_DT
+      , CASE WHEN PCDE_CUST_STAT.ATTR_VL = 'NOML' THEN 'ACT'
+             WHEN PCDE_CUST_STAT.ATTR_VL = 'SELP' THEN 'DRMNCY'
+             WHEN PCDE_CUST_STAT.ATTR_VL = 'DELT' THEN 'SECSN'
+             ELSE PCDE_CUST_STAT.ATTR_VL
+         END AS CUST_STAT
+      , PCDE_MEMBER_SEQ_NO.ATTR_VL AS MEMBER_SEQ_NO
+      FROM ${SCHEMA_ID}.PLT_CUST PC
+      INNER JOIN ${SCHEMA_ID}.PLT_CUST_DTL_EXPSN PCDE_MEMBER_SEQ_NO ON PCDE_MEMBER_SEQ_NO.CUST_ID = PC.CUST_ID AND PCDE_MEMBER_SEQ_NO.ATTR_ID = (SELECT PEA.ATTR_ID
+                  FROM ${SCHEMA_ID}.PLT_EXPSN_ATTR PEA
+                  WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+                  AND SE = 'CUSTOM'
+                  AND BSC_PVSN_ATTR_YN ='N'
+                  AND EXPSN_ATTR_COL_ID = 'MEMBER_SEQ_NO')
+      INNER JOIN ${SCHEMA_ID}.PLT_CUST_DTL_EXPSN PCDE_CUST_STAT ON PCDE_CUST_STAT.CUST_ID = PC.CUST_ID AND PCDE_CUST_STAT.ATTR_ID = (SELECT PEA.ATTR_ID
+                  FROM ${SCHEMA_ID}.PLT_EXPSN_ATTR PEA
+                  WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+                  AND SE = 'CUSTOM'
+                  AND BSC_PVSN_ATTR_YN ='N'
+                  AND EXPSN_ATTR_COL_ID = 'CUST_STAT')
+      WHERE PC.CUSTCO_ID = #{CUSTCO_ID}::INT
+      <if test='CUST_PHN_NO != null and CUST_PHN_NO != ""'>
+        AND PC.CUST_PHN_NO = #{CUST_PHN_NO}
+      </if>
+      <if test='MEMBER_SEQ_NO != null and MEMBER_SEQ_NO != ""'>
+          AND PCDE_MEMBER_SEQ_NO.ATTR_VL = #{MEMBER_SEQ_NO}
+      </if>
+
+  </select>
+
+
+</mapper>

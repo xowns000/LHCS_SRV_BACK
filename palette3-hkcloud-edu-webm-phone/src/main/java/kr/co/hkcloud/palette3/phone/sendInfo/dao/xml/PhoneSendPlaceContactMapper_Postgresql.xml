@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.sendInfo.dao.PhoneSendPlaceContactMapper">
+
+<!-- 위치정보 리스트 조회 -->
+<select id="selectPlace"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER(ORDER BY P.REG_DT DESC) AS ROW_NUMBER
+	 , PSTN_ID			AS PSTN_ID
+	 , CUSTCO_ID		AS CUSTCO_ID
+	 , PSTN_NM 			AS PSTN_NM
+	 , ZIP 				AS ZIP
+	 , ADDR 			AS ADDR
+	 , DTL_ADDR 		AS DTL_ADDR
+	 , ADDR_URL 		AS ADDR_URL
+	 , LAT 				AS LAT
+	 , LOT 				AS LOT
+	 , EXPLN 			AS EXPLN
+	 , P.USE_YN 		AS USE_YN
+	 , DEL_YN 			AS DEL_YN
+	 , P.RGTR_ID 		AS RGTR_ID
+	 , TO_CHAR(TO_TIMESTAMP(P.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD')		AS REG_DT			-- 등록_일시 *
+	 , P.MDFR_ID 		AS MDFR_ID
+	 , TO_CHAR(TO_TIMESTAMP(P.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD')		AS MDFCN_DT			-- 수정_일시
+	 , RGN_CD 			AS RGN_CD
+	 , U.USER_NM		AS USER_NM		-- 등록자 이름
+	 , UU.USER_NM 		AS EDITOR_NM	-- 수정자 이름
+	 , (SELECT CD_NM
+		  FROM PLT_COMM_CD
+		 WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'AREA'
+		   AND CD_ID = P.RGN_CD
+		   AND USE_YN = 'Y') AS SPLIT_ADDR
+ FROM PLT_PSTN P LEFT OUTER JOIN PLT_USER U ON U.USER_ID::BIGINT = P.RGTR_ID::BIGINT
+       	       	 LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID::BIGINT = P.MDFR_ID::BIGINT
+WHERE DEL_YN = 'N'
+  AND P.USE_YN = 'Y'
+  AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+  <if test="INPUT_DATA != '' and INPUT_DATA != null">AND PSTN_NM LIKE CONCAT('%',#{INPUT_DATA},'%')</if>
+  <if test="PLACE 	   != '' and PLACE  	!= null">AND SPLIT_PART(ADDR, ' ', 1) = (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'AREA' AND CD_ID = #{PLACE})</if>
+</select>
+
+
+<!-- 연락처정보 리스트 조회 -->
+<select id="selectContact"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER(ORDER BY C.REG_DT DESC) AS ROW_NUMBER
+	 , CTC_ID 																AS CTC_ID
+	 , CUSTCO_ID 															AS CUSTCO_ID
+	 , TASK_NM 																AS TASK_NM
+	 , TELNO 																AS TELNO
+	 , TKCG_DEPT_NM 														AS TKCG_DEPT_NM
+	 , C.USE_YN 															AS USE_YN
+	 , C.DEL_YN																AS DEL_YN
+	 , EXPLN 																AS EXPLN
+	 , TO_CHAR(TO_TIMESTAMP(C.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') 	AS REG_DT
+	 , C.RGTR_ID 															AS RGTR_ID
+	 , TO_CHAR(TO_TIMESTAMP(C.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') 	AS MDFCN_DT
+	 , C.MDFR_ID 															AS MDFR_ID
+	 , RGN_CD 																AS RGN_CD
+	 , (SELECT CD_NM
+  		  FROM PLT_COMM_CD
+	     WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'AREA'
+	       AND CD_ID = C.RGN_CD) 											AS RGN_NM
+	 , U.USER_NM															AS USER_NM		-- 등록자 이름
+	 , UU.USER_NM 															AS EDITOR_NM	-- 수정자 이름
+  FROM PLT_CTC C LEFT OUTER JOIN PLT_USER U ON U.USER_ID::BIGINT = C.RGTR_ID::BIGINT
+       	       	LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID::BIGINT = C.MDFR_ID::BIGINT
+ WHERE DEL_YN = 'N'
+   AND C.USE_YN = 'Y'
+   AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+   <if test="INPUT_DATA != '' and INPUT_DATA != null">AND (TKCG_DEPT_NM LIKE CONCAT('%',#{INPUT_DATA},'%') OR TASK_NM LIKE CONCAT('%',#{INPUT_DATA},'%'))</if>
+   <if test="PLACE 		!= '' and PLACE 	 != null">AND RGN_CD = #{PLACE}</if>
+</select>
+
+<!-- 발송 이력 저장 -->
+<insert id="sendInfo" parameterType= "java.util.HashMap">
+INSERT INTO PLT_MTS_SNDNG_HSTRY
+	( MTS_SNDNG_HSTRY_ID				-- 발송이력ID
+    , SNDNG_SE_CD 					  	-- 발송구분코드
+    , RCPTN_PHN_NO                    	-- 수신전화번호
+    , DSPTCH_PHN_NO                   	-- 발신전화번호
+    , SNDNG_CN                        	-- 발송내용
+    , RSLT_CD                         	-- 결과코드
+    , RSLT_MSG                        	-- 결과메시지
+    , SNDNG_DT                        	-- 발송일시
+    , REG_DT                          	-- 등록일시
+    , RGTR_ID                         	-- 등록자ID
+    , CUSTCO_ID                       	-- 고객사ID
+	)
+VALUES
+	( #{MTS_SNDNG_HSTRY_ID}::INTEGER
+	, #{SNDNG_SE_CD}
+	, (regexp_replace(#{phone_number}, '-', '', 'g'))
+	, (regexp_replace(#{callback_number}, '-', '', 'g'))
+	, #{message}
+	, #{RSLT_CD}
+	, #{RSLT_MSG}
+	, TRANSLATE(#{SNDNG_DT}, '-: ', '')
+	, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	, #{USER_ID}::INTEGER
+	, #{CUSTCO_ID}::INTEGER
+	)
+</insert>
+
+<!-- 위치정보,연락처정보 전용 sms 템플릿 조회 -->
+<select id="selectSmsTempleteInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT SMS_TMPL_ID AS TMPL_CD
+	 , SMS_TMPL_NM AS TMPL_NM
+  	 , SMS_TMPL_CN AS TMPL_CN
+  	 , FILE_GROUP_KEY
+  FROM PLT_SMS_TMPL
+ WHERE SMS_TMPL_TYPE_CD = #{TMPL_CD}
+</select>
+
+<!-- 위치정보,연락처정보 전용 알림톡 템플릿 조회 -->
+<select id="selectAtalkTempleteInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	   ATALK_ID
+	 , TMPL_CD AS TMPL_CD
+	 , DSPTCH_PRF_KEY AS DSPTCH_PRF_KEY
+	 , TMPL_NM AS TMPL_NM
+  	 , TMPL_CN AS TMPL_CN
+	 , EPSZ_INDCT_MPIT_INFO AS EPSZ_INDCT_MPIT_INFO
+  FROM PLT_ATALK
+ WHERE TMPL_CD = #{TMPL_CD}
+   AND USE_YN = 'Y'
+   AND TMPL_IGI_STTS = 'APR'
+   AND (TMPL_STTS = 'R' OR TMPL_STTS = 'A')
+ORDER BY ATALK_ID DESC
+</select>
+
+<!-- 알림톡 단건 전송 템플릿 조회 -->
+<select id="selectAtalkTemplete"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 			/* selectAtalkTemplete - 알림톡 단건 전송 템플릿 조회 */
+		ATALK.ATALK_ID				AS ATALK_ID
+		, DSPTCH_PRF_KEY 				AS SENDER_PROFILE_KEY
+		, ATALK.UUID					AS UUID
+		, ATALK.TMPL_CD 				AS TMPL_CD
+		, ATALK.TMPL_NM 				AS TMPL_NM
+		, ATALK.TMPL_CN 				AS TMPL_CN
+		, ATALK.ADD_INFO				AS TMPL_EXTRA
+		, ATALK.TMPL_MSG_TYPE			AS TMPL_MSG_TYPE
+		, ATALK.TMPL_EPSZ_TYPE		AS TMPL_EPSZ_TYPE  
+		, MSG_TYPE.CD_NM				AS TMPL_MSG_NM
+		, TO_CHAR(TO_TIMESTAMP(ATALK.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY.MM.DD')			AS REG_DT
+		, TO_CHAR(TO_TIMESTAMP(ATALK.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY.MM.DD')			AS MDFCN_DT
+		, ATALK.TMPL_STTS				AS TMPL_STTS
+		, TMPL_STTS.CD_NM				AS TMPL_STTS_NM
+		, ATALK.TMPL_IGI_STTS			AS TMPL_IGI_STTS
+		, ISPT_STAT.CD_NM				AS TMPL_IGI_NM
+		, ATALK.ADD_INFO				AS TMPL_EXTRA
+		, ATALK.FILE_GROUP_KEY		AS FILE_GROUP_KEY
+		, ATALK.IMG					AS IMG
+		, ATALK.EPSZ_IMG				AS EPSZ_IMG
+		, ATALK.EPSZ_INDCT_MPIT_INFO	AS TMPL_TITLE
+		, ATALK.EPSZ_INDCT_ADD_INFO 	AS TMPL_SUB_TITLE
+		, ATALK.HEAD 					AS ITEM_HEADER
+		, ATALK.ARTCL_EPSZ 			AS ITEM_HIGH_LIGHT
+		, ATALK.ARTCL_LIST 			AS TMPL_ITEM
+		, ATALK.BTN_INFO 				AS BUTTONS
+	FROM PLT_ATALK ATALK
+	JOIN PLT_COMM_CD MSG_TYPE 
+		ON MSG_TYPE.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND ATALK.TMPL_MSG_TYPE = MSG_TYPE.CD_ID
+		AND MSG_TYPE.GROUP_CD_ID = 'MTS_TMPL_MSG_TP'
+		AND MSG_TYPE.USE_YN = 'Y'
+	JOIN PLT_COMM_CD TMPL_STTS 
+		ON ATALK.TMPL_STTS = TMPL_STTS.CD_ID
+		AND TMPL_STTS.GROUP_CD_ID = 'MTS_TMPL_STAT_CD'
+		AND TMPL_STTS.USE_YN = 'Y'
+		AND TMPL_STTS.CUSTCO_ID = #{CUSTCO_ID}::INT
+	JOIN PLT_COMM_CD ISPT_STAT 
+		ON ISPT_STAT.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND ATALK.TMPL_IGI_STTS = ISPT_STAT.CD_ID
+		AND ISPT_STAT.GROUP_CD_ID = 'MTS_ISPT_STAT_CD'
+		AND ISPT_STAT.USE_YN = 'Y'
+	WHERE ATALK.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND ATALK.TMPL_IGI_STTS = 'APR'
+		AND (TMPL_STTS = 'R' OR TMPL_STTS = 'A')
+		<if test="TMPL_CD != '' and TMPL_CD != null and TMPL_CD != undefined">
+			AND TMPL_CD = #{TMPL_CD}
+		</if>
+	ORDER BY ATALK.ATALK_ID DESC
+</select>
+
+</mapper>

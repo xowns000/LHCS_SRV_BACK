@@ -1,0 +1,2389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper">
+
+<!-- ######################################################################### -->
+<!-- 고객정보 데이터 페이징 조회  -->
+<!-- <select id="selectRtnPageCustInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+ SELECT ROW_TBL.*
+     FROM ( 
+		    SELECT
+		    	ROW_NUMBER() OVER(ORDER BY T1.LAST_CONS_DTTM) AS ROW_NUMBER
+				, T1.TALK_USER_KEY																				AS TALK_USER_KEY
+			    , T1.TALK_USER_KEY																				AS CUSTOMER_ID
+		        , T2.CUSTOMER_NM
+		        , T2.CUSTOMER_MEMO																				 /* 고객메모 */
+		        , T2.CUSTOMER_STAT_CD
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK011' AND CT.CD=T2.CUSTOMER_STAT_CD AND CT.CD_TYPE  = '1') AS CUSTOMER_STAT_NM 					 /* 회원상태명 */
+		        , T2.CUSTOMER_TYPE															   					 /* 상담대상 */	
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK021' AND CT.CD=T2.CUSTOMER_TYPE AND CT.CD_TYPE  = '1') 	 AS CUSTOMER_TYPE_NM					 /* 상담대상명 */	
+		        , T2.CUSTOMER_GENDER															  				 /* 성별코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK022' AND CT.CD=T2.CUSTOMER_GENDER AND CT.CD_TYPE  = '1')	 AS CUSTOMER_GENDER_NM   				 /* 성별 */
+		        , T2.CUSTOMER_CAREER_STATUS		  											   					 /* 학업및재직상태 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK024' AND CT.CD=T2.CUSTOMER_CAREER_STATUS AND CT.CD_TYPE  = '1') AS CUSTOMER_CAREER_STATUS_NM		 /* 학업및재직상태 */
+		        , T2.CUSTOMER_BIRTH															   					 /* 출생년도 */
+		        , T2.CUSTOMER_EDU_CHK_YN														   				 /* 최종학력확인여부 */
+		        , T2.CUSTOMER_EDU_LEV														  					 /* 최종학력코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK025' AND CT.CD=T2.CUSTOMER_EDU_LEV AND CT.CD_TYPE  = '1') AS CUSTOMER_EDU_LEV_NM					 /* 최종학력명 */
+		        , T2.CUSTOMER_EDU_MAJOR														   					 /* 전공계열코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK026' AND CT.CD=T2.CUSTOMER_EDU_MAJOR AND CT.CD_TYPE  = '1') AS CUSTOMER_EDU_MAJOR_NM				 /* 전공계열명 */
+		        , T2.CUSTOMER_JOIN_POLICY_YN												   					 /* 정책참여유무코드 */
+				, (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK028' AND CT.CD=T2.CUSTOMER_JOIN_POLICY_YN AND CT.CD_TYPE  = '1') AS CUSTOMER_JOIN_POLICY_YN_NM	 /* 정책참여유무명 */
+		        , T2.CUSTOMER_JOIN_POLICY													   					 /* 참여정책명 */
+		        , T2.CUSTOMER_REGION															   				 /* 지역코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK023' AND CT.CD=T2.CUSTOMER_REGION AND CT.CD_TYPE  = '1') AS CUSTOMER_REGION_NM					 /* 지역명 */
+		        , T2.ATENT_CUSTOMER                                                             				 /* 주의고객 */
+		        , T2.REGR_DEPT_CD                                                 TALK023      				 /* 등록일시 */
+			    , TO_CHAR(TO_DATE(T1.LAST_CONS_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') 		AS LAST_CONS_DTTM				/*최근상담일시 */
+			    
+			    /*외교부 추가 컬럼*/
+			    , T2.ACDT_PRSN_REL	/*사고자 관계*/
+			    , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK043' AND CT.CD=T2.ACDT_PRSN_REL AND CT.CD_TYPE  = '1') AS ACDT_PRSN_REL_NM					 /* 사고자 관계 명 */
+			    
+			    , T2.ATENT_CD		/*주의고객코드*/
+			    , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK042' AND CT.CD=T2.ATENT_CD AND CT.CD_TYPE  = '1') AS ATENT_CD_NM					 /* 주의고객코드 명 */
+			    
+			    , T2.ATENT_PRE_PLAN /*주의고객대처방안*/
+			    , T2.CUSTOMER_PHONE_NO /*고객연락처*/
+				, (SELECT COMPANY_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} ) AS ASP_NEWCUST_KEY_NM
+				, #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+			  FROM (
+			    SELECT 
+				    S.TALK_USER_KEY 
+				    , MAX(S.TALK_START_DT) AS LAST_CONS_DTTM
+			    FROM PLT_CHT_CNSL S JOIN PLT_CUS C
+				ON S.CUSTOMER_ID = C.CUSTOMER_ID
+			    WHERE S.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			    AND S.TALK_START_DT BETWEEN #{REG_DTTM_FROM} || '000000' AND #{REG_DTTM_TO} || '235959' 
+			    
+			    /*외교부 상담완료코드 조회조건 삭제*/
+		          AND CNSL_TYP_CD IS NOT NULL
+			    
+			    GROUP BY S.TALK_USER_KEY
+			)T1
+			LEFT OUTER JOIN PLT_CUS T2
+			ON T1.TALK_USER_KEY = T2.TALK_USER_KEY
+			WHERE 1=1
+			<if test="SEARCH_CUSTOMER_NM       !='' and SEARCH_CUSTOMER_NM       != null"> AND T2.CUSTOMER_NM       LIKE '%' || #{SEARCH_CUSTOMER_NM} || '%'       </if>
+			<if test="SEARCH_CUSTOMER_ID       !='' and SEARCH_CUSTOMER_ID       != null"> AND T1.TALK_USER_KEY     LIKE '%' || #{SEARCH_CUSTOMER_ID} || '%'       </if>
+			<if test="CUSTOMER_PHONE_NO        !='' and CUSTOMER_PHONE_NO        != null"> AND T2.CUSTOMER_PHONE_NO     LIKE '%' || #{CUSTOMER_PHONE_NO} || '%'       </if>
+			<if test="ATENT_CD      		   !='' and ATENT_CD       			 != null"> AND T2.ATENT_CD     			LIKE '%' || #{ATENT_CD} || '%'       </if>
+			
+			ORDER BY T1.LAST_CONS_DTTM
+	) ROW_TBL
+				
+</select> -->
+
+
+<select id="selectRtnPageCustInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+ SELECT ROW_TBL.*
+     FROM ( 
+			SELECT 
+			  ROW_NUMBER() OVER(ORDER BY REGR_DEPT_CD) AS ROW_NUMBER
+			  ,CUSTOMER_ID 							/* 고객아이디 */
+			  ,CUSTCO_ID
+			  ,(SELECT COMPANY_NM FROM PLT_ASP_CUS CT WHERE CT.CUSTCO_ID = A.CUSTCO_ID)  AS COMPANY_NM 						/* ASP고객사키 */
+			  , SNDR_KEY						/* ASP센더키 */
+			  ,TALK_USER_KEY  						/* TALK사용자키 */
+			  ,CUSTOMER_NM							/* 고객이름 */
+			  ,CUSTOMER_TYPE 						/* 고객유형 */
+			  ,CUSTOMER_USER_MEMO						/* 고객메모 */
+			  ,CUSTOMER_PHONE_NO                  /* 고객전화번호 */
+			  ,(SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK021' AND CT.CD=CUSTOMER_TYPE AND CT.CD_TYPE  = '1')     AS CUSTOMER_TYPE_NM                /* 상담대상명 */
+			  ,CUSTOMER_GENDER                                                            /* 성별코드 */
+			  , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK022' AND CT.CD=CUSTOMER_GENDER AND CT.CD_TYPE  = '1')    AS CUSTOMER_GENDER_NM                /* 성별 */
+			  ,CUSTOMER_CAREER_STATUS                                                            /* 학업및재직상태 */
+			  , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK024' AND CT.CD=CUSTOMER_CAREER_STATUS AND CT.CD_TYPE  = '1') AS CUSTOMER_CAREER_STATUS_NM       /* 학업및재직상태 */
+			  ,CUSTOMER_BIRTH                                                                /* 출생년도 */
+			  ,CUSTOMER_EDU_CHK_YN                                                          /* 최종학력확인여부 */
+			  ,CUSTOMER_EDU_LEV                                                             /* 고객교육수준 */
+			  , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK025' AND CT.CD=CUSTOMER_EDU_LEV AND CT.CD_TYPE  = '1') AS CUSTOMER_EDU_LEV_NM                /* 최종학력명 */
+			  , CUSTOMER_EDU_MAJOR                                                             /* 전공계열코드 */
+			  , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK026' AND CT.CD= CUSTOMER_EDU_MAJOR AND CT.CD_TYPE  = '1') AS CUSTOMER_EDU_MAJOR_NM             /* 전공계열명 */
+			  , CUSTOMER_JOIN_POLICY_YN                                                       /* 정책참여유무코드 */
+			  , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK028' AND CT.CD=CUSTOMER_JOIN_POLICY_YN AND CT.CD_TYPE  = '1') AS CUSTOMER_JOIN_POLICY_YN_NM    /* 정책참여유무명 */
+			  , CUSTOMER_JOIN_POLICY                                                          /* 참여정책명 */
+			  , CUSTOMER_LOCAL                                                             /* 지역코드 */
+			  , ATENT_CUSTOMER                                                                          /* 주의고객 */
+			  , REGR_DEPT_CD                                                           /* 등록일시 */
+			  FROM PLT_CUS A
+			 WHERE custco_id = #{ASP_NEWCUST_KEY}
+			<if test="SEARCH_CUSTOMER_NM       !='' and SEARCH_CUSTOMER_NM       != null"> AND CUSTOMER_NM       LIKE '%' || #{SEARCH_CUSTOMER_NM} || '%'       </if>
+			<if test="SEARCH_CUSTOMER_ID       !='' and SEARCH_CUSTOMER_ID       != null"> AND CUSTOMER_ID     LIKE '%' || #{SEARCH_CUSTOMER_ID} || '%'       </if>
+			<if test="CUSTOMER_PHONE_NO        !='' and CUSTOMER_PHONE_NO        != null"> AND CUSTOMER_PHONE_NO     LIKE '%' || #{CUSTOMER_PHONE_NO} || '%'       </if>
+			<if test="ATENT_CD      		   !='' and ATENT_CD       			 != null"> AND TATENT_CD     			LIKE '%' || #{ATENT_CD} || '%'       </if>
+			ORDER BY CUSTOMER_NM
+	) ROW_TBL
+				
+</select>
+
+<select id="selectRtnPageCustInfoPre"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+ SELECT ROW_TBL.*
+     FROM ( 
+		    SELECT
+		    	ROW_NUMBER() OVER(ORDER BY T1.TOT_DATE) AS ROW_NUMBER
+				, T1.TALK_USER_KEY																				AS TALK_USER_KEY
+			    , T1.CUSTCO_ID
+			    , T2.CUSTOMER_ID																				AS CUSTOMER_ID
+		        , T2.CUSTOMER_NM
+		        , T2.CUSTOMER_MEMO																				 /* 고객메모 */
+		        , T2.CUSTOMER_STAT_CD
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK011' AND CT.CD=T2.CUSTOMER_STAT_CD AND CT.CD_TYPE  = '1') AS CUSTOMER_STAT_NM 					 /* 회원상태명 */
+		        , T2.CUSTOMER_TYPE															   					 /* 상담대상 */	
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK021' AND CT.CD=T2.CUSTOMER_TYPE AND CT.CD_TYPE  = '1') 	 AS CUSTOMER_TYPE_NM					 /* 상담대상명 */	
+		        , T2.CUSTOMER_GENDER															  				 /* 성별코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK022' AND CT.CD=T2.CUSTOMER_GENDER AND CT.CD_TYPE  = '1')	 AS CUSTOMER_GENDER_NM   				 /* 성별 */
+		        , T2.CUSTOMER_CAREER_STATUS		  											   					 /* 학업및재직상태 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK024' AND CT.CD=T2.CUSTOMER_CAREER_STATUS AND CT.CD_TYPE  = '1') AS CUSTOMER_CAREER_STATUS_NM		 /* 학업및재직상태 */
+		        , T2.CUSTOMER_BIRTH															   					 /* 출생년도 */
+		        , T2.CUSTOMER_EDU_CHK_YN														   				 /* 최종학력확인여부 */
+		        , T2.CUSTOMER_EDU_LEV														  					 /* 최종학력코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK025' AND CT.CD=T2.CUSTOMER_EDU_LEV AND CT.CD_TYPE  = '1') AS CUSTOMER_EDU_LEV_NM					 /* 최종학력명 */
+		        , T2.CUSTOMER_EDU_MAJOR														   					 /* 전공계열코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK026' AND CT.CD=T2.CUSTOMER_EDU_MAJOR AND CT.CD_TYPE  = '1') AS CUSTOMER_EDU_MAJOR_NM				 /* 전공계열명 */
+		        , T2.CUSTOMER_JOIN_POLICY_YN												   					 /* 정책참여유무코드 */
+				, (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK028' AND CT.CD=T2.CUSTOMER_JOIN_POLICY_YN AND CT.CD_TYPE  = '1') AS CUSTOMER_JOIN_POLICY_YN_NM	 /* 정책참여유무명 */
+		        , T2.CUSTOMER_JOIN_POLICY													   					 /* 참여정책명 */
+		        , T2.CUSTOMER_REGION															   				 /* 지역코드 */
+		        , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK023' AND CT.CD=T2.CUSTOMER_REGION AND CT.CD_TYPE  = '1') AS CUSTOMER_REGION_NM					 /* 지역명 */
+		        , T2.ATENT_CUSTOMER                                                             				 /* 주의고객 */
+		        , T2.REGR_DEPT_CD                                                 TALK023      				 /* 등록일시 */
+			    , TO_CHAR(TO_DATE(T1.TOT_DATE, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') 		AS LAST_CONS_DTTM				/*최근상담일시 */
+			    
+			    /*외교부 추가 컬럼*/
+			    , T2.ACDT_PRSN_REL	/*사고자 관계*/
+			    , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK043' AND CT.CD=T2.ACDT_PRSN_REL AND CT.CD_TYPE  = '1') AS ACDT_PRSN_REL_NM					 /* 사고자 관계 명 */
+			    
+			    , T2.ATENT_CD		/*주의고객코드*/
+			    , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK042' AND CT.CD=T2.ATENT_CD AND CT.CD_TYPE  = '1') AS ATENT_CD_NM					 /* 주의고객코드 명 */
+			    
+			    , T2.ATENT_PRE_PLAN /*주의고객대처방안*/
+			    , T2.CUSTOMER_PHONE_NO /*고객연락처*/
+				, (SELECT COMPANY_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} ) AS ASP_NEWCUST_KEY_NM
+				, #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+			  FROM (
+			    SELECT  
+                C.CUSTCO_ID
+			          , C.CUSTOMER_ID
+			          , C.TALK_USER_KEY 
+			          , CASE WHEN MAX(S.TALK_START_DT) IS NOT NULL 
+			          	THEN 
+                      		CASE WHEN MAX(P.CNSL_SAVE_DTIM) IS NOT NULL
+                      		THEN 
+                            	CASE WHEN MAX(S.TALK_START_DT) > MAX(P.CNSL_SAVE_DTIM)
+                            	THEN MAX(S.TALK_START_DT)
+                            	ELSE MAX(P.CNSL_EOT_DATE)
+                            	END 
+                      		ELSE MAX(S.TALK_START_DT)
+                      		END 
+			          	ELSE MAX(P.CNSL_SAVE_DTIM) 
+                	 	END AS TOT_DATE
+			          , MAX(S.TALK_START_DT) AS TALK_START_DT
+			          , MAX(p.CNSL_SAVE_DTIM) AS CNSL_EOT_DATE
+			        FROM PLT_CUS C 
+			        LEFT OUTER JOIN PLT_CHT_CNSL S 
+			        ON  C.TALK_USER_KEY = S.TALK_USER_KEY 
+			        LEFT OUTER JOIN PLT_PHN_CNSL P 
+			        ON  C.CUSTOMER_ID = P.CUST_NO		 
+			   WHERE C.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			   GROUP BY C.TALK_USER_KEY , C.CUSTOMER_ID, C.CUSTCO_ID
+			)T1
+			LEFT OUTER JOIN PLT_CUS T2
+			ON T1.TALK_USER_KEY = T2.TALK_USER_KEY AND T1.CUSTOMER_ID = T2.CUSTOMER_ID
+			WHERE 1=1
+			<if test="SEARCH_CUSTOMER_NM       !='' and SEARCH_CUSTOMER_NM       != null"> AND T2.CUSTOMER_NM       LIKE '%' || #{SEARCH_CUSTOMER_NM} || '%'       </if>
+			<if test="SEARCH_CUSTOMER_ID       !='' and SEARCH_CUSTOMER_ID       != null"> AND T1.CUSTOMER_ID     LIKE '%' || #{SEARCH_CUSTOMER_ID} || '%'       </if>
+			<if test="CUSTOMER_PHONE_NO        !='' and CUSTOMER_PHONE_NO        != null"> AND T2.CUSTOMER_PHONE_NO     LIKE '%' || #{CUSTOMER_PHONE_NO} || '%'       </if>
+			<if test="ATENT_CD      		   !='' and ATENT_CD       			 != null"> AND T2.ATENT_CD     			LIKE '%' || #{ATENT_CD} || '%'       </if>
+			
+			ORDER BY T1.TOT_DATE
+	) ROW_TBL
+				
+</select>
+
+
+
+
+<!-- 고객정보 데이터 조회 -->
+<select id="selectRtnCustInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT CUSTOMER_ID                                                      /* 고객ID */
+	 , CUSTCO_ID    
+     , TALK_USER_KEY                                                    /* 카카오고객KEY */
+     , CUSTOMER_NM                                                      /* 고객명 */     
+     , CUSTOMER_PHONE_NO                                                /* 고객전화번호 */  
+     , CUSTOMER_USER_MEMO                                               /* 고객메모 */    
+     , GENDER_CD                                                        /* 성별코드 */    
+     , CUSTOMER_BIRTH                                                   /* 생년월일 */    
+     , CUSTOMER_STAT_CD                                                 /* 회원상태코드 */  
+     , EMAIL                                                            /* 이메일 */
+     , CUSTOMER_MEMO                                                    /* 메모 */
+     , ATENT_CUSTOMER                                                   /* 주의고객 */
+     , REGR_DEPT_CD                                                     /* 등록자부서코드 */ 
+     , REGR_ID                                                          /* 등록자ID */   
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS REG_DTTM      /* 등록일시 */    
+     , AMDR_DEPT_CD                                                     /* 수정자부서코드 */ 
+     , AMDR_ID                                                          /* 수정자ID */   
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS UPD_DTTM      /* 수정일시 */    
+     , PROC_ID                                                          /* 처리자 */     
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING /* 전산처리일시 */ 
+     , CUSTOMER_SEQ                                                     /* 고객사_고객번호 */
+  FROM PLT_CUS
+ WHERE TALK_USER_KEY = #{TALK_USER_KEY}
+   AND CUSTOMER_ID = #{CUSTOMER_ID}
+
+</select>
+
+<!-- 고객정보 데이터 조회 - 고객번호 있는 고객 -->
+<select id="selectRtnCustInfoCustomerSeqIsNotNull"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT CUSTOMER_ID                                                      /* 고객ID */    
+     , TALK_USER_KEY                                                    /* 카카오고객KEY */
+     , CUSTOMER_NM                                                      /* 고객명 */     
+     , CUSTOMER_PHONE_NO                                                /* 고객전화번호 */  
+     , CUSTOMER_USER_MEMO                                               /* 고객메모 */    
+     , GENDER_CD                                                        /* 성별코드 */    
+     , CUSTOMER_BIRTH                                                   /* 생년월일 */    
+     , CUSTOMER_STAT_CD                                                 /* 회원상태코드 */  
+     , EMAIL                                                            /* 이메일 */
+     , CUSTOMER_MEMO                                                    /* 메모 */
+     , ATENT_CUSTOMER                                                   /* 주의고객 */
+     , REGR_DEPT_CD                                                     /* 등록자부서코드 */ 
+     , REGR_ID                                                          /* 등록자ID */   
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS REG_DTTM      /* 등록일시 */    
+     , AMDR_DEPT_CD                                                     /* 수정자부서코드 */ 
+     , AMDR_ID                                                          /* 수정자ID */   
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS UPD_DTTM      /* 수정일시 */    
+     , PROC_ID                                                          /* 처리자 */     
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING /* 전산처리일시 */ 
+     , CUSTOMER_SEQ                                                     /* 고객사_고객번호 */
+  FROM PLT_CUS
+ WHERE TALK_USER_KEY = #{TALK_USER_KEY}
+   AND CUSTOMER_SEQ IS NOT NULL
+
+</select>
+
+<!-- 고객정보 신규등록 -->
+<insert id="insertRtnCustInfo" parameterType= "java.util.HashMap">
+
+INSERT INTO PLT_CUS 
+       ( CUSTOMER_ID           /* 고객ID */    
+       , CUSTCO_ID
+       , TALK_USER_KEY         /* 카카오고객KEY */
+       , CUSTOMER_NM           /* 고객명 */     
+       , CUSTOMER_PHONE_NO     /* 고객전화번호 */  
+       , CUSTOMER_USER_MEMO    /* 고객메모 */    
+       , GENDER_CD             /* 성별코드 */    
+       , CUSTOMER_BIRTH        /* 생년월일 */    
+       , CUSTOMER_STAT_CD      /* 회원상태코드 */  
+       , EMAIL                 /* 이메일 */
+       , ATENT_CUSTOMER        /* 주의고객 */
+<if test="ATENT_CUSTOMER !='' and ATENT_CUSTOMER     != null">  
+       , ATENT_REGR_DATE       /* 주의고객 등록일자 */
+       , ATENT_REGR_ID         /* 주의고객 등록자 */
+</if>
+       , CUSTOMER_MEMO         /* 메모 */
+<if test="CUSTOMER_MEMO  !='' and CUSTOMER_MEMO      != null">  
+       , MEMO_REGR_DATE        /* 메모 등록일자 */
+       , MEMO_REGR_ID          /* 메모 등록자 */
+</if>
+       , REGR_DEPT_CD          /* 등록자부서코드 */ 
+       , REGR_ID               /* 등록자ID */   
+       , REG_DTTM              /* 등록일시 */    
+       , AMDR_DEPT_CD          /* 수정자부서코드 */ 
+       , AMDR_ID               /* 수정자ID */   
+       , UPD_DTTM              /* 수정일시 */    
+       , PROC_ID               /* 처리자 */     
+       , IT_PROCESSING         /* 전산처리일시 */  
+
+) VALUES 
+       ( #{CUSTOMER_ID}           /* 고객ID */    
+       , NULLIF(#{CUSTCO_ID},'')
+       , #{CUSTOMER_ID}           /* 카카오고객KEY */
+       , #{CUSTOMER_NM}           /* 고객명 */     
+       , #{CUSTOMER_PHONE_NO}     /* 고객전화번호 */  
+       , #{CUSTOMER_MEMO}         /* 고객메모 */    
+       , #{GENDER_CD}             /* 성별코드 */    
+       , #{CUSTOMER_BIRTH}        /* 생년월일 */    
+       , #{CUSTOMER_STAT_CD}      /* 회원상태코드 */
+       , #{EMAIL}                 /* 이메일 */
+       , #{ATENT_CUSTOMER}        /* 주의고객 */
+<if test="ATENT_CUSTOMER     !='' and ATENT_CUSTOMER     != null">  
+       , NOW()                  /* 주의고객 등록일자 */
+       , #{PROC_ID}               /* 주의고객 등록자 */
+</if>
+       , #{CUSTOMER_MEMO}         /* 메모 */
+<if test="CUSTOMER_MEMO      !='' and CUSTOMER_MEMO      != null">  
+       , NOW()                  /* 메모 등록일자 */
+       , #{PROC_ID}               /* 메모 등록자 */
+</if>
+       , #{REGR_DEPT_CD}          /* 등록자부서코드 */ 
+       , #{PROC_ID}               /* 등록자ID */   
+       , NOW()                  /* 등록일시 */    
+       , #{AMDR_DEPT_CD}          /* 수정자부서코드 */ 
+       , #{PROC_ID}               /* 수정자ID */   
+       , NOW()                  /* 수정일시 */    
+       , #{PROC_ID}               /* 처리자 */     
+       , NOW()                  /* 전산처리일시 */  
+)
+
+</insert>
+
+<!-- 고객정보 수정 -->
+<update id="updateRtnCustInfo" parameterType="java.util.HashMap">
+
+UPDATE PLT_CUS 
+   SET PROC_ID 					= #{PROC_ID}
+     , IT_PROCESSING 			= NOW()
+     , CUSTOMER_NM 				= #{CUSTOMER_NM} 					/* 고객명 */
+     , CUSTOMER_MEMO 			= #{CUSTOMER_MEMO} 					/* 메모 */
+     , MEMO_AMDR_DATE 			= NOW() 							/* 메모 수정일자 */
+     , MEMO_AMDR_ID 			= #{PROC_ID} 						/* 메모 수정자 */
+	 , CUSTOMER_EDU_CHK_YN 		= #{CUSTOMER_EDU_CHK_YN}			/* 최종학력확인여부 */
+	 , CUSTOMER_EDU_LEV 		= #{CUSTOMER_EDU_LEV}				/* 최종학력 */
+	 , CUSTOMER_EDU_MAJOR 		= #{CUSTOMER_EDU_MAJOR}				/* 전공계열 */
+	 , CUSTOMER_BIRTH 			= #{CUSTOMER_BIRTH}					/* 출생년도 */
+	 , CUSTOMER_TYPE 			= #{CUSTOMER_TYPE}					/* 상담대상 */
+	 , CUSTOMER_GENDER 			= #{CUSTOMER_GENDER}				/* 성별 */
+	 , CUSTOMER_REGION 			= #{CUSTOMER_REGION}				/* 지역 */
+	 , CUSTOMER_CAREER_STATUS 	= #{CUSTOMER_CAREER_STATUS}			/* 학업및재직상태 */
+	 , CUSTOMER_JOIN_POLICY_YN 	= #{CUSTOMER_JOIN_POLICY_YN}		/* 정책참여유무 */
+	 , CUSTOMER_JOIN_POLICY 	= #{CUSTOMER_JOIN_POLICY}			/* 참여정책명 */
+	<if test="CUSTOMER_USER_MEMO !='' and CUSTOMER_USER_MEMO != null">  , CUSTOMER_USER_MEMO = #{CUSTOMER_USER_MEMO}   </if>
+	<if test="CUSTOMER_STAT_CD   !='' and CUSTOMER_STAT_CD   != null">  , CUSTOMER_STAT_CD = #{CUSTOMER_STAT_CD}       </if>
+	<if test="AMDR_DEPT_CD       !='' and AMDR_DEPT_CD       != null">  , AMDR_DEPT_CD = #{AMDR_DEPT_CD}               </if>
+	<if test="AMDR_ID            !='' and AMDR_ID            != null">  , AMDR_ID = #{PROC_ID}                         
+																		, UPD_DTTM = NOW()                           </if>
+WHERE CUSTCO_ID = #{CUSTCO_ID}
+  AND CUSTOMER_ID = #{CUSTOMER_ID}
+</update>
+
+<!-- 고객정보 수정(Eai) -->
+<update id="updateRtnCustInfoEai" parameterType="java.util.HashMap">
+UPDATE PLT_CUS 
+   SET CUSTOMER_NM 	 = #{CUSTOMER_NM, typeHandler=ContentCipherTypeHandler}   /* 고객명 */
+ WHERE CUSTCO_ID  = #{CUSTCO_ID}
+   AND TALK_USER_KEY = #{TALK_USER_KEY}
+</update>
+
+<!-- 회원정보 삭제 -->
+<delete id="deleteRtnCustInfo" parameterType="java.util.HashMap">
+
+DELETE FROM PLT_CUS
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND TALK_USER_KEY = #{TALK_USER_KEY}
+   AND CUSTOMER_ID = #{CUSTOMER_ID}
+   
+</delete>
+
+<insert id="insertUserInfo" parameterType="java.util.HashMap">
+
+	MERGE 
+		INTO PLT_CUS  TTC
+	USING DUAL
+	ON (TTC.CUSTCO_ID = NULLIF(#{ASP_NEWCUST_KEY},'') AND TTC.CUSTOMER_ID = #{CUSTOMER_ID})
+	WHEN MATCHED THEN
+	UPDATE 
+	   SET PROC_ID 						= #{PROC_ID}
+<!-- 	   	 , TTC.SNDR_KEY 			= (SrhrELECT SNDR_KEY FROM PLT_CUS WHERE CUSTCO_ID = #{CUSTCO_ID} AND CUSTOMER_ID = #{CUSTOMER_ID}) -->
+	     , TTC.IT_PROCESSING 			= NOW()
+	     , TTC.CUSTOMER_NM 				= #{CUSTOMER_NM} 					/* 고객명 */
+	     , TTC.CUSTOMER_SEQ 			= #{CUSTOMER_SEQ} 					/* 고객번호 */
+	     , TTC.CUSTOMER_MEMO 			= #{CUSTOMER_MEMO} 					/* 메모 */
+	     , TTC.MEMO_AMDR_DATE 			= NOW() 							/* 메모 수정일자 */
+	     , TTC.MEMO_AMDR_ID 			= #{PROC_ID} 						/* 메모 수정자 */
+		 , TTC.CUSTOMER_EDU_CHK_YN 		= #{CUSTOMER_EDU_CHK_YN}			/* 최종학력확인여부 */
+		 <choose>
+		 	<when test="CUSTOMER_EDU_CHK_YN eq 'Y'.toString()">
+			 , TTC.CUSTOMER_EDU_LEV 		= #{CUSTOMER_EDU_LEV}			/* 최종학력 */
+			 , TTC.CUSTOMER_EDU_MAJOR 		= #{CUSTOMER_EDU_MAJOR}			/* 전공계열 */
+		 	</when>
+		 	<otherwise>
+			 , TTC.CUSTOMER_EDU_LEV 		= NULL							/* 최종학력 */
+			 , TTC.CUSTOMER_EDU_MAJOR 		= NULL							/* 전공계열 */
+		 	</otherwise>
+		 </choose>
+		 , TTC.CUSTOMER_BIRTH 			= #{CUSTOMER_BIRTH}					/* 출생년도 */
+		 , TTC.CUSTOMER_TYPE 			= #{CUSTOMER_TYPE}					/* 상담대상 */
+		 , TTC.CUSTOMER_GENDER 			= #{CUSTOMER_GENDER}				/* 성별 */
+		 , TTC.CUSTOMER_LOCAL 			= #{CUSTOMER_REGION}				/* 지역 */
+		 , TTC.CUSTOMER_CAREER_STATUS 	= #{CUSTOMER_CAREER_STATUS}			/* 학업및재직상태 */
+		 , TTC.CUSTOMER_JOIN_POLICY_YN 	= #{CUSTOMER_JOIN_POLICY_YN}		/* 정책참여유무 */
+		 <choose>
+		 	<when test="CUSTOMER_JOIN_POLICY_YN eq 'Y'.toString()">
+			 , TTC.CUSTOMER_JOIN_POLICY 	= #{CUSTOMER_JOIN_POLICY}		/* 참여정책명 */
+		 	</when>
+		 	<otherwise>
+			 , TTC.CUSTOMER_JOIN_POLICY 	= NULL							/* 참여정책명 */
+		 	</otherwise>
+		 </choose>
+		<if test="CUSTOMER_USER_MEMO !='' and CUSTOMER_USER_MEMO != null">  , TTC.CUSTOMER_USER_MEMO = #{CUSTOMER_USER_MEMO}   </if>
+		<if test="CUSTOMER_STAT_CD   !='' and CUSTOMER_STAT_CD   != null">  , TTC.CUSTOMER_STAT_CD = #{CUSTOMER_STAT_CD}       </if>
+		<if test="AMDR_DEPT_CD       !='' and AMDR_DEPT_CD       != null">  , TTC.AMDR_DEPT_CD = #{AMDR_DEPT_CD}               </if>
+		<if test="AMDR_ID            !='' and AMDR_ID            != null">  , TTC.AMDR_ID = #{PROC_ID}                         </if>
+		
+		/*외교부 추가*/
+		, TTC.ATENT_PRE_PLAN = #{ATENT_PRE_PLAN} 
+		, TTC.ACDT_PRSN_REL = #{ACDT_PRSN_REL} 
+		, TTC.ATENT_CD = #{ATENT_CD} 
+		<!-- , TTC.CUSTOMER_PHONE_NO = #{CUSTOMER_PHONE_NO}  -->
+		
+	WHEN NOT MATCHED THEN
+	INSERT ( 
+		TALK_USER_KEY
+		, CUSTOMER_ID
+		, CUSTCO_ID
+		, SNDR_KEY
+		, PROC_ID
+		, IT_PROCESSING
+		, CUSTOMER_NM
+		, CUSTOMER_MEMO
+		, MEMO_REGR_DATE
+		, MEMO_REGR_ID
+		, MEMO_AMDR_DATE
+		, MEMO_AMDR_ID
+		, CUSTOMER_EDU_CHK_YN												/* 최종학력확인여부 */
+		, CUSTOMER_EDU_LEV													/* 최종학력 */
+		, CUSTOMER_EDU_MAJOR												/* 전공계열 */
+		, CUSTOMER_BIRTH													/* 출생년도 */
+		, CUSTOMER_TYPE														/* 상담대상 */
+		, CUSTOMER_GENDER													/* 성별 */
+		, CUSTOMER_REGION													/* 지역 */
+		, CUSTOMER_CAREER_STATUS											/* 학업및재직상태 */
+		, CUSTOMER_JOIN_POLICY_YN											/* 정책참여유무 */
+		, CUSTOMER_JOIN_POLICY												/* 참여정책명 */
+		<if test="CUSTOMER_USER_MEMO !='' and CUSTOMER_USER_MEMO != null">  , TTC.CUSTOMER_USER_MEMO	</if>
+		<if test="CUSTOMER_STAT_CD   !='' and CUSTOMER_STAT_CD   != null">  , TTC.CUSTOMER_STAT_CD		</if>
+		<if test="AMDR_DEPT_CD       !='' and AMDR_DEPT_CD       != null">  , TTC.AMDR_DEPT_CD			</if>
+		<if test="AMDR_ID            !='' and AMDR_ID            != null">  , TTC.AMDR_ID				</if>
+		
+		, ATENT_PRE_PLAN 
+		, ACDT_PRSN_REL 
+		, ATENT_CD 		
+		<!--, CUSTOMER_PHONE_NO  -->
+		, CUSTOMER_SEQ
+		
+	) VALUES (
+		#{TALK_USER_KEY}
+		, #{CUSTOMER_ID}
+		, NULLIF(#{ASP_NEWCUST_KEY},'')
+		, (SELECT SNDR_KEY FROM PLT_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND CUSTOMER_ID = #{CUSTOMER_ID})
+		, #{PROC_ID}
+		, NOW()
+		, #{CUSTOMER_NM}
+		, #{CUSTOMER_MEMO}
+		, NOW()
+		, #{PROC_ID}
+		, NOW()
+		, #{PROC_ID}
+		, #{CUSTOMER_EDU_CHK_YN}
+		 <choose>
+		 	<when test="CUSTOMER_EDU_CHK_YN eq 'Y'.toString()">
+				, #{CUSTOMER_EDU_LEV}
+				, #{CUSTOMER_EDU_MAJOR}
+		 	</when>
+		 	<otherwise>
+				, NULL
+				, NULL
+		 	</otherwise>
+		 </choose>
+		, #{CUSTOMER_BIRTH}
+		, #{CUSTOMER_TYPE}
+		, #{CUSTOMER_GENDER}
+		, #{CUSTOMER_REGION}
+		, #{CUSTOMER_CAREER_STATUS}
+		, #{CUSTOMER_JOIN_POLICY_YN}
+		 <choose>
+		 	<when test="CUSTOMER_JOIN_POLICY_YN eq 'Y'.toString()">
+				, #{CUSTOMER_JOIN_POLICY}
+		 	</when>
+		 	<otherwise>
+				, NULL
+		 	</otherwise>
+		 </choose>
+		<if test="CUSTOMER_USER_MEMO !='' and CUSTOMER_USER_MEMO != null">  , #{CUSTOMER_USER_MEMO}   </if>
+		<if test="CUSTOMER_STAT_CD   !='' and CUSTOMER_STAT_CD   != null">  , #{CUSTOMER_STAT_CD}     </if>
+		<if test="AMDR_DEPT_CD       !='' and AMDR_DEPT_CD       != null">  , #{AMDR_DEPT_CD}         </if>
+		<if test="AMDR_ID            !='' and AMDR_ID            != null">  , #{PROC_ID}              </if>      
+		, #{ATENT_PRE_PLAN}   
+		, #{ACDT_PRSN_REL}    
+		, #{ATENT_CD}         
+		<!-- , #{CUSTOMER_PHONE_NO} -->
+		, #{CUSTOMER_SEQ}
+	)
+
+	
+	<!-- 
+	INSERT INTO PLT_CUS
+	( 
+		TALK_USER_KEY
+		, CUSTOMER_ID
+		, CUSTCO_ID
+		, PROC_ID
+		, IT_PROCESSING
+		, CUSTOMER_NM
+		, CUSTOMER_MEMO
+		, MEMO_REGR_DATE
+		, MEMO_REGR_ID
+		, MEMO_AMDR_DATE
+		, MEMO_AMDR_ID
+		, CUSTOMER_EDU_CHK_YN												/* 최종학력확인여부 */
+		, CUSTOMER_EDU_LEV													/* 최종학력 */
+		, CUSTOMER_EDU_MAJOR												/* 전공계열 */
+		, CUSTOMER_BIRTH													/* 출생년도 */
+		, CUSTOMER_TYPE														/* 상담대상 */
+		, CUSTOMER_GENDER													/* 성별 */
+		, CUSTOMER_REGION													/* 지역 */
+		, CUSTOMER_CAREER_STATUS											/* 학업및재직상태 */
+		, CUSTOMER_JOIN_POLICY_YN											/* 정책참여유무 */
+		, CUSTOMER_JOIN_POLICY												/* 참여정책명 */
+		<if test="CUSTOMER_USER_MEMO !='' and CUSTOMER_USER_MEMO != null">  , TTC.CUSTOMER_USER_MEMO	</if>
+		<if test="CUSTOMER_STAT_CD   !='' and CUSTOMER_STAT_CD   != null">  , TTC.CUSTOMER_STAT_CD		</if>
+		<if test="AMDR_DEPT_CD       !='' and AMDR_DEPT_CD       != null">  , TTC.AMDR_DEPT_CD			</if>
+		<if test="AMDR_ID            !='' and AMDR_ID            != null">  , TTC.AMDR_ID				</if>
+	) VALUES (
+		#{TALK_USER_KEY}
+		, #{CUSTOMER_ID}
+		, NULLIF(#{CUSTCO_ID},'')
+		, #{PROC_ID}
+		, NOW()
+		, #{CUSTOMER_NM}
+		, #{CUSTOMER_MEMO}
+		, NOW()
+		, #{PROC_ID}
+		, NOW()
+		, #{PROC_ID}
+		, #{CUSTOMER_EDU_CHK_YN}
+		 <choose>
+		 	<when test="CUSTOMER_EDU_CHK_YN eq 'Y'.toString()">
+				, #{CUSTOMER_EDU_LEV}
+				, #{CUSTOMER_EDU_MAJOR}
+		 	</when>
+		 	<otherwise>
+				, NULL
+				, NULL
+		 	</otherwise>
+		 </choose>
+		, #{CUSTOMER_BIRTH}
+		, #{CUSTOMER_TYPE}
+		, #{CUSTOMER_GENDER}
+		, #{CUSTOMER_REGION}
+		, #{CUSTOMER_CAREER_STATUS}
+		, #{CUSTOMER_JOIN_POLICY_YN}
+		 <choose>
+		 	<when test="CUSTOMER_JOIN_POLICY_YN eq 'Y'.toString()">
+				, #{CUSTOMER_JOIN_POLICY}
+		 	</when>
+		 	<otherwise>
+				, NULL
+		 	</otherwise>
+		 </choose>
+		<if test="CUSTOMER_USER_MEMO !='' and CUSTOMER_USER_MEMO != null">  , #{CUSTOMER_USER_MEMO}   </if>
+		<if test="CUSTOMER_STAT_CD   !='' and CUSTOMER_STAT_CD   != null">  , #{CUSTOMER_STAT_CD}     </if>
+		<if test="AMDR_DEPT_CD       !='' and AMDR_DEPT_CD       != null">  , #{AMDR_DEPT_CD}         </if>
+		<if test="AMDR_ID            !='' and AMDR_ID            != null">  , #{PROC_ID}              </if>           
+	)                      
+	ON DUPLICATE KEY UPDATE
+		 TALK_USER_KEY					= #{TALK_USER_KEY}
+		 , CUSTOMER_ID					= #{CUSTOMER_ID}
+		 , PROC_ID 						= #{PROC_ID}
+	     , IT_PROCESSING 			= NOW()
+	     , CUSTOMER_NM 				= #{CUSTOMER_NM} 					/* 고객명 */
+	     , CUSTOMER_MEMO 			= #{CUSTOMER_MEMO} 					/* 메모 */
+	     , MEMO_AMDR_DATE 			= NOW() 							/* 메모 수정일자 */
+	     , MEMO_AMDR_ID 			= #{PROC_ID} 						/* 메모 수정자 */
+		 , CUSTOMER_EDU_CHK_YN 		= #{CUSTOMER_EDU_CHK_YN}			/* 최종학력확인여부 */
+		 <choose>
+		 	<when test="CUSTOMER_EDU_CHK_YN eq 'Y'.toString()">
+			 , CUSTOMER_EDU_LEV 		= #{CUSTOMER_EDU_LEV}			/* 최종학력 */
+			 , CUSTOMER_EDU_MAJOR 		= #{CUSTOMER_EDU_MAJOR}			/* 전공계열 */
+		 	</when>
+		 	<otherwise>
+			 , CUSTOMER_EDU_LEV 		= NULL							/* 최종학력 */
+			 , CUSTOMER_EDU_MAJOR 		= NULL							/* 전공계열 */
+		 	</otherwise>
+		 </choose>
+		 , CUSTOMER_BIRTH 			= #{CUSTOMER_BIRTH}					/* 출생년도 */
+		 , CUSTOMER_TYPE 			= #{CUSTOMER_TYPE}					/* 상담대상 */
+		 , CUSTOMER_GENDER 			= #{CUSTOMER_GENDER}				/* 성별 */
+		 , CUSTOMER_REGION 			= #{CUSTOMER_REGION}				/* 지역 */
+		 , CUSTOMER_CAREER_STATUS 	= #{CUSTOMER_CAREER_STATUS}			/* 학업및재직상태 */
+		 , CUSTOMER_JOIN_POLICY_YN 	= #{CUSTOMER_JOIN_POLICY_YN}		/* 정책참여유무 */
+		 <choose>
+		 	<when test="CUSTOMER_JOIN_POLICY_YN eq 'Y'.toString()">
+			 , CUSTOMER_JOIN_POLICY 	= #{CUSTOMER_JOIN_POLICY}		/* 참여정책명 */
+		 	</when>
+		 	<otherwise>
+			 , CUSTOMER_JOIN_POLICY 	= NULL							/* 참여정책명 */
+		 	</otherwise>
+		 </choose>
+		<if test="CUSTOMER_USER_MEMO !='' and CUSTOMER_USER_MEMO != null">  , CUSTOMER_USER_MEMO = #{CUSTOMER_USER_MEMO}   </if>
+		<if test="CUSTOMER_STAT_CD   !='' and CUSTOMER_STAT_CD   != null">  , CUSTOMER_STAT_CD = #{CUSTOMER_STAT_CD}       </if>
+		<if test="AMDR_DEPT_CD       !='' and AMDR_DEPT_CD       != null">  , AMDR_DEPT_CD = #{AMDR_DEPT_CD}               </if>
+		<if test="AMDR_ID            !='' and AMDR_ID            != null">  , AMDR_ID = #{PROC_ID}                         </if>
+		 -->
+</insert>
+
+
+<insert id="insertCustInfo" parameterType="java.util.HashMap">
+
+	MERGE INTO PLT_CUS  TTC
+	USING DUAL
+	   ON (TTC.CUSTCO_ID = NULLIF(#{CUSTCO_ID},'') AND TTC.CUSTOMER_ID = #{CUSTOMER_ID})
+	
+	WHEN MATCHED THEN
+	UPDATE 
+	   SET PROC_ID 						= #{PROC_ID}
+	   	 , TTC.SNDR_KEY 			= #{SNDR_KEY}
+	     , TTC.IT_PROCESSING 			= NOW()
+	     , TTC.CUSTOMER_NM 				= #{CUSTOMER_NM, typeHandler=ContentCipherTypeHandler} 	/* 고객명 */
+	     , TTC.CUSTOMER_SEQ 			= #{CUSTOMER_SEQ} 					/* 고객번호 */
+		 , TTC.CUSTOMER_GENDER 			= #{CUSTOMER_GENDER}				/* 성별 */
+		
+	WHEN NOT MATCHED THEN
+	INSERT ( 
+		TALK_USER_KEY
+		, CUSTOMER_ID
+		, CUSTCO_ID
+		, SNDR_KEY
+		, PROC_ID
+		, IT_PROCESSING
+		, CUSTOMER_NM
+		, CUSTOMER_MEMO
+		, MEMO_REGR_DATE
+		, MEMO_REGR_ID
+		, MEMO_AMDR_DATE
+		, MEMO_AMDR_ID
+		, ATENT_PRE_PLAN 
+		, ACDT_PRSN_REL 
+		, ATENT_CD 		
+		, CUSTOMER_PHONE_NO
+		, CUSTOMER_SEQ
+		
+	) VALUES (
+		#{TALK_USER_KEY}
+		, #{CUSTOMER_ID}
+		, NULLIF(#{CUSTCO_ID},'')
+		, #{SNDR_KEY}
+		, #{PROC_ID}
+		, NOW()
+		, #{CUSTOMER_NM, typeHandler=ContentCipherTypeHandler} 	/* 고객명 */
+		, #{CUSTOMER_MEMO}
+		, NOW()
+		, #{PROC_ID}
+		, NOW()
+		, #{PROC_ID}
+		, #{ATENT_PRE_PLAN}   
+		, #{ACDT_PRSN_REL}    
+		, #{ATENT_CD}         
+		, #{CUSTOMER_PHONE_NO}
+		, #{CUSTOMER_SEQ}
+	)
+</insert>
+
+<!-- 추가연락처 데이터 조회 -->
+<select id="selectContactAddr"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+	  DCL_PRSN_ID		/* 신고자ID */
+	  , A.CVCT_SEQ		/* 순번 */
+	  , A.CVCT_NM     	/* 민원인 명 */
+	  , A.CVCT_TEL  	/* 민원인 전화번호 */
+	  , A.ACDT_PRSN_REL_CD /* 사고자 관계 코드 */
+	  , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK043' AND CT.CD=A.ACDT_PRSN_REL_CD AND CT.CD_TYPE  = '1') AS ACDT_PRSN_REL_NM
+	FROM TWB_CVCT_ADD_CTFC A
+	WHERE DCL_PRSN_ID = #{TALK_USER_KEY}
+	ORDER BY UPD_DTTM DESC
+</select>
+
+<!-- 추가연락처 데이터 저장 -->
+<insert id="insertContactAddr" parameterType="java.util.HashMap">
+	INSERT INTO TWB_CVCT_ADD_CTFC
+	(
+	  DCL_PRSN_ID	        /* 신고자 아이디  */
+	  ,CVCT_SEQ	          	/* 민원인 순번    */
+	  ,CVCT_NM	          	/* 민원인 명      */
+	  ,ACDT_PRSN_REL_CD	  	/* 사고자 관계 코드*/
+	  ,CVCT_TEL	          	/* 민원인 전화번호*/
+	  ,REGR_DEPT_CD	      	/* 등록자부서코드 */
+	  ,REGR_ID	         	/* 등록자ID       */
+	  ,REG_DTTM	          	/* 등록일시       */
+	  ,AMDR_DEPT_CD	     	/* 수정자부서코드 */
+	  ,AMDR_ID	          	/* 수정자ID       */
+	  ,UPD_DTTM	          	/* 수정일시       */
+	  ,PROC_ID	         	/* 처리자ID       */
+	  ,IT_PROCESSING	    /* 전산처리일시   */
+	)
+	VALUES
+	(
+	  #{TALK_USER_KEY}
+	  , (SELECT COALESCE(MAX(CVCT_SEQ)+1,1) FROM TWB_CVCT_ADD_CTFC WHERE DCL_PRSN_ID = #{TALK_USER_KEY})
+	  , #{CVCT_NM}
+	  , #{ACDT_PRSN_REL_CD}
+	  , REPLACE(#{CVCT_TEL}, '-', '')
+	  , (SELECT DEPT_CD FROM PLT_USER WHERE USER_ID = #{USER_ID})
+	  , #{USER_ID}
+	  , NOW()
+	  , (SELECT DEPT_CD FROM PLT_USER WHERE USER_ID = #{USER_ID})
+	  , #{USER_ID}
+	  , NOW()
+	  , #{USER_ID}
+	  , NOW()
+	)
+</insert>
+
+<!-- 추가연락처 데이터 삭제 -->
+<delete id="deleteContactAddr" parameterType="java.util.HashMap">
+
+	DELETE FROM TWB_CVCT_ADD_CTFC
+	 WHERE DCL_PRSN_ID = #{DCL_PRSN_ID}
+	   AND CVCT_SEQ = #{CVCT_SEQ}
+  
+</delete>
+
+<!--주의고객 대처방안 데이터 조회 -->
+<select id="searchAtentData"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+	SELECT
+	  A.CUSTOMER_ID 
+	  , COALESCE(A.CUSTOMER_NM, '알수없음') AS CUSTOMER_NM
+	  , A.ATENT_CD
+	  , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK042' AND CT.CD=A.ATENT_CD AND CT.CD_TYPE  = '1') AS ATENT_NM
+	  , A.ATENT_PRE_PLAN 
+	  , ATENT_REGR_ID
+	FROM PLT_CUS A
+	WHERE CUSTOMER_ID = #{TALK_USER_KEY}
+  
+</select>
+
+<!-- 고객정보 수정 -->
+<update id="updateAtentData" parameterType="java.util.HashMap">
+
+	UPDATE PLT_CUS SET
+		ATENT_PRE_PLAN 	= #{ATENT_PRE_PLAN}	/*주의고객 대처방안*/	
+		,ATENT_CD 		= #{ATENT_CD}		/*주의고객코드*/
+		,ATENT_CUSTOMER = (CASE WHEN #{ATENT_CD} IS NULL THEN 'N' ELSE 'Y' END)	/*주의고객 여부*/
+  	<choose>
+	 	<when test="ATENT_REGR_ID !='' and ATENT_REGR_ID != null">
+		 , ATENT_AMDR_DATE 		= NOW()		
+		 , ATENT_AMDR_ID 		= #{USER_ID}
+	 	</when>
+	 	<otherwise>
+		 , ATENT_REGR_DATE 		= NOW()		
+		 , ATENT_REGR_ID 		= #{USER_ID}	 	
+		 , ATENT_AMDR_DATE 		= NOW()		
+		 , ATENT_AMDR_ID 		= #{USER_ID}
+	 	</otherwise>
+	</choose>
+	WHERE CUSTOMER_ID = #{TALK_USER_KEY}
+
+</update>
+
+<!--고객 위치수집이력 조회 -->
+<select id="searchCustPositionHist"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+   SELECT
+    ROW_TBL.*
+   FROM (
+     SELECT
+        ROW_NUMBER() OVER(ORDER BY A.HP_NO_SEQ DESC) AS ROW_NUMBER
+	    ,A.USER_ID         /*사용자ID    */
+	    ,A.CUSTOMER_ID     /*고객ID     */
+	    ,A.HP_NO           /*휴대폰번호  	*/
+	    ,A.HP_NO_SEQ       /*휴대폰일련번	*/
+	    ,A.CNTY_CD         /*국가코드    	*/
+	    ,A.CNTY_NM         /*국가한글명  	*/
+	    ,A.CNTY_ENG_NM     /*국가영문명  	*/
+	    ,A.CITY_CD         /*도시코드    	*/
+	    ,A.CITY_NM         /*도시명      	*/
+	    ,A.CORD_X          /*좌표X      */
+	    ,A.CORD_Y          /*좌표Y      */
+	    ,A.CORD_ADDR       /*좌표주소    	*/
+	    ,A.IS_PRES_YN      /*지도표시여부	*/
+	    ,TO_CHAR(A.REG_DTTM, 'YYYY-MM-DD HH24:MI:SS') AS REG_DTTM   /*등록일시    	*/
+	    ,#{POSITION_URL} AS POSITION_URL
+     FROM TWB_POSITION_HIS A
+     WHERE CUSTOMER_ID = #{TALK_USER_KEY}
+     ORDER BY A.HP_NO_SEQ DESC
+   ) ROW_TBL
+</select>
+
+<!-- 
+	고객기본정보 DB 삽입
+	-->
+	<insert id="mergeCustomerBaseInfo" parameterType="CustomerVO">
+	<!-- 
+	MERGE INTO PLT_CUS A
+	     USING DUAL
+	        ON (A.TALK_USER_KEY = #{talkUserKey})
+	      WHEN MATCHED THEN
+	           UPDATE SET 
+	           			<choose>
+	           				<when test="custSeq != null">
+				           		CUSTOMER_SEQ = #{custSeq , jdbcType=NUMERIC}
+					            ,MEMBER_YN    = #{memberYn}
+	           				</when>
+	           				<otherwise>
+								<choose>
+									<when test="memberYn.equals('Y') or memberYn.equals('N')">
+					            		MEMBER_YN    = #{memberYn}
+									</when>
+									<otherwise>
+										MEMBER_YN	= 'N'
+									</otherwise>
+								</choose>
+	           				</otherwise>
+	           			</choose>
+	                    , AMDR_DEPT_CD = '10'
+	                    , AMDR_ID = 'SYSTEM'
+	                    , UPD_DTTM = NOW()
+	                    , PROC_ID = 'SYSTEM'
+	                    , IT_PROCESSING = NOW()
+	      WHEN NOT MATCHED THEN
+	           INSERT
+			   (
+			        CUSTOMER_ID
+			      , TALK_USER_KEY
+			      , CUSTOMER_SEQ
+			      , MEMBER_YN
+			      , REGR_DEPT_CD
+			      , REGR_ID
+			      , REG_DTTM
+			      , AMDR_DEPT_CD
+	              , AMDR_ID
+	              , UPD_DTTM
+			      , PROC_ID
+			      , IT_PROCESSING
+			   )
+			   VALUES
+			   (
+			        #{customerId}
+			      , #{talkUserKey}
+			      , #{custSeq , jdbcType=NUMERIC}
+			      , #{memberYn}
+			      , '10'
+			      , 'SYSTEM'
+			      , NOW()
+			      , '10'
+	              , 'SYSTEM'
+	              , NOW()
+			      , 'SYSTEM'
+			      , NOW()
+			   )
+			   
+ -->			   
+	</insert>
+	
+	<!-- 
+	고객기본정보 DB 삽입
+	-->
+	<insert id="insertCustomerBaseInfo" parameterType="CustomerVO">
+		INSERT INTO PLT_CUST
+			(
+				CUST_ID
+				, CUST_NM
+				, CUSTCO_ID
+				, RGTR_ID
+				, REG_DT
+				, MDFR_ID
+				, MDFCN_DT
+				, CUST_STTS_CD
+				, DEL_YN
+			) VALUES (
+				#{customerId}::INTEGER
+				, '성명미상'
+				, #{custcoId}::INTEGER
+				<choose>
+					<when test="userId != '' and userId != null and userId != undefined">
+						, #{userId}::INTEGER
+						, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+						, #{userId}::INTEGER
+						, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					</when>
+					<otherwise>
+						, '2'::INTEGER
+						, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+						, '2'::INTEGER
+						, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					</otherwise>
+				</choose>
+				, 'NOML'
+				, 'N'
+			)
+	</insert>
+	
+	<!-- 
+	고객기본정보 DB 삽입
+	-->
+	<insert id="insertChatCustomer" parameterType="CustomerVO">
+		 INSERT INTO PLT_CHT_CUST
+			   (
+			        CHN_CLSF_CD
+			      , CHT_USER_KEY
+			      , REG_DT
+			      , CUST_ID
+			      , SNDR_KEY
+			   )
+			   VALUES
+			   (
+			        #{chnClsfCd}
+			      , #{talkUserKey}
+			      , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			      , #{customerId}::INTEGER
+				  , #{sndrKey}::INTEGER
+			   )
+	</insert>
+	
+	<!-- 
+	고객기본정보 DB 삽입
+	-->
+	<update id="updateCustIdSeq" parameterType="CustomerVO">
+		UPDATE PLT_TBL_SEQ SET
+			SEQ_VL = (SELECT COALESCE(MAX(CUST_ID),0)
+						FROM PLT_CUST)::INTEGER
+		WHERE COL_ID = 'CUST_ID'
+	</update>
+	
+	<!-- 
+	고객기본정보 DB 삽입
+	-->
+	<update id="updateCustomerBaseInfo" parameterType="CustomerVO">
+		UPDATE PLT_CUST SET
+		<choose>
+			<when test="userId != '' and userId != null and userId != undefined">
+				MDFR_ID = #{userId}::INTEGER
+			</when>
+			<otherwise>
+				MDFR_ID = '2'::INTEGER
+			</otherwise>
+		</choose>
+			,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		WHERE CUST_ID = (SELECT CUST_ID
+   						FROM PLT_CHT_CUST
+   						WHERE CHT_USER_KEY = #{talkUserKey}
+   							AND SNDR_KEY = #{sndrKey}::INTEGER
+   						ORDER BY CUST_ID
+   						LIMIT 1)::INTEGER
+	</update>
+	
+	<!-- 
+	고객기본정보 DB 삽입 (Sony)
+	-->
+	<insert id="mergeCustomerBaseInfoBySony" parameterType="CustomerVO">
+	MERGE INTO PLT_CUS A
+	     USING DUAL
+	        ON (A.TALK_USER_KEY = #{talkUserKey})
+	      WHEN MATCHED THEN
+	           UPDATE SET 
+	           			<choose>
+	           				<when test="sonyUserId != null">
+				           		REFERENCE_CUSTOMER_KEY = #{sonyUserId}
+	           				</when>
+	           				<otherwise>
+	           				</otherwise>
+	           			</choose>
+	                    , AMDR_DEPT_CD = '10'
+	                    , AMDR_ID = 'SYSTEM'
+	                    , UPD_DTTM = NOW()
+	                    , PROC_ID = 'SYSTEM'
+	                    , IT_PROCESSING = NOW()
+	      WHEN NOT MATCHED THEN
+	           INSERT
+			   (
+			        CUSTOMER_ID
+			      , CUSTCO_ID
+			      , TALK_USER_KEY
+			      , REGR_DEPT_CD
+			      , REGR_ID
+			      , REG_DTTM
+			      , AMDR_DEPT_CD
+	              , AMDR_ID
+	              , UPD_DTTM
+			      , PROC_ID
+			      , IT_PROCESSING
+			      , REFERENCE_CUSTOMER_KEY
+			   )
+			   VALUES
+			   (
+			        #{customerId}
+			        NULLIF(#{custcoId},'')
+			      , #{talkUserKey}
+			      , '10'
+			      , 'SYSTEM'
+			      , NOW()
+			      , '10'
+	              , 'SYSTEM'
+	              , NOW()
+			      , 'SYSTEM'
+			      , NOW()
+			      , #{sonyUserId}
+			   )
+	</insert>
+	
+	<!-- 
+	고객기본정보 DB 삽입 (Ssg)
+	-->
+	<insert id="mergeCustomerBaseInfoBySsg" parameterType="CustomerVO">
+	MERGE INTO PLT_CUS A
+	     USING DUAL
+	        ON (A.TALK_USER_KEY = #{talkUserKey})
+	      WHEN MATCHED THEN
+	           UPDATE SET 
+	           			<choose>
+	           				<when test="sonyUserId != null">
+				           		REFERENCE_CUSTOMER_KEY = #{ssgUserId}
+	           				</when>
+	           				<otherwise>
+	           				</otherwise>
+	           			</choose>
+	                    , AMDR_DEPT_CD = '10'
+	                    , AMDR_ID = 'SYSTEM'
+	                    , UPD_DTTM = NOW()
+	                    , PROC_ID = 'SYSTEM'
+	                    , IT_PROCESSING = NOW()
+	      WHEN NOT MATCHED THEN
+	           INSERT
+			   (
+			        CUSTOMER_ID
+			      , CUSTCO_ID
+			      , TALK_USER_KEY
+			      , REGR_DEPT_CD
+			      , REGR_ID
+			      , REG_DTTM
+			      , AMDR_DEPT_CD
+	              , AMDR_ID
+	              , UPD_DTTM
+			      , PROC_ID
+			      , IT_PROCESSING
+			      , REFERENCE_CUSTOMER_KEY
+			   )
+			   VALUES
+			   (
+			        #{customerId}
+			      , NULLIF(#{custcoId},'')
+			      , #{talkUserKey}
+			      , '10'
+			      , 'SYSTEM'
+			      , NOW()
+			      , '10'
+	              , 'SYSTEM'
+	              , NOW()
+			      , 'SYSTEM'
+			      , NOW()
+			      , #{ssgUserId}
+			   )
+	</insert>
+	
+	
+	
+	
+		<!-- 
+	고객기본정보 DB 삽입
+	-->
+	<insert id="insertCustomerBaseInfoByKaom" parameterType="CustomerVO">
+		 INSERT INTO PLT_CUS
+			   (
+			        CUSTOMER_ID
+			      , CUSTCO_ID
+			      , TALK_USER_KEY
+			      , CUSTOMER_PHONE_NO
+			      , REGR_DEPT_CD
+			      , REGR_ID
+			      , REG_DTTM
+			      , AMDR_DEPT_CD
+	              , AMDR_ID
+	              , UPD_DTTM
+			      , PROC_ID
+			      , IT_PROCESSING
+			      , REFERENCE_CUSTOMER_KEY
+			      , TID
+			   )
+			   VALUES
+			   (
+			        #{customerId}
+			      , NULLIF(#{custcoId},'')
+			      , #{talkUserKey}
+			      , #{customerPhoneNo}
+			      , '10'
+			      , 'SYSTEM'
+			      , NOW()
+			      , '10'
+	              , 'SYSTEM'
+	              , NOW()
+			      , 'SYSTEM'
+			      , NOW()
+			      , #{appUserId}
+				  , #{kakaotId}
+			   )
+	</insert>
+	
+	<!-- 
+	고객기본정보 DB 삽입
+	-->
+	<update id="updateCustomerBaseInfoByKaom" parameterType="CustomerVO">
+		UPDATE PLT_CUS SET 
+	                    AMDR_DEPT_CD = '10'
+	                    , AMDR_ID = 'SYSTEM'
+	                    , UPD_DTTM = NOW()
+	                    , PROC_ID = 'SYSTEM'
+	                    , IT_PROCESSING = NOW()
+	           			<choose>
+	           				<when test="appUserId != null">
+				           		, REFERENCE_CUSTOMER_KEY = #{appUserId}
+	           				</when>
+	           				<otherwise>
+	           				</otherwise>
+	           			</choose>
+	           			<choose>
+	           				<when test="kakaotId != null">
+				           		, TID = #{kakaotId}
+	           				</when>
+	           				<otherwise>
+	           				</otherwise>
+	           			</choose>
+	           			<choose>
+	           				<when test="customerPhoneNo != null">
+	           					, CUSTOMER_PHONE_NO = #{customerPhoneNo}
+	           				</when>
+	           				<otherwise>
+	           				</otherwise>
+	           			</choose>
+	       WHERE CUSTCO_ID = #{custcoId}
+	         AND TALK_USER_KEY = #{talkUserKey}
+	</update>
+	
+	
+	<!-- 고객정보조회 팝업 고객마스터 데이터 조회 2-->
+	<select id="selectRtnCustInfoPop"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<!--		SELECT-->
+<!--			ROW_NUMBER() OVER(ORDER BY COALESCE(PC.MDFCN_DT, PC.REG_DT) DESC) AS ROW_NUMBER-->
+<!--			, PC.CUST_ID-->
+<!--			, PC.CUST_NM-->
+<!--			, PC.CUST_PHN_NO-->
+<!--			, PC.REG_DT-->
+<!--			, PC.MDFCN_DT-->
+<!--			, <foreach collection="arrAttrColId" item="EXPSN_ATTR_COL_ID" open="" separator="," close="" >-->
+<!--				${EXPSN_ATTR_COL_ID}::text-->
+<!--			</foreach>-->
+<!--		FROM PLT_CUST PC-->
+<!--		LEFT OUTER JOIN (-->
+<!--			SELECT * FROM DYNAMIC_CROSSTAB(#{CUSTCO_ID}::INT, 'CUSTOM', '0'::INT) AS TBL(CUST_ID INT, -->
+<!--			<foreach collection="arrAttrColId" item="EXPSN_ATTR_COL_ID" open="" separator="," close="" >-->
+<!--				${EXPSN_ATTR_COL_ID} text-->
+<!--			</foreach>-->
+<!--			)-->
+<!--		) ATTR ON ATTR.CUST_ID = PC.CUST_ID-->
+<!--		WHERE PC.CUSTCO_ID = #{CUSTCO_ID}::INT-->
+<!--		<if test="CUST_STAT !='' and CUST_STAT != null">-->
+<!--			AND ATTR.CUST_STAT = (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PC.CUSTCO_ID AND GROUP_CD_ID = 'CUST_ST' AND CD_ID = #{CUST_STAT})-->
+<!--		</if>-->
+<!--		<choose>-->
+<!--			<when test='SCH_GB != null and SCH_GB != ""'>-->
+<!--				<choose>-->
+<!--					<when test='SCH_GB == "CUST_ID"'>-->
+<!--						AND PC.CUST_ID::VARCHAR = #{SCH_KEYWORD}-->
+<!--					</when>-->
+<!--					<when test='SCH_GB == "CUST_NM"'>-->
+<!--						AND PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')-->
+<!--					</when>-->
+<!--					<when test='SCH_GB == "CUST_PHN_NO"'>-->
+<!--						AND PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')-->
+<!--					</when>-->
+<!--				</choose>-->
+<!--			</when>-->
+<!--			<otherwise>-->
+<!--				AND (-->
+<!--					   PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')-->
+<!--					OR PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')-->
+<!--				)-->
+<!--			</otherwise>-->
+<!--		</choose>-->
+<!--		<if test='SCH_ST_DTS != null and SCH_ST_DTS != "" and SCH_END_DTS != null and SCH_END_DTS != ""'>-->
+<!--			<choose>-->
+<!--				<when test='SCH_CUST_REG_TP != null and SCH_CUST_REG_TP != ""'>-->
+<!--					<choose>-->
+<!--						<when test='SCH_CUST_REG_TP == "REG_DT"'>-->
+<!--							AND PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')-->
+<!--						</when>-->
+<!--						<when test='SCH_CUST_REG_TP == "MDFCN_DT"'>-->
+<!--							AND PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')-->
+<!--						</when>-->
+<!--					</choose>-->
+<!--				</when>-->
+<!--				<otherwise>-->
+<!--					AND ( PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')-->
+<!--						OR-->
+<!--						PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')-->
+<!--					)-->
+<!--				</otherwise>-->
+<!--			</choose>-->
+<!--		</if>-->
+		SELECT /* 고객 목록 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.selectRtnCustInfoPop)*/
+			PC.CUST_ID
+			, PC.CUST_NM
+			, PC.CUST_PHN_NO
+			, PC.REG_DT
+			, COALESCE(PC.MDFCN_DT, PC.REG_DT) AS MDFCN_DT
+			<foreach collection="EXPSN_ATTR_LIST" item="ATTR" open="" separator="" close="" >
+				<choose>
+					<when test='ATTR.DATA_TYPE_CD == "COE" or ATTR.DATA_TYPE_CD == "COE_MULTI"'>
+						, (
+							SELECT
+								<choose>
+									<when test='ATTR.DATA_TYPE_CD == "COE"'>
+									(SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PC.CUSTCO_ID AND GROUP_CD_ID = '${ATTR.GROUP_CD_ID}' AND CD_ID = PCDE.ATTR_VL)
+									</when>
+									<otherwise>
+									(SELECT ARRAY_TO_STRING(ARRAY_AGG(PCC.CD_NM), ',') FROM PLT_COMM_CD PCC INNER JOIN (SELECT UNNEST(REGEXP_SPLIT_TO_ARRAY(PCDE.ATTR_VL, ',')) AS VAL) VAL ON VAL.VAL = PCC.CD_ID WHERE PCC.CUSTCO_ID = PC.CUSTCO_ID AND PCC.GROUP_CD_ID = '${ATTR.GROUP_CD_ID}' AND PCC.CD_ID = VAL.VAL)
+									</otherwise>
+								</choose>
+							FROM PLT_CUST_DTL_EXPSN PCDE
+							WHERE PCDE.CUST_ID = PC.CUST_ID
+							AND PCDE.ATTR_ID = '${ATTR.ATTR_ID}'::INT
+						) AS ${ATTR.EXPSN_ATTR_COL_ID}_NM
+						, (
+							SELECT
+								PCDE.ATTR_VL
+							FROM PLT_CUST_DTL_EXPSN PCDE
+							WHERE PCDE.CUST_ID = PC.CUST_ID
+							AND PCDE.ATTR_ID = '${ATTR.ATTR_ID}'::INT
+						) AS ${ATTR.EXPSN_ATTR_COL_ID}
+					</when>
+					<otherwise>
+						<if test='ATTR.ATTR_ID != null and ATTR.ATTR_ID != ""'>
+							<choose>
+								<when test='ATTR.INDI_INFO_ENCPT_YN == "Y"'>
+								, (SELECT custco.gen_decrypt(ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = '${ATTR.ATTR_ID}'::INT) AS ${ATTR.EXPSN_ATTR_COL_ID}
+								, (SELECT custco.gen_decrypt(ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = '${ATTR.ATTR_ID}'::INT) AS ${ATTR.EXPSN_ATTR_COL_ID}_NM
+								</when>
+								<otherwise>
+								, (SELECT ATTR_VL FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = '${ATTR.ATTR_ID}'::INT) AS ${ATTR.EXPSN_ATTR_COL_ID}
+								, (SELECT ATTR_VL FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = '${ATTR.ATTR_ID}'::INT) AS ${ATTR.EXPSN_ATTR_COL_ID}_NM
+								</otherwise>
+							</choose>
+						</if>
+					</otherwise>
+				</choose>
+			</foreach>
+		FROM PLT_CUST PC
+		WHERE PC.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND COALESCE(PC.DEL_YN, 'N') <![CDATA[<>]]> 'Y'
+		<if test="EMPTY_PHN_NO_CHK != null and EMPTY_PHN_NO_CHK !='' and EMPTY_PHN_NO_CHK = 'Y'">
+			AND (PC.CUST_PHN_NO IS NOT NULL AND PC.CUST_PHN_NO > '')
+		</if>
+		<if test="CUST_STAT !='' and CUST_STAT != null">
+<!--			AND (SELECT ATTR_VL FROM PLT_CUST_DTL_EXPSN WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR PEA WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND SE = 'CUSTOM' AND BSC_PVSN_ATTR_YN = 'N' AND EXPSN_ATTR_COL_ID = 'CUST_STAT')) = #{CUST_STAT}-->
+			AND PC.CUST_STTS_CD = #{CUST_STAT}
+		</if>
+		<choose>
+			<when test='SCH_GB != null and SCH_GB != ""'>
+				<choose>
+					<when test='SCH_GB == "CUST_ID"'>
+						AND PC.CUST_ID::VARCHAR = #{SCH_KEYWORD}
+					</when>
+					<when test='SCH_GB == "CUST_NM"'>
+						<choose>
+							<when test='CUST_LIKE_SCH_USE_YN != null and CUST_LIKE_SCH_USE_YN != "" and CUST_LIKE_SCH_USE_YN == "Y"'>
+							AND PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+							</when>
+							<otherwise>
+							AND PC.CUST_NM = #{SCH_KEYWORD}
+							</otherwise>
+						</choose>
+					</when>
+					<when test='SCH_GB == "CUST_PHN_NO"'>
+						<choose>
+							<when test='CUST_LIKE_SCH_USE_YN != null and CUST_LIKE_SCH_USE_YN != "" and CUST_LIKE_SCH_USE_YN == "Y"'>
+							AND PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+							</when>
+							<otherwise>
+							AND PC.CUST_PHN_NO = #{SCH_KEYWORD}
+							</otherwise>
+						</choose>
+					</when>
+				</choose>
+			</when>
+			<otherwise>
+				<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+					<choose>
+						<when test='CUST_LIKE_SCH_USE_YN != null and CUST_LIKE_SCH_USE_YN != "" and CUST_LIKE_SCH_USE_YN == "Y"'>
+						AND (PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%') OR PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%'))
+						</when>
+						<otherwise>
+						AND (PC.CUST_NM = #{SCH_KEYWORD} OR PC.CUST_PHN_NO = #{SCH_KEYWORD})
+						</otherwise>
+					</choose>
+				</if>
+			</otherwise>
+		</choose>
+		<if test='SCH_ST_DTS != null and SCH_ST_DTS != "" and SCH_END_DTS != null and SCH_END_DTS != ""'>
+			<choose>
+				<when test='SCH_CUST_REG_TP != null and SCH_CUST_REG_TP != ""'>
+					<choose>
+						<when test='SCH_CUST_REG_TP == "REG_DT"'>
+							AND PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+						</when>
+						<when test='SCH_CUST_REG_TP == "MDFCN_DT"'>
+							AND PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+						</when>
+					</choose>
+				</when>
+				<otherwise>
+					AND ( PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+						OR
+						PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+					)
+				</otherwise>
+			</choose>
+		</if>
+		<if test='SCH_CUST_EXPSN_ATTR != null and SCH_CUST_EXPSN_ATTR != ""'>
+			<foreach collection="SCH_CUST_EXPSN_ATTR" item="SCH_CUST_ATTR" open="" separator="" close="" >
+				<if test='SCH_CUST_ATTR.V_ATTR_SCH_MODEL != NULL and SCH_CUST_ATTR.V_ATTR_SCH_MODEL != ""'>
+				AND EXISTS (SELECT 1 FROM PLT_CUST_DTL_EXPSN WHERE ATTR_ID = ${SCH_CUST_ATTR.ATTR_ID} AND <choose><when test='SCH_CUST_ATTR.DATA_TYPE_CD =="COE"'>ATTR_VL = '${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'</when><otherwise>ATTR_VL LIKE CONCAT(CONCAT('%','${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'), '%')</otherwise></choose> AND CUST_ID = PC.CUST_ID)
+				</if>
+			</foreach>
+		</if>
+		ORDER BY PC.MDFCN_DT DESC
+	</select>
+	
+	<select id="custListExcelDwnldTbl" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* 고객 정보 관리 EXCEL 다운로드 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custListExcelDwnldTbl)*/
+			PC.CUST_ID
+			, PC.CUST_NM
+			, PC.CUST_PHN_NO
+			, TO_CHAR(TO_TIMESTAMP(PC.REG_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') AS REG_DT
+			, TO_CHAR(TO_TIMESTAMP(PC.MDFCN_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') AS MDFCN_DT
+			<foreach collection="EXPSN_ATTR_LIST" item="ATTR" open="" separator="" close="" >
+				<if test='ATTR.SE == "CUSTOM"'>
+					<choose>
+						<when test='ATTR.DATA_TYPE_CD == "COE" or ATTR.DATA_TYPE_CD == "COE_MULTI"'>
+							, (
+								SELECT
+									<choose>
+										<when test='ATTR.DATA_TYPE_CD == "COE"'>
+										(SELECT CASE WHEN SYS_CD_YN = 'Y' THEN CASE WHEN #{LOCALE} = 'ko' THEN CD_NM ELSE CD_NM_ENG END ELSE CD_NM END FROM PLT_COMM_CD WHERE CUSTCO_ID = PC.CUSTCO_ID AND GROUP_CD_ID = #{ATTR.GROUP_CD_ID} AND CD_ID = PCDE.ATTR_VL)
+										</when>
+										<otherwise>
+										(SELECT ARRAY_TO_STRING(ARRAY_AGG(CASE WHEN SYS_CD_YN = 'Y' THEN CASE WHEN #{LOCALE} = 'ko' THEN PCC.CD_NM ELSE PCC.CD_NM_ENG END ELSE PCC.CD_NM END), ',') FROM PLT_COMM_CD PCC INNER JOIN (SELECT UNNEST(REGEXP_SPLIT_TO_ARRAY(PCDE.ATTR_VL, ',')) AS VAL) VAL ON VAL.VAL = PCC.CD_ID WHERE PCC.CUSTCO_ID = PC.CUSTCO_ID AND PCC.GROUP_CD_ID = #{ATTR.GROUP_CD_ID} AND PCC.CD_ID = VAL.VAL)
+										</otherwise>
+									</choose>
+								FROM PLT_CUST_DTL_EXPSN PCDE
+								WHERE PCDE.CUST_ID = PC.CUST_ID
+								AND PCDE.ATTR_ID = #{ATTR.ATTR_ID}::INT
+							) AS ${ATTR.value}
+						</when>
+						<otherwise>
+							<if test='ATTR.ATTR_ID != null and ATTR.ATTR_ID != ""'>
+								<choose>
+									<when test='ATTR.INDI_INFO_ENCPT_YN == "Y"'>
+									, (SELECT custco.gen_decrypt(ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = #{ATTR.ATTR_ID}::INT) AS ${ATTR.value}
+									</when>
+									<otherwise>
+									, (SELECT ATTR_VL FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = #{ATTR.ATTR_ID}::INT) AS ${ATTR.value}
+									</otherwise>
+								</choose>
+							</if>
+						</otherwise>
+					</choose>
+				</if>
+			</foreach>
+		FROM PLT_CUST PC
+		WHERE PC.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND COALESCE(PC.DEL_YN, 'N') <![CDATA[<>]]> 'Y'
+		<if test="EMPTY_PHN_NO_CHK != null and EMPTY_PHN_NO_CHK !='' and EMPTY_PHN_NO_CHK = 'Y'">
+			AND (PC.CUST_PHN_NO IS NOT NULL AND PC.CUST_PHN_NO > '')
+		</if>
+		<if test="CUST_STAT !='' and CUST_STAT != null">
+			AND PC.CUST_STTS_CD = #{CUST_STAT}
+		</if>
+		<choose>
+			<when test='SCH_GB != null and SCH_GB != ""'>
+				<choose>
+					<when test='SCH_GB == "CUST_ID"'>
+						AND PC.CUST_ID::VARCHAR = #{SCH_KEYWORD}
+					</when>
+					<when test='SCH_GB == "CUST_NM"'>
+						<choose>
+							<when test='CUST_LIKE_SCH_USE_YN != null and CUST_LIKE_SCH_USE_YN != "" and CUST_LIKE_SCH_USE_YN == "Y"'>
+							AND PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+							</when>
+							<otherwise>
+							AND PC.CUST_NM = #{SCH_KEYWORD}
+							</otherwise>
+						</choose>
+					</when>
+					<when test='SCH_GB == "CUST_PHN_NO"'>
+						<choose>
+							<when test='CUST_LIKE_SCH_USE_YN != null and CUST_LIKE_SCH_USE_YN != "" and CUST_LIKE_SCH_USE_YN == "Y"'>
+							AND PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+							</when>
+							<otherwise>
+							AND PC.CUST_PHN_NO = #{SCH_KEYWORD}
+							</otherwise>
+						</choose>
+					</when>
+				</choose>
+			</when>
+			<otherwise>
+				<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+					<choose>
+						<when test='CUST_LIKE_SCH_USE_YN != null and CUST_LIKE_SCH_USE_YN != "" and CUST_LIKE_SCH_USE_YN == "Y"'>
+						AND (PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%') OR PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%'))
+						</when>
+						<otherwise>
+						AND (PC.CUST_NM = #{SCH_KEYWORD} OR PC.CUST_PHN_NO = #{SCH_KEYWORD})
+						</otherwise>
+					</choose>
+				</if>
+			</otherwise>
+		</choose>
+		<if test='SCH_ST_DTS != null and SCH_ST_DTS != "" and SCH_END_DTS != null and SCH_END_DTS != ""'>
+			<choose>
+				<when test='SCH_CUST_REG_TP != null and SCH_CUST_REG_TP != ""'>
+					<choose>
+						<when test='SCH_CUST_REG_TP == "REG_DT"'>
+							AND PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+						</when>
+						<when test='SCH_CUST_REG_TP == "MDFCN_DT"'>
+							AND PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+						</when>
+					</choose>
+				</when>
+				<otherwise>
+					AND ( PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+						OR
+						PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+					)
+				</otherwise>
+			</choose>
+		</if>
+		<if test='SCH_CUST_EXPSN_ATTR != null and SCH_CUST_EXPSN_ATTR != ""'>
+			<foreach collection="SCH_CUST_EXPSN_ATTR" item="SCH_CUST_ATTR" open="" separator="" close="" >
+				<if test='SCH_CUST_ATTR.V_ATTR_SCH_MODEL != NULL and SCH_CUST_ATTR.V_ATTR_SCH_MODEL != ""'>
+				AND EXISTS (SELECT 1 FROM PLT_CUST_DTL_EXPSN WHERE ATTR_ID = ${SCH_CUST_ATTR.ATTR_ID} AND <choose><when test='SCH_CUST_ATTR.DATA_TYPE_CD =="COE"'>ATTR_VL = '${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'</when><otherwise>ATTR_VL LIKE CONCAT(CONCAT('%','${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'), '%')</otherwise></choose> AND CUST_ID = PC.CUST_ID)
+				</if>
+			</foreach>
+		</if>
+		ORDER BY PC.MDFCN_DT DESC
+	</select>
+	
+	<!-- 고객정보조회 팝업 고객마스터 데이터 조회 Arthur.Kim 2021.10.14 -->
+	<select id="selectRtnComCustInqire"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT PAC.CUSTCO_ID													/* ASP고객사키 */
+			 , PAC.COMPANY_NM													/* ASP고객사명 */	
+			 , PAC.PHONE_NUM													/* ASP고객사전화번호 */
+			 , PC.CUSTOMER_ID                                                   /* 고객ID */  
+			 , PC.CUSTOMER_NM                                                   /* 고객명 */
+			 , PC.CUSTOMER_SIDE_NM												/* 동행자 */
+			 , PC.TALK_USER_KEY													/* TALK_사용자_키 */		
+			 , PC.CUSTOMER_PHONE_NO                                             /* 고객전화번호 */
+			 , PC.WRC_TEL_NO													/* 직장전화 */
+			 , PC.GENDER_CD														/* 성별 */		
+			 , PC.CUSTOMER_AGE													/* 연령 */
+			 , PC.CUSTOMER_LOCAL												/* 지역 */
+			 , PC.CUSTOMER_CS_TIME												/* 상담희망시간 */
+			 , PC.ATENT_CUSTOMER												/* B/L여부(2021-06-10 이태섭 추가)  */
+			 , PC.ATENT_CD														/* B/L 코드 */	
+			 , PC.CUSTOMER_USER_MEMO											/* 고객특이사항_고객메모(2021-06-10 이태섭 추가) */
+			 , PC.CUSTOMER_MEMO													/* 내용_고객메모(2021-06-10 이태섭 추가) */
+			 , PC.CUSTOMER_SECTION												/* 고객구분 */
+			 , PC.CUSTOMER_STATE												/* 고객상태 */
+			 , PC.CUSTOMER_TYPE_CD												/* 고객유형코드 */
+			 , PC.RES_NO														/* 주민등록번호 */
+			 , PC.OWNHOM_ADR													/* 자택주소(기본주소) */
+			 , PC.OWNHOM_DETAIL_ADR												/* 자택상세주소 */
+			 , PC.OLD_OWNHOM_ADR												/* 자택구주소(기본주소) */
+			 , PC.OLD_OWNHOM_DETAIL_ADR											/* 자택구상세주소 */
+			 , PC.WRC_ADR														/* 직장주소(기본주소) */
+			 , PC.WRC_DETAIL_ADR												/* 직장상세주소 */
+			 , PC.OLD_WRC_ADR													/* 직장구주소(기본주소) */
+			 , PC.CUSTOMER_PHONE_NO                                             /* 고객전화번호 */
+			 , PC.OWNHOM_TEL_NO													/* 자택전화 */
+			 , PC.EMAIL															/* 이메일 */
+			 , (SELECT A.REG_DTTM
+			      FROM (SELECT ROW_NUMBER() OVER(ORDER BY PCUH.REG_DTTM DESC) AS R_NUM
+			                  , PCUH.REG_DTTM
+					      FROM PLT_CNSL_UNITY_HST PCUH
+					     WHERE PCUH.CUSTCO_ID = PC.CUSTCO_ID
+					       AND PCUH.CSTMR_ID     = PC.CUSTOMER_ID
+					    ) A
+				 WHERE R_NUM            = 1  	    
+			   )	AS CNSL_DATE						 						/* 최근상담일시*/
+		  FROM PLT_CUS PC
+		 INNER JOIN PLT_ASP_CUS PAC 
+		    ON PC.CUSTCO_ID = PAC.CUSTCO_ID  
+		 WHERE 1 = 1
+		   <if test="ASP_NEWCUST_KEY !='' and ASP_NEWCUST_KEY != null">
+		   	AND PAC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		   </if>
+		   <if test="CNSL_CUST_KEY !='' and CNSL_CUST_KEY != null">
+		   	AND PAC.CUSTCO_ID = #{CNSL_CUST_KEY}
+		   </if>
+		   <if test="COMPANY_NM !='' and COMPANY_NM != null">
+		   	AND PAC.COMPANY_NM       LIKE '%' || #{COMPANY_NM} || '%'
+		   </if>
+		   <if test="CUSTOMER_ID !='' and CUSTOMER_ID != null">
+		   	AND PC.CUSTOMER_ID    = #{CUSTOMER_ID}  
+		   </if>
+		   <if test="CUSTOMER_NM !='' and CUSTOMER_NM != null">
+		   	AND PC.CUSTOMER_NM       LIKE '%' || #{CUSTOMER_NM} || '%'
+		   </if>
+		   <if test="RES_NO !='' and RES_NO != null">
+		   	AND RES_NO       	 LIKE '%' || #{RES_NO} || '%'
+		   </if>	 
+		   <if test="PHONE_NUM !='' and PHONE_NUM != null">
+		   	AND PAC.PHONE_NUM LIKE '%' || #{PHONE_NUM} || '%'
+		   </if>
+		   <if test="CUSTOMER_PHONE_NO !='' and CUSTOMER_PHONE_NO != null">
+		   	AND (replace(PC.CUSTOMER_PHONE_NO, '-', '') LIKE '%' || #{CUSTOMER_PHONE_NO} || '%'
+		     OR replace(PC.OWNHOM_TEL_NO, '-', '') LIKE '%' || #{CUSTOMER_PHONE_NO} || '%'
+		     OR replace(PC.WRC_TEL_NO, '-', '') LIKE '%' || #{CUSTOMER_PHONE_NO} || '%')
+		   </if>
+	</select>
+
+	<!-- 캠페인고객정보조회 데이터 조회 Arthur.Kim 2021.10.14 -->
+	<select id="selectRtnComObdCustInqire"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT ''					AS CUSTOMER_ID                                                   /* 고객ID */  
+			 , ''					AS CUSTOMER_SECTION												/* 고객구분 */
+			 , '' 					AS CUSTOMER_STATE												/* 고객상태 */
+			 , ''					AS CUSTOMER_TYPE_CD												/* 고객유형코드 */
+			 , PPOC.CUST_NO       	AS RES_NO														/* 주민등록번호 */
+			 , PPOC.CUST_NM       	AS CUSTOMER_NM                                                   /* 고객명 */  
+			 , '' 					AS OWNHOM_ADR													/* 자택주소(기본주소) */
+			 , '' 					AS OWNHOM_DETAIL_ADR											/* 자택상세주소 */
+			 , '' 					AS OLD_OWNHOM_ADR												/* 자택구주소(기본주소) */
+			 , '' 					AS OLD_OWNHOM_DETAIL_ADR										/* 자택구상세주소 */
+			 , '' 					AS WRC_ADR														/* 직장주소(기본주소) */
+			 , '' 					AS WRC_DETAIL_ADR												/* 직장상세주소 */
+			 , '' 					AS OLD_WRC_ADR													/* 직장구주소(기본주소) */
+			 , PPOC.MOBIL_NO      	AS CUSTOMER_PHONE_NO                                            /* 고객전화번호 */
+			 , PPOC.HOUSE_TEL_NO	AS OWNHOM_TEL_NO												/* 자택전화 */
+			 , PPOC.CO_TEL_NO		AS WRC_TEL_NO													/* 직장전화 */
+			 , ''					AS EMAIL														/* 이메일 */
+			 , PPOC.MOBIL_NO 		AS CUSTOMER_PHONE_NO											/* 고객핸드폰번호 */
+			 , '' 					AS CUSTOMER_MEMO												/* 고객메모(2021-06-10 이태섭 추가) */
+			 , '' 					AS ATENT_CUSTOMER												/* B/L여부(2021-06-10 이태섭 추가)  */
+			 
+			 , PAC.CUSTCO_ID													/* ASP고객사키 */
+			 , PAC.COMPANY_NM													/* ASP고객사명 */	
+			 , PAC.PHONE_NUM													/* ASP고객사전화번호 */
+			 , (SELECT A.REG_DTTM
+			      FROM (SELECT ROW_NUMBER() OVER(ORDER BY PCUH.REG_DTTM DESC) AS R_NUM
+			                  , PCUH.REG_DTTM
+					      FROM PLT_CNSL_UNITY_HST PCUH
+					     WHERE PCUH.CUSTCO_ID = PPOC.CUSTCO_ID
+					       AND PCUH.CSTMR_TELNO     = PPOC.MOBIL_NO
+					    ) A
+				 WHERE R_NUM            = 1  	    
+			   )	AS CNSL_DATE						 						/* 최근상담일시*/
+		  FROM PLT_PHN_OBD_CUS PPOC
+		 INNER JOIN PLT_ASP_CUS PAC 
+		    ON PPOC.CUSTCO_ID = PAC.CUSTCO_ID  
+		 WHERE 1 = 1
+		   <if test="CNSL_CUST_KEY !='' and CNSL_CUST_KEY != null">
+		   AND PAC.CUSTCO_ID = #{CNSL_CUST_KEY}
+		   </if>
+		   <if test="COMPANY_NM !='' and COMPANY_NM != null">
+		   AND PAC.COMPANY_NM       LIKE '%' || #{COMPANY_NM} || '%'
+		   </if>
+		   <if test="PHONE_NUM !='' and PHONE_NUM != null">
+		   AND PAC.PHONE_NUM LIKE '%' || #{PHONE_NUM} || '%'
+		   </if>
+		   <if test="CAM_ID !='' and CAM_ID != null">
+		   AND PPOC.CAM_ID = #{CAM_ID}
+		   </if>
+		   <if test="CUSTOMER_NM !='' and CUSTOMER_NM != null">
+		   AND PPOC.CUST_NM       LIKE '%' || #{CUSTOMER_NM} || '%'
+		   </if>
+		   <if test="CUSTOMER_PHONE_NO !='' and CUSTOMER_PHONE_NO != null">
+		   AND (replace(PPOC.MOBIL_NO, '-', '') LIKE '%' || #{CUSTOMER_PHONE_NO} || '%'
+		    OR replace(PPOC.HOUSE_TEL_NO, '-', '') LIKE '%' || #{CUSTOMER_PHONE_NO} || '%'
+		    OR replace(PPOC.CO_TEL_NO, '-', '') LIKE '%' || #{CUSTOMER_PHONE_NO} || '%')
+		   </if>
+		   <if test="RES_NO !='' and RES_NO != null">
+		   AND PPOC.CUST_NO       	 LIKE '%' || #{RES_NO} || '%'
+		   </if>		 
+	</select>
+		
+	<!-- 고객정보조회 팝업 고객마스터 데이터 조회 -->
+	<select id="selectRtnCust"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	
+		SELECT CUSTOMER_ID                                                      /* 고객ID */  
+			 , CUSTOMER_SECTION													/* 고객구분 */
+			 , CUSTOMER_STATE													/* 고객상태 */
+			 , CUSTOMER_TYPE_CD													/* 고객유형코드 */
+			 , RES_NO															/* 주민등록번호 */
+			 , CUSTOMER_NM                                                      /* 고객명 */  
+			 , OWNHOM_ADR														/* 자택주소(기본주소) */
+			 , OWNHOM_DETAIL_ADR												/* 자택상세주소 */
+			 , OLD_OWNHOM_ADR													/* 자택구주소(기본주소) */
+			 , WRC_ADR															/* 직장주소(기본주소) */
+			 , WRC_DETAIL_ADR													/* 직장상세주소 */
+			 , OLD_WRC_ADR														/* 직장구주소(기본주소) */
+			 , CUSTOMER_PHONE_NO                                                /* 고객전화번호 */
+			 , OWNHOM_TEL_NO													/* 자택전화 */
+			 , WRC_TEL_NO														/* 직장전화 */
+			 , EMAIL															/* 이메일 */
+			 , CUSTOMER_PHONE_NO												/* 고객핸드폰번호 */
+			 
+		  FROM PLT_CUS
+		 WHERE CUSTCO_ID = #{CUSTCO_ID}
+		   AND CUSTOMER_ID = #{CUSTOMER_ID}
+		   AND CUSTOMER_NM = #{CUSTOMER_NM}
+	</select>
+
+
+	<!-- 고객정보조회 팝업 고객마스터 데이터 조회 -->
+	<select id="selectQUEUEInqire"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	
+		SELECT B.QUEUE_NUM                                                      	/* 기업 QUEUE*/  
+			 , B.COMPANY_NM														/* 기업이름 */
+			 
+		  FROM PLT_ASP_QUEUE B
+		 WHERE B.CUSTCO_ID 
+		 IN(
+		 	SELECT regexp_substr(CUSTCO_ID,'[^,]+',1,rownum) 
+		 	FROM (
+				SELECT
+				CUSTCO_ID
+				FROM PLT_USER
+				WHERE USER_ID = #{USER_ID}
+		 ) A
+		 <![CDATA[connect by rownum <= length(regexp_replace(CUSTCO_ID,'[^,]+'))+1]]>
+		)
+	</select>
+	
+	<insert id="custTelNoReg"  parameterType= "java.util.HashMap">
+		INSERT /*고객 전화번호 저장 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custTelNoReg)*/
+		INTO PLT_CUST_TELNO ( CUST_TELNO_ID
+		       	, CUSTCO_ID
+		       	, CUST_PHN_NO
+		       	, RGTR_ID
+		       	, REG_DT
+		       ) 
+		VALUES ( #{CUST_TELNO_ID}::INT
+		       , #{CUSTCO_ID}::INT
+		       , REPLACE(#{CUST_PHN_NO}, '-', '')
+		       , #{USER_ID}::INT
+			   , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		       )
+	</insert>
+	
+	<insert id="custReg"  parameterType= "java.util.HashMap">
+		INSERT /*고객 기본 정보 저장 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custReg)*/
+		INTO PLT_CUST ( CUST_ID
+		       	, CUSTCO_ID
+		       	, CUST_NM
+		       	, CUST_PHN_NO
+		       	, CAUTION_CUST_YN
+		       	, RGTR_ID
+		       	, REG_DT
+		       	, MDFR_ID
+		       	, MDFCN_DT
+		       	, CUST_STTS_CD
+		       	, DEL_YN
+		       ) 
+		VALUES ( #{CUST_ID}::INT
+		       , #{CUSTCO_ID}::INT
+		       , COALESCE(#{CUST_NM}, '성명미상')
+		       , REPLACE(#{CUST_PHN_NO}, '-', '')
+		       , 'N'
+		       , #{USER_ID}::INT
+			   , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		       , #{USER_ID}::INT
+			   , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			   , 'NOML'
+			   , 'N'
+		       )
+	</insert>
+
+	<insert id="custTelNoItgrtReg"  parameterType= "java.util.HashMap">
+		INSERT /*고객 전화번호 통합 저장 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custTelNoItgrtReg)*/
+		INTO PLT_CUST_TELNO_ITGRT ( CUST_TELNO_ID
+		       	, CUST_ID
+		       	, RGTR_ID
+		       	, REG_DT
+		       ) 
+		VALUES ( #{CUST_TELNO_ID}::INT
+		       , #{CUST_ID}::INT
+		       , #{USER_ID}::INT
+			   , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		       )
+	</insert>
+
+	<insert id="custItgrtHstryReg"  parameterType= "java.util.HashMap">
+		INSERT /*고객 통합 이력 저장 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custItgrtHstryReg)*/
+		INTO PLT_CUST_ITGRT_HSTRY ( CUST_ITGRT_HSTRY_ID
+		       	, CUST_TELNO_ID
+		       	, CUST_ID
+		       	, CHG_SE_CD
+		       	, RGTR_ID
+		       	, REG_DT
+		       ) 
+		VALUES ( #{CUST_ITGRT_HSTRY_ID}::INT
+		       , #{CUST_TELNO_ID}::INT
+		       , #{CUST_ID}::INT
+		       , 'NEW'
+		       , #{USER_ID}::INT
+			   , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		       )
+	</insert>
+	
+	<update id="custMod"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CUST /*고객 기본 정보 수정 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custMod)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+	   		<if test='CUST_STTS_CD != null and CUST_STTS_CD != ""'>, CUST_STTS_CD = #{CUST_STTS_CD}</if>
+	   		<if test='DEL_YN != null and DEL_YN != ""'>, DEL_YN = #{DEL_YN}</if>
+	   		<if test='CUST_NM != null and CUST_NM != ""'>, CUST_NM = #{CUST_NM}</if>
+	   		<if test='CUST_PHN_NO != null and CUST_PHN_NO != ""'>, CUST_PHN_NO = #{CUST_PHN_NO}</if>
+	   		<if test='CAUTION_CUST_STAT != null and CAUTION_CUST_STAT != ""'>
+		   		<if test='CAUTION_CUST_YN != null and CAUTION_CUST_YN != ""'>, CAUTION_CUST_YN = #{CAUTION_CUST_YN}</if>
+		   		<if test='CAUTION_CUST_CD != null and CAUTION_CUST_CD != ""'>, CAUTION_CUST_CD = #{CAUTION_CUST_CD}</if>
+		   		<if test='CAUTION_CUST_FNDWAY != null and CAUTION_CUST_FNDWAY != ""'>, CAUTION_CUST_FNDWAY = #{CAUTION_CUST_FNDWAY}</if>
+		   		<choose>
+					 <when test='CAUTION_CUST_STAT == "REG"'>
+					 , CAUTION_CUST_RGTR_ID = #{USER_ID}::INT
+					 , CAUTION_CUST_REG_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+					 </when>
+					 <otherwise>
+					 , CAUTION_CUST_MDFR_ID = #{USER_ID}::INT
+					 , CAUTION_CUST_MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+					 </otherwise>
+				</choose>
+		   		<if test='CAUTION_VLD_BGNG_DT != null and CAUTION_VLD_BGNG_DT != ""'>, CAUTION_VLD_BGNG_DT = #{CAUTION_VLD_BGNG_DT}</if>
+		   		<if test='CAUTION_VLD_END_DT != null and CAUTION_VLD_END_DT != ""'>, CAUTION_VLD_END_DT = #{CAUTION_VLD_END_DT}</if>
+			</if>
+	   		<if test='CUST_STAT != null and CUST_STAT != ""'>
+				   <if test='CUST_STAT == "DELT" '>
+					   , DEL_YN = 'Y'
+				   </if>
+			</if>
+	 WHERE CUST_ID = #{CUST_ID}::INTEGER
+	</update>
+	
+	<insert id="custExpsnAttrMerge"  parameterType= "java.util.HashMap">
+		WITH UPSERT  /*고객 확장 정보 저장, 수정 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custExpsnAttrMerge)*/
+		AS (UPDATE PLT_CUST_DTL_EXPSN
+				SET ATTR_VL = CASE WHEN #{INDI_INFO_ENCPT_YN} = 'Y' THEN custco.gen_encrypt(#{ATTR_VL}, #{PP_KEY_PP}, #{PP_ALG_PP}) ELSE #{ATTR_VL} END
+			WHERE CUST_ID = #{CUST_ID}::INT
+			AND ATTR_ID = #{ATTR_ID}::INT
+		RETURNING *)
+		INSERT INTO PLT_CUST_DTL_EXPSN (CUST_ID, ATTR_ID, ATTR_VL)
+		SELECT #{CUST_ID}::INT, #{ATTR_ID}::INT, CASE WHEN #{INDI_INFO_ENCPT_YN} = 'Y' THEN custco.gen_encrypt(#{ATTR_VL}, #{PP_KEY_PP}, #{PP_ALG_PP}) ELSE #{ATTR_VL} END
+		WHERE NOT EXISTS (SELECT * FROM UPSERT)
+	</insert>
+
+	<insert id="custInfoChgHistReg"  parameterType= "java.util.HashMap">
+		INSERT /*고객 정보 변경 이력 저장 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custInfoChgHistReg)*/
+		INTO PLT_CUST_INFO_CHG_HSTRY (CUST_CHG_HSTRY_ID, CUST_ID, CHG_REG_DT, CHG_RGTR_ID)
+		VALUES(#{CUST_CHG_HSTRY_ID}::INT, #{CUST_ID}::INT, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'), #{USER_ID}::INT)
+	</insert
+	>
+	<insert id="custInfoExpsnAttrReg"  parameterType= "java.util.HashMap">
+		INSERT /*고객 정보 확장 속성 저장 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custInfoExpsnAttrReg)*/
+		INTO PLT_CUST_INFO_CHG_DTL_EXPSN (CUST_CHG_HSTRY_ID, ATTR_ID, ATTR_VL)
+		VALUES(#{CUST_CHG_HSTRY_ID}::INT, #{ATTR_ID}::INT, CASE WHEN #{INDI_INFO_ENCPT_YN} = 'Y' THEN custco.gen_encrypt(#{ATTR_VL}, #{PP_KEY_PP}, #{PP_ALG_PP}) ELSE #{ATTR_VL} END)
+	</insert>
+	
+	<insert id="custExpsnAttrForceReg"  parameterType= "java.util.HashMap">
+		WITH UPSERT  /*고객 확장 정보 저장, 수정 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custExpsnAttrMerge)*/
+		AS (UPDATE PLT_CUST_DTL_EXPSN
+				SET ATTR_VL = 'NOML'
+			WHERE CUST_ID = #{CUST_ID}::INT
+			AND ATTR_ID = (SELECT PEA.ATTR_ID 
+					FROM PLT_EXPSN_ATTR PEA 
+					WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT 
+						AND SE = 'CUSTOM' 
+						AND LNKG_ATTR_ID IS NOT NULL 
+						AND EXPSN_ATTR_COL_ID = 'CUST_STAT')
+		RETURNING *)
+		INSERT INTO PLT_CUST_DTL_EXPSN (CUST_ID, ATTR_ID, ATTR_VL)
+		SELECT #{CUST_ID}::INT, (SELECT PEA.ATTR_ID 
+					FROM PLT_EXPSN_ATTR PEA 
+					WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT 
+						AND SE = 'CUSTOM' 
+						AND LNKG_ATTR_ID IS NOT NULL 
+						AND EXPSN_ATTR_COL_ID = 'CUST_STAT'), 'NOML'
+		WHERE NOT EXISTS (SELECT * FROM UPSERT)
+	</insert>
+	
+	<insert id="custExpsnAttrForceRegVO" parameterType="CustomerVO">
+		INSERT  /*고객 확장 정보 고객상태 정상 강제 적용 (CustomerVO) */
+			INTO PLT_CUST_DTL_EXPSN (
+				CUST_ID
+				, ATTR_ID
+				, ATTR_VL
+			) VALUES (
+				#{customerId}::INTEGER
+				, (SELECT PEA.ATTR_ID 
+					FROM PLT_EXPSN_ATTR PEA 
+					WHERE PEA.CUSTCO_ID = #{custcoId}::INT 
+						AND SE = 'CUSTOM' 
+						AND LNKG_ATTR_ID IS NOT NULL 
+						AND EXPSN_ATTR_COL_ID = 'CUST_STAT')
+				, 'NOML')
+	</insert>
+	
+	<select id="custAgreHstryExistInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*고객 동의 이력 정보 조회 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custAgreHstryExistInfo)*/
+			PCAH.CUST_AGRE_HSTRY_ID
+			, PCAH.AGRE_YN
+			, PCAH.AGRE_DT
+			, PCAH.CUSL_ID
+			, PCAH.AGRE_USER_ID
+		FROM PLT_CUST_AGRE_HSTRY PCAH
+		WHERE CUST_ID = #{CUST_ID}::INT
+		AND AGRE_SE_CD = #{AGRE_SE_CD}
+	</select>
+	
+	<insert id="custAgreHstryReg"  parameterType= "java.util.HashMap">
+		INSERT /*고객 동의 이력 저장 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custAgreHstryReg)*/
+		INTO PLT_CUST_AGRE_HSTRY ( CUST_AGRE_HSTRY_ID
+		       	, CUST_ID
+		       	, AGRE_SE_CD
+		       	, AGRE_YN
+		       	, AGRE_DT
+		       	, AGRE_USER_ID
+		       ) 
+		VALUES ( #{CUST_AGRE_HSTRY_ID}::INT
+		       , #{CUST_ID}::INT
+		       , #{AGRE_SE_CD}
+		       , #{AGRE_YN}
+		       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		       , #{USER_ID}::INTEGER
+		       )
+	</insert>
+	
+	<update id="custAgreHstryMod"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CUST_AGRE_HSTRY /*고객 동의 이력 수정 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custAgreHstryMod)*/
+	   SET AGRE_YN = #{AGRE_YN}
+	   		, AGRE_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, AGRE_USER_ID = #{USER_ID}::INTEGER
+	 WHERE CUST_AGRE_HSTRY_ID = #{CUST_AGRE_HSTRY_ID}::INT
+	</update>
+
+	<select id="custTelNoCheck"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*고객 전화번호 체크 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custTelNoCheck)*/
+			CASE WHEN COUNT(PCT.CUST_TELNO_ID) > 0 THEN 'Y' ELSE 'N' END AS CUST_PHN_NO_EXIST_YN
+			, ARRAY_TO_STRING(ARRAY_AGG(CUST_ID),',') AS CUST_ID
+		FROM PLT_CUST_TELNO_ITGRT PCTI
+		INNER JOIN PLT_CUST_TELNO PCT ON PCT.CUST_TELNO_ID = PCTI.CUST_TELNO_ID
+		WHERE PCT.CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND PCT.CUST_PHN_NO = #{CUST_PHN_NO}
+	</select>
+
+	<!-- 동일 전화번호 존재 시 채팅 키를 통해 통합 가능 고객 판단 -->
+	<select id="chtCustDuplChk"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 		/* chtCustDuplChk - 동일 전화번호 존재 시 채팅 키를 통해 통합 가능 고객 판단 */
+			COUNT(SNDR_KEY) AS CNT
+		FROM PLT_CHT_CUST
+		WHERE CUST_ID IN (#{ORG_CUST_ID}::INTEGER,#{CUST_ID}::INTEGER)
+		GROUP BY SNDR_KEY
+	</select>
+	
+	<select id="custSelect"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*고객 기본 정보 조회 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custSelect)*/
+			PC.CUST_ID
+			, PC.CUST_NM
+			, PC.CUST_PHN_NO
+			, PC.CAUTION_CUST_YN
+			, PC.CAUTION_CUST_CD
+			, CASE WHEN PC.CAUTION_CUST_CD = 'Y' THEN (SELECT CD_VL FROM PLT_COMM_CD WHERE CUSTCO_ID = PC.CUSTCO_ID AND GROUP_CD_ID = 'CAUTION_TP' AND CD_ID = PC.CAUTION_CUST_CD) ELSE '' END AS CAUTION_MSG
+			, PC.CAUTION_CUST_FNDWAY
+			, PC.CAUTION_CUST_REG_DT
+			, PC.CAUTION_CUST_RGTR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.CAUTION_CUST_RGTR_ID) AS CAUTION_CUST_RGTR_NM
+			, PC.CAUTION_CUST_MDFCN_DT
+			, PC.CAUTION_CUST_MDFR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.CAUTION_CUST_MDFR_ID) AS CAUTION_CUST_MDFR_NM
+			, PC.CAUTION_VLD_BGNG_DT
+			, PC.CAUTION_VLD_END_DT
+			, PC.REG_DT
+			, PC.RGTR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.RGTR_ID) AS RGTR_NM
+			, PC.MDFCN_DT
+			, PC.MDFR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.MDFR_ID) AS MDFR_NM
+			, (SELECT MAX(PHN_CUTT_ID) FROM PLT_PHN_CUTT WHERE CUST_ID = PC.CUST_ID) AS LAST_PHN_CUTT_ID
+		FROM PLT_CUST PC
+		WHERE PC.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<if test='CUST_ID != null and CUST_ID != ""'>
+		AND PC.CUST_ID = #{CUST_ID}::INT
+		</if>
+		<choose>
+			<when test='CHNL != null and CHNL != ""'>
+				<choose>
+					<when test='CHNL == "TEL"'>
+						<choose>
+							<when test='CUST_EXPSN_ATTR_LIST != null and CUST_EXPSN_ATTR_LIST != ""'>
+							AND (PC.CUST_PHN_NO = #{CUST_PHN_NO}
+								<foreach collection="CUST_EXPSN_ATTR_LIST" item="ITEM" open="" separator="" close="" >
+								OR EXISTS (SELECT 1 FROM PLT_CUST_DTL_EXPSN PCDE WHERE PCDE.CUST_ID = PC.CUST_ID AND PCDE.ATTR_ID = ${ITEM.ATTR_ID} AND PCDE.ATTR_VL = #{CUST_PHN_NO})
+								</foreach>
+								)
+							</when>
+							<otherwise>AND PC.CUST_PHN_NO = #{CUST_PHN_NO}</otherwise>
+						</choose>
+					</when>
+					<when test='CHNL == "SNS" and CHT_USER_KEY != "" and CHT_USER_KEY != null and CHT_USER_KEY != undefined'>
+					AND EXISTS (SELECT 1 FROM PLT_CHT_CUST WHERE CUST_ID = PC.CUST_ID AND CHT_USER_KEY = #{CHT_USER_KEY})
+					</when>
+				</choose>
+			</when>
+		</choose>
+	</select>
+
+	<select id="custExpsnInfoSelect"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*고객 확장 정보 조회 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custExpsnInfoSelect)*/
+			PEA.ATTR_ID
+			, PEA.EXPSN_ATTR_NM
+			, PEA.EXPSN_ATTR_COL_ID
+			, PEA.DATA_TYPE_CD
+			, PEA.DATA_LEN
+			, COALESCE(PEA.INDI_INFO_ENCPT_YN, 'N') AS INDI_INFO_ENCPT_YN
+			, PEA.GROUP_CD_ID
+			, PEA.ESNTL_YN
+			, CUST.ATTR_VL
+			, CUST.CD_NM
+			, (CASE WHEN PCC.SYS_CD_YN IS NULL AND PEA.LNKG_ATTR_ID IS NOT NULL THEN 'Y'
+					WHEN PCC.SYS_CD_YN = 'Y' AND PEA.LNKG_ATTR_ID IS NULL THEN 'C'
+					WHEN PCC.SYS_CD_YN IS NOT NULL AND PEA.LNKG_ATTR_ID IS NULL THEN 'N'
+					ELSE PCC.SYS_CD_YN
+					END) AS SYS_CD_YN
+		FROM PLT_EXPSN_ATTR PEA
+		LEFT OUTER JOIN (
+			SELECT
+				PCDE.ATTR_ID
+				, CASE WHEN COALESCE(ATTR.INDI_INFO_ENCPT_YN, 'N') = 'Y' THEN custco.gen_decrypt(PCDE.ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) ELSE PCDE.ATTR_VL END AS ATTR_VL
+				, PCC.CD_NM
+			FROM PLT_CUST_DTL_EXPSN PCDE
+			INNER JOIN PLT_EXPSN_ATTR ATTR ON ATTR.ATTR_ID = PCDE.ATTR_ID
+			LEFT OUTER JOIN PLT_COMM_CD PCC ON PCC.CUSTCO_ID = #{CUSTCO_ID}::INT AND PCC.GROUP_CD_ID = ATTR.GROUP_CD_ID AND PCC.CD_ID = PCDE.ATTR_VL
+			WHERE PCDE.CUST_ID = #{CUST_ID}::INT
+		) CUST ON CUST.ATTR_ID = PEA.ATTR_ID
+		LEFT JOIN PLT_COMM_CD PCC ON PCC.CUSTCO_ID = #{CUSTCO_ID}::INT AND PCC.CD_ID = PEA.GROUP_CD_ID
+		WHERE PEA.SE = 'CUSTOM'
+		AND PEA.USE_YN = 'Y'
+		AND PEA.DEL_YN = 'N'
+		AND PEA.BSC_PVSN_ATTR_YN = 'N'
+		AND PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+		ORDER BY PEA.SORT_ORD
+	</select>
+
+	<select id="custAgreeInfoSelect"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*고객 동의 정보 조회 (kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custAgreeInfoSelect)*/
+			CUST.CUST_ID
+			, PCC.CD_ID
+			, PCC.CD_NM
+			, CUST.CUST_AGRE_HSTRY_ID
+			, CUST.AGRE_YN
+			, CUST.AGRE_DT
+			, CUST.CUSL_ID
+			, CUST.CUSL_NM
+			, CUST.AGRE_USER_ID
+			, CUST.AGRE_USER_NM
+		FROM PLT_COMM_CD PCC
+		LEFT OUTER JOIN (
+			SELECT
+				AGRE.CUST_ID
+				, AGRE.CUST_AGRE_HSTRY_ID
+				, AGRE.AGRE_SE_CD
+				, AGRE.AGRE_YN
+				, AGRE.AGRE_DT
+				, AGRE.CUSL_ID
+				, AGRE.CUSL_NM
+				, AGRE.AGRE_USER_ID
+				, AGRE.AGRE_USER_NM
+			FROM (
+				SELECT PCAH.CUST_AGRE_HSTRY_ID, PCAH.CUST_ID, PCAH.AGRE_SE_CD, PCAH.AGRE_YN, PCAH.AGRE_DT
+					, PCAH.CUSL_ID
+					, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PCAH.CUSL_ID) AS CUSL_NM
+					, PCAH.AGRE_USER_ID
+					, (SELECT PC.CUST_NM FROM PLT_CUST PC WHERE PC.CUST_ID = PCAH.AGRE_USER_ID) AS AGRE_USER_NM
+					, ROW_NUMBER() OVER(PARTITION BY PCAH.CUST_ID, PCAH.AGRE_SE_CD ORDER BY PCAH.AGRE_DT DESC) AS RNUM
+				FROM PLT_CUST_AGRE_HSTRY PCAH
+				WHERE PCAH.CUST_ID = #{CUST_ID}::INT
+			) AGRE
+			WHERE AGRE.RNUM = 1
+		) CUST ON CUST.AGRE_SE_CD = PCC.CD_ID
+		WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INT 
+		AND PCC.GROUP_CD_ID = 'AGREE_TP'
+		ORDER BY PCC.SORT_ORD
+	</select>
+	
+	<select id="custcoExpsnInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*고객사 확장정보 조회(kr.co.hkcloud.palette3.setting.customer.dao.SettingCustomerInformationListMapper.custcoExpsnInfo)*/
+			PEA.SE
+			, PEA.ATTR_ID
+			, PEA.EXPSN_ATTR_COL_ID
+			, PEA.EXPSN_ATTR_NM
+			, PEA.DATA_LEN
+			, PEA.DATA_TYPE_CD
+			, PEA.GROUP_CD_ID
+			, COALESCE(PEA.INDI_INFO_ENCPT_YN, 'N') AS INDI_INFO_ENCPT_YN
+			, (CASE WHEN PCC.SYS_CD_YN IS NULL AND PEA.LNKG_ATTR_ID IS NOT NULL THEN 'Y'
+					WHEN PCC.SYS_CD_YN = 'Y' AND PEA.LNKG_ATTR_ID IS NULL THEN 'C'
+					WHEN PCC.SYS_CD_YN IS NOT NULL AND PEA.LNKG_ATTR_ID IS NULL THEN 'N'
+					ELSE PCC.SYS_CD_YN
+					END) AS SYS_CD_YN
+			, PEA.USE_YN
+		FROM PLT_EXPSN_ATTR PEA
+		LEFT JOIN PLT_COMM_CD PCC ON PEA.GROUP_CD_ID = PCC.CD_ID AND PCC.CUSTCO_ID = #{CUSTCO_ID}::INT
+		WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<if test='CPI_ID != null and CPI_ID != ""'>AND PEA.CPI_ID = #{CPI_ID}::INT</if>
+		AND PEA.SE = #{SE}
+		AND PEA.DEL_YN = 'N'
+		AND PEA.BSC_PVSN_ATTR_YN = 'N'
+		<if test='SE != "ENV"'>AND PEA.SCRN_EXPSR_YN = 'Y'</if>
+		ORDER BY PEA.SORT_ORD
+	</select>
+	
+	<select id="selectCustType"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectCustType - 기존고객이 전화고객인지 확인 */
+			COUNT(CUST_ID) AS CNT
+		FROM PLT_CHT_CUST
+		WHERE EXISTS (SELECT 1 FROM PLT_CHT_CUST PCC WHERE PCC.CUST_ID = #{BF_CUST_ID}::INTEGER)
+	</select>
+	
+	<update id="updateChtUserRdyHstry" parameterType="java.util.HashMap">
+		UPDATE PLT_CHT_USER_RDY_HSTRY		/* updateChtUserRdyHstry - 채팅사용자 대기이력 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateCustAgre" parameterType="java.util.HashMap">
+		UPDATE PLT_CUST_AGRE_HSTRY		/* updateCustAgre - 고객동의이력 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<delete id="deleteCustAgreDupl"  parameterType="java.util.HashMap">
+		DELETE 			/* deleteCustAgreDupl - 고객동의이력 통합 후 중복 삭제 */
+		FROM PLT_CUST_AGRE_HSTRY 
+		WHERE (CUST_AGRE_HSTRY_ID IN (SELECT DEL_LIST.CUST_AGRE_HSTRY_ID
+									FROM (SELECT ROW_NUMBER() OVER(PARTITION BY PCAH.AGRE_SE_CD ORDER BY PCAH.CUST_AGRE_HSTRY_ID) AS ROWNUM
+										, PCAH.CUST_AGRE_HSTRY_ID
+										, PCAH.AGRE_SE_CD
+									FROM PLT_CUST_AGRE_HSTRY PCAH
+									LEFT JOIN (SELECT AGRE_SE_CD, AGRE_YN, COUNT(AGRE_SE_CD) AS CNT
+												FROM PLT_CUST_AGRE_HSTRY
+												WHERE CUST_ID = #{CUST_ID}::INTEGER
+												GROUP BY AGRE_SE_CD, AGRE_YN) CNT ON CNT.AGRE_SE_CD = PCAH.AGRE_SE_CD
+									WHERE CNT.CNT = '2'
+										AND CUST_ID = #{CUST_ID}::INTEGER) DEL_LIST
+									WHERE DEL_LIST.ROWNUM = '2'))
+			OR (CUST_ID = #{CUST_ID}::INTEGER
+				AND AGRE_YN = 'N')
+	</delete>
+	
+	<update id="updateChtRdy" parameterType="java.util.HashMap">
+		UPDATE PLT_CHT_RDY		/* updateChtRdy - 채팅대기 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateVocRcpt" parameterType="java.util.HashMap">
+		UPDATE PLT_VOC_RCPT		/* updateVocRcpt - VOC접수 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateCustItgrtHstry" parameterType="java.util.HashMap">
+		UPDATE PLT_CUST_ITGRT_HSTRY		/* updateCustItgrtHstry - 고객통합이력 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateCuttItgrtHstry" parameterType="java.util.HashMap">
+		UPDATE PLT_CUTT_ITGRT_HSTRY		/* updateCuttItgrtHstry - 상담통합이력 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateChtCutt" parameterType="java.util.HashMap">
+		UPDATE PLT_CHT_CUTT		/* updateChtCutt - 채팅상담 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateChtCuttHstry" parameterType="java.util.HashMap">
+		UPDATE PLT_CHT_CUTT_HSTRY		/* updateChtCuttHstry - 채팅상담이력 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateChtCust" parameterType="java.util.HashMap">
+		UPDATE PLT_CHT_CUST		/* updateChtCust - 채팅고객 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateSrvyTrgt" parameterType="java.util.HashMap">
+		UPDATE PLT_SRVY_TRGT		/* updateSrvyTrgt - 설문대상 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateStatsChtCuttDtl" parameterType="java.util.HashMap">
+		UPDATE PLT_STATS_CHT_CUTT_DTL		/* updateStatsChtCuttDtl - 채팅통계상세 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateCustTelnoItgrt" parameterType="java.util.HashMap">
+		UPDATE PLT_CUST_TELNO_ITGRT		/* updateCustTelnoItgrt - 고객전화번호통합 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="deleteCustExpsnInfo" parameterType="java.util.HashMap">
+		UPDATE PLT_CUST_DTL_EXPSN		/* deleteCustExpsnInfo - 고객 확장속성 삭제 처리 (소프트삭제) */
+		SET ATTR_VL = 'DELT'
+		WHERE ATTR_ID = (SELECT ATTR_ID 
+						FROM PLT_EXPSN_ATTR PEA 
+						WHERE GROUP_CD_ID = 'CUST_ST' 
+							AND BSC_PVSN_ATTR_YN = 'N' 
+							AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER)
+			AND CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<!-- 고객정보 변경이력 insert -->
+	<insert id="insertCustomerInfoChg"  parameterType= "java.util.HashMap">
+		INSERT /* insertCustomerInfoChg - 고객정보 변경이력 insert */
+		INTO PLT_CUST_INFO_CHG_HSTRY ( 
+			CUST_CHG_HSTRY_ID
+	       	, CUST_ID
+	       	, CHG_REG_DT
+	       	, CHG_RGTR_ID
+	    ) 
+		VALUES ( 
+	    	#{custChgHstryId}::INTEGER
+	    	, #{customerId}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, '1'::INTEGER
+       )
+	</insert>
+	
+	<update id="updateInfoChgIdSeq" parameterType="java.util.HashMap">
+		UPDATE PLT_TBL_SEQ		/* updateInfoChgIdSeq - 고객정보 변경이력id +1 */
+		SET SEQ_VL = (SELECT COALESCE(MAX(CUST_CHG_HSTRY_ID),0)
+						FROM PLT_CUST_INFO_CHG_HSTRY)::INTEGER + 1
+		WHERE COL_ID = 'CUST_CHG_HSTRY_ID'
+	</update>
+	
+	<!-- 고객정보 변경이력 insert -->
+	<insert id="insertCustomerInfoChgDtl"  parameterType= "java.util.HashMap">
+		INSERT /* insertCustomerInfoChgDtl - 고객정보 변경이력 insert */
+		INTO PLT_CUST_INFO_CHG_DTL_EXPSN ( 
+			CUST_CHG_HSTRY_ID
+	       	, ATTR_ID
+	       	, ATTR_VL
+	    ) 
+		VALUES ( 
+	    	#{custChgHstryId}::INTEGER
+    		, (SELECT PEA.ATTR_ID 
+				FROM PLT_EXPSN_ATTR PEA 
+				WHERE PEA.CUSTCO_ID = #{custcoId}::INT 
+					AND SE = 'CUSTOM' 
+					AND LNKG_ATTR_ID IS NOT NULL 
+					AND EXPSN_ATTR_COL_ID = 'CUST_STAT')
+			, 'NOML'
+       )
+	</insert>
+	
+	<!-- 통합고객 이름 뒤에 통합한 id 표시 -->
+	<update id="updateCustNmCustId" parameterType="java.util.HashMap">
+		UPDATE PLT_CUST		/* updateCustNmCustId - 통합고객 이름 뒤에 통합한 id 표시 */
+		SET 
+			CUST_NM =  CONCAT(CONCAT(CONCAT((SELECT CUST_NM
+												FROM PLT_CUST
+												WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER),'(통합_'),#{CUST_ID}), ')')
+			, CUST_PHN_NO = NULL
+			, CUST_STTS_CD = 'DELT'
+			, DEL_YN = 'Y'
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<select id="selectTelnoId"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectTelnoId - 전화번호 통합ID 확인 */
+			CUST_TELNO_ID
+		FROM PLT_CUST_TELNO_ITGRT
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</select>
+
+	<!-- plt_cust_itgrt_hstry - 전화번호 통합 통합고객 삭제 -->
+	<delete id="deleteCustItgrtHstry" parameterType="java.util.HashMap">
+		/* deleteCustItgrtHstry - plt_cust_itgrt_hstry - 전화번호 통합 통합고객 삭제 */
+		DELETE FROM PLT_CUST_ITGRT_HSTRY		
+		WHERE CUST_TELNO_ID = #{CUST_TELNO_ID}::INTEGER
+	</delete>
+
+	<!-- plt_cust_telno_itgrt - 전화번호 통합 통합고객 삭제 -->
+	<delete id="deleteCustTelnoItgrt" parameterType="java.util.HashMap">
+		/* deleteCustTelnoItgrt - plt_cust_telno_itgrt - 전화번호 통합 통합고객 삭제 */
+		DELETE FROM PLT_CUST_TELNO_ITGRT		
+		WHERE CUST_TELNO_ID = #{CUST_TELNO_ID}::INTEGER
+	</delete>
+
+	<!-- plt_cust_telno - 전화번호 통합 통합고객 삭제 -->
+	<delete id="deleteCustTelno" parameterType="java.util.HashMap">
+		/* deleteCustTelno - plt_cust_telno - 전화번호 통합 통합고객 삭제 */
+		DELETE FROM PLT_CUST_TELNO		
+		WHERE CUST_TELNO_ID = #{CUST_TELNO_ID}::INTEGER
+	</delete>
+	
+	<update id="updateObdCpiCust" parameterType="java.util.HashMap">
+		UPDATE PLT_OBD_CPI_CUST		/* updateObdCpiCust - 아웃바운드 캠페인 고객 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateObdCpiCustAltmnt" parameterType="java.util.HashMap">
+		UPDATE PLT_OBD_CPI_CUST_ALTMNT		/* updateObdCpiCustAltmnt - 아웃바운드 고객 배분 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateObdCpiCustDtl" parameterType="java.util.HashMap">
+		UPDATE PLT_OBD_CPI_CUST_DTL		/* updateObdCpiCustDtl - 아웃바운드 고객 상세 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updatePhnClbk" parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_CLBK		/* updatePhnClbk - 콜백 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updatePhnCutt" parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_CUTT		/* updatePhnCutt - 전화상담이력 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updatePhnDsptchHstry" parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_DSPTCH_HSTRY		/* updatePhnDsptchHstry - 전화발신이력합 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updatePrvcInqLog" parameterType="java.util.HashMap">
+		UPDATE PLT_PRVC_INQ_LOG		/* updateCustTelnoItgrt - 개인정보조회대상고객 통합 */
+		SET 
+			TRGT_CUST_ID = #{CUST_ID}::INTEGER
+		WHERE TRGT_CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateStatsPhnCuttDtl" parameterType="java.util.HashMap">
+		UPDATE PLT_STATS_PHN_CUTT_DTL		/* updateStatsPhnCuttDtl - 전화상담통계 통합 */
+		SET 
+			CUST_ID = #{CUST_ID}::INTEGER
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</update>
+	
+	<update id="updateCustNm" parameterType="java.util.HashMap">
+		UPDATE PLT_CUST		/* updateCustNm - 고객명 통합 */
+		SET 
+			CUST_NM = (SELECT CUST_NM
+						FROM PLT_CUST
+						WHERE CUST_ID = #{CUST_ID}::INTEGER)
+		WHERE CUST_ID = #{BF_CUST_ID}::INTEGER
+	</update>
+	
+	<insert id="insertObdCpiCust"  parameterType= "java.util.HashMap">
+		/* insertObdCpiCust - 아웃바운드 고객 insert */
+		INSERT INTO PLT_OBD_CPI_CUST
+		(
+			CUST_ID
+			, REG_DT
+			, RGTR_ID
+			, CPI_ID
+		) SELECT 
+			#{CUST_ID}::INTEGER
+			, REG_DT
+			, RGTR_ID
+			, CPI_ID
+		FROM PLT_OBD_CPI_CUST
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</insert>
+
+	<delete id="deleteObdCpiCust" parameterType="java.util.HashMap">
+		/* deleteObdCpiCust - 아웃바운드 고객 delete */
+		DELETE FROM PLT_OBD_CPI_CUST
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</delete>
+	
+	<insert id="insertObdCpiCustAltmnt"  parameterType= "java.util.HashMap">
+		/* insertObdCpiCust - 아웃바운드 고객 배정 insert */
+		INSERT INTO PLT_OBD_CPI_CUST_ALTMNT
+		(
+			CUSL_ID
+			, CUST_ID
+			, ALTMNT_DT
+			, CPI_ID
+		) SELECT 
+			CUSL_ID
+			, #{CUST_ID}::INTEGER
+			, ALTMNT_DT
+			, CPI_ID
+		FROM PLT_OBD_CPI_CUST_ALTMNT
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</insert>
+
+	<delete id="deleteObdCpiCustAltmnt" parameterType="java.util.HashMap">
+		/* deleteObdCpiCust - 아웃바운드 고객 배정 delete */
+		DELETE FROM PLT_OBD_CPI_CUST_ALTMNT
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</delete>
+	
+	<insert id="insertObdCpiCustDtl"  parameterType= "java.util.HashMap">
+		/* insertObdCpiCust - 아웃바운드 고객 상세 insert */
+		INSERT INTO PLT_OBD_CPI_CUST_DTL
+		(
+			ATTR_ID
+			, CUST_ID
+			, ATTR_VL
+			, CPI_ID
+		) SELECT 
+			ATTR_ID
+			, #{CUST_ID}::INTEGER
+			, ATTR_VL
+			, CPI_ID
+		FROM PLT_OBD_CPI_CUST_DTL
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</insert>
+
+	<delete id="deleteObdCpiCustDtl" parameterType="java.util.HashMap">
+		/* deleteObdCpiCust - 아웃바운드 고객 상세 delete */
+		DELETE FROM PLT_OBD_CPI_CUST_DTL
+		WHERE CUST_ID = #{ORG_CUST_ID}::INTEGER
+	</delete>
+	
+	<select id="selectCustomerBaseInfoCount"  parameterType="CustomerVO" resultType="java.util.HashMap">
+		SELECT		/* selectCustomerBaseInfoCount - 고객정보가 이미 있는지 확인 */
+			COUNT(CUST_ID) AS CNT
+		FROM PLT_CHT_CUST
+		WHERE CHT_USER_KEY = #{talkUserKey}
+			AND SNDR_KEY = #{sndrKey}::INTEGER
+	</select>
+	
+</mapper>

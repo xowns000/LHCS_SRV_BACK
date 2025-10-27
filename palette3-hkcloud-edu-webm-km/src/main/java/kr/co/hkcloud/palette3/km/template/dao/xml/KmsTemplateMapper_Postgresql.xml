@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.kms.template.dao.KmsTemplateMapper">
+
+	<select id="selectList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+<!--		-->
+		SELECT 
+			KMS_TMPL_ID
+			,T.RGTR_ID
+			,(SELECT USER_NM FROM PLT_USER WHERE USER_ID = T.RGTR_ID) AS RGTR_NM
+			,TO_CHAR(TO_DATE(T.REG_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD') AS REG_DT
+			,KMS_TMPL_TYPE_CD
+			,(SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'TMPL_TP' AND CD_ID = T.KMS_TMPL_TYPE_CD) AS KMS_TMPL_TYPE_CD_NM
+			,KMS_TMPL_NM
+			,T.USE_YN
+			,T.MDFR_ID
+			,T.MDFCN_DT
+			,T.FILE_GROUP_KEY
+			, F.FILE_KEY 
+			, F.ACTL_FILE_NM 
+			, F.FILE_PATH 
+			, F.STRG_FILE_NM 
+			, F.FILE_URI
+			,ROW_NUMBER() OVER() ROW_NUMBER	
+		FROM PLT_KMS_TMPL T
+		LEFT OUTER JOIN (
+			SELECT 
+				FILE_GROUP_KEY
+				, ARRAY_TO_STRING(ARRAY_AGG(FILE_KEY ORDER BY FILE_KEY), '||' ) AS FILE_KEY
+				, ARRAY_TO_STRING(ARRAY_AGG(ACTL_FILE_NM ORDER BY FILE_KEY), '||' ) AS ACTL_FILE_NM
+				, ARRAY_TO_STRING(ARRAY_AGG(FILE_PATH ORDER BY FILE_KEY), '||' ) AS FILE_PATH
+				, ARRAY_TO_STRING(ARRAY_AGG(STRG_FILE_NM ORDER BY FILE_KEY), '||' ) AS STRG_FILE_NM
+				, ARRAY_TO_STRING(ARRAY_AGG(CONCAT(FILE_PATH, '/', STRG_FILE_NM) ORDER BY FILE_KEY), '||' ) AS FILE_URI
+			FROM PLT_FILE
+			WHERE USE_YN = 'Y'
+			GROUP BY FILE_GROUP_KEY
+		) F ON F.FILE_GROUP_KEY = T.FILE_GROUP_KEY 
+		WHERE 1=1
+			AND T.CUSTCO_ID = #{CUSTCO_ID}::INT
+			AND T.DEL_YN = 'N'
+		<if test="KMS_TMPL_ID != null and KMS_TMPL_ID != ''">
+			AND T.KMS_TMPL_ID = #{ KMS_TMPL_ID }
+			</if>
+		<if test="RGTR_ID != null and RGTR_ID != ''">
+			AND T.RGTR_ID = #{ RGTR_ID }
+		</if>
+		<if test="REG_DT != null and REG_DT != ''">
+			AND T.REG_DT = #{ REG_DT }
+		</if>
+		<if test="KMS_TMPL_TYPE_CD != null and KMS_TMPL_TYPE_CD != ''">
+			AND T.KMS_TMPL_TYPE_CD = #{ KMS_TMPL_TYPE_CD }
+		</if>
+		<if test="KMS_TMPL_NM != null and KMS_TMPL_NM != ''">
+			AND T.KMS_TMPL_NM = #{ KMS_TMPL_NM }
+		</if>
+		<if test="KMS_TMPL_CN != null and KMS_TMPL_CN != ''">
+			AND T.KMS_TMPL_CN = #{ KMS_TMPL_CN }
+		</if>
+		<if test="FILE_GROUP_KEY != null and FILE_GROUP_KEY != ''">
+			AND T.FILE_GROUP_KEY = #{ FILE_GROUP_KEY }
+		</if>
+		<if test="USE_YN != null and USE_YN != ''">
+			AND T.USE_YN = #{ USE_YN }
+		</if>
+		<if test="DEL_YN != null and DEL_YN != ''">
+			AND T.DEL_YN = #{ DEL_YN }
+		</if>
+		<if test="MDFR_ID != null and MDFR_ID != ''">
+			AND T.MDFR_ID = #{ MDFR_ID }
+		</if>
+		<if test="MDFCN_DT != null and MDFCN_DT != ''">
+			AND T.MDFCN_DT = #{ MDFCN_DT }
+		</if>
+		<if test="LIKE_KMS_TMPL_NM != null and LIKE_KMS_TMPL_NM != '' ">
+				AND T.KMS_TMPL_NM LIKE '%' || #{ LIKE_KMS_TMPL_NM } || '%'							
+		</if>
+		<if test="LIKE_KMS_TMPL_CN != null and LIKE_KMS_TMPL_CN != '' ">
+				AND T.KMS_TMPL_CN LIKE '%' || #{ LIKE_KMS_TMPL_CN } || '%'							
+		</if>
+<!--		-->
+	</select>
+	
+	<select id="selectDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+		SELECT 
+			KMS_TMPL_ID
+			,RGTR_ID
+			,REG_DT
+			,KMS_TMPL_TYPE_CD
+			,KMS_TMPL_NM
+			,KMS_TMPL_CN
+			,FILE_GROUP_KEY
+			,(SELECT ARRAY_TO_STRING(ARRAY_AGG(ACTL_FILE_NM),',') FROM PLT_FILE WHERE FILE_GROUP_KEY = T.FILE_GROUP_KEY) AS ACTL_FILE_NM
+			,USE_YN
+			,MDFR_ID
+			,MDFCN_DT
+		FROM PLT_KMS_TMPL T
+		WHERE 1=1
+			AND DEL_YN = 'N'
+			AND KMS_TMPL_ID = #{ KMS_TMPL_ID }::numeric
+	</select>
+
+	<insert id="insert" parameterType="java.util.HashMap">
+
+		INSERT INTO PLT_KMS_TMPL
+		(
+			KMS_TMPL_ID
+			,CUSTCO_ID
+			,RGTR_ID
+			,REG_DT
+			,KMS_TMPL_TYPE_CD
+			,KMS_TMPL_NM
+			<if test="KMS_TMPL_CN != null and KMS_TMPL_CN != ''">,KMS_TMPL_CN</if>
+			<if test="FILE_GROUP_KEY != null and FILE_GROUP_KEY != ''">,FILE_GROUP_KEY</if>
+			<if test="USE_YN != null and USE_YN != ''">,USE_YN</if>
+			,DEL_YN
+		)
+		VALUES
+		(
+			#{ KMS_TMPL_ID }::numeric
+			,#{ CUSTCO_ID }::numeric
+			,#{ RGTR_ID }::numeric
+			,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			,#{ KMS_TMPL_TYPE_CD }
+			,#{ KMS_TMPL_NM }
+			<if test="KMS_TMPL_CN != null and KMS_TMPL_CN != ''">,#{ KMS_TMPL_CN }</if>
+			<if test="FILE_GROUP_KEY != null and FILE_GROUP_KEY != ''">,#{ FILE_GROUP_KEY }</if>
+			<if test="USE_YN != null and USE_YN != ''">,#{ USE_YN }</if>
+			,'N'
+		)
+	</insert>
+
+	<update id="update" parameterType="java.util.HashMap" >
+
+		UPDATE PLT_KMS_TMPL SET
+			KMS_TMPL_ID = #{ KMS_TMPL_ID }::numeric
+			<if test="KMS_TMPL_TYPE_CD != null and KMS_TMPL_TYPE_CD != ''">
+				,KMS_TMPL_TYPE_CD = #{ KMS_TMPL_TYPE_CD }
+			</if>
+			<if test="KMS_TMPL_NM != null and KMS_TMPL_NM != ''">
+				,KMS_TMPL_NM = #{ KMS_TMPL_NM }
+			</if>
+			<if test="KMS_TMPL_CN != null and KMS_TMPL_CN != ''">
+				,KMS_TMPL_CN = #{ KMS_TMPL_CN }
+			</if>
+			<if test="FILE_GROUP_KEY != null and FILE_GROUP_KEY != ''">
+				,FILE_GROUP_KEY = #{ FILE_GROUP_KEY }
+			</if>
+			<if test="USE_YN != null and USE_YN != ''">
+				,USE_YN = #{ USE_YN }
+			</if>
+			<if test="DEL_YN != null and DEL_YN != ''">
+				,DEL_YN = #{ DEL_YN }
+			</if>
+			,MDFR_ID = #{ MDFR_ID }::numeric
+			,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE 1=1
+		AND KMS_TMPL_ID = #{ KMS_TMPL_ID }::numeric
+	</update>
+	
+	<update id="delete" parameterType="java.util.HashMap" >
+
+		UPDATE PLT_KMS_TMPL SET
+		 	DEL_YN = 'Y'
+			,MDFR_ID = #{ MDFR_ID }
+			,MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE 1=1
+			AND KMS_TMPL_ID IN 
+		 <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+        	#{item}::numeric
+  		</foreach>
+	</update>
+
+</mapper>

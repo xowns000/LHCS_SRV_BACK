@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper">
+
+	<select id="cuttTypeTreeList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	WITH RECURSIVE CUTT_TREE AS ( /*상담유형 설정 관리 Tree 목록 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.cuttTypeTreeList)*/
+		SELECT CUSTCO_ID, CUSTCO_DSPTCH_NO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID, <choose><when test='CUTT_TYPE_SE_CD != null and CUTT_TYPE_SE_CD != ""'>#{CUTT_TYPE_SE_CD}::VARCHAR(60)</when><otherwise>CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PLT_CUTT_TYPE.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END</otherwise></choose> AS CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_EXPLN, CUTT_TYPE_LVL, USE_YN, DEL_YN, SORT_ORD, 1 AS LVL, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+		FROM PLT_CUTT_TYPE
+		WHERE UP_CUTT_TYPE_ID IS NULL
+		<if test='ALL_VIEW != "Y"'>
+		AND DEL_YN = 'N'
+		AND USE_YN = 'Y'
+		</if>
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		UNION ALL
+		SELECT B.CUSTCO_ID, B.CUSTCO_DSPTCH_NO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_NM, B.CUTT_TYPE_EXPLN, B.CUTT_TYPE_LVL, B.USE_YN, B.DEL_YN, B.SORT_ORD, C.LVL + 1 AS LVL, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CASE WHEN C.LVL >1 THEN C.FULL_CUTT_TYPE_ID || ',' ELSE '' END || B.CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID, CAST(CASE WHEN C.LVL >1 THEN C.FULL_PATH || ' > ' ELSE '' END || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+		FROM PLT_CUTT_TYPE B
+		INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+		WHERE 1 = 1
+		<if test='ALL_VIEW != "Y"'>
+		AND B.DEL_YN = 'N'
+		AND B.USE_YN = 'Y'
+		</if>
+		<choose>
+			<when test='CUTT_TYPE_SE_CD != null and CUTT_TYPE_SE_CD != ""'>
+			AND B.CUTT_TYPE_SE_CD = #{CUTT_TYPE_SE_CD}
+			</when>
+			<otherwise>
+			AND B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+			</otherwise>
+		</choose>
+		AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	)
+	SELECT
+		CT.CUSTCO_ID
+		, CT.CUSTCO_DSPTCH_NO_ID
+		, (SELECT DSPTCH_NO FROM PLT_CUSTCO_DSPTCH_NO WHERE CUSTCO_DSPTCH_NO_ID = CT.CUSTCO_DSPTCH_NO_ID) AS DSPTCH_NO
+		, CT.CUTT_TYPE_ID
+		, CT.UP_CUTT_TYPE_ID
+		, (SELECT CUTT_TYPE_NM FROM PLT_CUTT_TYPE WHERE CUTT_TYPE_ID = CT.UP_CUTT_TYPE_ID) AS UP_CUTT_TYPE_NM
+		, CT.CUTT_TYPE_SE_CD
+		, PCC.CD_NM AS CUTT_TYPE_SE_NM
+		, CT.CUTT_TYPE_NM
+		, CT.CUTT_TYPE_EXPLN
+		, CT.CUTT_TYPE_LVL
+		, CT.LVL
+		, COALESCE(CT.USE_YN, 'Y') AS USE_YN
+		, COALESCE(CT.DEL_YN, 'N') AS DEL_YN
+		, ROW_NUMBER() OVER(PARTITION BY CT.UP_CUTT_TYPE_ID ORDER BY CT.SORT_ORD) AS RE_SORT_ORD
+		, CT.SORT_ORD
+		, CT.SORT
+		, CT.FULL_CUTT_TYPE_ID
+		, CT.FULL_PATH
+		, (SELECT COUNT(*) FROM PLT_CUTT_TYPE WHERE UP_CUTT_TYPE_ID = CT.CUTT_TYPE_ID) AS CHILD_CNT
+		, (SELECT COUNT(*) FROM PLT_CUTT_TYPE WHERE CUSTCO_ID = CT.CUSTCO_ID AND CUTT_TYPE_SE_CD = CT.CUTT_TYPE_SE_CD AND UP_CUTT_TYPE_ID = CT.UP_CUTT_TYPE_ID AND DEL_YN = 'N') AS MAX_SORT_ORD
+	FROM CUTT_TREE CT
+	LEFT OUTER JOIN PLT_COMM_CD PCC ON PCC.CUSTCO_ID = #{CUSTCO_ID}::INT AND PCC.CD_ID = CT.CUTT_TYPE_SE_CD AND PCC.GROUP_CD_ID = 'CUSL_TP_CL'
+	WHERE CT.CUTT_TYPE_LVL <![CDATA[<=]]> (SELECT CUTT_TYPE_LMT_LVL_CD::INTEGER + 1 FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = CT.CUSTCO_ID)
+	<if test="UP_CUTT_TYPE_ID !=null and UP_CUTT_TYPE_ID != ''">
+		AND CT.UP_CUTT_TYPE_ID = #{UP_CUTT_TYPE_ID}::INTEGER
+	</if>
+	<if test="LVL !=null and LVL != ''">
+		AND CT.LVL = (#{LVL}::INTEGER + 1)
+	</if>
+	ORDER BY CT.SORT
+	</select>
+
+	<select id="cuttTypeSettingInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /*상담유형 설정 정보 조회 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.cuttTypeSettingInfo)*/
+		PCTS.CUTT_TYPE_STNG_ID
+		, PCTS.ITGRT_USE_YN
+		, PCTS.CUTT_TYPE_LMT_LVL_CD
+		, PCC.CD_NM AS CUTT_TYPE_LMT_LVL_NM
+		, COALESCE(PCTS.STT_USE_YN, 'N') AS STT_USE_YN
+		, COALESCE(PCTS.TRANS_USE_YN, 'N') AS TRANS_USE_YN
+	FROM PLT_CUTT_TYPE_STNG PCTS
+	LEFT OUTER JOIN PLT_COMM_CD PCC ON PCC.CUSTCO_ID = #{CUSTCO_ID}::INT AND PCC.CD_ID = PCTS.CUTT_TYPE_LMT_LVL_CD AND PCC.GROUP_CD_ID = 'CUSL_TP_LV'
+	WHERE PCTS.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</select>
+
+	<insert id="INSERT_CUTT_TYPE"  parameterType= "java.util.HashMap">
+	INSERT /*상담유형 등록 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.INSERT_CUTT_TYPE)*/
+	INTO PLT_CUTT_TYPE ( CUTT_TYPE_ID
+			, UP_CUTT_TYPE_ID
+	       	, CUTT_TYPE_SE_CD
+	       	, CUTT_TYPE_NM
+	       	, CUTT_TYPE_EXPLN
+	       	, CUTT_TYPE_LVL
+	       	, USE_YN
+	       	, DEL_YN
+	       	, SORT_ORD
+	       	, RGTR_ID
+	       	, REG_DT
+			, CUSTCO_ID
+			<if test='CUTT_DAIL_LVL != null and CUTT_DAIL_LVL != "" and CUTT_DAIL_LVL == "2" and CUSTCO_DSPTCH_NO_ID != null and CUSTCO_DSPTCH_NO_ID != ""'>, CUSTCO_DSPTCH_NO_ID</if>
+	       )
+	VALUES ( #{CUTT_TYPE_ID}
+		   , #{UP_CUTT_TYPE_ID}::INT
+	       , #{CUTT_TYPE_SE_CD}
+	       , #{CUTT_TYPE_NM}
+	       , #{CUTT_TYPE_EXPLN}
+	       , (SELECT CUTT_TYPE_LVL+1 FROM PLT_CUTT_TYPE WHERE CUTT_TYPE_ID = #{UP_CUTT_TYPE_ID}::INT)
+	       , #{USE_YN}
+	       , 'N'
+	       , (SELECT COALESCE(MAX(SORT_ORD), 0)+1 FROM PLT_CUTT_TYPE WHERE CUTT_TYPE_SE_CD = #{CUTT_TYPE_SE_CD} AND UP_CUTT_TYPE_ID = #{UP_CUTT_TYPE_ID}::INT)
+	       , #{USER_ID}::INT
+	       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		   , #{CUSTCO_ID}::INT
+		   <if test='CUTT_DAIL_LVL != null and CUTT_DAIL_LVL != "" and CUTT_DAIL_LVL == "2" and CUSTCO_DSPTCH_NO_ID != null and CUSTCO_DSPTCH_NO_ID != ""'>, #{CUSTCO_DSPTCH_NO_ID}::INT</if>
+	       )
+	</insert>
+
+	<update id="UPDATE_CUTT_TYPE"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CUTT_TYPE /*상담유형 수정 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.UPDATE_CUTT_TYPE)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INT
+		<if test="CUTT_TYPE_SE_CD !=null and CUTT_TYPE_SE_CD != ''"> , CUTT_TYPE_SE_CD = #{CUTT_TYPE_SE_CD}</if>
+		<if test="UP_CUTT_TYPE_ID !=null and UP_CUTT_TYPE_ID != ''"> , UP_CUTT_TYPE_ID = #{UP_CUTT_TYPE_ID}::INT</if>
+		<if test="CUTT_TYPE_NM !=null and CUTT_TYPE_NM != ''"> , CUTT_TYPE_NM = #{CUTT_TYPE_NM}</if>
+		<if test="CUTT_TYPE_EXPLN !=null and CUTT_TYPE_EXPLN != ''"> , CUTT_TYPE_EXPLN = #{CUTT_TYPE_EXPLN}</if>
+		<if test="USE_YN !=null and USE_YN != ''"> , USE_YN = #{USE_YN}</if>
+		<if test="DEL_YN !=null and DEL_YN != ''"> , DEL_YN = #{DEL_YN}</if>
+		<if test="ORDER_TYPE !=null and ORDER_TYPE != ''"> , SORT_ORD = #{SORT_ORD}::INT</if>
+		<if test='CUTT_DAIL_LVL != null and CUTT_DAIL_LVL != "" and CUTT_DAIL_LVL == "2" and CUSTCO_DSPTCH_NO_ID != null and CUSTCO_DSPTCH_NO_ID != ""'>, CUSTCO_DSPTCH_NO_ID = #{CUSTCO_DSPTCH_NO_ID}::INT</if>
+	 WHERE CUTT_TYPE_ID = #{CUTT_TYPE_ID}::INT
+	</update>
+
+	<update id="UPDATE_CUTT_TYPE_OTHER_SORT_ORDER"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CUTT_TYPE /*상담유형 해당 노드 제외한 정렬 순서 변경 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.UPDATE_CUTT_TYPE_OTHER_SORT_ORDER)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+			, SORT_ORD = SORT_ORD + (#{ADD_NUM}::INTEGER)
+	 WHERE UP_CUTT_TYPE_ID = #{UP_CUTT_TYPE_ID}::INTEGER
+	 AND CUTT_TYPE_SE_CD = #{CUTT_TYPE_SE_CD}
+	 AND SORT_ORD = #{SORT_ORD}::INTEGER
+	</update>
+
+	<update id="UPDATE_CUTT_TYPE_SORT_ORDER"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CUTT_TYPE /*상담유형 정렬 순서 변경 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.UPDATE_CUTT_TYPE_SORT_ORDER)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+			, SORT_ORD = #{SORT_ORD}::INTEGER
+	 WHERE CUTT_TYPE_ID = #{CUTT_TYPE_ID}::INTEGER
+	</update>
+
+	<update id="UPDATE_CUTT_TYPE_SETTING"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CUTT_TYPE_STNG /*상담유형 설정 수정 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.UPDATE_CUTT_TYPE_SETTING)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+		<if test="ITGRT_USE_YN !=null and ITGRT_USE_YN != ''"> , ITGRT_USE_YN = #{ITGRT_USE_YN}</if>
+		<if test="CUTT_TYPE_LMT_LVL_CD !=null and CUTT_TYPE_LMT_LVL_CD != ''"> , CUTT_TYPE_LMT_LVL_CD = #{CUTT_TYPE_LMT_LVL_CD}</if>
+	 WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+
+	<select id="dsptchNoList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /*고객사 대표번호 목록 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.dsptchNoList)*/
+		PCDH.CUSTCO_DSPTCH_NO_ID
+		, PCDH.RPRS_NO
+		, PCDH.DSPTCH_NO
+	FROM PLT_CUSTCO_DSPTCH_NO PCDH
+	WHERE PCDH.CUSTCO_ID = #{CUSTCO_ID}::INT
+	</select>
+
+	<select id="cuslCuttTypeBmkList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT /*상담사 상담유형 북마크(즐겨찾기) 목록 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.cuslCuttTypeBmkList)*/
+		A.RNUM
+		, A.REG_SE_CD
+		, A.CUTT_TYPE_NM
+		, A.FULL_CUTT_TYPE_ID
+	FROM (
+			SELECT
+				ROW_NUMBER() OVER(PARTITION BY PUCTB.REG_SE_CD ORDER BY PUCTB.REG_DT DESC) AS RNUM
+				, PUCTB.REG_SE_CD
+				, (SELECT CUTT_TYPE_NM FROM PLT_CUTT_TYPE WHERE CUTT_TYPE_ID = PUCTB.CUTT_TYPE_ID) AS CUTT_TYPE_NM
+				, (
+					WITH RECURSIVE CUTT_TREE AS (
+						SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID, CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PLT_CUTT_TYPE.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END  AS CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_EXPLN, CUTT_TYPE_LVL, USE_YN, SORT_ORD, 1 AS LVL, CAST(CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID
+						FROM PLT_CUTT_TYPE
+						WHERE UP_CUTT_TYPE_ID IS NULL
+						AND DEL_YN = 'N'
+						AND USE_YN = 'Y'
+						AND CUSTCO_ID = #{CUSTCO_ID}::INT
+						UNION ALL
+						SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_NM, B.CUTT_TYPE_EXPLN, B.CUTT_TYPE_LVL, B.USE_YN, B.SORT_ORD, C.LVL + 1 AS LVL, CAST(CASE WHEN C.LVL >1 THEN C.FULL_CUTT_TYPE_ID || ',' ELSE '' END || B.CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID
+						FROM PLT_CUTT_TYPE B
+						INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+						WHERE B.DEL_YN = 'N'
+						AND B.USE_YN = 'Y'
+						AND B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+						AND B.CUSTCO_ID = #{CUSTCO_ID}::INT
+					)
+					SELECT
+						CT.FULL_CUTT_TYPE_ID
+					FROM CUTT_TREE CT
+					WHERE CT.CUTT_TYPE_LVL<![CDATA[<=]]>(SELECT CUTT_TYPE_LMT_LVL_CD::INTEGER + 1 FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = CT.CUSTCO_ID)
+					AND CT.CUTT_TYPE_ID = PUCTB.CUTT_TYPE_ID
+				)  AS FULL_CUTT_TYPE_ID
+			FROM PLT_USER_CUTT_TYPE_BMK PUCTB
+			INNER JOIN PLT_CUTT_TYPE PCT ON PCT.CUTT_TYPE_ID = PUCTB.CUTT_TYPE_ID
+			WHERE PUCTB.USER_ID = #{USER_ID}::INT
+			AND PCT.CUTT_TYPE_LVL<![CDATA[<=]]>(SELECT CUTT_TYPE_LMT_LVL_CD::INTEGER + 1 FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PCT.CUSTCO_ID)
+			<if test='REG_SE_CD != null and REG_SE_CD != ""'>
+			AND PUCTB.REG_SE_CD = #{REG_SE_CD}
+			</if>
+			<if test='CUTT_TYPE_ID != null and CUTT_TYPE_ID != ""'>
+			AND PUCTB.CUTT_TYPE_ID = #{CUTT_TYPE_ID}::INT
+			</if>
+	) A
+	WHERE 1 = 1
+	AND RNUM<![CDATA[<=]]>COALESCE(#{BMK_CNT}, '5')::INT
+	</select>
+
+	<update id="cuslCuttTypeBmkUpdate"  parameterType= "java.util.HashMap">
+	UPDATE PLT_USER_CUTT_TYPE_BMK /*상담사 최근 등록 상담유형 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.cuslCuttTypeBmkUpdate)*/
+		SET REG_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	WHERE USER_ID = #{USER_ID}::INT
+	AND REG_SE_CD = #{REG_SE_CD}
+	AND CUTT_TYPE_ID = #{CUTT_TYPE_ID}::INT
+	</update>
+
+	<insert id="cuslCuttTypeBmkReg"  parameterType= "java.util.HashMap">
+	INSERT /* 상담사 상담유형 즐겨찾기 등록 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.cuslCuttTypeBmkReg)*/
+	INTO PLT_USER_CUTT_TYPE_BMK (USER_ID, REG_SE_CD, CUTT_TYPE_ID, REG_DT)
+	VALUES(#{USER_ID}::INT, #{REG_SE_CD}, #{CUTT_TYPE_ID}::INT, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'))
+	</insert>
+
+	<delete id="cuslCuttTypeBmkDel"  parameterType= "java.util.HashMap">
+	DELETE /* 상담사 상담유형 즐겨찾기 삭제 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.cuttTypeMapper.cuslCuttTypeBmkDel)*/
+	FROM PLT_USER_CUTT_TYPE_BMK
+	WHERE USER_ID = #{USER_ID}::INT
+	AND REG_SE_CD = #{REG_SE_CD}
+	AND CUTT_TYPE_ID = #{CUTT_TYPE_ID}::INT
+	</delete>
+</mapper>

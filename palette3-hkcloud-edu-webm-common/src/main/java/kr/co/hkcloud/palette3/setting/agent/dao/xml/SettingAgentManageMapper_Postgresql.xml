@@ -1,0 +1,1022 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper">
+	<!-- 사용자 정보 조회 -->
+	<select id="selectRtnUserInfo" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	     SELECT ROWNUM AS ROW_NUMBER
+				 ,RE.*
+	     , (SELECT LISTAGG(COALESCE(SUBSTR(BB.ATRT_GROUP_NM, 1), '권한미할당'),',') WITHIN GROUP (ORDER BY BB.ATRT_GROUP_NM) AS ATRT_GROUP_NM
+			  FROM PLT_USER_AUTH AA 
+			  LEFT OUTER JOIN (SELECT ATRT_GROUP_ID
+			                        , ATRT_GROUP_NM 
+			                     FROM PLT_AUTH
+			                   ) BB 
+			               ON AA.ATRT_GROUP_ID = BB.ATRT_GROUP_ID 
+	         WHERE AA.USER_ID = RE.USER_ID ) AS ATRT_GROUP_NM  -- 권한그룹명
+	     , (SELECT LISTAGG(B.INQRY_TYP_NM, ',')
+                   WITHIN GROUP (ORDER BY B.INQRY_TYP_NM) AS INQRY_TYP_NM
+	          FROM PLT_CHT_USER_INQ A
+	          JOIN PLT_CHT_INQ_TYP B
+	            ON A.TALK_INQRY_CD = B.INQRY_TYP_CD
+	         WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	           AND B.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	           AND A.USER_ID = RE.USER_ID
+	        ) AS INQRY_TYP_NM
+		 <!-- , (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY_NM -->
+			<!-- 20190509 ojw added for new user dept -->
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'A' AND ATTR_DIV_CD = RE.USER_ATTR_A) AS ATTR_DIV_NM_A /* 사용자소속A */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'B' AND ATTR_DIV_CD = RE.USER_ATTR_B) AS ATTR_DIV_NM_B /* 사용자소속B */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'C' AND ATTR_DIV_CD = RE.USER_ATTR_C) AS ATTR_DIV_NM_C /* 사용자소속C */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'D' AND ATTR_DIV_CD = RE.USER_ATTR_D) AS ATTR_DIV_NM_D /* 사용자소속D */ 
+	     , (SELECT (CASE WHEN LISTAGG(CASE WHEN AA.ATRT_GROUP_ID IN ('20151106173043466TWB14896'
+                                                                    ,'20190327140137132TWB3843'
+                                                                    ,'20190503054503024TWB168613')
+                                           THEN 'Y'
+                                           ELSE 'N'
+                                      END,'') WITHIN GROUP (ORDER BY AA.ATRT_GROUP_ID) LIKE '%Y%' 
+                         THEN 'Y' 
+                         ELSE 'N'
+                    END)
+			  FROM PLT_USER_AUTH AA 
+	         WHERE AA.USER_ID = RE.USER_ID ) AS ACCOUNT_PAY_YN
+	  FROM (
+	     		SELECT A.USER_ID                                                                    -- 사용자ID
+				     , A.USER_NM                                                                    -- 사용자이름
+				     , A.USER_NICK                                                                  -- 사용자닉네임
+				     --, A.USE_YN                                                                     -- 사용여부
+				     , CASE WHEN A.USE_YN = 'Y' THEN '사용' ELSE '미사용' END      AS USE_YN       	-- 사용여부
+				     , A.CNNCT_IP                                                                   -- 접속IP
+				     , A.ETC_INFO01                                               AS LAST_LOGIN_DT  -- 최근접속일시
+				     , A.HP_NO																	    -- 휴대폰번호
+				     , A.PWD_FAIL_FREQ																-- 패스워드오류횟수
+				     , D.MAX_CHAT_AGENT																-- 개인채팅허용수
+					<!-- 20190509 ojw added for new user dept -->
+	                 , ATTR.USER_ATTR_A
+	                 , ATTR.USER_ATTR_B
+	                 , ATTR.USER_ATTR_C
+	                 , ATTR.USER_ATTR_D
+					 , A.CUSTCO_ID AS ASP_NEWCUST_KEYS
+		             , TO_CHAR(A.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')               AS REG_DTTM      -- 등록일자
+					 , TAC.CO_NM AS ASP_NEWCUST_KEY_NM
+					 , W.INLNE_NO AS INLNE_NO
+					 , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+		             <!-- , CASE WHEN TAC.PRODUCT_CD = 'STANDARD' AND TAC.SRVC_BGNG_DT  <![CDATA[>]]> TO_CHAR(A.REG_DTTM, 'YYYYMMDDHH24MISS')
+		                      THEN  TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MISS'),'YYYY/MM/DD')
+		                    WHEN TAC.PRODUCT_CD = 'STANDARD' AND TAC.SRVC_BGNG_DT  <![CDATA[<]]> TO_CHAR(A.REG_DTTM, 'YYYYMMDDHH24MISS')
+		                      THEN TO_CHAR(A.REG_DTTM, 'YYYY/MM/DD')
+		                    ELSE
+		                      ''
+		                END                                                       AS SERVICE_CHARGE_DT  과금일자   -->
+		              , A.CALLBACK_YN
+		              
+				  FROM PLT_USER A
+				  <!-- ASP 관리자 그룹 -->
+				 <if test="SEARCH_GROUP == 'manager'"> 
+				 INNER JOIN PLT_USER_AUTH TB7
+				    ON A.USER_ID = TB7.USER_ID
+				   AND TB7.ATRT_GROUP_ID IN ('20190503054503024TWB168613', '20190327140137132TWB3843')
+				 </if>
+				 <!-- ASP 상담사 그룹 -->
+				 <if test="SEARCH_GROUP == 'agent'">
+				 INNER JOIN PLT_USER_AUTH TB7
+				    ON A.USER_ID = TB7.USER_ID
+				   AND TB7.ATRT_GROUP_ID IN ('20151106173043466TWB14896')
+				 </if>
+				  LEFT OUTER JOIN PLT_CHT_USER_CHAT_SET D
+				  ON A.USER_ID = D.USER_ID
+				  LEFT OUTER JOIN PLT_USER_ATTR ATTR
+				  ON A.USER_ID = ATTR.USER_ID AND ATTR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				  LEFT OUTER JOIN PLT_ASP_CUS TAC
+				  ON ATTR.CUSTCO_ID = TAC.CUSTCO_ID
+				  LEFT OUTER JOIN PLT_PHN_IP_INLN W
+         		  ON A.USER_ID = W.USER_ID AND W.CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+				 WHERE A.CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+				<if test="USER_ID != ''">AND A.USER_ID LIKE '%'|| #{USER_ID}|| '%'</if>
+				<if test="USER_NM != ''">AND A.USER_NM LIKE '%'|| #{USER_NM}|| '%'</if>
+				<if test="USER_NICK != ''">AND A.USER_NICK LIKE '%'|| #{USER_NICK}|| '%'</if>
+				<if test="USE_YN 				!= '' and USE_YN 		!= null">   AND A.USE_YN     = #{USE_YN}                   	</if>
+				<if test="CNNCT_IP 				!= '' and CNNCT_IP 		!= null">   AND A.CNNCT_IP LIKE '%' || #{CNNCT_IP} || '%'   </if>
+				<if test="SPEC_CNSL_CD 			!= '' and SPEC_CNSL_CD 	!= null">   AND A.SPEC_CNSL_CD = #{SPEC_CNSL_CD}            </if>
+				<if test="ATRT_GROUP_ID 		!= '' and ATRT_GROUP_ID != null"> 
+				  <choose>
+				    <when test="GROUP_F = Y">
+				   AND (A.USER_ID IN (SELECT USER_ID 
+				                        FROM PLT_USER_AUTH 
+				                       WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID}) 
+				        OR A.USER_ID NOT IN (SELECT USER_ID FROM PLT_USER_AUTH) )
+				    </when>
+				    <otherwise>
+				   AND A.USER_ID IN (SELECT USER_ID 
+				                       FROM PLT_USER_AUTH 
+				                      WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID})
+				    </otherwise>
+				  </choose>						
+				</if>
+				<if test="LAST_LOGIN_DT_FROM	!= '' and LAST_LOGIN_DT_FROM != null">   AND TO_DATE(A.ETC_INFO01, 'YYYY/MM/DD HH24:MI:SS') >= TO_DATE(#{LAST_LOGIN_DT_FROM}||'000000', 'YYYY/MM/DD HH24:MI:SS')  </if>
+				<if test="LAST_LOGIN_DT_TO 		!= '' and LAST_LOGIN_DT_TO != null">  <![CDATA[ AND TO_DATE(A.ETC_INFO01, 'YYYY/MM/DD HH24:MI:SS') <= TO_DATE(#{LAST_LOGIN_DT_TO}||'235959', 'YYYY/MM/DD HH24:MI:SS') ]]>   </if>
+				
+				<!-- 20190509 ojw added for new user dept -->
+				<if test="USER_ATTR_A != '' and USER_ATTR_A !=null"> AND ATTR.USER_ATTR_A = #{USER_ATTR_A} /* 사용자소속A */ </if>
+				<if test="USER_ATTR_B != '' and USER_ATTR_B !=null"> AND ATTR.USER_ATTR_B = #{USER_ATTR_B} /* 사용자소속B */ </if>
+				<if test="USER_ATTR_C != '' and USER_ATTR_C !=null"> AND ATTR.USER_ATTR_C = #{USER_ATTR_C} /* 사용자소속C */ </if>
+				<if test="USER_ATTR_D != '' and USER_ATTR_D !=null"> AND ATTR.USER_ATTR_D = #{USER_ATTR_D} /* 사용자소속D */ </if>
+				 
+				<if test="SORT_ORDR == 'USER_NM'">
+				ORDER BY USER_NM
+				</if>
+				<if test="SORT_ORDR == 'JOIN_DATE'">
+				ORDER BY COALESCE(A.ETC_INFO01, ' ') DESC
+				</if>
+	        ) RE
+	</select>
+	
+	<!-- 사용자 조회_new -->
+	<select id="selectRtnUserInfo_new" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* 사용자 조회 (kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper.selectRtnUserInfo_new)*/
+			ROW_NUMBER() OVER(ORDER BY PU.REG_DT DESC) AS ROW_NUMBER
+			, PU.USER_ID
+			, PU.LGN_ID
+			, PU.USER_NM
+			, PU.USER_NNM
+			, PU.PSWD_FAIL_CNT
+			, PU.CLBK_YN
+			, COALESCE(PU.DPCN_LGN_PM_YN, 'N') AS DPCN_LGN_PM_YN
+			, PU.JBTTL_CD
+			, PU.REG_DT
+			, PU.EML
+			, PU.USER_EXPLN
+			, PU.MBL_PHN_NO
+			, PU.JNCMP_YMD
+			, PU.RSGNTN_YMD
+			, PU.ICON
+			, PF.FILE_PATH||'/'||PF.STRG_FILE_NM AS ICON_URL
+			, PU.STTS_EXPSR_MTHD_CD
+			<if test='SCH_USER_ID != null and SCH_USER_ID != ""'>
+			, (SELECT ARRAY_TO_STRING(ARRAY_AGG( FILE_PATH || '/' || STRG_FILE_NM ), '') FROM PLT_FILE WHERE FILE_GROUP_KEY = PU.ICON) AS ICON_IMG_URI
+			</if>
+			, (SELECT LGN_ID FROM PLT_USER WHERE USER_ID = PU.RGTR_ID) AS RGTR_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PU.RGTR_ID) AS RGTR_NM
+			, (SELECT AUTHRT_GROUP_ID FROM PLT_USER_AUTHRT WHERE USER_ID = PU.USER_ID) AS AUTHRT_GROUP_ID
+			, (SELECT PA.AUTHRT_GROUP_NM FROM PLT_USER_AUTHRT PUA INNER JOIN PLT_AUTHRT PA ON PA.AUTHRT_GROUP_ID = PUA.AUTHRT_GROUP_ID WHERE PUA.USER_ID = PU.USER_ID) AS AUTHRT_GROUP_NM
+			, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'JOB_POST' AND CD_ID = PU.JBTTL_CD) AS JBTTL
+			, (SELECT CO_NM FROM PLT_CUSTCO WHERE CUSTCO_ID = PUO.CUSTCO_ID) AS CO_NM
+			, PUO.DEPT_ID
+			, (SELECT DEPT_NM FROM PLT_OGNZ WHERE DEPT_ID = PUO.DEPT_ID) AS DEPT_NM
+			, (SELECT ARRAY_TO_STRING(ARRAY_AGG( COALESCE(BLDG_PSTN,'') || ' ' || COALESCE(BLDG_NM,'') || ' ' || COALESCE(BLDG_NOFL || '층 ', '') || COALESCE(OFC_NO, '') ), '') FROM PLT_OGNZ WHERE DEPT_ID = PUO.DEPT_ID) AS OFC_ADDR
+			, PU.USER_STTS_CD
+			, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'USER_ST' AND CD_ID = PU.USER_STTS_CD) AS USER_STTS
+			, PU.CNTN_IP
+			, (SELECT MAX(REG_DT) FROM PLT_USER_LOG WHERE USER_ID = PU.USER_ID) AS CNTN_DT
+			<if test='SCH_USER_ID != null and SCH_USER_ID != ""'>
+			, (WITH RECURSIVE OGNZ_TREE
+				AS (
+					SELECT CUSTCO_ID, DEPT_ID, UP_DEPT_ID, DEPT_NM::VARCHAR(300) AS FULL_PATH
+					FROM PLT_OGNZ
+					WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+					AND UP_DEPT_ID IS NULL
+					UNION ALL
+					SELECT B.CUSTCO_ID, B.DEPT_ID, COALESCE(B.UP_DEPT_ID, 0) AS UP_DEPT_ID, CAST(C.FULL_PATH || ' > ' || B.DEPT_NM AS VARCHAR(300)) AS FULL_PATH
+					FROM PLT_OGNZ B
+					INNER JOIN OGNZ_TREE C ON C.DEPT_ID = COALESCE(B.UP_DEPT_ID, 0)
+					WHERE B.CUSTCO_ID = #{CUSTCO_ID}::INT
+				)
+				SELECT OT.FULL_PATH FROM OGNZ_TREE OT WHERE DEPT_ID = PUO.DEPT_ID
+			) AS FULL_PATH
+			</if>
+			, (SELECT EXT_NO FROM PLT_PHN_IP_EXT WHERE USER_ID = PU.USER_ID AND DEPT_ID = PUO.DEPT_ID) AS EXT_NO
+			, COALESCE(PU.RSVT_ALTMNT_USE_YN, 'N') AS RSVT_YN
+			, COALESCE(PU.CUSTCO_CUSL_ID, '') AS CUSTCO_CUSL_ID
+		FROM PLT_USER PU
+		LEFT OUTER JOIN PLT_USER_OGNZ PUO ON PUO.USER_ID = PU.USER_ID AND PUO.USE_YN = 'Y' AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		LEFT JOIN PLT_FILE PF ON PU.ICON = PF.FILE_GROUP_KEY
+		WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<choose>
+			<when test='SCH_USER_ID != null and SCH_USER_ID != ""'>AND PU.USER_ID =  #{USER_ID}::INT</when>
+			<otherwise><choose><when test='USER_ID == 1'></when><when test='USER_ID == 3'>AND PU.USER_ID > 2 AND PU.USER_ID NOT IN (4)</when><when test='USER_ID > 4'>AND PU.USER_ID NOT IN (0, 1, 2, 3, 4)</when></choose></otherwise>
+		</choose>
+		<if test="LGN_ID != null and LGN_ID != ''">AND PU.LGN_ID LIKE '%'|| #{LGN_ID}|| '%'</if>
+		<if test="USER_NM != null and USER_NM != ''">AND PU.USER_NM LIKE '%'|| #{USER_NM}|| '%'</if>
+		<if test="CNTN_IP != null and CNTN_IP != ''">AND PU.CNTN_IP LIKE '%'|| #{CNTN_IP}|| '%'</if>
+		<if test="USER_STTS_CD != null and USER_STTS_CD != ''">AND PU.USER_STTS_CD = #{USER_STTS_CD}</if>
+		<if test="AUTHRT_GROUP_ID != null and AUTHRT_GROUP_ID != ''">AND EXISTS (SELECT 1 FROM PLT_USER_AUTHRT WHERE USER_ID = PU.USER_ID AND AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}::INT)</if>
+	</select>
+		
+	<!-- 사용자 정보 조회(페이지검색) - 사용자 정보 조회 팝업 -->
+	<select id="selectUserListPage"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ROW_NUMBER() OVER(ORDER BY USER_NM) AS ROW_NUMBER
+	     , PG.*
+	  FROM (
+	        SELECT  A.USER_ID -- 사용자ID
+	             , A.USER_NM -- 사용자명
+	             , A.INLN_NO -- 내선번호
+	             , A.HP_NO   -- 핸드폰번호
+	          FROM PLT_USER A
+	         WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+	           AND A.USE_YN = 'Y' 
+	        <if test="USER_INFO !='' and USER_INFO != NULL">
+	           AND (A.USER_ID LIKE '%' || #{USER_INFO} || '%'
+	                OR A.USER_NM LIKE '%' || #{USER_INFO} || '%')
+	        </if>
+	        ORDER BY A.USER_NM
+	        ) PG
+	</select>
+	
+	
+	<!-- 특정 사용자의 특정 메뉴 권한 보유여부를 체크한다. -->
+	<select id="chkHasMenuAuthoity"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COUNT(1) AS HAS_CNT
+	  FROM PLT_USER A
+	     , PLT_USER_AUTH B
+	     , PLT_AUTH C
+	     , PLT_AUTH_PRG D
+	 WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+	   AND A.USER_ID       = B.USER_ID
+	   AND B.ATRT_GROUP_ID = C.ATRT_GROUP_ID
+	   AND C.ATRT_GROUP_ID = D.ATRT_GROUP_ID
+	   AND A.USER_ID       = #{USER_ID}
+	   AND D.MENU_ID       = #{MENU_ID}
+	</select>
+	
+	<!-- 사용자 비밀번호 유효기간 만료여부를 체크한다. -->
+	<select id="chkUserPasswordExpireDate"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+	SELECT CASE WHEN TO_DATE(ETC_INFO02, 'YYYY/MM/DD HH24:MI:SS') + 90 < NOW() THEN 'EXPIRED' ELSE 'ENABLE' END AS IS_ENABLE
+	  FROM PLT_USER
+	 WHERE CUSTCO_ID = #{CUSTCO_ID}
+	   AND USER_ID = #{USER_ID}
+	]]>
+	</select>
+	
+	<!-- 사용자정보를 조회한다.(사용자정보 조회 공통팝업) -->
+	<select id="selectRtnUserBaseInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT A.USER_ID                                  AS USER_ID          -- 사용자ID
+	     , A.USER_NM                                  AS USER_NM          -- 사용자명
+	  FROM PLT_USER A
+	 WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+	<if test="USER_INFO != '' and USER_INFO != null">
+	   AND ( USER_ID LIKE '%' || #{USER_INFO} || '%'
+	    OR   USER_NM LIKE '%' || #{USER_INFO} || '%' )
+	</if>
+	 ORDER BY USER_ID, USER_NM
+	</select>
+	
+	<!-- 사용자 등록 시, 기본 채팅 허용수를 같이 등록 -->
+	<insert id="mergeUserChatAgent" parameterType="java.util.HashMap">
+		
+		MERGE 
+			INTO PLT_CHT_USER_CHAT_SET  UCA
+		USING DUAL
+		ON ( UCA.USER_ID = #{USER_ID})
+		WHEN MATCHED THEN
+		UPDATE 
+			SET
+		UCA.MAX_CHAT_AGENT = UCA.MAX_CHAT_AGENT
+		, UCA.CUSTCO_ID = #{ASP_NEWCUST_KEY_DE}
+		WHEN NOT MATCHED THEN
+		INSERT ( 
+			USER_ID
+			, CUSTCO_ID
+			, MAX_CHAT_AGENT
+		) VALUES (
+			#{USER_ID}
+			, #{ASP_NEWCUST_KEY_RE}
+			, (SELECT COALESCE(CASE WHEN (SELECT STNG_VL FROM PLT_CHT_ENV WHERE STNG_CD = 'CONT_CHATAGENT_YN'  AND CUSTCO_ID = #{ASP_NEWCUST_KEY_RE}) = 'Y' 
+			                     THEN (SELECT STNG_VL FROM PLT_CHT_ENV WHERE STNG_CD = 'CONT_CHATAGENT_CNT'  AND CUSTCO_ID = #{ASP_NEWCUST_KEY_RE})
+						       ELSE '3' END,'3') )
+		)
+		 
+	</insert>
+	
+	<update id="updatePasswordReset" parameterType= "java.util.HashMap">
+		UPDATE PLT_USER
+		 SET PSWD 			=  #{PSWD}						/* 초기화된 비밀번호 */
+			,MDFR_ID 		=  #{USER_ID}::INTEGER					/* 수정한 사용자ID */
+			,PSWD_STTS		=  #{PSWD_STTS}							/* 비밀번호 상태 */
+			,PSWD_MDFCN_DT 	=  TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	/* 비밀번호를 수정한 사용자ID */
+		 WHERE USER_ID 		=  #{RESET_USER_ID}::INTEGER			/* 초기화된 사용자ID */
+	</update>
+	
+	<update id="updatePasswordUnLock" parameterType= "java.util.HashMap">
+		UPDATE PLT_USER
+		SET PSWD_FAIL_CNT = #{PSWD_FAIL_CNT}::INTEGER
+		, PSWD_STTS = #{PSWD_STTS}
+		, MDFR_ID = #{MDFR_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		WHERE USER_ID = #{RESET_USER_ID}::INTEGER AND LGN_ID = #{RESET_LGN_ID}
+	</update>
+	
+<select id="selectRtnUserPage_new" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ROW_NUMBER() OVER() AS ROW_NUMBER 				/* 번호 */
+		 , PU.USER_ID										/* 사용자ID */
+		 , PU.LGN_ID										/* 로그인ID */
+		 , PU.USER_NM										/* 사용자이름 */
+		 , PU.USER_NNM										/* 사용자별칭(닉네임) */
+		 , PPIE.EXT_NO										/* 내선번호 */
+		 , PU.JBTTL_CD										/* 직책코드 */
+		 , (SELECT CD_NM
+		 	FROM PLT_COMM_CD
+		 	WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'JOB_POST'
+		 		AND CD_ID = PU.JBTTL_CD)	AS JBTTL		/* 직책 */
+		 , PUO.DEPT_ID										/* 부서코드 */
+		 , (SELECT DEPT_NM FROM PLT_OGNZ WHERE DEPT_ID = PUO.DEPT_ID) AS DEPT_NM			/* 부서이름 */
+		 , (WITH RECURSIVE DEPT_TREE 
+		 	AS(SELECT DEPT_ID,DEPT_NM,UP_DEPT_ID,DEPT_NM AS full_path
+		    	FROM PLT_OGNZ
+		    	WHERE DEPT_ID = PUO.DEPT_ID
+		    	UNION ALL
+		    	SELECT PO.DEPT_ID,PO.DEPT_NM,PO.UP_DEPT_ID, cast(DT.DEPT_NM || ' > ' || PO.DEPT_NM AS VARCHAR(100))
+		    	FROM DEPT_TREE DT
+		    	INNER JOIN PLT_OGNZ PO on PO.DEPT_ID = DT.UP_DEPT_ID
+			)SELECT FULL_PATH 
+				FROM DEPT_TREE 
+				WHERE UP_DEPT_ID IS NULL)	AS FULL_PATH	/* 부서 */
+		, PU.USER_STTS_CD									/* 사용자상태코드 */
+		, (SELECT CD_NM
+		 	FROM PLT_COMM_CD
+		 	WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'USER_ST'
+		 		AND CD_ID = PU.USER_STTS_CD) AS USER_STTS	/* 사용자상태 */
+		, PU.USER_EXPLN
+	FROM PLT_USER PU
+	LEFT JOIN PLT_USER_OGNZ PUO
+		on PUO.USER_ID = PU.USER_ID
+		AND PUO.USE_YN = 'Y'
+		AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	LEFT JOIN PLT_PHN_IP_EXT PPIE
+		ON PU.USER_ID = PPIE.USER_ID
+	LEFT JOIN PLT_OGNZ PO
+		ON PO.DEPT_ID = PPIE.DEPT_ID
+	WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+		<if test="SRCH_USER_ID != '' and SRCH_USER_ID != null">AND PU.LGN_ID LIKE '%'|| #{SRCH_USER_ID}|| '%'</if>
+		<if test="SRCH_USER_NM != '' and SRCH_USER_NM != null">AND PU.USER_NM LIKE '%'|| #{SRCH_USER_NM}|| '%'</if>
+		<if test="USER_STTS_CD != '' and USER_STTS_CD != null">AND PU.USER_STTS_CD = #{USER_STTS_CD}</if>
+	ORDER BY ROW_NUMBER
+</select>
+
+<!-- PLT_USER(사용자정보) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_USER"  parameterType= "java.util.HashMap">
+   INSERT INTO PLT_USER  /*PLT_USER 사용자 등록 (kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper.INSERT_PLT_USER)*/
+		( USER_ID					/* 사용자 ID */
+		, LGN_ID					/* 사용자 로그인 ID */
+		, USER_NM					/* 사용자 이름 */
+		, USER_NNM					/* 사용자 별칭 */
+		, EML 						/* 이메일 */
+		, MBL_PHN_NO				/* 전화번호 */
+		, PSWD						/* 비밀번호*/
+		, JNCMP_YMD					/* 입사일자 */
+		, RSGNTN_YMD				/* 퇴사일자 */
+		, USER_SE_CD				/* 사용자구분코드 */
+		, USER_STTS_CD				/* 사용자상태코드 */
+		, JBTTL_CD					/* 직책코드 */
+		, CLBK_YN					/* 콜백여부 */
+		, RGTR_ID					/* 등록자 ID */
+		, REG_DT					/* 등록일자 */
+		, MDFR_ID					/* 수정자 ID */
+		, MDFCN_DT					/* 수정일자 */
+		, USE_YN					/* 사용여부 */
+		, PSWD_ENCPT_CD				/* 비밀번호 암호화키 */
+		, PSWD_FAIL_CNT				/* 비밀번호 실패 횟수 */
+		, PSWD_STTS					/* 비밀번호 상태 */
+		, USER_CERT_YN				/* 사용자인증여부*/
+		, ICON						/* 아이콘 */
+		, TOP_MSG					/* 상단메시지 */
+		, USER_EXPLN				/* 사용자설명 */
+		<if test='DPCN_LGN_PM_YN != null and DPCN_LGN_PM_YN != ""'>, DPCN_LGN_PM_YN /* 중복로그인허용여부 */</if>
+		, STTS_EXPSR_MTHD_CD /* 모니터링 표시 방법 */
+		, RSVT_ALTMNT_USE_YN	/* 상담예약 배분여부 */
+		, CUSTCO_CUSL_ID	/* 고객사 상담사 ID */
+		)
+		VALUES
+		( #{GEN_USER_ID}::INTEGER
+		, #{LGN_ID}
+		, #{USER_NM}
+		, #{USER_NNM}
+		, #{EML}
+		, #{MBL_PHN_NO}		
+		, #{PSWD}
+		, #{JNCMP_YMD}
+		, #{RSGNTN_YMD}
+		, #{USER_SE_CD}
+		, #{USER_STTS_CD}
+		, #{JBTTL_CD}
+		, #{CLBK_YN}
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USE_YN}
+		, #{ENCRYPT_KEY}
+		, #{PSWD_FAIL_CNT}::INTEGER
+		, #{PSWD_STTS}
+		, #{USER_CERT_YN}
+		, null
+		, #{TOP_MSG}
+		, #{USER_EXPLN}
+		<if test='DPCN_LGN_PM_YN != null and DPCN_LGN_PM_YN != ""'>, #{DPCN_LGN_PM_YN}</if>
+		, #{STTS_EXPSR_MTHD_CD}
+		, #{RSVT_YN}
+		, #{CUSTCO_CUSL_ID}
+		)
+</insert>
+<!-- PLT_USER(사용자정보) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_CERT_USER"  parameterType= "java.util.HashMap">
+   INSERT INTO CUSTCO.PLT_CERT_USER  /* CUSTCO.PLT_CERT_USER 사용자 등록 (kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper.INSERT_PLT_CERT_USER)*/
+   		( CERT_USER_ID
+   		, LGN_ID )
+   	VALUES
+   		( #{GEN_CERT_USER_ID}::INTEGER
+   		, #{LGN_ID})
+   		
+</insert>
+<insert id="INSERT_PLT_CERT_CUSTCO_USER"  parameterType= "java.util.HashMap">
+   INSERT INTO CUSTCO.PLT_CERT_CUSTCO_USER  /* CUSTCO.PLT_CERT_CUSTCO_USER 사용자 등록 (kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper.INSERT_PLT_CERT_CUSTCO_USER)*/
+   		( CERT_CUSTCO_ID
+   		, CERT_USER_ID
+		, USE_YN
+		, SORT_ORD
+		, RGTR_ID
+		, REG_DT)
+   	VALUES
+   		( #{CERT_CUSTCO_ID}::INTEGER
+   		, #{GEN_CERT_USER_ID}::INTEGER
+   		, 'Y'
+   		, 1
+   		, #{RGTR_ID}::INTEGER
+   		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'))
+   		
+</insert>
+
+<insert id="INSERT_PLT_USER_AUTHRT"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_AUTHRT
+		( AUTHRT_GROUP_ID				/* 권한그룹 ID*/
+		, USER_ID						/* 사용자 ID*/
+		, RGTR_ID						/* 등록자 ID*/
+		, REG_DT)						/* 등록일자 */
+		VALUES(
+		#{AUTHRT_GROUP_ID}::INTEGER
+		, #{GEN_USER_ID}::INTEGER
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'))
+</insert>
+
+<insert id="INSERT_PLT_USER_OGNZ"  parameterType= "java.util.HashMap">		
+	INSERT INTO PLT_USER_OGNZ
+		( USER_ID						/* 사용자 ID*/
+		, DEPT_ID						/* 소속부서 ID*/
+		, CUSTCO_ID						/* 고객사 ID*/
+		, USE_YN						/* 사용여부 */
+		, RGTR_ID						/* 등록자 ID */
+		,REG_DT)						/* 등록일자 */
+		VALUES
+		(#{GEN_USER_ID}::INTEGER
+		, #{DEPT_ID}::INTEGER
+		, #{CUSTCO_ID}::INTEGER
+		<!--, #{USE_YN}-->
+		, 'Y'
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'))
+</insert>
+
+<!-- 사용자 소속등록 -->
+<insert id="processRtnAttr" parameterType="java.util.HashMap">
+	MERGE INTO PLT_USER_ATTR T
+		USING DUAL
+			ON 	(T.USER_ID = #{USER_ID}
+				AND T.CUSTCO_ID = #{ASP_NEWCUST_KEY_ATTR}
+				)
+		WHEN MATCHED THEN
+			UPDATE SET
+				  T.AMDR_ID = #{AMDR_ID}
+				, T.UPD_DTTM = NOW()
+				, T.USER_ATTR_A = #{USER_ATTR_A}
+				, T.USER_ATTR_B = #{USER_ATTR_B}
+				, T.USER_ATTR_C = #{USER_ATTR_C}
+				, T.USER_ATTR_D = #{USER_ATTR_D}
+		WHEN NOT MATCHED THEN
+			INSERT
+			 ( 	 T.USER_ID
+				 , T.CUSTCO_ID 	
+				 , T.AMDR_ID 		
+				 , T.REGR_ID 		
+				, T.REG_DTTM 	
+				, T.UPD_DTTM 		
+				, T.USER_ATTR_A
+				, T.USER_ATTR_B 
+				, T.USER_ATTR_C 
+				, T.USER_ATTR_D  
+			 ) VALUES (
+				#{USER_ID}
+				, #{ASP_NEWCUST_KEY_ATTR}
+				, #{AMDR_ID}
+				, #{REGR_ID}
+				, NOW()
+				, NOW()
+				, #{USER_ATTR_A}
+				, #{USER_ATTR_B}
+				, #{USER_ATTR_C}
+				, #{USER_ATTR_D}
+			 )
+</insert>
+
+<!-- PLT_USER(사용자정보) 테이블 수정 로그인 페이지 비밀번호 변경 시 CUSTCO_ID가 존재하지 않는다 -->	
+<update id="UPDATE_PLT_USER"  parameterType="java.util.HashMap">			
+UPDATE PLT_USER
+   SET IT_PROCESSING   	= NOW()
+  <if test="USER_NM				!='' and USER_NM 			!= null">     , USER_NM			    = #{USER_NM}   			/* 사용자이름 */  </if>
+  <if test="USER_NICK			!='' and USER_NICK 			!= null">     , USER_NICK			= #{USER_NICK}   		/* 사용자닉네임 */  </if>
+  <if test="PWD					!='' and PWD 				!= null">     , PWD				    = #{PWD}  			 	/* 비밀번호 */
+  																		  , PWD_UPD_DTTM = NOW()						/* 비밀번호수정일시 */
+    																																</if>
+  <if test="DEPT_CD				!='' and DEPT_CD 			!= null">     , DEPT_CD			    = #{DEPT_CD}   			/* 부서코드 */  </if>
+  <if test="BRCH_CD				!='' and BRCH_CD 			!= null">     , BRCH_CD			    = #{BRCH_CD}   			/* 지사코드 */  </if>
+  <if test="CEN_TYPE_CD			!='' and CEN_TYPE_CD 		!= null">     , CEN_TYPE_CD		    = #{CEN_TYPE_CD}  		/* 센터구분코드 */  </if> 
+  <if test="USER_GROUP_CD		!='' and USER_GROUP_CD 		!= null">     , USER_GROUP_CD		= #{USER_GROUP_CD}  	/* 사용자그룹코드 */  </if>
+  <if test="USER_TEAM_PTTN_CD	!='' and USER_TEAM_PTTN_CD 	!= null">     , USER_TEAM_PTTN_CD	= #{USER_TEAM_PTTN_CD}  /* 사용자팀유형코드 */  </if> 
+  <if test="PSNT_LOGIN_YN		!='' and PSNT_LOGIN_YN 		!= null">     , PSNT_LOGIN_YN		= #{PSNT_LOGIN_YN}  	/* 현재로그인여부 */  </if>
+  <if test="PWD_FAIL_FREQ		!='' and PWD_FAIL_FREQ 		!= null">     , PWD_FAIL_FREQ		= #{PWD_FAIL_FREQ, jdbcType=NUMERIC}    /* 비밀번호실패횟수 */ </if>
+  <if test="BDAY				!='' and BDAY 				!= null">     , BDAY				= #{BDAY} 	    /* 생년월일 */ </if>   	
+  <if test="INLN_NO				!='' and INLN_NO 			!= null">     , INLN_NO			    = #{INLN_NO}    /* 핸드폰번호 */  </if>
+  <if test="HP_NO				!='' and HP_NO 				!= null">     , HP_NO			    = #{HP_NO}    /* 내선번호 */  </if>   	
+  <if test="EML_ADDR			!='' and EML_ADDR 		!= null">     , EML_ADDR		    = #{EML_ADDR} /* E-MAIL주소 */ </if> 
+  <if test="SOCAL_TYPE			!='' and SOCAL_TYPE 		!= null">     , SOCAL_TYPE		    = #{SOCAL_TYPE} /* 양력구분코드 */ </if>
+  <if test="ENTCO_DT			!='' and ENTCO_DT 			!= null">     , ENTCO_DT			= #{ENTCO_DT} 	/* 입사일자 */ 	</if>
+  <if test="RETR_DT				!='' and RETR_DT 			!= null">     , RETR_DT			    = #{RETR_DT}   	/* 퇴사일자 */ 	</if>
+  <if test="USER_TYPE_CD		!='' and USER_TYPE_CD 		!= null">     , USER_TYPE_CD	    = #{USER_TYPE_CD}  /* 사용자구분코드 */	</if> 
+  <if test="USER_DUTY_CD		!='' and USER_DUTY_CD 		!= null">     , USER_DUTY_CD		= #{USER_DUTY_CD}  /* 사용자직책코드 */ 	</if>
+  <if test="PSNT_LOGIN_YN		!='' and PSNT_LOGIN_YN 		!= null">
+  	  <choose>
+	      <when test='PSNT_LOGIN_YN == "Y"'>
+			  , ETC_INFO01 = TO_CHAR(NOW(),'YYYY/MM/DD HH24:MI:SS')	/* 기타정보01 */ 
+		  </when>
+	  </choose>  
+  </if>
+  <if test="ETC_INFO02			!='' and ETC_INFO02 		!= null">     , ETC_INFO02		    = #{ETC_INFO02} /* 기타정보02 */ </if>
+  <if test="ETC_INFO03			!='' and ETC_INFO03 		!= null">     , ETC_INFO03		    = #{ETC_INFO03} /* 기타정보03 */ </if>
+  <if test="ETC_INFO04			!='' and ETC_INFO04 		!= null">     , ETC_INFO04		    = #{ETC_INFO04} /* 기타정보04 */ </if>
+  <if test="ETC_INFO05			!='' and ETC_INFO05 		!= null">     , ETC_INFO05		    = #{ETC_INFO05} /* 기타정보05 */ </if>
+  <if test="ETC_INFO06			!='' and ETC_INFO06 		!= null">     , ETC_INFO06		    = #{ETC_INFO06} /* 기타정보06 */ </if>
+  <if test="ETC_INFO07			!='' and ETC_INFO07 		!= null">     , ETC_INFO07		    = #{ETC_INFO07} /* 기타정보07 */ </if>
+  <if test="ETC_INFO08			!='' and ETC_INFO08 		!= null">     , ETC_INFO08		    = #{ETC_INFO08} /* 기타정보08 */ </if>
+  <if test="ETC_INFO09			!='' and ETC_INFO09 		!= null">     , ETC_INFO09		    = #{ETC_INFO09} /* 기타정보09 */ </if>
+  <if test="ETC_INFO10			!='' and ETC_INFO10 		!= null">     , ETC_INFO10		    = #{ETC_INFO10} /* 기타정보10 */ </if>
+  <if test="USE_YN				!='' and USE_YN 			!= null">     , USE_YN			    = #{USE_YN}   	   /* 사용여부 */ </if>
+  <if test="CNNCT_IP			!='' and CNNCT_IP 			!= null">     , CNNCT_IP			= #{CNNCT_IP}      /* 접속아이피 */ </if>
+  <if test="REGR_DEPT_CD		!='' and REGR_DEPT_CD 		!= null">     , REGR_DEPT_CD		= #{REGR_DEPT_CD}  /* 등록자부서코드 */ </if>
+  <if test="REGR_ID				!='' and REGR_ID 			!= null">     , REGR_ID			    = #{REGR_ID} 	   /* 등록자ID */ </if>
+  <if test="REG_DTTM			!='' and REG_DTTM 			!= null">     	
+	  <choose>
+	      <when test="REG_DTTM == 'NOW()'">
+			  , REG_DTTM = NOW()	/* 등록일시 */ 
+		  </when>
+		  <otherwise>
+		      , REG_DTTM = #{REG_DTTM} /* 등록일시 */
+		  </otherwise>
+	  </choose>
+  </if>   
+  <if test="AMDR_DEPT_CD		!='' and AMDR_DEPT_CD 	!= null">     , AMDR_DEPT_CD		= (SELECT * FROM(SELECT DEPT_CD FROM PLT_USER WHERE USER_ID = #{AMDR_ID})AS A)  /* 수정자부서코드 */ </if>   
+  <if test="AMDR_ID				!='' and AMDR_ID 		!= null">     , AMDR_ID			    = #{AMDR_ID}  /* 수정자ID */ </if>  
+  <if test="UPD_DTTM			!='' and UPD_DTTM 		!= null">
+ 	  <choose>
+	      <when test="UPD_DTTM == 'NOW()'">
+			  , UPD_DTTM = NOW()	/* 수정일시 */ 
+		  </when>
+		  <otherwise>
+		      , UPD_DTTM = #{UPD_DTTM} /* 수정일시 */
+		  </otherwise>
+	  </choose> 
+  </if>
+  <if test="PROC_ID				!='' and PROC_ID 		!= null">     , PROC_ID			    = #{PROC_ID}  /* 처리자 */  	      </if>
+  <if test="SPEC_CNSL_CD		!='' and SPEC_CNSL_CD 	!= null">     , SPEC_CNSL_CD        = #{SPEC_CNSL_CD}  /* 전문상담코드 */  </if>
+  <if test="PWD_STATUS			!='' and PWD_STATUS 	!= null">     , PWD_STATUS        	= #{PWD_STATUS}  /* 비밀번호상태 */  	  </if>
+  
+	<!-- 20190509 ojw added for new user dept -->
+	<!-- <if test="USER_ATTR_A != '' and USER_ATTR_A 	!= null"> , USER_ATTR_A = #{USER_ATTR_A} /* 사용자소속A */ </if>
+	<if test="USER_ATTR_B != '' and USER_ATTR_B 	!= null"> , USER_ATTR_B = #{USER_ATTR_B} /* 사용자소속B */ </if>
+	<if test="USER_ATTR_C != '' and USER_ATTR_C 	!= null"> , USER_ATTR_C = #{USER_ATTR_C} /* 사용자소속C */ </if>
+	<if test="USER_ATTR_D != '' and USER_ATTR_D 	!= null"> , USER_ATTR_D = #{USER_ATTR_D} /* 사용자소속D */ </if> 
+-->
+ WHERE 1 = 1 
+   AND USER_ID         = #{USER_ID}  
+</update>
+
+<!-- PLT_USER(사용자정보) 테이블 수정 로그인 페이지 비밀번호 변경 시  사용자 관리에서 CUSTCO_ID를 사용하여 변경한다 -->	
+<update id="UPDATE_PLT_USER_USER"  parameterType="java.util.HashMap">
+UPDATE PLT_USER /*PLT_USER 사용자 업데이트 (kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper.UPDATE_PLT_USER_USER)*/
+SET		MDFR_ID = #{USER_ID}::INTEGER																			/* 수정자 ID */
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')															/* 수정일시 */
+		<if test="USER_NM			 !='' and USER_NM 			!= null"> ,USER_NM 		= #{USER_NM}			/* 사용자 이름 */ </if>  
+		<if test="USER_NNM 			 !='' and USER_NNM 			!= null"> ,USER_NNM 	= #{USER_NNM}   		/* 사용자 별칭*/ </if>  
+		<if test="JNCMP_YMD 		 !='' and JNCMP_YMD 		!= null"> ,JNCMP_YMD 	= #{JNCMP_YMD}    		/* 입사일자 */</if>  
+		<if test="RSGNTN_YMD 		 !='' and RSGNTN_YMD 		!= null"> ,RSGNTN_YMD	= #{RSGNTN_YMD}     	/* 퇴사일자 */ </if>  
+		<if test="USER_SE_CD 		 !='' and USER_SE_CD 		!= null"> ,USER_SE_CD	= #{USER_SE_CD}     	/* 사용자구분코드 */</if>  
+		<if test="USE_YN 		 	 !='' and USE_YN			!= null"> ,USE_YN		= #{USE_YN}    			/* 사용여부 */</if>  
+		<if test="USER_STTS_CD 		 !='' and USER_STTS_CD 		!= null"> ,USER_STTS_CD = #{USER_STTS_CD}   	/* 사용자 상태 코드*/</if>  
+		<if test="JBTTL_CD 			 !='' and JBTTL_CD 			!= null"> ,JBTTL_CD 	= #{JBTTL_CD} 			/* 직책코드 */</if>  
+		<if test="CLBK_YN			 !='' and CLBK_YN 			!= null"> ,CLBK_YN 		= #{CLBK_YN} 			/* 콜백사용여부 */</if>
+		<if test="DPCN_LGN_PM_YN	 !='' and DPCN_LGN_PM_YN 	!= null"> ,DPCN_LGN_PM_YN = #{DPCN_LGN_PM_YN} 	/* 중복로그인허용여부 */</if>
+		,STTS_EXPSR_MTHD_CD = #{STTS_EXPSR_MTHD_CD} 	/* 모니터링 표시 방법 */
+		<if test="EML			 	 !='' and EML 				!= null"> ,EML   		= #{EML} 				/* 이메일 */</if>
+		<if test="MBL_PHN_NO		 !='' and MBL_PHN_NO 		!= null"> ,MBL_PHN_NO	= #{MBL_PHN_NO} 		/* 휴대전화번호 */</if>
+		<if test="PSWD				 !='' and PSWD 		 		!= null">, PSWD 		 = #{PSWD}				/* 초기화된 비밀번호 */ </if>
+		<if test="PSWD_ENCPT_CD		 !='' and PSWD_ENCPT_CD 	!= null">, PSWD_ENCPT_CD = #{PSWD_ENCPT_CD}		/* 비밀번호암호화키 */	</if>
+		<if test="PSWD_STTS			 !='' and PSWD_STTS 		!= null">, PSWD_STTS	 = #{PSWD_STTS} 		/* 비밀번호 상태 */</if>
+		<if test="PSWD				 !='' and PSWD	 			!= null">, PSWD_MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS') /* 비밀번호 수정 일시 */</if>	 
+		<if test="PSWD_FAIL_CNT		 !='' and PSWD_FAIL_CNT	 	!= null">, PSWD_FAIL_CNT = #{PSWD_FAIL_CNT}::INTEGER 		 /* 비밀번호 실패횟수 */</if>
+		<if test="ICON		 		 !='' and ICON			 	!= null">, ICON = #{ICON}						/* 사용자아이콘 */</if>	 
+		<if test="RSVT_YN		 	 !='' and RSVT_YN			!= null">, RSVT_ALTMNT_USE_YN = #{RSVT_YN}						/* 예약상담 배정여부 */</if>	 
+		<if test="CUSTCO_CUSL_ID	 !='' and CUSTCO_CUSL_ID	!= null">, CUSTCO_CUSL_ID = #{CUSTCO_CUSL_ID}					/* 고객사 상담사 ID */</if>	 
+			WHERE USER_ID  = #{REG_USER_ID}::INTEGER
+</update>	
+<update id="UPDATE_PLT_USER_OGNZ"  parameterType="java.util.HashMap">
+UPDATE PLT_USER_OGNZ
+SET		USE_YN 	= 'N'
+		,MDFR_ID = #{USER_ID}::INTEGER
+		,MDFCN_DT =  TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+WHERE USER_ID = #{REG_USER_ID}::INTEGER
+AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+</update>
+
+<!-- PLT_USER(사용자정보) 데이터 삭제 -->	
+<delete id="DELETE_PLT_USER"  parameterType="java.util.HashMap">
+DELETE FROM PLT_USER
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+   AND USER_ID         = #{USER_ID}
+</delete>
+
+
+<!-- PLT_USER(사용자정보) ID 중복 조회 -->
+<select id="SELECT_PLT_USER_PWD"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT USER_ID                       /* 사용자ID */
+  FROM PLT_USER
+ WHERE USER_ID = #{USER_ID}
+</select>
+
+<!-- PLT_USER(사용자정보) 로그인 ID 중복 조회 -->
+<select id="SELECT_PLT_USER_DPNC"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT LGN_ID                       /* 사용자ID */
+  FROM PLT_USER
+ WHERE LGN_ID = #{LGN_ID}
+</select>
+
+<!-- CUSTCO.PLT_CERT_USER(고객사 인증 사용자 정보)  로그인 ID 중복 조회 -->
+<select id="SELECT_PLT_CERT_USER_DPNC"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT LGN_ID                       /* 사용자ID */
+FROM CUSTCO.PLT_CERT_USER
+WHERE LGN_ID = #{LGN_ID}
+</select>
+
+
+<!-- PLT_USER(사용자정보) 테이블 데이터 조회, 로그인 페이지에서 비번 변경 시 CUSTCO_ID가 존재하지 않는다.-->
+<select id="SELECT_PLT_USER"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ROW_NUMBER() OVER() AS ROW_NUMBER 												/* 번호 */
+				 , PU.USER_ID																		/* 사용자ID */
+				 , PU.LGN_ID																		/* 로그인ID */
+				 , PU.USER_NM																		/* 사용자이름 */
+				 , PU.USER_NNM																		/* 사용자별칭(닉네임) */
+				 , PPIE.EXT_NO																		/* 내선번호 */
+				 , PU.PSWD_FAIL_CNT																	/* 비밀번호 실패 수 */
+				 , PU.CLBK_YN																		/* 콜백여부 */
+				 , PU.JBTTL_CD																		/* 직책코드 */
+				 , PU.REG_DT					 													/* 등록일자 */
+				 , PU.JNCMP_YMD																		/* 입사일자 */
+				 , PU.RSGNTN_YMD																	/* 퇴사일자 */
+				 , PU.PSWD																			/* 비밀번호 */
+				 , PU.PSWD_ENCPT_CD																	/* 비밀번호 암호화 키 */
+				 , PU2.LGN_ID AS RGTR_ID															/* 등록자 */
+				 , PUA.AUTHRT_GROUP_ID																/* 권한그룹 ID */
+		 		 ,(SELECT AUTHRT_GROUP_NM
+				 	FROM PLT_AUTHRT
+				 	WHERE AUTHRT_GROUP_ID = PUA.AUTHRT_GROUP_ID) as AUTHRT_GROUP_NM        			/* 권한그룹 이름 */
+				 , (SELECT CD_NM
+				 	FROM PLT_COMM_CD
+				 	WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'JOB_POST'
+				 		AND CD_ID = PU.JBTTL_CD)	AS JBTTL										/* 직책 */
+				 , PUO.DEPT_ID																		/* 부서코드 */
+				 , (SELECT DEPT_NM FROM PLT_OGNZ WHERE DEPT_ID = PUO.DEPT_ID) AS DEPT_NM			/* 부서이름 */
+				 , (WITH RECURSIVE DEPT_TREE
+				 	AS(SELECT DEPT_ID,DEPT_NM,UP_DEPT_ID,DEPT_NM AS full_path
+				    	FROM PLT_OGNZ
+				    	WHERE DEPT_ID = PUO.DEPT_ID
+				    	UNION ALL
+				    	SELECT PO.DEPT_ID,PO.DEPT_NM,PO.UP_DEPT_ID, cast(DT.DEPT_NM || ' > ' || PO.DEPT_NM AS VARCHAR(100))
+				    	FROM DEPT_TREE DT
+				    	INNER JOIN PLT_OGNZ PO on PO.DEPT_ID = DT.UP_DEPT_ID
+					)SELECT FULL_PATH
+						FROM DEPT_TREE
+						WHERE UP_DEPT_ID IS NULL)	AS FULL_PATH									/* 부서 트리 */
+				, PU.USER_STTS_CD																	/* 사용자상태코드 */
+				, (SELECT CD_NM
+				 	FROM PLT_COMM_CD
+				 	WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'USER_ST'
+				 		AND CD_ID = PU.USER_STTS_CD) AS USER_STTS									/* 사용자상태 */
+				 ,(SELECT CNTN_IP
+				 	FROM PLT_USER_LOG
+				 	WHERE USER_ID = PU.USER_ID
+				 	ORDER BY USER_LOG_ID DESC
+				 	LIMIT 1) as CNTN_IP                       										 /* 최근 접속 IP */
+				 , (SELECT REG_DT
+					 FROM PLT_USER_LOG
+					 WHERE USER_ID = PU.USER_ID
+					 ORDER BY USER_LOG_ID DESC
+					 LIMIT 1)as CNTN_DT																/* 최근 접속 일자 */
+					FROM PLT_USER PU
+					JOIN PLT_USER PU2
+						on PU.RGTR_ID = PU2.USER_ID
+					LEFT JOIN PLT_USER_OGNZ PUO
+						on PUO.USER_ID = PU.USER_ID
+						AND PUO.USE_YN = 'Y'
+						AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+					LEFT JOIN PLT_PHN_IP_EXT PPIE
+						ON PU.USER_ID = PPIE.USER_ID
+					LEFT JOIN PLT_OGNZ PO
+						ON PO.DEPT_ID = PPIE.DEPT_ID
+					LEFT JOIN PLT_USER_AUTHRT PUA
+    					ON PU.USER_ID = PUA.USER_ID
+					WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+					<if test="LGN_ID			 !='' and LGN_ID 			!= null">AND PU.LGN_ID   = #{LGN_ID}	</if>
+			ORDER BY ROW_NUMBER
+</select>
+
+<!-- PLT_USER(사용자정보) 비밀번호상태값 수정-->
+<update id="UPDATE_PWD_STATUS"  parameterType="java.util.HashMap">
+UPDATE PLT_USER
+ SET	PSWD 		 =  #{PSWD}		/* 초기화된 비밀번호 */
+		<if test="PSWD_ENCPT_CD		 !='' and PSWD_ENCPT_CD 	!= null">, PSWD_ENCPT_CD = #{PSWD_ENCPT_CD}	</if>			/* 비밀번호암호화키 */
+		<if test="PSWD_STTS			 !='' and PSWD_STTS 		!= null">, PSWD_STTS	 = #{PSWD_STTS} </if>				/* 비밀번호 상태 */
+			, PSWD_FAIL_CNT = #{PSWD_FAIL_CNT}::INTEGER
+			, PSWD_MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			WHERE USER_ID  = #{USER_ID}::INTEGER
+</update>
+
+<!-- 상담원 정보 조회 -->
+<!-- 	<select id="selectRtnUserInfoPop" parameterType= "java.util.HashMap" resultType="java.util.HashMap"> -->
+<!--    		 SELECT ROW_TBL.* -->
+<!-- 		         , PAG_TBL.* -->
+<!-- 		     FROM ( -->
+<!-- 			   		 SELECT ROWNUM -->
+<!-- 			   		       A.USER_ID													/*상담사ID*/ -->
+<!-- 			               ,A.USER_NM													/*상담사명*/ -->
+<!-- 			               ,(SELECT B.DEPT_NM -->
+<!-- 			                   FROM PLT_ORGZ B  -->
+<!-- 			                WHERE A.DEPT_CD = B.DEPT_CD -->
+<!-- 			                  AND A.TENANT_ID =  B.TENANT_ID) AS DEPT_NM				/*부서명*/ -->
+<!-- 			               ,(SELECT B.CODE_NM -->
+<!-- 			                   FROM PLT_COMN_CD B  -->
+<!-- 			                WHERE A.TM_KIND = B.CODE -->
+<!-- 			                  AND A.TENANT_ID =  B.TENANT_ID -->
+<!-- 			                  AND B.SORT_CD = 'NOTI_GUBUN') AS TM_KIND_NM				/*업무그룹명*/ -->
+<!-- 			               ,(SELECT B.CODE_NM -->
+<!-- 			                   FROM PLT_COMN_CD B  -->
+<!-- 			                WHERE A.AGENT_JIKCHK = B.CODE -->
+<!-- 			                  AND A.TENANT_ID =  B.TENANT_ID -->
+<!-- 			                  AND B.SORT_CD = 'AGENT_JIKCHK') AS AGENT_JIKCHK_NM   		/*직책명*/ -->
+<!-- 			               ,(SELECT B.CODE_NM -->
+<!-- 			                   FROM PLT_COMN_CD B  -->
+<!-- 			                  WHERE A.AGENT_JIKGUP = B.CODE -->
+<!-- 			                    AND A.TENANT_ID =  B.TENANT_ID -->
+<!-- 			                    AND B.SORT_CD = 'AGENT_JIKGUP') AS AGENT_JIKGUP_NM  	/*직급명*/       -->
+<!-- 			               ,A.TEL_NO													/*전화번호*/ -->
+<!-- 			               ,A.ENTER_YMD		/*입사일자*/ -->
+<!-- 			               ,A.RETIRE_YMD	/*퇴사일자*/ -->
+<!-- 			           FROM PLT_USER A -->
+<!-- 				      WHERE 1 = 1 -->
+<!-- 						<if test="USER_ID != '' and USER_ID != null"> AND A.USER_ID LIKE '%'|| #{USER_ID} ||'%'</if> -->
+<!-- 						<if test="USER_NM != '' and USER_NM != null"> AND A.USER_NM LIKE '%'|| #{USER_NM} ||'%'</if> -->
+<!-- 						<if test="DEPT_CD1 != '' and DEPT_CD2 == '' and DEPT_CD3 == ''">  -->
+
+<!-- 						</if> -->
+<!-- 						<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 == ''">  -->
+<!-- 								AND A.DEPT_CD IN (SELECT K.DEPT_CD -->
+<!-- 								                   FROM PLT_ORGZ K -->
+<!-- 								                  WHERE K.PARENT_DEPT_CD = #{DEPT_CD2} OR K.DEPT_CD = #{DEPT_CD2}) -->
+<!-- 						</if> -->
+<!-- 						<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 != ''">  -->
+<!-- 								AND A.DEPT_CD = #{DEPT_CD3}  -->
+<!-- 						</if> -->
+<!-- 	        			) ROW_TBL -->
+<!-- 						, ( -->
+<!-- 								SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */ -->
+<!-- 								  FROM PLT_USER A -->
+<!-- 								 WHERE 1 = 1 -->
+<!-- 								<if test="USER_ID != '' and USER_ID != null"> AND A.USER_ID LIKE '%'|| #{USER_ID} ||'%' </if> -->
+<!-- 								<if test="USER_NM != '' and USER_NM != null"> AND A.USER_NM LIKE '%'|| #{USER_NM} ||'%'</if> -->
+<!-- 						<if test="DEPT_CD1 != '' and DEPT_CD2 == '' and DEPT_CD3 == ''">  -->
+
+<!-- 						</if> -->
+<!-- 						<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 == ''">  -->
+<!-- 								AND A.DEPT_CD IN (SELECT K.DEPT_CD -->
+<!-- 								                   FROM PLT_ORGZ K -->
+<!-- 								                  WHERE K.PARENT_DEPT_CD = #{DEPT_CD2} OR K.DEPT_CD = #{DEPT_CD2}) -->
+<!-- 						</if> -->
+<!-- 						<if test="DEPT_CD1 != '' and DEPT_CD2 != '' and DEPT_CD3 != ''">  -->
+<!-- 								AND A.DEPT_CD = #{DEPT_CD3}  -->
+<!-- 						</if> -->
+<!-- 						) PAG_TBL -->
+<!-- 						ORDER BY ROW_TBL.USER_NM -->
+<!-- 	</select> -->
+
+	<select id="selectRtnUserInfoPop" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+			   		 SELECT A.USER_ID	AS AGENT_ID												/*상담사ID*/
+			               ,A.USER_NM	AS AGENT_NM												/*상담사명*/
+			               ,(SELECT B.DEPT_NM FROM PLT_ORGZ B WHERE A.DEPT_CD = B.DEPT_CD ) AS DEPT_NM				/*부서명*/
+			           FROM PLT_USER A
+				      WHERE 1 = 1
+						<if test="AGENT_ID != '' and AGENT_ID != null"> AND A.USER_ID LIKE '%'|| #{AGENT_ID} ||'%'</if>
+						<if test="AGENT_NM != '' and AGENT_NM != null"> AND A.USER_NM LIKE '%'|| #{AGENT_NM} ||'%'</if>
+	</select>
+
+<!-- 접속중인 사용자의 CUSTCO_ID로 ASP_CUST_KEY 조회 -->
+<select id="SELECT_ASP_CUST_KEY" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ASP_CUST_KEY FROM PLT_CUSTCO WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+</select>
+
+<!-- ASP_CUST_KEY로 CERT_CUSTCO_ID 조회 -->
+<select id="SELECT_CERT_CUSTCO_ID" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT CERT_CUSTCO_ID FROM CUSTCO.PLT_CERT_CUSTCO WHERE ASP_CUST_KEY = #{ASP_CUST_KEY}
+</select>
+
+
+<!-- PLT_USER테이블 사용자 삭제 -->
+<delete id="deleteUserTB"  parameterType="java.util.HashMap">
+DELETE FROM PLT_USER
+ WHERE USER_ID         = #{USER_ID}
+</delete>
+<!-- PLT_CHT_USER_CHAT_SET테이블 사용자 삭제 -->
+<delete id="deleteChatSetTB"  parameterType="java.util.HashMap">
+DELETE FROM PLT_CHT_USER_CHAT_SET
+ WHERE USER_ID         = #{USER_ID}
+</delete>
+<!-- PLT_USER_AUTH테이블 사용자 삭제 -->
+<delete id="deleteUserAuthTB"  parameterType="java.util.HashMap">
+DELETE FROM PLT_USER_AUTH
+ WHERE USER_ID         = #{USER_ID}
+</delete>
+<!-- PLT_USER_AUTH테이블 사용자 삭제 -->
+<delete id="deleteUserAttrTB"  parameterType="java.util.HashMap">
+DELETE FROM PLT_USER_ATTR
+ WHERE USER_ID         = #{USER_ID}
+</delete>
+
+<!-- PLT_USER테이블 사용자 ID 수정-->
+<update id="updateUserTB"  parameterType="java.util.HashMap">
+UPDATE PLT_USER
+   SET USER_ID   	= #{AF_USER_ID}
+   WHERE USER_ID         = #{BF_USER_ID}
+</update>
+<!-- PLT_CHT_USER_CHAT_SET테이블 사용자 ID 수정-->
+<update id="updateChatSetTB"  parameterType="java.util.HashMap">
+UPDATE PLT_CHT_USER_CHAT_SET
+   SET USER_ID   	= #{AF_USER_ID}
+   WHERE USER_ID         = #{BF_USER_ID}
+</update>
+<!-- PLT_USER_AUTH테이블 사용자 ID 수정-->
+<update id="updateUserAuthTB"  parameterType="java.util.HashMap">
+UPDATE PLT_USER_AUTH
+   SET USER_ID   	= #{AF_USER_ID}
+   WHERE USER_ID         = #{BF_USER_ID}
+</update>
+<!-- PLT_USER_ATTR테이블 사용자 ID 수정-->
+<update id="updateUserAttrTB"  parameterType="java.util.HashMap">
+UPDATE PLT_USER_ATTR
+   SET USER_ID   	= #{AF_USER_ID}
+   WHERE USER_ID         = #{BF_USER_ID}
+</update>
+
+
+	<!-- 고객사 채팅 사용여부 조회 -->
+	<select id="SELECT_CUSTCO_CHAT_YN" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 		/* SELECT_CUSTCO_CHAT_YN - 고객사 채팅 사용여부 조회 */
+			CASE WHEN COUNT(SNDR_KEY) = 0
+				THEN 'N'
+				ELSE 'Y' END	AS CHAT_YN
+		FROM PLT_CUSTCO_CHN
+	</select>
+
+	<!-- 채팅 사용자 등록 -->
+	<insert id="INSERT_CHAT_USER" parameterType="java.util.HashMap">
+		INSERT INTO 		/* INSERT_CHAT_USER - 채팅 사용자 등록 */
+			PLT_CHT_CUTT_PM_STNG
+			(
+				CUSL_ID
+				, CHT_LMT_CNT
+				, COMM_SCRIPT_EXPSR_YN
+			) VALUES (
+				#{GEN_USER_ID}::INTEGER
+				, (SELECT STNG_VL
+					FROM PLT_CHT_STNG
+					WHERE STNG_CD = 'CONT_CHATAGENT_CNT'
+						AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER)::INTEGER
+				, 'N'
+			)
+	</insert>
+	<insert id="INSERT_CHAT_USER_CUSTCO" parameterType="java.util.HashMap">
+		INSERT INTO 		/* INSERT_CHAT_USER_CUSTCO - 채팅 사용자 고객사 등록 */
+			PLT_CHT_CUTT_CUSTCO
+			(
+				CUSL_ID
+				, CUSTCO_ID
+			) VALUES (
+				#{GEN_USER_ID}::INTEGER
+				, #{CUSTCO_ID}::INTEGER
+			)
+	</insert>
+	
+	<select id="chkUserAcntCnt" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* chkUserAcntCnt - 허용 상담사 수 조회 */
+		    USER_ACNT_CNT 																				/* 고객사 등록 가능 상담사 전체 계정 개수 */
+			 , USER_CNT 																				/* 고객사 상담사 계정 개수 */
+		     <![CDATA[
+			 , COALESCE (CASE WHEN USER_CNT > -1 THEN USER_ACNT_CNT - USER_CNT END, 0) AS LEFT_USER_CNT /* 현재 등록 가능 계정 개수 */
+		     ]]>
+		FROM(
+				SELECT USER_ACNT_CNT
+					 , COALESCE(SET_USER_CNT.USER_CNT, 0) AS USER_CNT
+				FROM PLT_CUSTCO PC
+						 LEFT OUTER JOIN (
+											SELECT COUNT(PU.USER_ID) AS USER_CNT
+												 , PUO.CUSTCO_ID
+											FROM PLT_USER PU
+											INNER JOIN PLT_USER_OGNZ PUO ON PU.USER_ID = PUO.USER_ID AND PUO.USE_YN = 'Y' AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+											INNER JOIN PLT_USER_AUTHRT PUA ON PUA.USER_ID = PU.USER_ID
+											WHERE PU.USER_STTS_CD = 'WORK' AND PUA.AUTHRT_GROUP_ID = '6'::INTEGER
+											AND PU.USE_YN = 'Y'
+											AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+											GROUP BY PUO.CUSTCO_ID
+										) AS SET_USER_CNT ON SET_USER_CNT.CUSTCO_ID = PC.CUSTCO_ID
+				WHERE PC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			) AS CURR_USER
+	</select>
+
+	<select id="selectExtNoByUserId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectExtNoByUserId - 내선번호 체크 */
+				USER_ID
+				,DEPT_ID
+				,EXT_NO
+				,REG_DT
+		FROM PLT_PHN_IP_EXT
+		WHERE USER_ID = #{REG_USER_ID}::INTEGER AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</select>
+	<update id="updateDeptIdInExt"  parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_IP_EXT  /* updateDeptIdInExt - 내선번호 정보 업데이트 */
+		SET
+				DEPT_ID = #{DEPT_ID}::INTEGER
+			, MDFCN_DT 	= TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, MDFR_ID 	= #{USER_ID}::INTEGER
+		WHERE USER_ID = #{REG_USER_ID}::INTEGER
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+	<delete id="deleteExtNo"  parameterType="java.util.HashMap">
+		DELETE FROM PLT_PHN_IP_EXT /* deleteExtNo - 내선번호 정보 삭제 */
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND USER_ID = #{REG_USER_ID}::INTEGER
+	</delete>
+
+	<!-- 전체 스키마별(tenant) custco아이디 조회 -->
+	<select id="schemaCustcoList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*전체 스키마별 고객사 목록 (kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper.schemaCustcoList)*/
+			ROW_NUMBER() OVER(PARTITION BY PCC.SCHEMA_ID ORDER BY PCC.CERT_CUSTCO_ID) AS RNUM
+			, PCC.SCHEMA_ID
+			, PCC.ASP_CUST_KEY
+			, PCC.CERT_CUSTCO_ID
+			, PCC.CUSTCO_NM
+		FROM custco.PLT_CERT_CUSTCO PCC
+		WHERE PCC.SRVC_CRT_DT IS NOT NULL
+		AND PCC.SRVC_STTS_CD = 'ON' --서비스 중인 고객사
+		<if test='EXECPTION_CERT_CUSTCO_ID != null and EXECPTION_CERT_CUSTCO_ID != ""'>AND PCC.CERT_CUSTCO_ID != #{EXECPTION_CERT_CUSTCO_ID}::INT</if>
+	</select>
+
+	<select id="custcoCuslList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*고객사별 상담원 목록 (kr.co.hkcloud.palette3.setting.agent.dao.SettingAgentManageMapper.custcoCuslList)*/
+			ROW_NUMBER() OVER(ORDER BY PPIE.EXT_NO, PU.USER_ID) AS RNUM
+			, #{CERT_CUSTCO_ID}::INT AS CERT_CUSTCO_ID
+			, PC.CUSTCO_ID
+			, PC.CO_NM
+			, PO.DEPT_NM
+			, PU.USER_ID
+			, PU.LGN_ID
+			, PU.USER_NM
+			, PU.MBL_PHN_NO
+			, PPIE.EXT_NO
+		FROM "${SCHEMA_ID}".PLT_USER PU
+		INNER JOIN "${SCHEMA_ID}".PLT_USER_AUTHRT PUA ON PUA.USER_ID = PU.USER_ID AND PUA.AUTHRT_GROUP_ID = 6
+		INNER JOIN "${SCHEMA_ID}".PLT_USER_OGNZ PUO ON PUO.USER_ID = PUA.USER_ID AND PUO.USE_YN = 'Y'
+		INNER JOIN "${SCHEMA_ID}".PLT_OGNZ PO ON PO.CUSTCO_ID = PUO.CUSTCO_ID AND PO.DEPT_ID = PUO.DEPT_ID
+		INNER JOIN "${SCHEMA_ID}".PLT_CUSTCO PC ON PC.CUSTCO_ID = PO.CUSTCO_ID
+		LEFT OUTER JOIN "${SCHEMA_ID}".PLT_PHN_IP_EXT PPIE ON PPIE.DEPT_ID = PO.DEPT_ID AND PPIE.USER_ID = PU.USER_ID
+		WHERE EXISTS (SELECT 1 FROM custco.PLT_CERT_CUSTCO_USER PCCU
+						INNER JOIN custco.PLT_CERT_CUSTCO PCC ON PCC.CERT_CUSTCO_ID = PCCU.CERT_CUSTCO_ID
+						INNER  JOIN custco.PLT_CERT_USER PCU ON PCU.CERT_USER_ID = PCCU.CERT_USER_ID
+						WHERE PCC.ASP_CUST_KEY = PC.ASP_CUST_KEY AND PCU.LGN_ID = PU.LGN_ID
+						AND PCCU.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INT
+					  )
+<!--		AND PPIE.EXT_NO IS NOT NULL-->
+		<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+			<choose>
+				<when test='SCH_KEY == "EXT_NO"'>AND PPIE.EXT_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+				<when test='SCH_KEY == "CUSL_NM"'>AND PU.USER_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+				<when test='SCH_KEY == "CUSL_ID"'>AND PU.LGN_ID LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+			</choose>
+		</if>
+	</select>
+</mapper>

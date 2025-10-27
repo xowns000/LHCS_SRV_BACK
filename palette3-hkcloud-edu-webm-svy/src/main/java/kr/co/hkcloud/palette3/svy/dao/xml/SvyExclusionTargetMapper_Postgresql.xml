@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.svy.dao.SvyExclusionTargetMapper">
+	<select id="selectTargetList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* selectTargetList - 설문조사 제외 대상 목록 조회 */
+			ROW_NUMBER() OVER(ORDER BY PSET.REG_DT DESC) AS ROW_NUMBER,
+			PSET.SRVY_EXL_TRGT_ID,
+			PSET.EXL_SE_CD,
+			CUSTCO.GEN_DECRYPT(PSET.CUST_NM, #{PP_KEY_PP}, #{PP_ALG_PP}) AS CUST_NM,
+			CUSTCO.GEN_DECRYPT(PSET.CUST_PHN_NO, #{PP_KEY_PP}, #{PP_ALG_PP}) AS CUST_PHN_NO,
+			PSET.EXL_BGNG_DT,
+			PSET.EXL_END_DT,
+			PSET.EXL_RSN,
+			PSET.DEL_YN,
+			PSET.REG_DT,
+			PSET.RGTR_ID,
+			PSET.MDFCN_DT,
+			PSET.MDFR_ID,
+			PSET.CUSTCO_ID,
+			TO_CHAR(TO_TIMESTAMP(PSET.EXL_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') EXL_BGNG_DT_F,
+			TO_CHAR(TO_TIMESTAMP(PSET.EXL_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') EXL_END_DT_F,
+			TO_CHAR(TO_TIMESTAMP(PSET.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') REG_DT_F,
+			U.USER_NM AS RGTR_NM,
+			C.CD_NM AS EXL_SE_NM
+		FROM PLT_SRVY_EXL_TRGT PSET 
+		LEFT OUTER JOIN PLT_COMM_CD C
+			ON C.CD_ID = PSET.EXL_SE_CD AND C.GROUP_CD_ID = 'SUVY_EXL_TRGT_TP' AND C.CUSTCO_ID = PSET.CUSTCO_ID
+		LEFT OUTER JOIN PLT_USER U
+			ON U.USER_ID = PSET.RGTR_ID
+		WHERE PSET.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+			AND PSET.DEL_YN = 'N'
+			<if test="EXL_SE_CD != null and EXL_SE_CD != ''">
+				AND PSET.EXL_SE_CD = #{EXL_SE_CD}
+			</if>
+			<if test="SRCH_TP != null and SRCH_TP == 'CUST_NM' and SRCH_KEYWORD != null and SRCH_KEYWORD != ''">
+				AND CUSTCO.GEN_DECRYPT(PSET.CUST_NM, #{PP_KEY_PP}, #{PP_ALG_PP}) LIKE '%'||#{SRCH_KEYWORD}||'%'
+			</if>
+			<if test="SRCH_TP != null and SRCH_TP == 'CUST_PHN_NO' and SRCH_KEYWORD != null and SRCH_KEYWORD != ''">
+				AND CUSTCO.GEN_DECRYPT(PSET.CUST_PHN_NO, #{PP_KEY_PP}, #{PP_ALG_PP}) LIKE '%'||#{SRCH_KEYWORD}||'%'
+			</if>
+			<if test="SRCH_TP != null and SRCH_TP == '' and SRCH_KEYWORD != null and SRCH_KEYWORD != ''">
+				AND (
+					CUSTCO.GEN_DECRYPT(PSET.CUST_NM, #{PP_KEY_PP}, #{PP_ALG_PP}) LIKE '%'||#{SRCH_KEYWORD}||'%' OR
+					CUSTCO.GEN_DECRYPT(PSET.CUST_PHN_NO, #{PP_KEY_PP}, #{PP_ALG_PP}) LIKE '%'||#{SRCH_KEYWORD}||'%'
+				)
+			</if>
+			<if test='DUP_CHECK_YN != null and DUP_CHECK_YN == "Y"'>
+				AND TO_CHAR(NOW(), 'YYYYMMDDHH24MISS') BETWEEN PSET.EXL_BGNG_DT AND PSET.EXL_END_DT
+			</if>
+	</select>
+	
+	<select id="checkCustPhnNo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* checkCustPhnNo - 설문조사 제외 대상 등록 - 전화번호 중복 체크 */
+			COUNT(PSET.SRVY_EXL_TRGT_ID) AS DUP_COUNT
+		FROM PLT_SRVY_EXL_TRGT PSET 
+		WHERE PSET.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+			AND PSET.DEL_YN = 'N'
+			AND PSET.CUST_PHN_NO = CUSTCO.GEN_ENCRYPT(#{CUST_PHN_NO}, #{PP_KEY_PP}, #{PP_ALG_PP})
+	</select>
+	
+	
+	<insert id="insertTarget" parameterType="java.util.HashMap">
+		INSERT 	/* 설문조사 제외 대상 등록 */
+		INTO PLT_SRVY_EXL_TRGT (
+			SRVY_EXL_TRGT_ID,
+			EXL_SE_CD,
+			CUST_NM,
+			CUST_PHN_NO,
+			EXL_BGNG_DT,
+			EXL_END_DT,
+			EXL_RSN,
+			DEL_YN,
+			CUSTCO_ID,
+			REG_DT,
+			RGTR_ID,
+			MDFCN_DT,
+			MDFR_ID
+		) VALUES (
+			#{SRVY_EXL_TRGT_ID}::BIGINT,
+			#{EXL_SE_CD},
+			CUSTCO.GEN_ENCRYPT(#{CUST_NM}, #{PP_KEY_PP}, #{PP_ALG_PP}),
+			CUSTCO.GEN_ENCRYPT(#{CUST_PHN_NO}, #{PP_KEY_PP}, #{PP_ALG_PP}),
+			#{EXL_BGNG_DT},
+			#{EXL_END_DT},
+			#{EXL_RSN},
+			'N',
+			#{CUSTCO_ID}::BIGINT,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			#{USER_ID}::INTEGER,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			#{USER_ID}::INTEGER
+		)
+	</insert>
+	
+	
+	<update id="updateTarget" parameterType="java.util.HashMap">
+		UPDATE 	/* 설문조사 제외 대상 수정 */
+			PLT_SRVY_EXL_TRGT 
+		SET
+			EXL_SE_CD = #{EXL_SE_CD},
+			CUST_NM = CUSTCO.GEN_ENCRYPT(#{CUST_NM}, #{PP_KEY_PP}, #{PP_ALG_PP}),
+			CUST_PHN_NO = CUSTCO.GEN_ENCRYPT(#{CUST_PHN_NO}, #{PP_KEY_PP}, #{PP_ALG_PP}),
+			EXL_BGNG_DT = #{EXL_BGNG_DT},
+			EXL_END_DT = #{EXL_END_DT},
+			EXL_RSN = #{EXL_RSN},
+			MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			MDFR_ID = #{USER_ID}::INTEGER
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+			AND SRVY_EXL_TRGT_ID = #{SRVY_EXL_TRGT_ID}::BIGINT
+	</update>
+	
+	<update id="deleteTarget" parameterType="java.util.HashMap">
+		UPDATE 	/* 설문조사 제외 대상 삭제 */
+			PLT_SRVY_EXL_TRGT 
+		SET
+			DEL_YN = 'Y',
+			MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+			MDFR_ID = #{USER_ID}::INTEGER
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+		<if test="SRVT_EXL_TRGT_LIST != null">
+			AND SRVY_EXL_TRGT_ID IN 
+				<foreach collection="SRVT_EXL_TRGT_LIST" item="SRVY_EXL_TRGT_ID" open="(" separator="," close=")" >
+					#{SRVY_EXL_TRGT_ID}::BIGINT
+				</foreach>
+		</if>
+	</update>
+	
+</mapper>

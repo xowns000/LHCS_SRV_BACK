@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.common.code.dao.CodeCmmnMapper">
+    <!--
+    코드타입기준으로 공통코드정보를 콤보박스에 로드하기 위해 CODE, CODE_NM으로 검색한다.
+    -->
+    <select id="selectRtnCodeBook" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT  /* kr.co.hkcloud.palette3.common.code.dao.CodeCmmnMapper.selectRtnCodeBook */
+              CD_ID AS CD /* 코드 */
+            , CD_NM /* 코드명 */
+            , CD_NM_ENG /* 코드명 영문 */
+            , CD_VL /* 코드값*/
+            , COALESCE(SYS_CD_YN, 'Y') AS SYS_CD_YN /* 시스템 코드 여부*/
+        FROM PLT_COMM_CD
+        WHERE CUSTCO_ID = #{CUSTCO_ID}
+        AND CD_ID != '*'
+        AND DEL_YN = 'N'
+        AND USE_YN = 'Y'
+        <choose>
+            <when test="USE_YN != null and USE_YN = 'ALL'"> AND USE_YN IN ('Y','N') </when>
+            <when test="USE_YN != null"> AND USE_YN = #{USE_YN} </when>
+            <otherwise> AND USE_YN = 'Y'</otherwise>
+        </choose>
+        <if test="GROUP_CD_ID !='' and GROUP_CD_ID != null"> AND GROUP_CD_ID = #{GROUP_CD_ID} </if>
+        <if test="CD_EXPLN !='' and CD_EXPLN != null"> AND CD_EXPLN = #{CD_EXPLN} </if>
+        ORDER BY SORT_ORD
+
+    </select>
+    <!--
+
+    코드타입기준으로 공통코드정보를 콤보박스에 로드하기 위해 CODE, CODE_NM으로 검색한다.(멀티)
+
+    -->
+    <select id="selectRtnCodeBooks" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /* kr.co.hkcloud.palette3.common.code.dao.CodeCmmnMapper.selectRtnCodeBooks */
+              CD_ID AS CD /* 코드 */
+            , CD_NM /* 코드명 */
+            , GROUP_CD_ID
+        FROM PLT_COMM_CD
+        WHERE CUSTCO_ID = #{CUSTCO_ID}
+        AND USE_YN = 'Y'
+        AND CD_ID != '****'
+        AND GROUP_CD_ID IN (<foreach collection="groupCds" item="item" separator=",">#{item}</foreach>)
+        ORDER BY GROUP_CD_ID, SORT_ORD
+    </select>
+
+
+    <!--
+
+    ASP_CUST를 이용하여 공통회사정보를 콤보박스에 로드하기 위해 ASP_CUST, CO_NM 으로 검색한다.
+    author 정성현
+    -->
+    <select id="selectRtnAspBook" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        <!--<![CDATA[-->
+        <!--	SELECT /* kr.co.hkcloud.palette3.common.code.dao.CodeCmmnMapper.selectRtnAspBook */ -->
+        <!--	 	PC.CUSTCO_ID AS CD-->
+        <!--	 	, PC.CO_NM AS CD_NM-->
+        <!--	 	, PC.ASP_CUST_KEY-->
+        <!--	 	, PC.API_URI-->
+        <!--	 	, PPIE.EXT_NO-->
+        <!--	 	, PPIE.PDS_EXT_NO-->
+        <!--	 	, (SELECT ARRAY_TO_STRING(ARRAY_AGG(DSPTCH_NO),',') FROM PLT_CUSTCO_DSPTCH_NO WHERE CUSTCO_ID = PC.CUSTCO_ID) AS DSPTCH_NO-->
+        <!--	 FROM PLT_USER_OGNZ PUO -->
+        <!--	 INNER JOIN PLT_CUSTCO PC ON PC.CUSTCO_ID = PUO.CUSTCO_ID-->
+        <!--	 LEFT OUTER JOIN PLT_PHN_IP_EXT PPIE ON PPIE.CUSTCO_ID = PC.CUSTCO_ID AND PPIE.USER_ID = PUO.USER_ID-->
+        <!--	 WHERE PUO.USE_YN = 'Y'-->
+        <!--	 AND PUO.USER_ID = #{USER_ID}-->
+        <!--	 ORDER BY PUO.SORT_ORD-->
+        <!--]]>-->
+
+        SELECT /* kr.co.hkcloud.palette3.common.code.dao.CodeCmmnMapper.selectRtnAspBook */
+            *
+        FROM table(custco.getUserCustcoList(#{LGN_ID}))
+        ORDER BY CD
+    </select>
+
+    <select id="selectRtnCachingAllAspBook" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+        SELECT /* kr.co.hkcloud.palette3.common.code.dao.CodeCmmnMapper.selectRtnCachingAllAspBook */
+               CUSTCO_ID AS CD
+             , CO_NM     AS CD_NM
+        FROM PLT_ASP_CUS
+        ]]>
+	</select>
+
+
+    <select id="selectRtnSenderAspBook" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	<![CDATA[
+        SELECT /* kr.co.hkcloud.palette3.common.code.dao.CodeCmmnMapper.selectRtnSenderAspBook */
+               CD.*
+             , PACC.CUSTCO_ID
+        FROM PLT_ASP_CUS_CHN PACC
+           , (SELECT CUSTCO_ID AS CD
+                   , CO_NM     AS CD_NM
+              FROM PLT_ASP_CUS
+              WHERE CUSTCO_ID IN (SELECT REGEXP_SUBSTR(A.CUSTCO_ID, '[^\,]+', 1, ROWNUM) AS CUSTCO_ID
+                                  FROM (SELECT ROWNUM, CUSTCO_ID
+                                        FROM PLT_USER
+                                        WHERE PLT_USER.USER_ID = #{ASP_USER_ID}) A
+              CONNECT BY ROWNUM <= LENGTH (REGEXP_REPLACE(A.CUSTCO_ID, '[^\,]+', ''))+1)
+            )CD
+        WHERE CD.CD = PACC.CUSTCO_ID
+        ]]>
+	</select>
+	
+	
+	<select id="selectTranCommCode" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectTranCommCode - 문자/SMS/이메일 발송 시, 공통코드 전환 값 조회. */
+			1 NUM, 
+			GROUP_CD_ID,
+			CD_ID,
+			CUSTCO_ID,
+			CD_NM,
+			CD_EXPLN,
+			CD_VL
+		FROM PLT_COMM_CD 
+		WHERE 
+			DEL_YN = 'N'
+			AND USE_YN = 'Y'
+			AND CUSTCO_ID = #{CUSTCO_ID}
+			AND GROUP_CD_ID = #{GROUP_CD_ID}
+			AND CD_ID = #{CD_ID}
+		UNION 
+		SELECT 
+			2 NUM, 
+			GROUP_CD_ID,
+			CD_ID,
+			CUSTCO_ID,
+			CD_NM,
+			CD_EXPLN,
+			CD_VL
+		FROM PLT_COMM_CD 
+		WHERE 
+			DEL_YN = 'N'
+			AND USE_YN = 'Y'
+			AND CUSTCO_ID = #{CUSTCO_ID}
+			AND GROUP_CD_ID = #{GROUP_CD_ID}
+			AND SORT_ORD = (SELECT MIN(SORT_ORD) FROM PLT_COMM_CD WHERE DEL_YN = 'N' AND USE_YN = 'Y' AND CUSTCO_ID = #{CUSTCO_ID} AND GROUP_CD_ID = #{GROUP_CD_ID})
+		ORDER BY NUM
+	</select>
+
+
+</mapper>

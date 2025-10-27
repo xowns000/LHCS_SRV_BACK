@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCnsltTypeByTimeMapper">
+
+	<select id="selectCnslTypeTimeSttcList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectCnslTypeTimeSttcList */
+
+	SELECT
+				(SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY
+				  , CASE WHEN  DE.CNSL_TYP_CD IS NOT NULL 
+                         THEN COALESCE( ( SELECT CNSL_TYP_NM FROM PLT_CHT_CUTT_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND CNSL_TYP_CD = DE.CNSL_TYP_CD_R ), '미등록') 
+                             ELSE  '▶ 총계' END AS CNSL_TYP_CD
+				  , CASE WHEN  DE.CNSL_TYP_CD_2 IS NOT NULL  
+                         THEN COALESCE( ( SELECT CNSL_TYP_NM FROM PLT_CHT_CUTT_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND CNSL_TYP_CD =  DE.CNSL_TYP_CD_2_R), '미등록') 
+                             ELSE  CASE WHEN  DE.CNSL_TYP_CD_R IS NOT NULL  THEN  '▷ 소계'  ELSE  '▶ 총계'  END  END  AS CNSL_TYP_CD_2
+		          , CASE WHEN  DE.CNSL_TYP_CD_3 IS NOT NULL  
+		                         THEN COALESCE( ( SELECT CNSL_TYP_NM FROM PLT_CHT_CUTT_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND CNSL_TYP_CD =  DE.CNSL_TYP_CD_3_R), '미등록') 
+		                             ELSE  CASE WHEN  DE.CNSL_TYP_CD_2_R IS NOT NULL  THEN  '▷ 소계'  ELSE  '▶ 총계'  END  END  AS CNSL_TYP_CD_3
+		          , CASE WHEN  DE.CNSL_TYP_CD_4 IS NOT NULL  
+		                         THEN COALESCE( ( SELECT CNSL_TYP_NM FROM PLT_CHT_CUTT_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND CNSL_TYP_CD =  DE.CNSL_TYP_CD_4_R), '미등록') 
+		                             ELSE  CASE WHEN  DE.CNSL_TYP_CD_3_R IS NOT NULL  THEN  '▷ 소계'  ELSE  ''  END  END  AS CNSL_TYP_CD_4                  
+                             
+				 , SUM(1) AS SUM_TOT
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) BETWEEN '00' AND '08' THEN 1 ELSE 0 END)   AS S08
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '09'          THEN 1 ELSE 0 END)   AS S09
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '10'          THEN 1 ELSE 0 END)   AS S10
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '11'          THEN 1 ELSE 0 END)   AS S11
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '12'          THEN 1 ELSE 0 END)   AS S12
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '13'          THEN 1 ELSE 0 END)   AS S13
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '14'          THEN 1 ELSE 0 END)   AS S14
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '15'          THEN 1 ELSE 0 END)   AS S15
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '16'          THEN 1 ELSE 0 END)   AS S16
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '17'          THEN 1 ELSE 0 END)   AS S17
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) =       '18'          THEN 1 ELSE 0 END)   AS S18
+				 , SUM(CASE WHEN SUBSTR(DE.CNSL_BEGIN_TIME, 1, 2) BETWEEN '19' AND '24' THEN 1 ELSE 0 END)   AS S19
+			  FROM 
+				  	 ( 
+                        SELECT  
+                        		 T1.CUSTCO_ID
+                                , T1.CNSL_HIST_NO 
+                                , T1.CNSL_BEGIN_DATE
+                                , T1.CNSL_BEGIN_TIME
+                                , T1.CSLT_ID
+                                , T1.ORGZ_ID
+                                , T2.CNSL_TYP_CD
+                                , T2.CNSL_TYP_CD_2
+                                , T2.CNSL_TYP_CD_3 
+                                , T2.CNSL_TYP_CD_4 
+                                , T2.CNSL_TYP_CD AS CNSL_TYP_CD_R
+                                , T2.CNSL_TYP_CD_2 AS CNSL_TYP_CD_2_R
+                                , T2.CNSL_TYP_CD_3 AS CNSL_TYP_CD_3_R
+                                , T2.CNSL_TYP_CD_4 AS CNSL_TYP_CD_4_R
+				  			FROM  PLT_PHN_CNSL       T1           /* TB_상담정보 */
+				  				 INNER JOIN PLT_PHN_CNSL_DTL   T2    ON    T1.CNSL_HIST_NO   =    T2.CNSL_HIST_NO      /* TB_상담정보 상세테이블 */
+				  				 
+				  				 WHERE  1 = 1 
+				  				 AND T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					  		 <if test="searchBase eq 'CAL'"> 
+					   				 AND T1.RDWT_SEND_YN    =      'Y'
+					   			</if>
+			                    <if test="DATE_FROM != null and DATE_FROM != ''">
+			                    	 AND T1.CNSL_BEGIN_DATE      BETWEEN #{DATE_FROM} AND #{DATE_TO}     /* 상담시작일자-종료일자 */
+			                    </if>
+							    <if test="CALL_TY != null and CALL_TY != ''"> 
+				                  	 AND T1.CALL_TY      	=       #{CALL_TY}           /* 콜유형 */
+			                    </if>
+			                    <if test="CNSL_TYP_CD != null and CNSL_TYP_CD != ''">
+									 AND T2.CNSL_TYP_CD		=	#{CNSL_TYP_CD} 	 /* 상담유형 */
+								</if>
+								<if test="CNSL_TYP_CD_2 != null and CNSL_TYP_CD_2 != ''">
+									 AND T2.CNSL_TYP_CD_2 	= 		#{CNSL_TYP_CD_2} 	 /* 상담유형2 */
+								</if>
+								<if test="CNSL_TYP_CD_3 != null and CNSL_TYP_CD_3 != ''">
+									 AND T2.CNSL_TYP_CD_3		=	#{CNSL_TYP_CD_3} 	 /* 상담유형3 */
+								</if>
+								<if test="CNSL_TYP_CD_4 != null and CNSL_TYP_CD_4 != ''">
+									 AND T2.CNSL_TYP_CD_4 	= 		#{CNSL_TYP_CD_4} 	 /* 상담유형4 */
+								</if>
+				  		  )  DE
+				    
+	                     LEFT OUTER JOIN  PLT_USER    T3    ON    DE.CSLT_ID     =       T3.USER_ID          /* 상담사정보_VIEW */
+	                     LEFT OUTER JOIN  PLT_ORGZ    T4    ON    DE.ORGZ_ID     =       T4.DEPT_CD           /* 상담사조직정보_VIEW */
+                       
+				 WHERE   1  =  1
+				
+				    <if test="AGENT_ID != null and AGENT_ID != ''">
+						AND T3.USER_ID      	=       #{AGENT_ID}       	 /* 상담사ID */
+					</if>
+				    <if test="DEPT_CD != null and DEPT_CD != ''">
+						AND T3.USER_ID IN (SELECT USER_ID
+			                              FROM PLT_USER_ATTR
+			                             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                             AND #{DEPT_CD} LIKE ('%' || USER_ATTR_B || '%'))		/* 상담사부서 센터 */
+                    </if>  
+				 GROUP BY  ROLLUP( DE.CNSL_TYP_CD_R, DE.CNSL_TYP_CD_2_R ,DE.CNSL_TYP_CD_3_R ,DE.CNSL_TYP_CD_4_R)
+				 
+				 ORDER BY  DE.CNSL_TYP_CD_R, DE.CNSL_TYP_CD_2_R ,DE.CNSL_TYP_CD_3_R ,DE.CNSL_TYP_CD_4_R
+	</select>
+	
+	<select id="selectCnslTypeDaySttcList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectCnslTypeDaySttcList */
+
+	             
+		SELECT 
+			AA.CUSTCO_ID
+			,(SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY
+			,AA.YYYYMMDD
+			,AA.CNSL_TYP_CD
+			,AA.CNSL_TYP_NM
+			,AA.CNSL_TYP_CD_2
+			,AA.CNSL_TYP_NM_2
+			,COALESCE(BB.CNT, 0) AS CNT
+		FROM
+			(
+			SELECT 
+				TT.CUSTCO_ID
+				,TT.YYYYMMDD
+				,TT.CNSL_TYP_CD
+				,TT.CNSL_TYP_NM
+				,'' AS CNSL_TYP_CD_2
+				,'' AS CNSL_TYP_NM_2
+			FROM
+			(
+				SELECT *
+				FROM PLT_CAL CC, PLT_CHT_CUTT_TYP PCCT
+				WHERE CC.YYYYMMDD BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+					AND PCCT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND PCCT.CNSL_TYP_CD = #{CNSL_TYP_CD}
+					AND PCCT.CNSL_TYP_DIV_CD = '1') TT
+				UNION
+				SELECT 
+					TT.CUSTCO_ID
+					,TT.YYYYMMDD
+					,TT.CNSL_TYP_CD
+					,TT.CNSL_TYP_NM
+					,TT2.CNSL_TYP_CD_2
+					,TT2.CNSL_TYP_NM_2
+				FROM
+				(
+				SELECT *
+				FROM PLT_CAL CC, PLT_CHT_CUTT_TYP PCCT
+				WHERE CC.YYYYMMDD BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+					AND PCCT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND PCCT.CNSL_TYP_DIV_CD = '1') TT
+				LEFT JOIN(
+				SELECT 
+					TT.CUSTCO_ID
+					,TT.YYYYMMDD
+					,(SELECT PCCT2.CNSL_TYP_CD
+					    FROM PLT_CHT_CUTT_TYP PCCT2
+					    WHERE PCCT2.CNSL_TYP_CD = TT.SPST_CNSL_TYP_CD
+					    AND PCCT2.CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS CNSL_TYP_CD
+					,(SELECT PCCT2.CNSL_TYP_NM
+					    FROM PLT_CHT_CUTT_TYP PCCT2
+					    WHERE PCCT2.CNSL_TYP_CD = TT.SPST_CNSL_TYP_CD
+					    AND PCCT2.CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS CNSL_TYP_NM
+					,TT.CNSL_TYP_CD AS CNSL_TYP_CD_2
+					,TT.CNSL_TYP_NM AS CNSL_TYP_NM_2
+					,TT.SPST_CNSL_TYP_CD
+				FROM
+				(
+				SELECT *
+				FROM PLT_CAL CC, PLT_CHT_CUTT_TYP PCCT
+				WHERE CC.YYYYMMDD BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+					AND PCCT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND PCCT.CNSL_TYP_DIV_CD = '2') TT)TT2
+				ON (
+				    TT.CNSL_TYP_CD = TT2.CNSL_TYP_CD
+				    AND TT.YYYYMMDD = TT2.YYYYMMDD
+				)
+			) AA
+			LEFT JOIN
+			(                 
+				SELECT 
+					CC.YYYYMMDD AS CNSL_BEGIN_DATE
+					,DD.CNSL_TYP_CD
+					,DD.CNSL_TYP_CD_2
+					,DD.CNSL_TYP_CD_3
+					,DD.CNSL_TYP_CD_4
+					,DD.CNT
+				FROM PLT_CAL CC
+				LEFT JOIN(
+				SELECT 
+					PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+					,COUNT (*) AS CNT
+				FROM PLT_PHN_CNSL_DTL PPCD, PLT_PHN_CNSL PPC
+				WHERE PPCD.CNSL_HIST_NO = PPC.CNSL_HIST_NO
+					AND PPC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					<if test="CNSL_TYP_CD != '' and CNSL_TYP_CD != null and CNSL_TYP_CD != undefined">
+						AND PPCD.CNSL_TYP_CD = #{CNSL_TYP_CD}
+					</if>
+					<if test="CNSL_TYP_CD_2 != '' and CNSL_TYP_CD_2 != null and CNSL_TYP_CD_2 != undefined">
+						AND PPCD.CNSL_TYP_CD_2 = #{CNSL_TYP_CD_2}
+					</if>
+					<if test="CNSL_TYP_CD_3 != '' and CNSL_TYP_CD_3 != null and CNSL_TYP_CD_3 != undefined">
+						AND PPCD.CNSL_TYP_CD_3 = #{CNSL_TYP_CD_3}
+					</if>
+					<if test="CNSL_TYP_CD_4 != '' and CNSL_TYP_CD_4 != null and CNSL_TYP_CD_4 != undefined">
+						AND PPCD.CNSL_TYP_CD_4 = #{CNSL_TYP_CD_4}
+					</if>
+					<if test="AGENT_ID != '' and AGENT_ID != null and AGENT_ID != undefined">
+						AND PPC.CSLT_ID = #{AGENT_ID}
+					</if>
+					<if test="NON_HOPE != '' and NON_HOPE != null and NON_HOPE != undefined">
+						AND PPCD.NON_HOPE LIKE ('%' || #{NON_HOPE} || '%')
+					</if>
+					AND PPCD.CNSL_TYP_CD_2 IS NULL
+					AND PPC.CNSL_BEGIN_DATE BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+				GROUP BY PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+				UNION 
+				SELECT 
+					PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3 
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+					,COUNT (*) AS CNT
+				FROM PLT_PHN_CNSL_DTL PPCD, PLT_PHN_CNSL PPC
+				WHERE PPCD.CNSL_HIST_NO = PPC.CNSL_HIST_NO
+					AND PPC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					<if test="CNSL_TYP_CD != '' and CNSL_TYP_CD != null and CNSL_TYP_CD != undefined">
+						AND PPCD.CNSL_TYP_CD = #{CNSL_TYP_CD}
+					</if>
+					<if test="CNSL_TYP_CD_2 != '' and CNSL_TYP_CD_2 != null and CNSL_TYP_CD_2 != undefined">
+						AND PPCD.CNSL_TYP_CD_2 = #{CNSL_TYP_CD_2}
+					</if>
+					<if test="CNSL_TYP_CD_3 != '' and CNSL_TYP_CD_3 != null and CNSL_TYP_CD_3 != undefined">
+						AND PPCD.CNSL_TYP_CD_3 = #{CNSL_TYP_CD_3}
+					</if>
+					<if test="CNSL_TYP_CD_4 != '' and CNSL_TYP_CD_4 != null and CNSL_TYP_CD_4 != undefined">
+						AND PPCD.CNSL_TYP_CD_4 = #{CNSL_TYP_CD_4}
+					</if>
+					<if test="AGENT_ID != '' and AGENT_ID != null and AGENT_ID != undefined">
+						AND PPC.CSLT_ID = #{AGENT_ID}
+					</if>
+					<if test="NON_HOPE != '' and NON_HOPE != null and NON_HOPE != undefined">
+						AND PPCD.NON_HOPE LIKE ('%' || #{NON_HOPE} || '%')
+					</if>
+					AND PPCD.CNSL_TYP_CD_3 IS NULL
+					AND PPC.CNSL_BEGIN_DATE BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+				GROUP BY PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+				UNION 
+				SELECT 
+					PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+					,COUNT (*) AS CNT
+				FROM PLT_PHN_CNSL_DTL PPCD, PLT_PHN_CNSL PPC
+				WHERE PPCD.CNSL_HIST_NO = PPC.CNSL_HIST_NO
+					AND PPC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					<if test="CNSL_TYP_CD != '' and CNSL_TYP_CD != null and CNSL_TYP_CD != undefined">
+						AND PPCD.CNSL_TYP_CD = #{CNSL_TYP_CD}
+					</if>
+					<if test="CNSL_TYP_CD_2 != '' and CNSL_TYP_CD_2 != null and CNSL_TYP_CD_2 != undefined">
+						AND PPCD.CNSL_TYP_CD_2 = #{CNSL_TYP_CD_2}
+					</if>
+					<if test="CNSL_TYP_CD_3 != '' and CNSL_TYP_CD_3 != null and CNSL_TYP_CD_3 != undefined">
+						AND PPCD.CNSL_TYP_CD_3 = #{CNSL_TYP_CD_3}
+					</if>
+					<if test="CNSL_TYP_CD_4 != '' and CNSL_TYP_CD_4 != null and CNSL_TYP_CD_4 != undefined">
+						AND PPCD.CNSL_TYP_CD_4 = #{CNSL_TYP_CD_4}
+					</if>
+					<if test="AGENT_ID != '' and AGENT_ID != null and AGENT_ID != undefined">
+						AND PPC.CSLT_ID = #{AGENT_ID}
+					</if>
+					<if test="NON_HOPE != '' and NON_HOPE != null and NON_HOPE != undefined">
+						AND PPCD.NON_HOPE LIKE ('%' || #{NON_HOPE} || '%')
+					</if>
+					AND PPCD.CNSL_TYP_CD_4 IS NULL
+					AND PPC.CNSL_BEGIN_DATE BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+				GROUP BY PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+				UNION 
+				SELECT 
+					PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+					,COUNT (*) AS CNT
+				FROM PLT_PHN_CNSL_DTL PPCD, PLT_PHN_CNSL PPC
+				WHERE PPCD.CNSL_HIST_NO = PPC.CNSL_HIST_NO
+					AND PPC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					<if test="CNSL_TYP_CD != '' and CNSL_TYP_CD != null and CNSL_TYP_CD != undefined">
+						AND PPCD.CNSL_TYP_CD = #{CNSL_TYP_CD}
+					</if>
+					<if test="CNSL_TYP_CD_2 != '' and CNSL_TYP_CD_2 != null and CNSL_TYP_CD_2 != undefined">
+						AND PPCD.CNSL_TYP_CD_2 = #{CNSL_TYP_CD_2}
+					</if>
+					<if test="CNSL_TYP_CD_3 != '' and CNSL_TYP_CD_3 != null and CNSL_TYP_CD_3 != undefined">
+						AND PPCD.CNSL_TYP_CD_3 = #{CNSL_TYP_CD_3}
+					</if>
+					<if test="CNSL_TYP_CD_4 != '' and CNSL_TYP_CD_4 != null and CNSL_TYP_CD_4 != undefined">
+						AND PPCD.CNSL_TYP_CD_4 = #{CNSL_TYP_CD_4}
+					</if>
+					<if test="AGENT_ID != '' and AGENT_ID != null and AGENT_ID != undefined">
+						AND PPC.CSLT_ID = #{AGENT_ID}
+					</if>
+					<if test="NON_HOPE != '' and NON_HOPE != null and NON_HOPE != undefined">
+						AND PPCD.NON_HOPE LIKE ('%' || #{NON_HOPE} || '%')
+					</if>
+					AND PPC.CNSL_BEGIN_DATE BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+				GROUP BY PPCD.CNSL_TYP_CD
+					,PPCD.CNSL_TYP_CD_2
+					,PPCD.CNSL_TYP_CD_3
+					,PPCD.CNSL_TYP_CD_4
+					,PPC.CNSL_BEGIN_DATE
+				) DD
+				ON (
+				    CC.YYYYMMDD = DD.CNSL_BEGIN_DATE
+				)
+				WHERE YYYYMMDD BETWEEN #{DATE_FROM}  AND #{DATE_TO}
+				ORDER BY CNSL_BEGIN_DATE
+				)BB
+				 ON(
+				    AA.YYYYMMDD = BB.CNSL_BEGIN_DATE
+				    AND AA.CNSL_TYP_CD = BB.CNSL_TYP_CD
+				    AND AA.CNSL_TYP_CD_2 = BB.CNSL_TYP_CD_2
+				)
+			WHERE 1 = 1
+			<if test="CNSL_TYP_CD != '' and CNSL_TYP_CD != null and CNSL_TYP_CD != undefined">
+				AND AA.CNSL_TYP_CD = #{CNSL_TYP_CD}
+			</if>
+			<if test="CNSL_TYP_CD_2 != '' and CNSL_TYP_CD_2 != null and CNSL_TYP_CD_2 != undefined">
+				AND AA.CNSL_TYP_CD_2 = #{CNSL_TYP_CD_2}
+			</if>
+			<if test="CNSL_TYP_CD_3 != '' and CNSL_TYP_CD_3 != null and CNSL_TYP_CD_3 != undefined">
+				AND AA.CNSL_TYP_CD_3 = #{CNSL_TYP_CD_3}
+			</if>
+			<if test="CNSL_TYP_CD_4 != '' and CNSL_TYP_CD_4 != null and CNSL_TYP_CD_4 != undefined">
+				AND AA.CNSL_TYP_CD_4 = #{CNSL_TYP_CD_4}
+			</if>
+				
+	</select>
+		
+</mapper>

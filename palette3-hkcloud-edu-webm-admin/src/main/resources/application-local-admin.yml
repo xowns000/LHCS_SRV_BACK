@@ -1,0 +1,29 @@
+###################################################
+# local-admin profile
+###################################################
+spring.profiles:
+  -local-admin
+  
+##spring.profiles.include: "admin"
+spring.profiles.include: 
+  -admin
+
+###################################################
+#
+# 테넌트 관리자(admin) 속성
+# -------------------------------------------------
+# include 'admin' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "admin"
+# ----------------------------------------
+# amin Properties
+# ----------------------------------------
+spring:  
+  #멀티테넌시(multitenancy) 처리 : flyway 설정
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:/db/migration

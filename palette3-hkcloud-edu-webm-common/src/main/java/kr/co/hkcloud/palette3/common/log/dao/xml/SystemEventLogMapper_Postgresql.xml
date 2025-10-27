@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.common.log.dao.SystemEventLogMapper">
+    <insert id="INSERT_PLT_SYS_LOG"  parameterType= "java.util.HashMap">
+        INSERT INTO PLT_SYS_LOG (   /* 주요 시스템설정정보 변경 로깅(kr.co.hkcloud.palette3.common.log.dao.SystemEventLogMapper.INSERT_PLT_SYS_LOG ) */
+              CUSTCO_ID /* 고객사_ID */
+            , SE_CD /* 구분_코드 */
+            , SE_NM /* 구분_명 */
+            , PARAM /* 파라미터 */
+            , RSLT  /* 결과 */
+            , CNTN_MENU_CD  /* 접속_메뉴_코드 */
+            , CNTN_MENU_PATH    /* 접속_메뉴_경로 */
+            , CNTN_IP   /* 접속_IP */
+            , RGTR_ID   /* 등록자_ID */
+            , REG_DT    /* 등록_일시 */
+        ) VALUES (
+               #{CUSTCO_ID}::INTEGER
+             , #{SE_CD}
+             , #{SE_NM}
+             , #{PARAM}
+             , #{RSLT}
+             , #{CNTN_MENU_CD}
+             , #{CNTN_MENU_PATH}
+             , #{CNTN_IP}
+             , #{RGTR_ID}::INTEGER
+             , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+         )
+    </insert>
+    
+    
+    <select id="selectSysLogList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectSysLogList - 시스템 로그 목록 조회 */
+			ROW_NUMBER() OVER(ORDER BY LOG.REG_DT DESC) AS ROW_NUMBER,
+			SYS_LOG_ID, 
+			CUSTCO_ID, 
+			SE_CD, 
+			SE_NM, 
+			CNTN_IP, 
+			CNTN_MENU_CD, 
+			CNTN_MENU_PATH,
+			RGTR_ID,
+			REG_DT,
+			REG_DT_F,
+			RGTR_NM
+		FROM (
+			SELECT 
+				PSL.SYS_LOG_ID, 
+				PSL.CUSTCO_ID, 
+				PSL.SE_CD, 
+				PSL.SE_NM, 
+				PSL.CNTN_IP, 
+				PSL.CNTN_MENU_CD, 
+				PSL.CNTN_MENU_PATH,
+				PSL.RGTR_ID,
+				PSL.REG_DT,
+				TO_CHAR(TO_TIMESTAMP(PSL.REG_DT, 'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') AS REG_DT_F,
+				PU.USER_NM AS RGTR_NM
+			FROM PLT_SYS_LOG PSL
+				LEFT OUTER JOIN PLT_USER PU ON PU.USER_ID = PSL.RGTR_ID 
+			WHERE 
+				CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+				<if test="SCH_BGNG_DT != null and SCH_BGNG_DT != ''">
+					AND PSL.REG_DT BETWEEN #{SCH_BGNG_DT}||'000000' and #{SCH_END_DT}||'235959'
+				</if>
+				<if test="SE_CD != null and SE_CD != ''">
+					AND PSL.SE_CD = #{SE_CD}
+				</if>
+				<if test="RGTR_NM != null and RGTR_NM != ''">
+					AND PU.USER_NM LIKE '%' || #{RGTR_NM} || '%'
+				</if>
+				<if test="CNTN_MENU_PATH != null and CNTN_MENU_PATH != ''">
+					AND PSL.CNTN_MENU_PATH LIKE '%' || #{CNTN_MENU_PATH} || '%'
+				</if>
+			union
+			SELECT 
+				PUL.USER_LOG_ID AS SYS_LOG_ID, 
+				PUO.CUSTCO_ID,
+				PUL.TASK_SE_CD AS SE_CD,
+				PUL.TASK_SE_CD AS SE_NM,
+				PUL.CNTN_IP,
+				'LOGIN' AS CNTN_MENU_CD, 
+				'로그인' AS CNTN_MENU_PATH,
+				PUL.RGTR_ID,
+				PUL.REG_DT,
+				TO_CHAR(TO_TIMESTAMP(PUL.REG_DT, 'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') AS REG_DT_F,
+				PU.USER_NM AS RGTR_NM
+			FROM PLT_USER_LOG PUL
+			INNER JOIN PLT_USER_OGNZ PUO ON PUO.USER_ID = PUL.USER_ID
+			INNER JOIN PLT_USER PU ON PU.USER_ID = PUL.RGTR_ID
+			WHERE
+				CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+				<if test="SCH_BGNG_DT != null and SCH_BGNG_DT != ''">
+					AND PUL.REG_DT BETWEEN #{SCH_BGNG_DT}||'000000' and #{SCH_END_DT}||'235959'
+				</if>
+				<if test="SE_CD != null and SE_CD != ''">
+					AND PUL.TASK_SE_CD = #{SE_CD}
+				</if>
+				<if test="RGTR_NM != null and RGTR_NM != ''">
+					AND PU.USER_NM LIKE '%' || #{RGTR_NM} || '%'
+				</if>
+				<if test="CNTN_MENU_PATH != null and CNTN_MENU_PATH != ''">
+					AND CNTN_MENU_PATH LIKE '%' || #{CNTN_MENU_PATH} || '%'
+				</if>
+		) LOG
+	</select>
+	
+	<select id="selectSeList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* selectSeList - 구분 리스트 조회 */
+			SE_CD, 
+			SE_NM
+		FROM PLT_SYS_LOG PSL 
+		UNION
+		SELECT
+			PUL.TASK_SE_CD AS SE_CD,
+			PUL.TASK_SE_CD AS SE_NM
+		FROM PLT_USER_LOG PUL	
+		GROUP BY SE_CD, SE_NM
+		ORDER BY SE_NM
+	</select>
+</mapper>

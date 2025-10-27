@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCnsltResultMapper">
+
+	<select id="selectCnslResultSttc"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectCnslResultSttc */
+
+    	
+    		SELECT 
+                     T3.USER_NM AS AGENT_NM                                             /*  상담사명  */
+                     , T3.DEPT_CD                                                        /*  상담사부서명  */
+                     , ( SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT007' AND CD = T1.CALL_TY )  AS  CALL_TY_NM   /* 콜유형 */
+                     , T1.CALL_TY                                                   	/*  콜유형 */
+				     , SUM(CASE WHEN T2.PROC_CODE_LCLS = '00001' OR T2.PROC_CODE_LCLS = '01' THEN 1 ELSE 0 END) AS END_CNT     	/*  처리코드대분류-처리완료 */ 
+				     , SUM(CASE WHEN T2.PROC_CODE_LCLS = '00002' THEN 1 ELSE 0 END) AS NEND_CNT   	/*  처리코드대분류-미처리 */
+				     , SUM(CASE WHEN T2.PROC_CODE_LCLS IS NOT NULL THEN 1 ELSE 0 END)                                               AS TOT_CNT           	/*  총건수 */
+                     , ROUND((( SUM(CASE WHEN T2.PROC_CODE_LCLS = '00001' THEN 1 ELSE 0 END) / SUM(1) ) * 100 ), 2) || ' %'  AS  END_RATE   /* 비율  */
+				  	 , (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY})	AS ASP_NEWCUST_KEY /*	회사명	*/
+				  FROM PLT_PHN_CNSL       T1    /* TB_상담정보 */
+				     , PLT_PHN_CNSL_DTL   T2    /* TB_상담정보 상세테이블 */
+				     , PLT_USER       T3    /* 상담사정보_View */
+                     
+				 WHERE T1.CNSL_HIST_NO      =       T2.CNSL_HIST_NO             	/*  상담이력번호 */
+				   AND T1.CSLT_ID           =       T3.USER_ID                 	/*  상담사ID  */
+				   AND T1.CUSTCO_ID		= 		#{ASP_NEWCUST_KEY}			/*	회사키	*/
+				     <if test="CNSL_BEGIN_DATE != null and CNSL_BEGIN_DATE != ''">
+                    	AND T1.CNSL_BEGIN_DATE      BETWEEN #{CNSL_BEGIN_DATE} AND #{CNSL_END_DATE}     /* 상담시작일자-종료일자 */
+                    </if>
+				   	
+                    <if test="RDWT_SEND_YN != null and RDWT_SEND_YN != ''">
+				    	AND T1.RDWT_SEND_YN     =       #{RDWT_SEND_YN}      /* 녹취전송여부 */
+                    </if>
+				    <if test="CALL_TY != null and CALL_TY != ''"> 
+	                  	AND T1.CALL_TY      	=       #{CALL_TY}           /* 콜유형 */
+                    </if>
+				    <if test="DEPT_CD != null and DEPT_CD != ''">
+						AND T1.CSLT_ID IN (SELECT USER_ID
+			                              FROM PLT_USER_ATTR
+			                             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                             AND #{DEPT_CD} LIKE ('%' || USER_ATTR_B || '%'))
+                    </if>
+					<if test="AGENT_ID != null and AGENT_ID != ''">
+						AND T1.CSLT_ID      	=       #{AGENT_ID}       	 /* 상담사ID */
+					</if>
+              
+                   
+				 GROUP BY  T3.DEPT_CD
+                          , T3.USER_NM
+                          , T1.CALL_TY
+                 
+				 ORDER BY DEPT_CD, USER_NM, CALL_TY
+		
+	</select>
+		
+		
+</mapper>

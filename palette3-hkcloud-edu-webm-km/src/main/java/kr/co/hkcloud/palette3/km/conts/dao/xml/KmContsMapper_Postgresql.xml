@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper">
+    <select id="selectContentList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/*		지식 콘텐츠 목록 조회 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.selectContentList)	*/
+			KC.KMS_CONTS_ID
+			, KC.KMS_CLSF_ID
+			, KC.KMS_CONTS_NM
+			, KC.STTS_CD
+			, KC.SORT_ORD
+			, KC.SE_CD
+			, KC.ESNTL_YN
+			, CASE
+				WHEN KC.STTS_CD = 'WRTG' THEN 'is-txt-disable'			/*		작성중	*/
+				WHEN KC.STTS_CD = 'RVRQ' THEN 'is-txt-open'				/*		검토요청	*/
+				WHEN KC.STTS_CD = 'UDCD' THEN 'is-txt-error'			/*		검토중	*/
+				WHEN KC.STTS_CD = 'APPR' THEN 'is-txt-accept'			/*		승인	*/
+				WHEN KC.STTS_CD = 'RFSL' THEN 'is-txt-reject'			/*		반려	*/
+				WHEN KC.STTS_CD = 'PBIC' THEN 'is-txt-indigo'			/*		공개	*/
+				WHEN KC.STTS_CD = 'DELT' THEN 'is-txt-red'				/*		삭제	*/
+				ELSE NULL
+			  END AS STTS_CD_CLASS
+			, CC.CD_NM AS STTS_NM
+			, CC_SE_CD.CD_NM AS SE_NM
+			, KC.REG_DT
+			, TO_CHAR(TO_DATE(KC.REG_DT , 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS REG_DT_F
+			, KC.RGTR_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = KC.RGTR_ID) AS RGTR_NM
+			, KC.COMM_YN
+			, ROW_NUMBER() OVER( ORDER BY  KC.SORT_ORD, KC.REG_DT DESC) AS ROW_NUMBER
+		FROM PLT_KMS_CONTS KC
+		LEFT OUTER JOIN PLT_COMM_CD CC ON CC.CUSTCO_ID = #{CUSTCO_ID}::BIGINT AND CC.CD_ID  = KC.STTS_CD AND CC.GROUP_CD_ID = 'CONT_ST'
+		LEFT OUTER JOIN PLT_COMM_CD CC_SE_CD ON CC_SE_CD.CUSTCO_ID = #{CUSTCO_ID}::BIGINT AND CC_SE_CD.CD_ID  = KC.SE_CD AND CC_SE_CD.GROUP_CD_ID = 'KMS_CL'
+		WHERE KMS_CLSF_ID  = #{KMS_CLSF_ID}::BIGINT
+			<choose>
+				<when test=' COMM_YN != null and COMM_YN != "" '>
+					AND KC.COMM_YN = #{COMM_YN}
+				</when>
+				<otherwise>
+					AND KC.COMM_YN='Y'
+				</otherwise>
+			</choose>
+			
+			<if test=' STTS_CD != null and STTS_CD != "" '>
+				AND KC.STTS_CD = #{STTS_CD}
+			</if>
+			<if test=' SE_CD != null and SE_CD != "" '>
+				AND KC.SE_CD = #{SE_CD}
+			</if>
+			<if test=' KMS_CONTS_NM != null and KMS_CONTS_NM != "" '>
+				AND UPPER(KC.KMS_CONTS_NM) LIKE CONCAT('%', UPPER( #{KMS_CONTS_NM} ) , '%')
+			</if>
+			<if test=' BASE_SORT_ORD != null and BASE_SORT_ORD != "" '>
+				AND KC.SORT_ORD >= #{BASE_SORT_ORD}::INTEGER
+			</if>
+			<if test=' IS_PRIVATE != null and IS_PRIVATE == "Y" '>
+				AND KC.RGTR_ID = #{USER_ID}::BIGINT
+			</if>
+	</select>
+	
+	<select id="selectContent"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/*		지식 콘텐츠 단건 조회 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.selectContent)	*/
+			KC.KMS_CONTS_ID
+			, KC.KMS_CLSF_ID
+			, KC.KMS_CONTS_NM
+			, KC.STTS_CD
+			, KC.SORT_ORD
+			, KC.FILE_GROUP_KEY
+			, KC.SE_CD
+			, KC.ESNTL_YN
+			, CASE
+				WHEN KC.STTS_CD = 'WRTG' THEN 'is-txt-disable'			/*	작성중	*/
+				WHEN KC.STTS_CD = 'RVRQ' THEN 'is-txt-open'				/*	검토요청	*/
+				WHEN KC.STTS_CD = 'UDCD' THEN 'is-txt-error'			/*	검토중	*/
+				WHEN KC.STTS_CD = 'APPR' THEN 'is-txt-accept'			/*	승인	*/
+				WHEN KC.STTS_CD = 'RFSL' THEN 'is-txt-reject'			/*	반려	*/
+				WHEN KC.STTS_CD = 'PBIC' THEN 'is-txt-indigo'			/*	공개	*/
+				WHEN KC.STTS_CD = 'DELT' THEN 'is-txt-red'				/*	삭제	*/
+				ELSE NULL
+			  END AS STTS_CD_CLASS
+			, CC.CD_NM AS STTS_NM
+			, KC.COMM_YN
+			, KC.REG_DT
+			, TO_CHAR(TO_DATE(KC.REG_DT , 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS REG_DT_F
+			, KC.RGTR_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = KC.RGTR_ID) AS RGTR_NM
+			,(SELECT KMS_CONTS_CN FROM PLT_KMS_CONTS_CN WHERE KMS_CONTS_ID = KC.KMS_CONTS_ID) AS KMS_CONTS_CN 
+			,(SELECT ARRAY_TO_STRING(ARRAY_AGG(KMS_KEYWD_NM),',') FROM PLT_KMS_CONTS_KEYWD WHERE KMS_CONTS_ID = KC.KMS_CONTS_ID) AS KMS_KEYWD_NMS
+			, COALESCE((SELECT CD_ID 
+				FROM PLT_COMM_CD 
+				WHERE CUSTCO_ID = #{CUSTCO_ID}::BIGINT AND GROUP_CD_ID='SHROTCUT_CD' 
+					AND CD_ID IN(
+						SELECT KEY_CD FROM PLT_SHORT_KEY 
+						WHERE LNK_ID = KC.KMS_CONTS_ID::VARCHAR AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT AND RGTR_ID = #{USER_ID}::BIGINT
+			)), 'NO_USE') AS SHORTCUT_CD
+		FROM PLT_KMS_CONTS KC
+		INNER JOIN (
+			WITH RECURSIVE CTE_T AS (
+				SELECT CONCAT( KMS_CLSF_NM ) AS FULL_PATH , *
+				FROM PLT_KMS_CLSF
+				WHERE UP_KMS_CLSF_ID IS NULL AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+				UNION ALL 
+				SELECT CONCAT( FULL_PATH, ' > ', S. KMS_CLSF_NM) , S.*
+				FROM CTE_T R
+				INNER JOIN PLT_KMS_CLSF S ON R.KMS_CLSF_ID = S.UP_KMS_CLSF_ID AND S.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+			) SELECT * FROM CTE_T
+		) CL ON CL.KMS_CLSF_ID = KC.KMS_CLSF_ID
+		LEFT OUTER JOIN PLT_COMM_CD CC ON CC.CUSTCO_ID = #{CUSTCO_ID}::BIGINT AND CC.CD_ID  = KC.STTS_CD AND CC.GROUP_CD_ID = 'CONT_ST'
+		WHERE 
+			KC.KMS_CONTS_ID = #{KMS_CONTS_ID}::BIGINT
+	</select>
+	
+	<insert id="insertContent"  parameterType= "java.util.HashMap">
+		INSERT /*		지식 콘텐츠 등록 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.INSERT_KMS_CONTS)	*/
+		INTO PLT_KMS_CONTS (
+			KMS_CONTS_ID
+			, KMS_CLSF_ID
+			, KMS_CONTS_NM
+			, STTS_CD
+			, SE_CD
+			, ESNTL_YN
+			, SORT_ORD
+			, RGTR_ID
+			, REG_DT
+			, MDFR_ID
+			, MDFCN_DT
+			, COMM_YN
+		)
+		SELECT
+			#{KMS_CONTS_ID}::BIGINT
+			, #{KMS_CLSF_ID}::BIGINT
+			, #{KMS_CONTS_NM}
+			<choose>
+				<when test=' STTS_CD != null and STTS_CD != "" '>
+					, #{STTS_CD}
+				</when>
+				<otherwise>
+					, 'WRTG'	/*		컨텐츠 최초 등록시 기본 상태값은 작성중( WRTG )	*/
+				</otherwise>
+			</choose>
+			, #{SE_CD}
+			, #{ESNTL_YN}
+			, #{SORT_ORD}::INTEGER
+			, #{USER_ID}::BIGINT
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, #{USER_ID}::BIGINT
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, #{COMM_YN}
+		
+	</insert>
+	
+	<update id="updateContent" parameterType= "java.util.HashMap">
+		UPDATE PLT_KMS_CONTS SET	/*		지식 콘텐츠 수정 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.updateContent)	*/
+			MDFR_ID = #{USER_ID}::INTEGER
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test=' KMS_CONTS_NM != null and KMS_CONTS_NM != "" '> 		, KMS_CONTS_NM = #{KMS_CONTS_NM}	</if>
+			<if test=' STTS_CD != null and STTS_CD != "" '>					, STTS_CD = #{STTS_CD}	</if>
+			<if test=' FILE_GROUP_KEY != null and FILE_GROUP_KEY != "" '>	, FILE_GROUP_KEY = #{FILE_GROUP_KEY}	</if>
+			<if test=' SE_CD != null and SE_CD != "" '>						, SE_CD = #{SE_CD}	</if>
+			<if test=' ESNTL_YN != null and ESNTL_YN != "" '>				, ESNTL_YN = #{ESNTL_YN}	</if>
+			<if test=' SORT_ORD != null and SORT_ORD != "" '>				, SORT_ORD = #{SORT_ORD}::INTEGER	</if>
+		WHERE KMS_CONTS_ID = #{KMS_CONTS_ID}::INTEGER
+	</update>
+	
+	
+	<insert id="mergeContentCn" parameterType="java.util.HashMap">
+		WITH UPSERT AS 
+		(
+			UPDATE PLT_KMS_CONTS_CN SET 
+				KMS_CONTS_CN = #{ KMS_CONTS_CN }
+			WHERE
+				KMS_CONTS_ID = #{ KMS_CONTS_ID }::INTEGER
+			RETURNING *
+		)
+		INSERT INTO PLT_KMS_CONTS_CN
+		(
+			KMS_CONTS_ID,
+			KMS_CONTS_CN
+		)
+		SELECT 
+			#{ KMS_CONTS_ID }::INTEGER,
+			#{ KMS_CONTS_CN }
+		WHERE NOT EXISTS(SELECT * FROM UPSERT);		
+	</insert>
+	
+	
+	<insert id="insertContentKeywd" parameterType="java.util.HashMap">
+		INSERT INTO PLT_KMS_CONTS_KEYWD
+		(
+			KMS_KEYWD_ID
+			,KMS_CONTS_ID
+			,KMS_KEYWD_NM		
+		)
+		VALUES
+		(
+			#{ KMS_KEYWD_ID }::INTEGER
+			,#{ KMS_CONTS_ID }::INTEGER
+			,#{ KMS_KEYWD_NM }
+		)
+	</insert>
+	
+	<delete id="deleteContentKeywd" parameterType="java.util.HashMap" >
+		DELETE FROM PLT_KMS_CONTS_KEYWD
+		WHERE KMS_CONTS_ID = #{ KMS_CONTS_ID }::INTEGER
+	</delete>
+	
+	
+	<insert id="insertContentReviewHistory" parameterType= "java.util.HashMap">
+		INSERT 	/*		지식 콘텐츠 검토이력 등록 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.insertContentReviewHistory)	*/
+		INTO PLT_KMS_CONTS_RVW_HSTRY (
+			KMS_CONTS_RVW_HSTRY_ID
+			, KMS_CONTS_ID
+			, STTS_CD
+			, CN
+			, RGTR_ID
+			, REG_DT
+		) VALUES (
+			#{KMS_CONTS_RVW_HSTRY_ID}::INTEGER
+			, #{KMS_CONTS_ID}::INTEGER
+			, #{STTS_CD}
+			<choose>
+				<when test=' CN != null and CN != "" '>
+					, #{CN}
+				</when>
+				<otherwise>
+					, CONCAT( TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'), ' INSERT STATUS ==> ',  #{STTS_CD} )
+				</otherwise>
+			</choose>
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	<select id="kmContsApprManageList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+		SELECT	/*		지식 콘텐츠  승인관리 목록 조회 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.kmContsApprManageList)	*/
+			DT.*
+			, ROW_NUMBER() OVER(ORDER BY DT.SORT_ORD , DT.REG_DT DESC) AS ROWNUM
+		FROM (
+			SELECT
+				KC.KMS_CONTS_ID
+				, KC.KMS_CONTS_NM
+				, CL.KMS_CLSF_NM
+				, KC.KMS_CLSF_ID
+				, CL.FULL_PATH
+				, RVH.RGTR_ID AS RVRQ_USER_ID
+				, COALESCE((SELECT USER_NM FROM PLT_USER WHERE USER_ID = RVH.RGTR_ID), '-') AS RVRQ_USER_NM
+				, COALESCE(TO_CHAR(TO_DATE(RVH.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD'), '-') AS RVRQ_DT
+				, KC.SE_CD
+				, CC_SE_CD.CD_NM AS SE_NM
+				, KC.STTS_CD
+				, CASE
+					WHEN KC.STTS_CD = 'WRTG' THEN 'is-txt-disable'		/*		작성중	*/
+					WHEN KC.STTS_CD = 'RVRQ' THEN 'is-txt-open'			/*		검토요청	*/
+					WHEN KC.STTS_CD = 'UDCD' THEN 'is-txt-error'			/*		검토중	*/
+					WHEN KC.STTS_CD = 'APPR' THEN 'is-txt-accept'			/*		승인	*/
+					WHEN KC.STTS_CD = 'RFSL' THEN 'is-txt-reject'			/*		반려	*/
+					WHEN KC.STTS_CD = 'PBIC' THEN 'is-txt-indigo'			/*		공개	*/
+					WHEN KC.STTS_CD = 'DELT' THEN 'is-txt-red'				/*		삭제	*/
+					ELSE NULL
+				  END AS STTS_CD_CLASS
+				, ( SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND CD_ID = KC.STTS_CD AND GROUP_CD_ID = 'CONT_ST' ) AS STTS_NM
+				, APH.RGTR_ID AS APPR_USER_ID
+				, COALESCE((SELECT USER_NM FROM PLT_USER WHERE USER_ID = APH.RGTR_ID), '-') AS APPR_USER_NM
+				, COALESCE(TO_CHAR(TO_DATE(APH.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD'), '-') AS APPR_DT
+				, KC.SORT_ORD
+				, KC.REG_DT
+			FROM PLT_KMS_CONTS KC
+			INNER JOIN (
+				WITH RECURSIVE CTE_T AS (
+					SELECT CONCAT( KMS_CLSF_NM ) AS FULL_PATH , *
+					FROM PLT_KMS_CLSF
+					WHERE UP_KMS_CLSF_ID IS NULL AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+					UNION ALL 
+					SELECT CONCAT( FULL_PATH, ' > ', S. KMS_CLSF_NM) , S.*
+					FROM CTE_T R
+					INNER JOIN PLT_KMS_CLSF S ON R.KMS_CLSF_ID = S.UP_KMS_CLSF_ID AND S.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+				) SELECT * FROM CTE_T
+			) CL ON CL.KMS_CLSF_ID = KC.KMS_CLSF_ID
+			LEFT OUTER JOIN (		/* 최근 검토요청 이력 */ 
+				SELECT 
+					H.*
+				FROM PLT_KMS_CONTS_RVW_HSTRY H
+				INNER JOIN (
+					SELECT
+						MAX(KMS_CONTS_RVW_HSTRY_ID) AS KMS_CONTS_RVW_HSTRY_ID
+						, KMS_CONTS_ID
+					FROM PLT_KMS_CONTS_RVW_HSTRY 
+					WHERE STTS_CD = 'RVRQ'
+					GROUP BY KMS_CONTS_ID
+				) RV ON H.KMS_CONTS_RVW_HSTRY_ID = RV.KMS_CONTS_RVW_HSTRY_ID
+			) RVH ON RVH.KMS_CONTS_ID = KC.KMS_CONTS_ID
+			LEFT OUTER JOIN (	/* 최근 승인(처리) 이력 */
+				SELECT
+					RH.*
+				FROM PLT_KMS_CONTS_RVW_HSTRY RH
+				INNER JOIN (
+					SELECT
+							MAX(KMS_CONTS_RVW_HSTRY_ID) AS KMS_CONTS_RVW_HSTRY_ID
+							, KMS_CONTS_ID
+						FROM PLT_KMS_CONTS_RVW_HSTRY 
+						WHERE STTS_CD = 'APPR'
+						GROUP BY KMS_CONTS_ID
+				) AP ON AP.KMS_CONTS_RVW_HSTRY_ID = RH.KMS_CONTS_RVW_HSTRY_ID
+			) APH ON APH.KMS_CONTS_ID = KC.KMS_CONTS_ID
+			LEFT OUTER JOIN PLT_COMM_CD CC_SE_CD ON CC_SE_CD.CUSTCO_ID = #{CUSTCO_ID}::BIGINT AND CC_SE_CD.CD_ID  = KC.SE_CD AND CC_SE_CD.GROUP_CD_ID = 'KMS_CL'
+			WHERE 1=1
+				<choose>
+					<when test=' STTS_CD != null and STTS_CD != "" '>
+						AND KC.STTS_CD = #{STTS_CD}
+					</when>
+					<otherwise>
+						AND  KC.STTS_CD = 'RVRQ'		/*		상태 검색값이 없을경우 Default 검토요청	*/
+					</otherwise>
+				</choose>
+				<if test=' SE_CD != null and SE_CD != "" '>
+						AND KC.SE_CD = #{SE_CD}
+				</if>
+				<if test=' ST_DATE != null and ST_DATE != "" and ED_DATE != null and ED_DATE != "" '>
+					AND ( TO_CHAR(TO_DATE(KC.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYYMMDD') BETWEEN REPLACE(#{ST_DATE}, '-','') AND REPLACE(#{ED_DATE}, '-','') )
+				</if>
+				<if test=' KMS_CONTS_NM != null and KMS_CONTS_NM != "" '>
+					AND UPPER(KC.KMS_CONTS_NM) LIKE CONCAT('%', UPPER( #{KMS_CONTS_NM} ) ,'%')
+				</if>
+				AND KC.COMM_YN = 'Y'
+		) DT
+		WHERE 1=1
+			<if test=' RVRQ_USER_NM != null and RVRQ_USER_NM != "" '>
+				AND UPPER(DT.RVRQ_USER_NM) LIKE CONCAT('%', UPPER( REPLACE(#{RVRQ_USER_NM}, '-','') ),'%')
+			</if>
+
+	</select>
+	
+	
+	<update id="updateContentSortOrd" parameterType= "java.util.HashMap">
+		UPDATE PLT_KMS_CONTS SET	/*		지식 콘텐츠 정렬 순서 수정 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.updateContentSortOrd)	*/
+			SORT_ORD = #{SORT_ORD}::INTEGER
+		WHERE KMS_CONTS_ID = #{KMS_CONTS_ID}::INTEGER
+	</update>
+	
+	
+	<select id="selectReviewHistoryList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			PKCRH.KMS_CONTS_RVW_HSTRY_ID 
+			, PKCRH.KMS_CONTS_ID 
+			, PKCRH.STTS_CD
+			, ( SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::BIGINT AND CD_ID = PKCRH.STTS_CD AND GROUP_CD_ID = 'CONT_ST' ) AS STTS_NM
+			, CASE
+				WHEN PKCRH.STTS_CD = 'WRTG' THEN 'is-txt-disable'			/*		작성중	*/
+				WHEN PKCRH.STTS_CD = 'RVRQ' THEN 'is-txt-open'				/*		검토요청	*/
+				WHEN PKCRH.STTS_CD = 'UDCD' THEN 'is-txt-error'			/*		검토중	*/
+				WHEN PKCRH.STTS_CD = 'APPR' THEN 'is-txt-accept'			/*		승인	*/
+				WHEN PKCRH.STTS_CD = 'RFSL' THEN 'is-txt-reject'			/*		반려	*/
+				WHEN PKCRH.STTS_CD = 'PBIC' THEN 'is-txt-indigo'			/*		공개	*/
+				WHEN PKCRH.STTS_CD = 'DELT' THEN 'is-txt-red'				/*		삭제	*/
+				ELSE NULL
+			  END AS STTS_CD_CLASS
+			, PKCRH.CN
+			, PKCRH.RGTR_ID
+			, COALESCE((SELECT USER_NM FROM PLT_USER WHERE USER_ID = PKCRH.RGTR_ID), '-') AS RGTR_NM
+			, PKCRH.REG_DT
+			, TO_CHAR(TO_TIMESTAMP(PKCRH.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') REG_DT_F
+		FROM PLT_KMS_CONTS_RVW_HSTRY PKCRH 
+		INNER JOIN PLT_KMS_CONTS PKC ON PKC.KMS_CONTS_ID = PKCRH.KMS_CONTS_ID 
+		INNER JOIN PLT_KMS_CLSF PKC2 ON PKC2.KMS_CLSF_ID = PKC.KMS_CLSF_ID AND PKC2.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+		WHERE 
+			PKCRH.STTS_CD IN('RFSL', 'RVRQ')
+			AND PKCRH.KMS_CONTS_ID = #{KMS_CONTS_ID}::BIGINT
+		ORDER BY KMS_CONTS_RVW_HSTRY_ID DESC
+	</select>
+	
+	
+	<select id="selectNewSortOrd" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COALESCE(MAX(SORT_ORD),0) + 1 AS SORT_ORD	/*		새 표시 순서 값 조회 (kr.co.hkcloud.palette3.km.conts.dao.KmContsMapper.selectNewSortOrd)	*/
+		FROM PLT_KMS_CONTS PKC 
+		WHERE PKC.STTS_CD NOT IN('DELT') 
+			AND PKC.COMM_YN = #{COMM_YN}
+			AND PKC.KMS_CLSF_ID = #{KMS_CLSF_ID}::BIGINT
+			<if test=' COMM_YN != null and COMM_YN == "N" '>
+				AND PKC.RGTR_ID = #{USER_ID}::BIGINT
+			</if>
+	</select>
+</mapper>

@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: palette-api  #서비스ID (Config Client가 어떤 서비스를 조회할지의 매핑)
+  main:
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+
+
+#  cloud:
+#    config:
+#      uri: http://localhost:8888    #Config서버 URL
+#      enabled: true
+#      fail-fast: true
+#
+#  rabbitmq:
+#    host: localhost
+#    port: 5672
+#    username: guest
+#    password: guest
+#
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: bus-refresh  #엔드포인트, ex) http://192.168.101.181:8080/actuator/bus-refresh (POST)
+#
+#eureka:
+#  instance:
+#    prefer-ip-address: true
+#  client:
+#    register-with-eureka: true
+#    fetch-registry: true
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka

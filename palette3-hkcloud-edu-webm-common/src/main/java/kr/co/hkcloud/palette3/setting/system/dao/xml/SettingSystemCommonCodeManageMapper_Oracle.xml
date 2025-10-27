@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemCommonCodeManageMapper">
+<!-- ######################################################################### -->
+<!-- 코드북 그룹 데이터 조회 -->
+<select id="selectRtnCodeType"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+WITH RECURSIVE COMM_TREE AS (
+   SELECT GROUP_CD_ID, CD_ID, CUSTCO_ID, CD_NM, CD_NM_ENG, CD_EXPLN, CD_VL, SYS_CD_YN, USE_YN, DEL_YN, SORT_ORD, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CD_NM AS VARCHAR(500)) AS FULL_PATH
+   FROM PLT_COMM_CD
+   WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+   AND DEL_YN = 'N'
+   AND GROUP_CD_ID = '*'
+   UNION ALL
+   SELECT B.GROUP_CD_ID, B.CD_ID, B.CUSTCO_ID, B.CD_NM, B.CD_NM_ENG, B.CD_EXPLN, B.CD_VL, B.SYS_CD_YN, B.USE_YN, B.DEL_YN, B.SORT_ORD, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(C.FULL_PATH || ' > ' || B.CD_NM AS VARCHAR(500)) AS FULL_PATH
+   FROM PLT_COMM_CD B
+   INNER JOIN COMM_TREE C ON C.CD_ID = B.GROUP_CD_ID AND B.GROUP_CD_ID = #{GROUP_CD_ID}
+   WHERE B.CUSTCO_ID = #{CUSTCO_ID}::INT
+   AND B.DEL_YN = 'N'
+)
+SELECT
+	ROW_NUMBER() OVER(ORDER BY CT.SORT_ORD) AS ROW_NUMBER
+	, CT.GROUP_CD_ID
+	, CT.CD_ID
+	, CT.CUSTCO_ID
+	, CT.CD_NM
+	, (CASE WHEN CT.CD_NM_ENG IS NULL THEN CT.CD_NM
+			ELSE CT.CD_NM_ENG
+			END) AS CD_NM_ENG
+	, CT.CD_EXPLN
+	, CT.CD_VL
+	, CT.SYS_CD_YN
+	, CT.USE_YN
+	, CT.DEL_YN
+	, CT.SORT_ORD
+	, CT.SORT
+	, CT.FULL_PATH
+FROM COMM_TREE CT
+WHERE GROUP_CD_ID = #{GROUP_CD_ID}
+AND CT.CUSTCO_ID = #{CUSTCO_ID}
+<if test="CD_ID !='' and CD_ID != null and CD_ID != undefined">
+	AND (CD_ID = #{CD_ID} OR CD_NM LIKE ('%' || #{CD_ID} || '%'))
+</if>
+<if test="SCH_CHAR !=null and SCH_CHAR != ''">
+	<choose>
+		<when test='SCH_CHAR == "ETC"'>
+			<choose>
+				<when test='LOCALE == "ko"'>
+				AND GET_FIRST_CHAR(CT.CD_NM) NOT IN ('ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ')
+				</when>
+				<otherwise>
+				AND CT.CD_NM_ENG NOT LIKE CONCAT(#{SCH_CHAR}, '%')
+				</otherwise>
+			</choose>
+		</when>
+		<otherwise>
+			<choose>
+				<when test='LOCALE == "ko"'>
+				AND GET_FIRST_CHAR(CT.CD_NM) = #{SCH_CHAR}
+				</when>
+				<otherwise>
+				AND CT.CD_NM_ENG LIKE CONCAT(#{SCH_CHAR}, '%')
+				</otherwise>
+			</choose>
+		</otherwise>
+	</choose>
+</if>
+<if test="CD_NM !=null and CD_NM != ''">
+	<choose>
+		<when test='LOCALE == "ko"'>
+		AND CT.CD_NM LIKE '%' || #{CD_NM} || '%'
+		</when>
+		<otherwise>
+		AND CT.CD_NM_ENG LIKE CONCAT(CONCAT('%', #{CD_NM}), '%')
+		</otherwise>
+	</choose>
+</if>
+ORDER BY CT.SORT
+</select>
+	
+<!-- 공통코드의 코드타입에 따른 상세코드를 조회한다.(공통코드 관리화면에서 사용) -->	
+<select id="selectRtnCodeDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT ROWNUM AS ROW_NUMBER
+         , ROW_TBL.*
+     FROM ( 
+			SELECT A.GROUP_CD
+			     , A.CD_TYPE
+			     , A.CD
+			     , A.CD_NM
+			     , CD_USE_FR_DT   AS CD_USE_FR_DT
+			     , CD_USE_TO_DT   AS CD_USE_TO_DT
+			     , A.ETC_INFO01
+			     , A.ETC_INFO02
+			     , A.ETC_INFO03
+			     , A.USE_YN
+			     , CASE WHEN A.USE_YN = 'Y'
+			            THEN '사용'
+			            ELSE '미사용'
+			        END                                    AS USE_YN_NM
+			     , A.SORT_ORD
+			     , ( SELECT REGR_ID FROM PLT_COMN_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD = A.GROUP_CD AND CD = LTRIM(RTRIM('****')) ) AS REGR_ID
+			  FROM PLT_COMN_CD A
+			 WHERE 1 =1
+			   AND A.CUSTCO_ID = #{CUSTCO_ID}::INT
+			   AND A.CD    != LTRIM(RTRIM('****'))
+			<if test="GROUP_CD !='' and GROUP_CD != null">
+			   AND GROUP_CD    = #{GROUP_CD}
+			</if>
+			 ORDER BY A.SORT_ORD, A.CD_TYPE, A.CD     
+     ) ROW_TBL
+        
+</select>
+
+<!-- PLT_COMN_CD(공통코드정보) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_COMN_CD"  parameterType= "java.util.HashMap">
+
+INSERT INTO PLT_COMM_CD
+       ( 
+		 GROUP_CD_ID
+		, CD_ID
+		, CUSTCO_ID
+		, CD_NM
+		, CD_EXPLN
+      	<if test="CD_VL != '' and CD_VL != null and CD_VL != undefined">
+			, CD_VL
+		</if>
+      	<if test="SYS_CD_YN != '' and SYS_CD_YN != null and SYS_CD_YN != undefined">
+			, SYS_CD_YN
+		</if>
+		, SORT_ORD
+		, USE_YN
+		, DEL_YN
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+       )
+ VALUES ( 
+		 #{GROUP_CD_ID}
+		, #{CD_ID}
+		, #{CUSTCO_ID}
+		, #{CD_NM}
+		, #{CD_EXPLN}
+      	<if test="CD_VL != '' and CD_VL != null and CD_VL != undefined">
+			, #{CD_VL}
+		</if>
+      	<if test="SYS_CD_YN != '' and SYS_CD_YN != null and SYS_CD_YN != undefined">
+			, #{SYS_CD_YN}
+		</if>
+		<choose>
+		<when test="SORT_ORD != '' and SORT_ORD != null and SORT_ORD != undefined">
+			, #{SORT_ORD}
+		</when>
+		<otherwise>
+			, (SELECT COALESCE(MAX(SORT_ORD),0)+1
+				FROM PLT_COMM_CD
+				WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = #{GROUP_CD_ID})
+		</otherwise>
+		</choose>
+		, #{USE_YN}
+		, 'N'
+		, #{USER_ID}
+		, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+		, #{USER_ID}
+		, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+       )
+
+</insert>
+	
+<!-- PLT_COMN_CD(공통코드정보) 테이블 수정 -->	
+<!-- 상위 공통코드 수정 -->
+<update id="UPDATE_PLT_COMN_CD"  parameterType="java.util.HashMap">
+UPDATE PLT_COMM_CD
+	SET 
+		CD_NM = #{CD_NM}
+		, CD_EXPLN = #{CD_EXPLN}
+		<if test='GROUP_CD_ID != "*"'>
+			,CD_ID = #{CD_ID}
+		</if>
+      	<if test="CD_VL != '' and CD_VL != null and CD_VL != undefined">
+			, CD_VL = #{CD_VL}
+		</if>
+		<if test="SORT_ORD != '' and SORT_ORD != null and SORT_ORD != undefined">
+			, SORT_ORD = #{SORT_ORD}
+		</if>
+		, USE_YN = #{USE_YN} 
+		, DEL_YN = 'N'
+		, MDFR_ID = #{USER_ID}
+		, MDFCN_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')   
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+		AND CD_ID = #{BF_CD_ID}
+		<if test='GROUP_CD_ID != "*"'>
+			AND GROUP_CD_ID = #{GROUP_CD_ID}
+		</if>
+</update>
+
+<!-- PLT_COMN_CD(공통코드정보) 데이터 삭제 -->
+<!-- 데이터 삭제x 데이터 DEL_YN='Y' -->	
+<!--
+<delete id="DELETE_PLT_COMN_CD"  parameterType="java.util.HashMap">
+DELETE FROM PLT_COMM_CD
+ WHERE 
+ 	<choose>
+		<when test='GROUP_CD_ID == "*"'>
+			(GROUP_CD_ID = #{GROUP_CD_ID}
+			AND CD_ID = #{CD_ID})
+			OR (GROUP_CD_ID =#{CD_ID})
+		</when>
+		<otherwise>
+			GROUP_CD_ID = #{GROUP_CD_ID}
+			AND CD_ID =#{CD_ID}
+		</otherwise>
+	</choose>
+</delete>
+-->
+<update id="DELETE_PLT_COMN_CD"  parameterType="java.util.HashMap">
+UPDATE PLT_COMM_CD
+SET DEL_YN = 'Y'
+WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+ 	<choose>
+		<when test='GROUP_CD_ID == "*"'>
+			AND (GROUP_CD_ID = #{GROUP_CD_ID}
+			AND CD_ID = #{CD_ID})
+			OR (GROUP_CD_ID =#{CD_ID})
+		</when>
+		<otherwise>
+			AND GROUP_CD_ID = #{GROUP_CD_ID}
+			AND CD_ID =#{CD_ID}
+		</otherwise>
+	</choose>
+</update>
+
+<!-- PLT_COMN_CD(공통코드정보) 테이블 데이터 조회 -->	
+<select id="SELECT_PLT_COMN_CD"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT GROUP_CD                      /* --그룹코드       */ 
+     , CD                            /* --코드             */ 
+     , CD_TYPE                       /* --코드구분       */ 
+     , CD_NM                         /* --코드명          */ 
+     , CD_EXPLN                       /* --코드설명        */ 
+     , CD_USE_FR_DT                  /* --코드사용시작일자       */ 
+     , CD_USE_TO_DT                  /* --코드사용종료일자       */ 
+     , CD_PRE_TYPE                   /* --코드생성구분            */ 
+     , ETC_INFO01                    /* --기타정보01     */ 
+     , ETC_INFO02                    /* --기타정보02     */ 
+     , ETC_INFO03                    /* --기타정보03     */ 
+     , USE_YN                        /* --사용여부                 */ 
+     , SORT_ORD                      /* --정렬순서                 */ 
+     , REGR_DEPT_CD                  /* --등록자부서코드        */ 
+     , REGR_ID                       /* --등록자ID     */ 
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM /* --등록일시                */ 
+     , AMDR_DEPT_CD                  /* --수정자부서코드        */ 
+     , AMDR_ID                       /* --수정자ID     */ 
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM /* --수정일시           */ 
+     , PROC_ID                       /* --처리자            */ 
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING /* --전산처리일시         */ 
+  FROM PLT_COMN_CD
+ WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+<if test="GROUP_CD 		!='' and GROUP_CD != null">		AND GROUP_CD        = #{GROUP_CD} </if>
+<if test="CD 			!='' and CD != null">			AND CD              = #{CD} </if>
+<if test="CD_TYPE 		!='' and CD_TYPE != null">		AND CD_TYPE         = #{CD_TYPE} </if>
+<if test="CD_NM 		!='' and CD_NM != null">		AND CD_NM           = #{CD_NM} </if>
+<if test="CD_EXPLN 		!='' and CD_EXPLN != null">		AND CD_EXPLN         = #{CD_EXPLN} </if>
+<if test="CD_USE_FR_DT 	!='' and CD_USE_FR_DT != null">	AND CD_USE_FR_DT    = #{CD_USE_FR_DT} </if>
+<if test="CD_USE_TO_DT 	!='' and CD_USE_TO_DT != null">	AND CD_USE_TO_DT    = #{CD_USE_TO_DT} </if>
+<if test="CD_PRE_TYPE 	!='' and CD_PRE_TYPE != null">	AND CD_PRE_TYPE     = #{CD_PRE_TYPE} </if>
+<if test="ETC_INFO01 	!='' and ETC_INFO01 != null">	AND ETC_INFO01      = #{ETC_INFO01} </if>
+<if test="ETC_INFO02 	!='' and ETC_INFO02 != null">	AND ETC_INFO02      = #{ETC_INFO02} </if>
+<if test="ETC_INFO03 	!='' and ETC_INFO03 != null">	AND ETC_INFO03      = #{ETC_INFO03} </if>
+<if test="USE_YN 		!='' and USE_YN != null">		AND USE_YN          = #{USE_YN} </if>
+<if test="SORT_ORD 		!='' and SORT_ORD != null">		AND SORT_ORD        = #{SORT_ORD} </if>
+<if test="REGR_DEPT_CD 	!='' and REGR_DEPT_CD != null">	AND REGR_DEPT_CD    = #{REGR_DEPT_CD} </if>
+<if test="REGR_ID 		!='' and REGR_ID != null">		AND REGR_ID         = #{REGR_ID} </if>
+<if test="REG_DTTM 		!='' and REG_DTTM != null">		AND REG_DTTM        = #{REG_DTTM} </if>
+<if test="AMDR_DEPT_CD 	!='' and AMDR_DEPT_CD != null">	AND AMDR_DEPT_CD    = #{AMDR_DEPT_CD} </if>
+<if test="AMDR_ID 		!='' and AMDR_ID != null">		AND AMDR_ID         = #{AMDR_ID} </if>
+<if test="UPD_DTTM 		!='' and UPD_DTTM != null">		AND UPD_DTTM        = #{UPD_DTTM} </if>
+<if test="CD_NM 		!='' and CD_NM != PROC_ID">		AND PROC_ID         = #{PROC_ID} </if>
+</select>
+	
+<!-- PLT_COMN_CD(공통코드정보) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_COMN_CD"  parameterType="java.util.HashMap" resultType="java.util.HashMap">	
+SELECT *
+  FROM ( SELECT ROWNUM AS ROW_NUMBER, A.*
+           FROM ( 
+                   SELECT GROUP_CD                      /* --그룹코드 */ 
+                        , CD                            /* --코드 */ 
+                        , CD_TYPE                       /* --코드구분 */ 
+                        , CD_NM                         /* --코드명 */ 
+                        , CD_EXPLN                       /* --코드설명 */ 
+                        , CD_USE_FR_DT                  /* --코드사용시작일자 */ 
+                        , CD_USE_TO_DT                  /* --코드사용종료일자 */ 
+                        , CD_PRE_TYPE                   /* --코드생성구분 */ 
+                        , ETC_INFO01                    /* --기타정보01 */ 
+                        , ETC_INFO02                    /* --기타정보02 */ 
+                        , ETC_INFO03                    /* --기타정보03 */ 
+                        , USE_YN                        /* --사용여부 */ 
+                        , SORT_ORD                      /* --정렬순서 */ 
+                        , REGR_DEPT_CD                  /* --등록자부서코드 */ 
+                        , REGR_ID                       /* --등록자ID */ 
+                        , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM /* --등록일시 */ 
+                        , AMDR_DEPT_CD                  /* --수정자부서코드 */ 
+                        , AMDR_ID                       /* --수정자ID */ 
+                        , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM /* --수정일시 */ 
+                        , PROC_ID                       /* --처리자 */ 
+                        , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING /* --전산처리일시 */ 
+                     FROM PLT_COMN_CD
+                    WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+<if test="GROUP_CD 		!='' and GROUP_CD != null">		AND GROUP_CD        = #{GROUP_CD} </if>
+<if test="CD 			!='' and CD != null">			AND CD              = #{CD} </if>
+<if test="CD_TYPE 		!='' and CD_TYPE != null">		AND CD_TYPE         = #{CD_TYPE} </if>
+<if test="CD_NM 		!='' and CD_NM != null">		AND CD_NM           = #{CD_NM} </if>
+<if test="CD_EXPLN 		!='' and CD_EXPLN != null">		AND CD_EXPLN         = #{CD_EXPLN} </if>
+<if test="CD_USE_FR_DT 	!='' and CD_USE_FR_DT != null">	AND CD_USE_FR_DT    = #{CD_USE_FR_DT} </if>
+<if test="CD_USE_TO_DT 	!='' and CD_USE_TO_DT != null">	AND CD_USE_TO_DT    = #{CD_USE_TO_DT} </if>
+<if test="CD_PRE_TYPE 	!='' and CD_PRE_TYPE != null">	AND CD_PRE_TYPE     = #{CD_PRE_TYPE} </if>
+<if test="ETC_INFO01 	!='' and ETC_INFO01 != null">	AND ETC_INFO01      = #{ETC_INFO01} </if>
+<if test="ETC_INFO02 	!='' and ETC_INFO02 != null">	AND ETC_INFO02      = #{ETC_INFO02} </if>
+<if test="ETC_INFO03 	!='' and ETC_INFO03 != null">	AND ETC_INFO03      = #{ETC_INFO03} </if>
+<if test="USE_YN 		!='' and USE_YN != null">		AND USE_YN          = #{USE_YN} </if>
+<if test="SORT_ORD 		!='' and SORT_ORD != null">		AND SORT_ORD        = #{SORT_ORD} </if>
+<if test="REGR_DEPT_CD 	!='' and REGR_DEPT_CD != null">	AND REGR_DEPT_CD    = #{REGR_DEPT_CD} </if>
+<if test="REGR_ID 		!='' and REGR_ID != null">		AND REGR_ID         = #{REGR_ID} </if>
+<if test="REG_DTTM 		!='' and REG_DTTM != null">		AND REG_DTTM        = #{REG_DTTM} </if>
+<if test="AMDR_DEPT_CD 	!='' and AMDR_DEPT_CD != null">	AND AMDR_DEPT_CD    = #{AMDR_DEPT_CD} </if>
+<if test="AMDR_ID 		!='' and AMDR_ID != null">		AND AMDR_ID         = #{AMDR_ID} </if>
+<if test="UPD_DTTM 		!='' and UPD_DTTM != null">		AND UPD_DTTM        = #{UPD_DTTM} </if>
+<if test="CD_NM 		!='' and CD_NM != PROC_ID">		AND PROC_ID         = #{PROC_ID} </if>
+                    ) A
+            ) A
+        WHERE ROW_NUMBER BETWEEN #{START_NUM} AND #{END_NUM}
+</select>
+
+<!-- 공통코드 중복 체크 -->	
+<select id="dpcnCheck"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COUNT(CD_ID) AS CNT
+	FROM PLT_COMM_CD
+	WHERE CUSTCO_ID = #{CUSTCO_ID}
+		AND GROUP_CD_ID = #{GROUP_CD_ID}
+		AND CD_ID = #{CD_ID}
+</select>
+
+</mapper>

@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.history.dao.PhoneHistoryChangeManageMapper">
+
+	<resultMap id="mapSelectBi" type="java.util.HashMap" >
+    	<result property="TEL_TEL_NO" column="TEL_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+	</resultMap>
+	
+	<resultMap id="mapSelectClob" type="java.util.HashMap" >
+		<result property="BF_SOLT" column="BF_SOLT" javaType="java.lang.String" jdbcType="VARCHAR" />
+		<result property="AF_SOLT" column="AF_SOLT" javaType="java.lang.String" jdbcType="VARCHAR" />
+		<result property="BF_DTL_MATT" column="BF_DTL_MATT" javaType="java.lang.String" jdbcType="VARCHAR" />
+		<result property="AF_DTL_MATT" column="AF_DTL_MATT" javaType="java.lang.String" jdbcType="VARCHAR" />
+		<result property="REG_MAN_OFFC_NO" column="REG_MAN_OFFC_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+    	<result property="REG_MAN_MOBIL" column="REG_MAN_MOBIL" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+    	<result property="SEND_MAN_NO" column="SEND_MAN_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+	</resultMap>
+	
+	<resultMap id="mapSelectDe" type="java.util.HashMap" >
+    	<result property="CUST_TEL_NO" column="CUST_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+    	<result property="SEND_MAN_NO" column="SEND_MAN_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+	</resultMap>
+
+	<!-- 상담이력변경관리 조회(공제) -->
+	<select id="selectRtnCnslHistChngMngDe" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+   		 SELECT ROW_TBL.*
+		         , PAG_TBL.*
+		     FROM (
+				    SELECT A.CHNG_HIST_SEQ				/*변경이력일련번호*/
+						,A.CNSL_HIST_NO					/*상담이력번호*/
+						,A.CNSL_HIST_DTL_NO				/*상담이력상세번호*/
+						,A.CHNG_DTIM					/*변경일시*/
+						,(SELECT USER_NM
+		                    FROM PLT_USER K
+		                   WHERE A.REQ_CSLT_ID = K.USER_ID) AS REQ_CSLT_NM 			/*요청상담사명*/
+						,(SELECT USER_NM
+		                    FROM PLT_USER K
+		                   WHERE A.APRV_CSLT_ID = K.USER_ID) AS APRV_CSLT_NM 			/*승인상담사명*/
+						,A.CHNG_REQ_CNTN												/*변경요청내용*/
+						,(SELECT CD_NM
+					        FROM PLT_COMN_CD B
+					       WHERE GROUP_CD = 'RE002'
+					         AND A.CHNG_PROC_TY = B.CD) AS CHNG_PROC_TY_NM				/* 변경처리구분*/
+						,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.af_cnsl_typ_cd  ) AS AF_CNSL_TYP_NM
+            			,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.af_cnsl_typ_cd_2  ) AS AF_CNSL_TYP_NM_2
+            			,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.af_cnsl_typ_cd_3  ) AS AF_CNSL_TYP_NM_3
+            			,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.af_cnsl_typ_cd_4  ) AS AF_CNSL_TYP_NM_4
+		                ,(SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT007' AND CD = A.AF_CALL_TY) AS AF_CALL_TY_NM
+          				,(SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT007' AND CD = A.BF_CALL_TY) AS BF_CALL_TY_NM
+		                ,A.AF_CNSL_TYP_CD     	
+		                ,A.BF_CNSL_TYP_CD	              
+		                ,A.AF_CNSL_TYP_CD_2        		             
+		                ,A.AF_CNSL_TYP_CD_3		              
+		                ,A.AF_CNSL_TYP_CD_4   
+		                ,A.AF_CALL_TY       
+						,(SELECT CD_NM
+					        FROM PLT_COMN_CD B
+					       WHERE GROUP_CD = 'CO001'
+					         AND A.AF_PROC_RSLT = B.CD) AS AF_PROC_RSLT_NM		/*변경후처리결과*/
+					    ,A.AF_PROC_RSLT
+					    ,(SELECT CD_NM
+				               FROM PLT_COMN_CD K
+				              WHERE GROUP_CD = 'CO002'
+				                AND A.AF_UN_PROC_RESN = K.CD) AS AF_UN_PROC_RESN_NM  /*변경후미처리사유*/
+				        ,A.AF_UN_PROC_RESN
+						,A.AF_SUMM						/*변경후요약*/
+						,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.BF_CNSL_TYP_CD  ) AS BF_CNSL_TYP_NM
+            			,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.BF_CNSL_TYP_CD_2  ) AS BF_CNSL_TYP_NM_2
+            			,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.BF_CNSL_TYP_CD_3  ) AS BF_CNSL_TYP_NM_3
+           				,(select cnsl_typ_NM from plt_cht_cnsl_typ where custco_id = #{ASP_NEWCUST_KEY} and cnsl_typ_cd = A.BF_CNSL_TYP_CD_4  ) AS BF_CNSL_TYP_NM_4
+						
+						,(SELECT CD_NM
+					        FROM PLT_COMN_CD B
+					       WHERE GROUP_CD = 'CO001'
+					         AND A.BF_PROC_RSLT = B.CD) AS BF_PROC_RSLT_NM		/*변경전처리결과*/
+					    ,A.BF_PROC_RSLT
+					    ,(SELECT CD_NM
+				               FROM PLT_COMN_CD K
+				              WHERE GROUP_CD = 'CO002'
+				                AND A.BF_UN_PROC_RESN = K.CD) AS BF_UN_PROC_RESN_NM  /*변경전미처리사유*/  
+				        ,A.BF_UN_PROC_RESN        
+						,A.BF_SUMM						/*변경전요약*/
+						,B.CNSL_BEGIN_DATE        		/*상담시작일자*/
+				        ,B.CNSL_EOT_DATE           		/*상담종료일자*/
+				        ,B.CNSL_BEGIN_TIME  			/* 상담시작시간*/
+					    ,SUBSTR(B.CNSL_EOT_TIME,0,2)||':'|| SUBSTR(B.CNSL_EOT_TIME,3,2) ||':'|| SUBSTR(B.CNSL_EOT_TIME,5,6) AS CNSL_EOT_TIME 		  /* 상담종료시간*/	
+						,(SELECT CD_NM
+					      FROM PLT_COMN_CD
+					     WHERE GROUP_CD = 'PLT007'
+					       AND CD = B.CALL_TY) AS CALL_TY_NM							/* 콜유형*/
+						,(SELECT USER_NM
+		                  FROM PLT_USER K
+		                 WHERE B.CSLT_ID = K.USER_ID) AS CSLT_NM 			/*상담원명*/
+						,B.SEND_MAN_NO             							/*전화번호*/ 
+						,B.CU_NM                     	/*조합명*/   
+				        ,B.SECU_NO                   	/*증권번호*/ 
+						,B.RDWT_FILE_PATH										/*녹취파일명 */
+						,B.RDWT_ID
+						,B.CUST_TEL_NO      		/* 고객전화번호*/
+						,B.CUST_NM              			/*고객명*/
+						,A.BF_CNSL_CNTN
+						,A.AF_CNSL_CNTN
+						,A.AF_RDWT_FILE_NM
+						,A.BF_RDWT_FILE_NM
+						,A.REG_DTIM
+						,B.CALL_TY
+                        ,A.BF_CNSL_CONT					/* 문의내용 */
+                        ,A.BF_VIS_PATH					/* 내원경로 */
+                        ,A.BF_DISA_ITEM					/* 진료항목 */
+                        ,A.BF_CNSL_BOOK					/* 문의,예약구분 */
+                        ,A.BF_CNSL_BOOK_DT              /* 문의,예약일시 */
+                        ,A.BF_CONS_BOOK					/* 상담예약 */
+                        ,A.BF_CONS_BOOK_DT              /* 상담예약일시 */
+                        ,A.BF_OPER_BOOK					/* 수술예약 */
+                        ,A.BF_OPER_BOOK_DT              /* 수술예약일시 */
+                        ,A.BF_OPERATION					/* 수술 */
+                        ,A.BF_OPERATION_DT              /* 수술일시 */
+                        ,A.BF_ETC						/* 특이사항/비고 */
+                        ,A.BF_OPERATION_COST			/* 수술비용 */
+                        ,A.BF_VIS_MANAGE				/* 상담내원담당 */
+                        ,A.BF_OPER_MANAGE				/* 수술예약담당 */
+                        ,A.BF_MANAGE					/* 담당자 */
+                        ,A.BF_VIS_BOOK					/* 상담내원 */
+                        ,A.BF_VIS_BOOK_DT				/* 상담내원일자 */
+                        ,A.BF_VIS_TERM					/* 간격일자 */
+                        ,A.BF_CUST_NM					/* 고객명*/
+                        ,A.AF_CNSL_CONT					/* 문의내용 */
+                        ,A.AF_VIS_PATH					/* 내원경로 */
+                        ,A.AF_DISA_ITEM					/* 진료항목 */
+                        ,A.AF_CNSL_BOOK					/* 문의,예약구분 */
+                        ,A.AF_CNSL_BOOK_DT              /* 문의,예약일시 */
+                        ,A.AF_CONS_BOOK					/* 상담예약 */
+                        ,A.AF_CONS_BOOK_DT              /* 상담예약일시 */
+                        ,A.AF_OPER_BOOK					/* 수술예약 */
+                        ,A.AF_OPER_BOOK_DT              /* 수술예약일시 */
+                        ,A.AF_OPERATION					/* 수술 */
+                        ,A.AF_OPERATION_DT              /* 수술일시 */
+                        ,A.AF_ETC						/* 특이사항/비고 */
+                        ,A.AF_OPERATION_COST			/* 수술비용 */
+                        ,A.AF_VIS_MANAGE				/* 상담내원담당 */
+                        ,A.AF_OPER_MANAGE				/* 수술예약담당 */
+                        ,A.AF_MANAGE					/* 담당자 */
+                        ,A.AF_VIS_BOOK					/* 상담내원 */ 
+                        ,A.AF_VIS_BOOK_DT				/* 상담내원일자 */
+                        ,A.AF_VIS_TERM					/* 간격일자 */
+                        ,A.AF_CUST_NM					/* 고객명*/
+                        ,BF_MAN_REAL_DRIVER				/* 만트럭_변경전 실운전자 */
+						,BF_MAN_CUST_TY					/* 만트럭_변경전 고객구분 */
+						,BF_MAN_PHONE_NO				/* 만트럭_변경전 연락처 */
+						,BF_MAN_VEHICLE_TY				/* 만트럭_변경전 차량 */
+						,BF_MAN_SITE					/* 만트럭_변경전 지역 */
+						,(SELECT CD_NM
+							FROM PLT_COMN_CD
+							WHERE GROUP_CD = 'MAN001'
+								AND CD = BF_MAN_SITE) AS BF_MAN_SITE_NM
+						,BF_MAN_CENTER					/* 만트럭_변경전 서비스센터 */
+						,(SELECT CD_NM
+							FROM PLT_COMN_CD
+							WHERE GROUP_CD = 'MAN002'
+								AND CD = BF_MAN_CENTER) AS BF_MAN_CENTER_NM
+						,AF_MAN_REAL_DRIVER				/* 만트럭_변경후 실운전자 */
+						,AF_MAN_CUST_TY					/* 만트럭_변경후 고객구분 */
+						,AF_MAN_PHONE_NO				/* 만트럭_변경후 연락처 */
+						,AF_MAN_VEHICLE_TY				/* 만트럭_변경후 차량 */
+						,AF_MAN_SITE					/* 만트럭_변경후 지역 */
+						,(SELECT CD_NM
+							FROM PLT_COMN_CD
+							WHERE GROUP_CD = 'MAN001'
+								AND CD = AF_MAN_SITE) AS AF_MAN_SITE_NM
+						,AF_MAN_CENTER					/* 만트럭_변경후 서비스센터 */
+						,(SELECT CD_NM
+							FROM PLT_COMN_CD
+							WHERE GROUP_CD = 'MAN002'
+								AND CD = AF_MAN_CENTER) AS AF_MAN_CENTER_NM
+						,BF_PLEN					/* 퇴직연금_변경전 플랜명 */
+						,BF_RCVR					/* 퇴직연금_변경전 수신자 */
+						,BF_RCVR_INFO				/* 퇴직연금_변경전 수신자정보 */
+						,BF_INTEREST				/* 퇴직연금_변경전 관심도 */
+						,BF_NON_HOPE				/* 퇴직연금_변경전 가입비희망사유 */
+						,AF_PLEN					/* 퇴직연금_변경후 플랜명 */
+						,AF_RCVR					/* 퇴직연금_변경후 수신자 */
+						,AF_RCVR_INFO				/* 퇴직연금_변경후 수신자정보 */
+						,AF_INTEREST				/* 퇴직연금_변경후 관심도*/
+						,AF_NON_HOPE				/* 퇴직연금_번경후 가입비희망사유 */
+				    FROM PLT_PHN_CNSL_CHG_HST A, PLT_PHN_CNSL B
+				   WHERE A.CNSL_HIST_NO = B.CNSL_HIST_NO
+				   AND B.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				    <if test="SEARCH_DT_FROM != '' and SEARCH_DT_FROM != NULL"> 
+				      AND A.REG_DTIM BETWEEN #{SEARCH_DT_FROM} || '000000' AND #{SEARCH_DT_TO} || '235959'
+				   </if> 
+		           <if test="CHNG_PROC_TY != '' and CHNG_PROC_TY != null"> 
+		           	 AND A.CHNG_PROC_TY = #{CHNG_PROC_TY}
+		           </if>
+		           <if test="CNSL_HIST_NO != '' and CNSL_HIST_NO != null"> 
+		           	 AND A.CNSL_HIST_NO = #{CNSL_HIST_NO}
+		           </if>
+		       	 ) ROW_TBL
+					, (
+						SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+						  FROM PLT_PHN_CNSL_CHG_HST A, PLT_PHN_CNSL B
+						 WHERE A.CNSL_HIST_NO = B.CNSL_HIST_NO
+						 AND B.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+						   <if test="SEARCH_DT_FROM != '' and SEARCH_DT_FROM != NULL"> 
+						      AND A.REG_DTIM BETWEEN #{SEARCH_DT_FROM} || '000000' AND #{SEARCH_DT_TO} || '235959'
+						   </if> 
+				           <if test="CHNG_PROC_TY != '' and CHNG_PROC_TY != null"> 
+				           	 AND A.CHNG_PROC_TY = #{CHNG_PROC_TY}
+				           </if>	
+				           <if test="CNSL_HIST_NO != '' and CNSL_HIST_NO != null"> 
+				           	 AND A.CNSL_HIST_NO = #{CNSL_HIST_NO}
+				           </if>
+				 	) PAG_TBL
+				 	ORDER BY ROW_TBL.REG_DTIM DESC
+	</select>
+	
+	<!-- 상담이력관리 수정(업무지원) -->	
+	<update id="updateRtnCnslHistChngMng"  parameterType="java.util.HashMap">
+		UPDATE PLT_PHN_CNSL_CHG_HST
+		   SET CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS') 
+			  ,CHNG_MAN = #{REQ_CSLT_NM}       
+			  ,APRV_CSLT_ID = #{APRV_CSLT_ID}     /*승인상담원*/  
+		      ,CHNG_PROC_TY = '00002'
+		 WHERE 1 = 1
+		   AND CHNG_HIST_SEQ = #{CHNG_HIST_SEQ}
+	</update>
+	
+</mapper>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.common.date.dao.DateCmmnMapper">
+	<!--
+	
+	서버의 현재 일시를 포맷을 적용하여 검색한다.
+	
+	-->
+	<select id="selectServerDate"  parameterType="java.util.HashMap" resultType="java.util.HashMap" >   
+		SELECT TO_CHAR(SYSDATE, #{FORMAT01}) AS RET_VAL FROM DUAL
+		  
+	</select>
+	<!--
+	
+	기준시간 기준으로 날짜를 더한 결과 일을 검색한다.
+	
+	-->
+	<select id="selectAddDate"  parameterType="java.util.HashMap" resultType="java.util.HashMap" >   
+		SELECT TO_CHAR(
+<if test="BASE_DATE == 'SYSDATE'">
+	<if test="DATE_CASE == 'yyyy' ">	ADD_MONTHS(SYSDATE, 12 * #{DIFFER_NUM})											</if>
+	<if test="DATE_CASE == 'mm'   ">	ADD_MONTHS(SYSDATE, #{DIFFER_NUM})												</if>
+	<if test="DATE_CASE == 'dd'   ">	SYSDATE + #{DIFFER_NUM}															</if>
+	<if test="DATE_CASE == 'hh'   ">	SYSDATE + (1/24) * #{DIFFER_NUM}												</if>
+	<if test="DATE_CASE == 'mi'   ">	SYSDATE + (1/24) * (1/60) * #{DIFFER_NUM}										</if>
+	<if test="DATE_CASE == 'ss'   ">	SYSDATE + (1/24) * (1/60) * (1/60) * #{DIFFER_NUM}								</if>
+</if>
+<if test="BASE_DATE != 'SYSDATE'">
+	<if test="DATE_CASE == 'yyyy' ">	ADD_MONTHS(TO_DATE(#{BASE_DATE}, #{FORMAT01}), 12 * #{DIFFER_NUM})				</if>
+	<if test="DATE_CASE == 'mm'   ">	ADD_MONTHS(TO_DATE(#{BASE_DATE}, #{FORMAT01}), #{DIFFER_NUM})					</if>
+	<if test="DATE_CASE == 'dd'   ">	TO_DATE(REPLACE(#{BASE_DATE}, '/', ''), #{FORMAT01}) + #{DIFFER_NUM}							</if>
+	<if test="DATE_CASE == 'hh'   ">	TO_DATE(REPLACE(#{BASE_DATE}, '/', ''), #{FORMAT01}) + (1/24) * #{DIFFER_NUM}					</if>
+	<if test="DATE_CASE == 'mi'   ">	TO_DATE(REPLACE(#{BASE_DATE}, '/', ''), #{FORMAT01}) + (1/24) * (1/60) * #{DIFFER_NUM}			</if>
+	<if test="DATE_CASE == 'ss'   ">	TO_DATE(REPLACE(#{BASE_DATE}, '/', ''), #{FORMAT01}) + (1/24) * (1/60) * (1/60) * #{DIFFER_NUM}	</if>
+</if>
+		      , #{FORMAT01})  AS RET_VAL
+		   
+	</select>
+	<!-- 
+	
+	두날짜의 차이를 구분에 따라 계산하여 검색한다.
+	
+	-->
+	<select id="selectDiffDate"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">   
+		SELECT 
+<if test="DATE_CASE == 'YEAR'	">		TRUNC(MONTHS_BETWEEN(TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI'), TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI'))/12)	</if>
+<if test="DATE_CASE == 'MONTH'	">		TRUNC(MONTHS_BETWEEN(TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI'), TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI')))		</if>
+<if test="DATE_CASE == 'DAY'	">		CEIL(TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI') - TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI'))						</if>
+<if test="DATE_CASE == 'HOUR'	">		TRUNC(((TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI') - TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI')) - TRUNC(TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI') - TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI'))) * 24)	</if>
+<if test="DATE_CASE == 'MINUTE'	">		FLOOR(((((TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI') - TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI')) - TRUNC(TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI') - TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI'))) * 24) - TRUNC(((TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI') - TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI'))-TRUNC(TO_DATE(#{DATE_TO},'YYYYMMDDHH24MI') - TO_DATE(#{DATE_FROM},'YYYYMMDDHH24MI'))) * 24)) * 60)	</if>
+			  AS RET_VAL
+		 
+	</select>
+	<!-- 
+	
+	기준일자의 마지막일을 검색한다.
+	
+	-->
+	<select id="selectLastDay"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">   
+		SELECT TO_CHAR(LAST_DAY(
+		<if test="BASE_DATE == 'SYSDATE'">SYSDATE</if>
+		<if test="BASE_DATE != 'SYSDATE'">TO_DATE(#{BASE_DATE}, #{FORMAT01})</if>
+		       ), #{FORMAT01}) AS RET_VAL
+		 
+	</select>
+	<!-- 
+	
+	서버시간 기준으로 오늘날짜, 3일전, 7주일전,  등의 날짜를 검색한다.
+	
+	-->
+	<select id="selectDatePattern"  parameterType="java.util.HashMap" resultType="java.util.HashMap">   
+		SELECT TO_CHAR(SYSTIMESTAMP            , #{FORMAT01})  AS TO_DAY
+		     , TO_CHAR(SYSDATE - 3             , #{FORMAT01})  AS TO_DAY_3
+		     , TO_CHAR(SYSDATE - 7             , #{FORMAT01})  AS TO_DAY_7
+		     , TO_CHAR(SYSDATE + 30            , #{FORMAT01})  AS TO_DAY_30
+		     , TO_CHAR(ADD_MONTHS(SYSDATE, -1) , #{FORMAT01})  AS TO_MONTH_1
+		     , TO_CHAR(ADD_MONTHS(SYSDATE, -3) , #{FORMAT01})  AS TO_MONTH_3
+		  
+	</select>
+	<!--
+	
+	서버시간 기준으로 오늘날짜, 3일후, 7일후, 1달후, 3세달후의 날짜를 검색한다.
+	
+	-->
+	<select id="selectAfterDatePattern"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">   
+		SELECT TO_CHAR(SYSTIMESTAMP               , #{FORMAT01})   AS TO_DAY
+		     , TO_CHAR(SYSDATE                    , #{FORMAT01})   AS TO_DAY_0
+		     , TO_CHAR(SYSDATE + 1                , #{FORMAT01})   AS TO_DAY_1
+		     , TO_CHAR(SYSDATE + 3                , #{FORMAT01})   AS TO_DAY_3
+		     , TO_CHAR(SYSDATE + 7                , #{FORMAT01})   AS TO_DAY_7
+		     , TO_CHAR(ADD_MONTHS(SYSDATE, 1)     , #{FORMAT01})   AS TO_MONTH_1
+		     , TO_CHAR(ADD_MONTHS(SYSDATE, 3)     , #{FORMAT01})   AS TO_MONTH_3
+		  
+	</select>
+</mapper>

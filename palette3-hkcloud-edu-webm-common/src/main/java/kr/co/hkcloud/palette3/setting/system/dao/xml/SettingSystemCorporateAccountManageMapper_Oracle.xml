@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemCorporateAccountManageMapper">
+
+<!-- ######################################################################### -->
+<!-- 고객사목록 데이터 페이징 조회 조건 파라미터 -->
+<sql id="selectRtnPageAspCustList-params">
+
+<if test="REG_DTTM_FROM != '' and REG_DTTM_FROM != null"> AND TAC.REG_DTTM >= #{REG_DTTM_FROM} </if> <!-- 조회기간 시작일자 -->
+<if test="REG_DTTM_TO != '' and REG_DTTM_TO != null"> <![CDATA[ AND TAC.REG_DTTM <= #{REG_DTTM_TO} ]]></if> <!-- 조회기간 종료일자 -->
+<if test="SEARCH_CO_NM != '' and SEARCH_CO_NM != null"> AND TAC.CO_NM LIKE '%' || #{SEARCH_CO_NM} || '%' </if> <!-- 고객사명 시작일자 -->
+<if test="USER_ID != '' and USER_ID != null"> AND TAC.REGR_ID LIKE '%' || #{USER_ID} || '%' </if> <!-- 등록자ID 시작일자 -->
+<if test="USER_NM != '' and USER_NM != null"> AND TB1.USER_NM LIKE '%' || #{USER_NM} || '%' </if> <!-- 등록자명 시작일자 -->
+<if test="USER_NICK != '' and USER_NICK != null"> AND TB1.USER_NICK LIKE '%' || #{USER_NICK} || '%' </if> <!-- 등록자명 시작일자 -->
+</sql>
+
+<!-- 고객사목록 데이터 페이징 조회 -->
+<select id="selectRtnPageAspCustList"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+SELECT ROW_TBL.*
+  FROM ( 
+         SELECT ROW_NUMBER() OVER(ORDER BY TAC.REG_DTTM DESC) AS ROW_NUMBER
+              , TAC.CUSTCO_ID  AS ASP_CUST_INFO  /*ASP_고객사_KEY*/
+              , TAC.CO_NM         /*회사명*/
+              , TAC.PHN_NO          /*전화번호*/
+              , TAC.EML              /*이메일*/
+              , TAC.HOMEPAGE_ADDR      /*홈페이지주소*/
+              , TAC.PRODUCT_CD         /*상품코드*/
+              , PDT.PRODUCT_NAME       /*상품명*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI') AS SRVC_BGNG_DT  /*서비스시작일시*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI') AS SRVC_END_DT      /*서비스종료일시*/
+              , TAC.SRVC_MAINT_YN       /*서비스유지여부*/
+              , TAC.BZMN_COR        /*사업자등록증*/
+              , TAC.ACCOUNT_CREATION_LIMIT  /*계정생성제한건수*/
+              , TAC.REGR_DEPT_CD       /*등록자부서*/
+              , TAC.REGR_ID            /*등록자아이디*/
+              , TO_CHAR(TAC.REG_DTTM, 'YYYY-MM-DD HH24:MI:SS')      AS REG_DTTM      /*등록일시*/
+              , TAC.AMDR_DEPT_CD       /*수정자부서*/
+              , TAC.AMDR_ID            /*수정자아이디*/
+              , TO_CHAR(TAC.UPD_DTTM, 'YYYY-MM-DD HH24:MI:SS')      AS UPD_DTTM      /*수정일시*/
+              , TAC.PROC_ID            /*처리자아이디*/
+              , TO_CHAR(TAC.IT_PROCESSING, 'YYYY-MM-DD HH24:MI:SS') AS IT_PROCESSING /*전산처리일시*/
+              , TAC.CHAT_YN				/* 채팅사용여부 */
+              , TAC.ALRIM_YN			/* 알림톡 사용여부 */
+              , TAC.SMS_YN			/* 문자 사용여부 */
+           FROM PLT_ASP_CUS TAC
+           LEFT OUTER JOIN PLT_USER TB1
+             ON TAC.REGR_ID = TB1.USER_ID
+           LEFT OUTER JOIN PLT_ASP_PRD PDT
+             ON TAC.PRODUCT_CD = PDT.PRODUCT_CD
+          WHERE 1=1
+          <include refid="selectRtnPageAspCustList-params"/>
+          ORDER BY TAC.REG_DTTM DESC
+       ) ROW_TBL
+
+</select>
+
+<!-- 고객사목록 데이터 페이징 조회 -->
+<select id="selectAspQueue"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT CUSTCO_ID AS ASP_NEWCUST_KEY
+			, CO_NM AS CO_NM
+			, PHN_NO AS PHN_NO
+	FROM PLT_ASP_CUS
+	WHERE CUSTCO_ID = #{ASP_CUST_INFO}
+</select>
+
+<!-- 고객사목록 큐리스트 조회 -->
+<select id="selectQueueList"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT    CUSTCO_ID
+			, CO_NM
+			, PHN_NO
+			, QUEUE_NUM
+			, REGR_ID
+			, REG_DTTM
+			, AMDR_ID
+			, UPD_DTTM
+			, IT_PROCESSING
+	FROM PLT_ASP_QUEUE
+	WHERE CUSTCO_ID = #{ASP_CUST_INFO}
+</select>
+
+
+
+<!-- 고객사상세 데이터 조회 -->
+<select id="selectRtnAspCustDetail"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+
+SELECT TAC.CUSTCO_ID AS ASP_CUST_INFO  /*ASP_고객사_KEY*/
+     , TAC.CO_NM         /*회사명*/
+     , TAC.PHN_NO          /*전화번호*/
+     , TAC.EML              /*이메일*/
+     , TAC.HOMEPAGE_ADDR      /*홈페이지주소*/
+     , TAC.PRODUCT_CD         /*상품코드*/
+     , PDT.PRODUCT_NAME       /*상품명*/
+     , TAC.PRODUCT_CD            /*서비스코드*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI') AS SRVC_BGNG_DT  /*서비스시작일시*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD')       AS SERV_START_DATE  /*서비스시작일자*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'HH24:MI')          AS SERV_START_TIME  /*서비스시작시간*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI')   AS SRVC_END_DT    /*서비스종료일시*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD')         AS SERV_END_DATE    /*서비스종료일자*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'HH24:MI')            AS SERV_END_TIME    /*서비스종료시간*/
+     , TAC.SRVC_MAINT_YN       /*서비스유지여부*/
+     , TAC.BZMN_COR        /*사업자등록증*/
+     , TAC.ACCOUNT_CREATION_LIMIT  /*계정생성제한건수*/
+     , TAC.REGR_DEPT_CD       /*등록자부서*/
+     , TAC.REGR_ID            /*등록자아이디*/
+     , TO_CHAR(TAC.REG_DTTM, 'YYYY-MM-DD HH24:MI:SS')      AS REG_DTTM      /*등록일시*/
+     , TAC.AMDR_DEPT_CD       /*수정자부서*/
+     , TAC.AMDR_ID            /*수정자아이디*/
+     , TO_CHAR(TAC.UPD_DTTM, 'YYYY-MM-DD HH24:MI:SS')      AS UPD_DTTM      /*수정일시*/
+     , TAC.PROC_ID            /*처리자아이디*/
+     , TO_CHAR(TAC.IT_PROCESSING, 'YYYY-MM-DD HH24:MI:SS') AS IT_PROCESSING /*전산처리일시*/
+  FROM PLT_ASP_CUS TAC
+  LEFT OUTER JOIN PLT_USER TB1
+    ON TAC.REGR_ID = TB1.USER_ID
+  LEFT OUTER JOIN PLT_ASP_PRD PDT
+    ON TAC.PRODUCT_CD = PDT.PRODUCT_CD
+   AND TB1.CUSTCO_ID = #{ASP_CUST_INFO}
+ WHERE TAC.CUSTCO_ID = #{ASP_CUST_INFO}
+
+</select>
+
+<!-- ASP고객사 서비스 정보  조회 -->
+<!--20200720 검증필요(테스트데이터가 존재하지 않아 확인 불가능) -->
+<select id="selectRtnAspCustServiceInfo"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+SELECT A.*
+     , ROUND((SELECT SUM(AA.USER_CHARGE * TRUNC(TO_DATE(END_DATE, 'YYYYMMDD') - TO_DATE(CHARGE_START_DATE, 'YYYYMMDD')) / MONTH_ALL_CNT) AS DAY_CHARGE
+          FROM (
+               SELECT CASE WHEN START_DATE <![CDATA[>=]]> TO_CHAR(TRUNC(SYSDATE,'MM'), 'YYYYMM')||'01'
+                              THEN START_DATE
+                              ELSE TO_CHAR(TRUNC(SYSDATE,'MM'), 'YYYYMM')||'01'
+                          END AS CHARGE_START_DATE
+                       , (SELECT COUNT(*) FROM PLT_CAL WHERE YYYYMMDD BETWEEN TO_CHAR(TRUNC(SYSDATE,'MM'), 'YYYYMM')||'01' AND TO_CHAR(LAST_DAY(SYSDATE), 'YYYYMMDD')) AS MONTH_ALL_CNT
+                       , A.PRODUCT_CD
+                       , A.USER_ID
+                       , A.END_DATE
+                       , CASE WHEN USER_GROUP = 'AGENT'
+                                THEN 1.0 * A.SERV_AGENT_CHARGE * CHARGE_RATE
+                              WHEN USER_GROUP = 'MANAGER'
+                                THEN 1.0 * A.SERV_MANAGER_CHARGE * CHARGE_RATE
+                          END  AS USER_CHARGE
+                    FROM (
+                          SELECT CASE WHEN TAC.PRODUCT_CD = 'STANDARD' AND TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MISS') <![CDATA[>=]]> TB1.REG_DTTM
+                           			  THEN TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYYMMDD')
+                           			WHEN TAC.PRODUCT_CD = 'STANDARD' AND TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MISS') <![CDATA[<]]>  TB1.REG_DTTM
+                           			  THEN TO_CHAR(TB1.REG_DTTM, 'YYYYMMDD')
+                           			ELSE '' END AS START_DATE
+                                , TO_CHAR(LAST_DAY(SYSDATE), 'YYYYMMDD') AS END_DATE
+                                , TB1.USER_ID
+                                , TAC.PRODUCT_CD
+                                , (SELECT DECODE(ETC_INFO01, NULL, 0, '', 0, ETC_INFO01)
+                                     FROM PLT_COMN_CD WHERE GROUP_CD = 'ASP003' AND CD = 'agent') AS SERV_AGENT_CHARGE /*상담사 금액*/  
+                                , (SELECT DECODE(ETC_INFO01, NULL, 0, '', 0, ETC_INFO01)
+                                     FROM PLT_COMN_CD WHERE GROUP_CD = 'ASP003' AND CD = 'manager') AS SERV_MANAGER_CHARGE /*관리자, 매니저 금액*/ 
+                                , (SELECT DECODE(ETC_INFO01, NULL, 0, '', 0, ETC_INFO01) * 1.0
+                                     FROM PLT_COMN_CD WHERE GROUP_CD = 'ASP001' AND CD = TAC.PRODUCT_CD) AS CHARGE_RATE /*상담사 금액비율*/  
+                                , TB7.USER_GROUP
+                             FROM PLT_USER TB1
+                             LEFT OUTER JOIN PLT_ASP_CUS TAC
+                               ON TAC.CUSTCO_ID = TB1.CUSTCO_ID
+                            INNER JOIN (
+                                 SELECT USER_ID
+                                      , CASE WHEN ATRT_GROUP_ID = '20190503054503024TWB168613' OR ATRT_GROUP_ID = '20190327140137132TWB3843' /*관리자, 매니저*/
+                                               THEN 'MANAGER'
+                                             WHEN ATRT_GROUP_ID = '20151106173043466TWB14896' /*상담사*/
+                                               THEN 'AGENT'
+                                         END AS USER_GROUP
+                                   FROM PLT_USER_AUTH
+                                  WHERE ATRT_GROUP_ID IN ('20190503054503024TWB168613', '20190327140137132TWB3843', '20151106173043466TWB14896')
+                                ) TB7
+                               ON TB1.USER_ID = TB7.USER_ID
+                            WHERE TAC.CUSTCO_ID = #{CUSTCO_ID}
+                         ) A
+               ) AA
+          LEFT OUTER JOIN PLT_COMN_CD TB3
+            ON AA.PRODUCT_CD = TB3.CD
+        ), 0) AS SERV_CHARGE /*관리자, 상담사 일별요금 합산*/
+  FROM (
+       SELECT TAC.CUSTCO_ID AS ASP_CUST_INFO  /*ASP_고객사_KEY*/
+              , TAC.CO_NM         /*회사명*/
+              , TAC.PHN_NO          /*전화번호*/
+              , TAC.EML              /*이메일*/
+              , TAC.HOMEPAGE_ADDR      /*홈페이지주소*/
+              , TAC.PRODUCT_CD         /*서비스코드*/
+              , PDT.PRODUCT_NAME       /*이용상품*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI') AS SRVC_BGNG_DT  /*서비스시작일시*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD')       AS SERV_START_DATE  /*서비스시작일자*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'HH24:MI')          AS SERV_START_TIME  /*서비스시작시간*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI')   AS SRVC_END_DT    /*서비스종료일시*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD')         AS SERV_END_DATE    /*서비스종료일자*/
+              , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'HH24:MI')            AS SERV_END_TIME    /*서비스종료시간*/
+              , TRUNC( CAST(TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI') - TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI')) AS INTEGER) ) AS LEFT_SERV_DATE/*남은기간*/
+              , TAC.SRVC_MAINT_YN       /*서비스유지여부*/
+              , TAC.BZMN_COR        /*사업자등록증*/
+              , TAC.ACCOUNT_CREATION_LIMIT  /*계정생성제한건수*/
+              , (SELECT COUNT(*) FROM PLT_USER TB1
+                                    , PLT_USER_AUTH TB7
+                                WHERE TB1.USER_ID = TB7.USER_ID
+                                  AND TB1.CUSTCO_ID = TAC.CUSTCO_ID
+                                  AND TB7.ATRT_GROUP_ID = '20151106173043466TWB14896') AS SERV_AGENT_COUNT /*이용중인 상담사수*/
+              , (SELECT COUNT(*) FROM PLT_USER TB1
+                                    , PLT_USER_AUTH TB7
+                                WHERE TB1.USER_ID = TB7.USER_ID
+                                  AND TB1.CUSTCO_ID = TAC.CUSTCO_ID
+                                  AND TB7.ATRT_GROUP_ID IN ('20190327140137132TWB3843', '20190503054503024TWB168613')) AS SERV_MANAGER_COUNT /*이용중인 관리자, 매니저수*/
+              , (SELECT CAST(DECODE(ETC_INFO01, '', '0', COALESCE(ETC_INFO01, '0')) AS INTEGER)
+                   FROM PLT_COMN_CD WHERE GROUP_CD = 'ASP003' AND CD = 'agent') as SERV_AGENT_CHARGE
+              , (SELECT CAST(DECODE(ETC_INFO01, '', '0', COALESCE(ETC_INFO01, '0')) AS INTEGER)
+                   FROM PLT_COMN_CD WHERE GROUP_CD = 'ASP003' AND CD = 'manager') as SERV_MANAGER_CHARGE
+              , (SELECT COALESCE(ETC_INFO01, '0') * 1.0
+                   FROM PLT_COMN_CD WHERE GROUP_CD = 'ASP001' AND CD = PDT.PRODUCT_CD) AS CHARGE_RATE /*금액비율*/
+           FROM PLT_ASP_CUS TAC
+           LEFT OUTER JOIN PLT_USER TB1
+             ON TAC.REGR_ID = TB1.USER_ID
+            AND TB1.CUSTCO_ID = #{CUSTCO_ID}
+           LEFT OUTER JOIN PLT_ASP_PRD PDT
+             ON TAC.PRODUCT_CD = PDT.PRODUCT_CD
+          WHERE TAC.CUSTCO_ID = #{CUSTCO_ID}
+       ) A
+</select>
+
+<!-- ASP고객사 콤보 데이터 조회 -->
+<select id="selectRtnAspCustComboData"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+
+SELECT CUSTCO_ID AS CD
+     , CO_NM AS CD_NM
+  FROM PLT_ASP_CUS
+
+</select>
+
+<!-- ASP고객 회사정보 조회 -->
+<select id="selectAspCustInfo"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+
+SELECT TAC.CUSTCO_ID AS ASP_CUST_INFO  /*ASP_고객사_KEY*/
+     , TAC.CO_NM         /*회사명*/
+     , TAC.PHN_NO          /*전화번호*/
+     , TAC.EML              /*이메일*/
+     , TAC.HOMEPAGE_ADDR      /*홈페이지주소*/
+     , TAC.PRODUCT_CD         /*상품코드*/
+     , PDT.PRODUCT_NAME       /*상품명*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI') AS SRVC_BGNG_DT  /*서비스시작일시*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD')       AS SERV_START_DATE  /*서비스시작일자*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_BGNG_DT, 'YYYYMMDDHH24MI'), 'HH24:MI')          AS SERV_START_TIME  /*서비스시작시간*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD HH24:MI')   AS SRVC_END_DT    /*서비스종료일시*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'YYYY-MM-DD')         AS SERV_END_DATE    /*서비스종료일자*/
+     , TO_CHAR(TO_DATE(TAC.SRVC_END_DT, 'YYYYMMDDHH24MI'), 'HH24:MI')            AS SERV_END_TIME    /*서비스종료시간*/
+     , TAC.SRVC_MAINT_YN       /*서비스유지여부*/
+     , TAC.BZMN_COR        /*사업자등록증*/
+     , TAC.ACCOUNT_CREATION_LIMIT  /*계정생성제한건수*/
+     , TAC.REGR_DEPT_CD       /*등록자부서*/
+     , TAC.REGR_ID            /*등록자아이디*/
+     , TO_CHAR(TAC.REG_DTTM, 'YYYY-MM-DD HH24:MI:SS')      AS REG_DTTM      /*등록일시*/
+     , TAC.AMDR_DEPT_CD       /*수정자부서*/
+     , TAC.AMDR_ID            /*수정자아이디*/
+     , TO_CHAR(TAC.UPD_DTTM, 'YYYY-MM-DD HH24:MI:SS')      AS UPD_DTTM      /*수정일시*/
+     , TAC.PROC_ID            /*처리자아이디*/
+     , TO_CHAR(TAC.IT_PROCESSING, 'YYYY-MM-DD HH24:MI:SS') AS IT_PROCESSING /*전산처리일시*/
+  FROM PLT_ASP_CUS TAC
+  LEFT OUTER JOIN PLT_USER TB1
+    ON TAC.REGR_ID = TB1.USER_ID
+  LEFT OUTER JOIN PLT_ASP_PRD PDT
+    ON TAC.PRODUCT_CD = PDT.PRODUCT_CD
+   AND TB1.CUSTCO_ID = #{CUSTCO_ID}
+ WHERE TAC.CUSTCO_ID = #{CUSTCO_ID}
+
+</select>
+
+<!-- ASP고객 신규등록 -->
+<insert id="insertRtnAspCust" parameterType="java.util.HashMap">
+INSERT INTO PLT_ASP_CUS
+(
+	  CUSTCO_ID
+<if test="CO_NM != '' 		and CO_NM != null"> , CO_NM </if>
+<if test="PHN_NO != '' 		and PHN_NO != null"> , PHN_NO </if>
+<if test="EML != '' 			and EML != null"> , EML </if>
+<if test="HOMEPAGE_ADDR != '' 	and HOMEPAGE_ADDR != null"> , HOMEPAGE_ADDR </if>
+<if test="PRODUCT_CD != '' 	    and PRODUCT_CD != null"> , PRODUCT_CD </if>
+<if test="SRVC_BGNG_DT != '' and SRVC_BGNG_DT != null"> , SRVC_BGNG_DT </if>
+<if test="SRVC_END_DT != '' 	and SRVC_END_DT != null"> , SRVC_END_DT </if>
+<if test="SRVC_MAINT_YN != '' 	and SRVC_MAINT_YN != null"> , SRVC_MAINT_YN </if>
+<if test="BZMN_COR != '' 	and BZMN_COR != null"> , BZMN_COR </if>
+<if test="CUST_AGREE_YN != '' 	and CUST_AGREE_YN != null"> , CUST_AGREE_YN </if>
+<if test="ACCOUNT_CREATION_LIMIT != ''  and ACCOUNT_CREATION_LIMIT != null"> , ACCOUNT_CREATION_LIMIT </if>
+	, CUST_AGREE_DTTM
+	, REGR_DEPT_CD
+	, REGR_ID
+	, REG_DTTM
+	, AMDR_DEPT_CD
+	, AMDR_ID
+	, UPD_DTTM
+	, PROC_ID
+	, IT_PROCESSING
+	, CHAT_YN
+	, ALRIM_YN
+	, SMS_YN
+)
+VALUES
+(
+	  #{CUSTCO_ID}
+<if test="CO_NM != '' 		and CO_NM != null"> , #{CO_NM} </if>
+<if test="PHN_NO != '' 		and PHN_NO != null"> , #{PHN_NO} </if>
+<if test="EML != '' 			and EML != null"> , #{EML} </if>
+<if test="HOMEPAGE_ADDR != '' 	and HOMEPAGE_ADDR != null"> , #{HOMEPAGE_ADDR} </if>
+<if test="PRODUCT_CD != '' 	    and PRODUCT_CD != null"> , #{PRODUCT_CD} </if>
+<if test="SRVC_BGNG_DT != '' and SRVC_BGNG_DT != null"> , #{SRVC_BGNG_DT} </if>
+<if test="SRVC_END_DT != '' 	and SRVC_END_DT != null"> , #{SRVC_END_DT} </if>
+<if test="SRVC_MAINT_YN != '' 	and SRVC_MAINT_YN != null"> , #{SRVC_MAINT_YN} </if>
+<if test="BZMN_COR != '' 	and BZMN_COR != null"> , #{BZMN_COR} </if>
+<if test="CUST_AGREE_YN != '' 	and CUST_AGREE_YN != null"> , #{CUST_AGREE_YN} </if>
+<if test="ACCOUNT_CREATION_LIMIT != '' 	and ACCOUNT_CREATION_LIMIT != null"> , #{ACCOUNT_CREATION_LIMIT} </if>
+	, SYSDATE
+	, #{REGR_DEPT_CD}
+	, #{REGR_ID}
+	, SYSDATE
+	, #{AMDR_DEPT_CD}
+	, #{AMDR_ID}
+	, SYSDATE
+	, #{PROC_ID}
+	, SYSDATE
+	, #{CHAT_YN}
+	, #{ALRIM_YN}
+	, #{SMS_YN}
+)
+
+</insert>
+
+<!-- 회사별 큐 신규등록 -->
+<insert id="insertAspQueue" parameterType="java.util.HashMap">
+INSERT INTO PLT_ASP_QUEUE
+(
+	  CUSTCO_ID
+<if test="CO_NM != '' 		and CO_NM != null"> , CO_NM </if>
+<if test="PHN_NO != '' 		and PHN_NO != null"> , PHN_NO </if>
+<if test="QUEUE_NUM != '' 		and QUEUE_NUM != null"> , QUEUE_NUM </if>
+	, REGR_ID
+	, REG_DTTM
+	, AMDR_ID
+	, UPD_DTTM
+	, IT_PROCESSING
+)
+VALUES
+(
+	  #{ASP_NEWCUST_KEY}
+<if test="CO_NM != '' 		and CO_NM != null"> , #{CO_NM} </if>
+<if test="PHN_NO != '' 		and PHN_NO != null"> , #{PHN_NO} </if>
+<if test="QUEUE_NUM != '' 		and QUEUE_NUM != null"> , #{QUEUE_NUM} </if>
+	, #{REGR_ID}
+	, SYSDATE
+	, #{AMDR_ID}
+	, SYSDATE
+	, SYSDATE
+)
+
+</insert>
+
+
+
+
+
+
+<!-- 고객사정보 업데이트 -->
+<update id="updateRtnAspCustDetail" parameterType="java.util.HashMap">
+UPDATE PLT_ASP_CUS 
+   SET AMDR_DEPT_CD = #{AMDR_DEPT_CD}
+     , AMDR_ID = #{AMDR_ID}
+     , UPD_DTTM = SYSDATE
+     , PROC_ID = #{PROC_ID}
+     , IT_PROCESSING = SYSDATE
+<if test="CO_NM != '' 		and CO_NM != null"> , CO_NM = #{CO_NM} </if>
+<if test="PHN_NO != '' 		and PHN_NO != null"> , PHN_NO = #{PHN_NO} </if>
+<if test="EML != '' 			and EML != null"> , EML = #{EML} </if>
+<if test="HOMEPAGE_ADDR != '' 	and HOMEPAGE_ADDR != null"> , HOMEPAGE_ADDR = #{HOMEPAGE_ADDR} </if>
+<if test="PRODUCT_CD != '' 	    and PRODUCT_CD != null"> , PRODUCT_CD = #{PRODUCT_CD} </if>
+<if test="SRVC_BGNG_DT != '' and SRVC_BGNG_DT != null"> , SRVC_BGNG_DT = #{SRVC_BGNG_DT} </if>
+<if test="SRVC_END_DT != '' 	and SRVC_END_DT != null"> , SRVC_END_DT = #{SRVC_END_DT} </if>
+<if test="SRVC_MAINT_YN != '' 	and SRVC_MAINT_YN != null"> , SRVC_MAINT_YN = #{SRVC_MAINT_YN} </if>
+<if test="BZMN_COR != '' 	and BZMN_COR != null"> , BZMN_COR = #{BZMN_COR} </if>
+<if test="ACCOUNT_CREATION_LIMIT != ''  and ACCOUNT_CREATION_LIMIT != null"> , ACCOUNT_CREATION_LIMIT = #{ACCOUNT_CREATION_LIMIT} </if>
+	, CHAT_YN = #{CHAT_YN}
+	, ALRIM_YN = #{ALRIM_YN}
+	, SMS_YN = #{SMS_YN}
+ WHERE CUSTCO_ID = #{ASP_CUST_INFO}
+</update>
+
+<!-- 고객사 삭제 -->
+<delete id="deleteRtnAspCust" parameterType="java.util.HashMap">
+DELETE FROM PLT_ASP_CUS 
+ WHERE CUSTCO_ID = #{ASP_CUST_INFO}
+</delete>
+
+<!-- 큐 삭제 -->
+<delete id="deleteQueue" parameterType="java.util.HashMap">
+DELETE FROM PLT_ASP_QUEUE 
+ WHERE CUSTCO_ID = #{ASP_CUST_INFO} AND QUEUE_NUM = #{QUEUE_NUM}
+</delete>
+
+<!-- ASP고객 회사정보 조회(봇톡스 request용) -->
+<select id="selectRtnBotalk"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+
+SELECT CUSTCO_ID AS ID
+	, CO_NM AS NAME
+	, EML AS EML
+	, PHN_NO AS MOBILE
+FROM PLT_ASP_CUS
+WHERE CUSTCO_ID = '1041'
+
+</select>
+
+<!-- 기업계정 존재여부 조회 -->
+<select id="selectCustExist"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT COUNT(*) AS CNT
+	FROM PLT_ASP_CUS
+	WHERE BZMN_COR = #{BZMN_COR}
+</select>
+
+
+<!-- PLT_ASP_CUS테이블 CUSTCO_ID 수정 -->
+<update id="updateCustcoId" parameterType="java.util.HashMap">
+UPDATE PLT_ASP_CUS 
+   SET CUSTCO_ID = #{AF_CUSTCO_ID}
+ WHERE CUSTCO_ID = #{BF_CUSTCO_ID}
+</update>
+
+<!-- PLT_BLBD_MNG테이블 CUSTCO_ID 수정 -->
+<update id="updateBlbd" parameterType="java.util.HashMap">
+UPDATE PLT_BLBD_MNG 
+   SET CUSTCO_ID = #{AF_CUSTCO_ID}
+ WHERE CUSTCO_ID = #{BF_CUSTCO_ID}
+</update>
+
+<!-- PLT_CHT_SYS_LNK테이블 CUSTCO_ID 수정 -->
+<update id="updateChatLnk" parameterType="java.util.HashMap">
+UPDATE PLT_CHT_SYS_LNK
+   SET CUSTCO_ID = #{AF_CUSTCO_ID}
+ WHERE CUSTCO_ID = #{BF_CUSTCO_ID}
+</update>
+
+<!-- PLT_CHT_SYS_MSG테이블 CUSTCO_ID 수정 -->
+<update id="updateChatMsg" parameterType="java.util.HashMap">
+UPDATE PLT_CHT_SYS_MSG
+   SET CUSTCO_ID = #{AF_CUSTCO_ID}
+ WHERE CUSTCO_ID = #{BF_CUSTCO_ID}
+</update>
+
+<!-- PLT_CHT_WRK_TIME_HST테이블 CUSTCO_ID 수정 -->
+<update id="updateChatTime" parameterType="java.util.HashMap">
+UPDATE PLT_CHT_WRK_TIME_HST
+   SET CUSTCO_ID = #{AF_CUSTCO_ID}
+ WHERE CUSTCO_ID = #{BF_CUSTCO_ID}
+</update>
+
+</mapper>

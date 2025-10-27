@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.qa.dao.QAPlanManageMapper">
+
+    <!-- 평가 기획 목록 조회 -->
+    <select id="selectQaPlan" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT *, 
+			   CASE WHEN DIFF_DAY <![CDATA[<]]> 0 THEN '+'::TEXT || (DIFF_DAY*-1)::TEXT 
+			   ELSE DIFF_DAY::TEXT 
+			   END AS REMAIN_DAY,
+			   json_array_length(CYCL_LIST) CYCL_CNT
+		FROM (
+				<if test="ROW_CNT != null and ROW_CNT gt 0 and PAGES_CNT != null and PAGES_CNT gt 0">
+
+				</if>
+				SELECT  (ROW_NUMBER() OVER(ORDER BY P.REG_DT DESC)) AS ROW_NUMBER
+						,P.QA_PLAN_ID
+						,P.CUSTCO_ID
+						,P.PLAN_NM
+						,P.EVL_BGNG_YMD
+						,P.EVL_END_YMD
+						,P.OBJC_APLY_YN
+						,OCD.CD_NM AS OBJC_APLY_NM
+						,P.PRGRS_STTS_CD
+						,PCD.CD_NM AS PRGRS_STTS_NM
+						,P.EVL_CL_ADD_YN
+						,P.EVL_CHN_CD
+						,P.EXPLN
+						,TO_DATE(P.REG_DT,'YYYYMMDDHH24MISS') AS REG_DT
+						,P.RGTR_ID
+						,P.MDFCN_DT
+						,P.MDFR_ID
+						,P.ENFC_YR
+						,P.ENFC_SE_CD
+						,ECD.QLTY_CLSF_NM AS ENFC_SE_NM
+						,U.USER_NM AS RGTR_ID_NM
+						, (SELECT COUNT(*) 
+						     FROM PLT_QA_MNGR M
+						    WHERE M.QA_PLAN_ID = P.QA_PLAN_ID ) QA_MNGR_CNT
+						,TO_DATE(P.EVL_END_YMD::TEXT ,'YYYYMMDDHH24MISS') - CURRENT_DATE DIFF_DAY
+						, (
+							SELECT ARRAY_TO_JSON(ARRAY_AGG(C))
+							  FROM PLT_QA_CYCL C 
+							 WHERE C.QA_PLAN_ID = P.QA_PLAN_ID
+						  ) CYCL_LIST
+		    	  FROM PLT_QA_PLAN P
+				  LEFT OUTER JOIN PLT_USER U
+					ON P.RGTR_ID = U.USER_ID
+				  LEFT OUTER JOIN PLT_COMM_CD OCD
+					ON OCD.CUSTCO_ID = P.CUSTCO_ID AND P.OBJC_APLY_YN = OCD.CD_ID AND OCD.GROUP_CD_ID = 'QAOJ_WT'				
+				  LEFT OUTER JOIN PLT_COMM_CD PCD
+					ON PCD.CUSTCO_ID = P.CUSTCO_ID AND P.PRGRS_STTS_CD = PCD.CD_ID AND PCD.GROUP_CD_ID = 'QATS_ST'				
+				  LEFT OUTER JOIN (
+									  SELECT A.QLTY_CLSF_ID, A.QLTY_CLSF_NM, A.UP_QLTY_CLSF_ID
+										FROM PLT_QA_QLTY_CLSF A
+										  		LEFT OUTER JOIN PLT_QA_QLTY_CLSF B 
+										  			ON A.UP_QLTY_CLSF_ID = B.QLTY_CLSF_ID 	
+									   WHERE  B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+										 AND B.UP_QLTY_CLSF_ID IS NULL
+				  				  ) ECD 
+					ON P.ENFC_SE_CD = ECD.QLTY_CLSF_ID::VARCHAR
+				  <if test="QA_MNGR_ID != null and QA_MNGR_ID != ''">
+				  LEFT JOIN PLT_QA_MNGR AS MNGR ON MNGR.QA_PLAN_ID = P.QA_PLAN_ID	
+				  </if>
+				 WHERE 	
+				   <if test="ONLY_MINE != null and ONLY_MINE != ''">
+				 	EXISTS (
+				 		SELECT 1 
+					  	  FROM PLT_QA_TRGT_SLCTN AS SLCTN
+					  	  LEFT JOIN PLT_CUTT_ITGRT_HSTRY HSTRY ON HSTRY.ITGRT_HSTRY_ID = SLCTN.ITGRT_HSTRY_ID 
+					  	  LEFT JOIN PLT_PHN_CUTT AS CUTT ON CUTT.PHN_CUTT_ID = HSTRY.PHN_CUTT_ID 
+					 	 WHERE CUTT.CUSL_ID = #{USER_ID}::INTEGER
+					) AND 
+				   </if>				 
+				        P.CUSTCO_ID	= #{CUSTCO_ID}::INTEGER
+				   AND  P.DEL_YN <![CDATA[<>]]> 'Y'
+					<if test="ENFC_YR != null and ENFC_YR != ''">
+				   AND 	P.ENFC_YR = #{ENFC_YR}
+					</if>
+					<if test="PRGRS_STTS_CD != null and PRGRS_STTS_CD != ''">
+				   AND 	P.PRGRS_STTS_CD = #{PRGRS_STTS_CD}
+					</if>
+					<if test="ENFC_SE_CD != null and ENFC_SE_CD != ''">
+				   AND 	P.ENFC_SE_CD = #{ENFC_SE_CD}
+					</if>
+					<if test="PLAN_NM != null and PLAN_NM != ''">
+				   AND 	P.PLAN_NM LIKE CONCAT('%', #{PLAN_NM}, '%')
+					</if>
+					<if test="QA_MNGR_ID != null and QA_MNGR_ID != ''">
+				   AND  MNGR.QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+				    </if>
+				<if test="ROW_CNT != null and ROW_CNT gt 0 and PAGES_CNT != null and PAGES_CNT gt 0">
+
+				</if>
+			) as TMP
+    </select>
+
+	<!-- QA 플랜 저장 -->
+	<insert id="upsertQaPlan" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_PLAN (
+					QA_PLAN_ID
+					,CUSTCO_ID
+					,PLAN_NM
+					,EVL_BGNG_YMD
+					,EVL_END_YMD
+					,OBJC_APLY_YN
+					,PRGRS_STTS_CD
+					,EVL_CL_ADD_YN
+					,EVL_CHN_CD
+					,EXPLN
+					,REG_DT
+					,RGTR_ID
+					,ENFC_YR
+					,ENFC_SE_CD
+					,DEL_YN
+		) VALUES (
+					#{QA_PLAN_ID}::INTEGER
+					,#{CUSTCO_ID}::INTEGER
+					,#{PLAN_NM}
+					,#{EVL_BGNG_YMD}
+					,#{EVL_END_YMD}
+					,#{OBJC_APLY_YN}
+					,#{PRGRS_STTS_CD}
+					,#{EVL_CL_ADD_YN}
+					,#{EVL_CHN_CD}
+					,#{EXPLN}
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					,#{RGTR_ID}::INTEGER
+					,#{ENFC_YR}
+					,#{ENFC_SE_CD}
+					,'N'
+		)
+		ON CONFLICT (QA_PLAN_ID)
+		DO
+		UPDATE SET
+					MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					<if test="RGTR_ID != null and RGTR_ID != ''">
+					,MDFR_ID = #{RGTR_ID}::INTEGER
+					</if>
+					<if test="CUSTCO_ID != null and CUSTCO_ID != ''">
+					,CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+					</if>
+					<if test="PLAN_NM != null and PLAN_NM != ''">
+					,PLAN_NM = #{PLAN_NM}
+					</if>
+					<if test="EVL_BGNG_YMD != null and EVL_BGNG_YMD != ''">
+					,EVL_BGNG_YMD = #{EVL_BGNG_YMD}
+					</if>
+					<if test="EVL_END_YMD != null and EVL_END_YMD != ''">
+					,EVL_END_YMD = #{EVL_END_YMD}
+					</if>
+					<if test="QA_QLTY_ID != null and QA_QLTY_ID != ''">
+					,QA_QLTY_ID = #{QA_QLTY_ID}
+					</if>
+					<if test="OBJC_APLY_YN != null and OBJC_APLY_YN != ''">
+					,OBJC_APLY_YN = #{OBJC_APLY_YN}
+					</if>
+					<if test="PRGRS_STTS_CD != null and PRGRS_STTS_CD != ''">
+					,PRGRS_STTS_CD = #{PRGRS_STTS_CD}
+					</if>
+					<if test="EVL_CL_ADD_YN != null and EVL_CL_ADD_YN != ''">
+					,EVL_CL_ADD_YN = #{EVL_CL_ADD_YN}
+					</if>
+					<if test="EVL_CHN_CD != null and EVL_CHN_CD != ''">
+					,EVL_CHN_CD = #{EVL_CHN_CD}
+					</if>
+					<if test="EXPLN != null and EXPLN != ''">
+					,EXPLN = #{EXPLN}
+					</if>
+					<if test="ENFC_YR != null and ENFC_YR != ''">
+					,ENFC_YR = #{ENFC_YR}
+					</if>
+					<if test="ENFC_SE_CD != null and ENFC_SE_CD != ''">
+					,ENFC_SE_CD = #{ENFC_SE_CD}
+					</if>
+					
+	</insert>    
+	
+	<!-- QA 차수 저장 (여러건) -->
+	<insert id="insertQaCycls" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_CYCL (
+			 QA_CYCL_ID
+			,QA_PLAN_ID
+			,CYCL_NM
+			,CYCL_BGNG_YMD
+			,CYCL_END_YMD
+		) VALUES
+		<foreach collection="QA_CYCL" item="ITEM" close="" separator=",">
+		(
+			#{ITEM.QA_CYCL_ID}::INTEGER
+			,#{ITEM.QA_PLAN_ID}::INTEGER 
+			,#{ITEM.CYCL_NM}
+			,#{ITEM.CYCL_BGNG_YMD}
+			,#{ITEM.CYCL_END_YMD}
+		)
+		</foreach>
+	</insert>    
+	<!-- QA 차수 저장 (단건) -->
+	<insert id="insertQaCycl" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_CYCL (
+			 QA_CYCL_ID
+			,QA_PLAN_ID
+			,CYCL_NM
+			,CYCL_BGNG_YMD
+			,CYCL_END_YMD
+		) VALUES
+		(
+			#{QA_CYCL_ID}::INTEGER
+			,#{QA_PLAN_ID}::INTEGER 
+			,#{CYCL_NM}
+			,#{CYCL_BGNG_YMD}
+			,#{CYCL_END_YMD}
+		)
+	</insert>    
+	<!-- QA 차수 수정 -->
+	<update id="updateQaCycl" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_CYCL
+		   SET CYCL_NM = #{CYCL_NM}
+			  ,CYCL_BGNG_YMD = #{CYCL_BGNG_YMD}
+			  ,CYCL_END_YMD = #{CYCL_END_YMD}
+         WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+           AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+	</update>    
+    
+	<!-- QA 차수 삭제 -->
+	<delete id="deleteQaCycls" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_CYCL
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</delete>
+	<!-- QA 계획 삭제 -->
+	<delete id="deleteQaPlan" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_PLAN
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</delete>
+	
+   <select id="selectQaPlanCycls" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT QA_CYCL_ID
+			  ,CYCL_NM
+			  ,CYCL_BGNG_YMD
+			  ,CYCL_END_YMD
+		  FROM PLT_QA_CYCL
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</select>
+    <select id="selectQaPlanStatus" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT PLAN.PRGRS_STTS_CD
+		      ,COUNT(DISTINCT MNGR.QA_MNGR_ID) AS MNGR_CNT
+		      ,COUNT(DISTINCT RSLT.QA_MNGR_ID) AS RSLT_CNT
+		  FROM PLT_QA_PLAN AS PLAN
+		  LEFT JOIN PLT_QA_MNGR AS MNGR
+		         ON MNGR.QA_PLAN_ID = PLAN.QA_PLAN_ID
+		  LEFT JOIN PLT_QA_RSLT AS RSLT
+		  		 ON RSLT.QA_PLAN_ID = PLAN.QA_PLAN_ID
+		 WHERE PLAN.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		 GROUP BY PLAN.PRGRS_STTS_CD
+	</select>
+	<!-- QA 상태 변경 -->
+	<update id="updateQaPlanStts" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_PLAN
+		SET PRGRS_STTS_CD = #{PRGRS_STTS_CD}
+			,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			<if test="PRGRS_STTS_CD == 'TERMIAT'">
+				, EVL_END_YMD = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			</if>
+		WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+			<if test="NOT_INCLUDE != null and NOT_INCLUDE != ''">
+				AND <foreach collection="LIST_ID" item="ITEM" close="" separator=" AND ">
+					PRGRS_STTS_CD <![CDATA[<>]]> #{ITEM}
+				</foreach>
+			</if>	 
+	</update>
+	<update id="updateQaPlanDel" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_PLAN
+		   SET DEL_YN = 'Y'
+		      ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		      ,MDFR_ID = #{USER_ID}::INTEGER
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+	</update>
+	<!-- QA 상태 변경 : 진행중으로 일괄. 스케쥴러 -->
+	<update id="updateQaPlanSttsAllToOngong" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_PLAN
+		   SET PRGRS_STTS_CD = 'ONGONG'
+		      ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE PRGRS_STTS_CD = 'PRPARG'
+		   AND EVL_BGNG_YMD <![CDATA[<=]]> TO_CHAR(NOW(),'YYYY-MM-DD')
+		   AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</update>
+	<update id="updateQaPlanSttsAllToTerminat" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_PLAN AS A
+		   SET PRGRS_STTS_CD = 'TERMIAT'
+		      ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE 
+		   NOT EXISTS (
+		   				SELECT 1
+		   				  FROM PLT_QA_CYCL_STTS AS B
+		   				 WHERE B.QA_PLAN_ID = A.QA_PLAN_ID
+		   				   AND EVL_CMPTN_YN = 'N'
+		              )
+		   AND EVL_END_YMD  <![CDATA[<]]> TO_CHAR(NOW(),'YYYY-MM-DD')
+		   AND PRGRS_STTS_CD = 'ONGONG'
+		   AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   </update>
+	<delete id="deleteQaCyclNotExist" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_CYCL
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID NOT IN (
+		   		<foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+		   		#{ITEM}::INTEGER
+		   	   </foreach>
+		   )
+	</delete>
+	<delete id="deleteQaCyclSttsNotExist" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_CYCL_STTS
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID NOT IN (
+		   		<foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+		   		#{ITEM}::INTEGER
+		   	   </foreach>
+		   )
+	</delete>   
+	
+	<update id="qaPlanStrtNow" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_PLAN 			/* qaPlanStrtNow - qa평가관리 즉시진행 */
+		   SET PRGRS_STTS_CD = 'ONGONG'
+		      ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   </update>
+</mapper>

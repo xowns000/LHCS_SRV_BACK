@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.sms.dao.PhoneSmsMessageManageMapper">
+
+    <!-- 템플릿 분류 조회 -->
+    <select id="selectSmsTmplClsfList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    	WITH RECURSIVE  TMPL_CLSF_TREE(TMPL_CLSF_ID, TMPL_PATH) AS (
+			SELECT  TMPL_CLSF_ID, '' || TMPL_CLSF_NM
+			  FROM  PLT_TMPL_CLSF
+			 WHERE  UP_TMPL_CLSF_ID IS NULL
+			   AND  USE_YN = 'Y'
+			   AND  CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		 UNION ALL
+			SELECT  A.TMPL_CLSF_ID, B.TMPL_PATH || ' > ' || A.TMPL_CLSF_NM  
+			  FROM  PLT_TMPL_CLSF AS A, TMPL_CLSF_TREE AS B
+			 WHERE  A.UP_TMPL_CLSF_ID = B.TMPL_CLSF_ID
+			   AND  A.USE_YN = 'Y'
+			   AND  CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		)
+		SELECT  distinct A.TMPL_CLSF_ID			AS TMPL_CLSF_ID
+			   ,A.TMPL_PATH				AS TMPL_PATH   
+		  FROM  TMPL_CLSF_TREE A
+	 	  JOIN  PLT_SMS_TMPL B
+		    ON  a.TMPL_CLSF_ID = b.TMPL_CLSF_ID
+		   AND  B.USE_YN = 'Y'
+		 WHERE  1=1
+	  ORDER BY  A.TMPL_CLSF_ID DESC
+    </select>
+    
+    <!-- 발송 가능한 SMS 템플릿 정보 조회 -->
+    <select id="selectSmsTmplList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    WITH RECURSIVE  TMPL_CLSF_TREE(TMPL_CLSF_ID, TMPL_PATH) AS (
+			SELECT  TMPL_CLSF_ID, '' || TMPL_CLSF_NM
+			  FROM  PLT_TMPL_CLSF
+			 WHERE  UP_TMPL_CLSF_ID IS NULL
+			   AND  USE_YN = 'Y'
+			   AND  CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		 UNION ALL
+			SELECT  A.TMPL_CLSF_ID, B.TMPL_PATH || ' > ' || A.TMPL_CLSF_NM  
+			  FROM  PLT_TMPL_CLSF AS A, TMPL_CLSF_TREE AS B
+			 WHERE  A.UP_TMPL_CLSF_ID = B.TMPL_CLSF_ID
+			   AND  A.USE_YN = 'Y'
+			   AND  CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		)
+		SELECT  A.TMPL_CLSF_ID									AS TMPL_CLSF_ID
+			   ,A.TMPL_PATH										AS TMPL_PATH
+			   ,B.SMS_TMPL_ID									AS SMS_TMPL_ID
+			   ,B.SMS_TMPL_TYPE_CD								AS SMS_TMPL_TYPE_CD
+			   ,C.CD_NM											AS CD_NM
+			   ,B.SMS_TMPL_NM									AS SMS_TMPL_NM
+			   ,B.SMS_TMPL_CN									AS SMS_TMPL_CN
+			   ,COALESCE(B.FILE_GROUP_KEY,'')					AS FILE_GROUP_KEY
+			   ,COALESCE((SELECT SUM(FILE_SZ) 
+			   				FROM PLT_FILE 
+			   			   WHERE USE_YN = 'Y' 
+			   			     AND FILE_GROUP_KEY = B.FILE_GROUP_KEY)
+			   			,0)										AS TOTAL_FILE_SIZE
+<!-- 			   ,(SELECT COUNT(FILE_KEY)  -->
+<!-- 			  	   FROM PLT_FILE  -->
+<!-- 			   	  WHERE USE_YN = 'Y'  -->
+<!-- 			   		AND FILE_GROUP_KEY = B.FILE_GROUP_KEY)		AS FILE_COUNT -->
+<!-- 			   ,COALESCE((SELECT STRING_AGG(CAST(FILE_SZ AS VARCHAR), ',')  -->
+<!-- 			   				FROM PLT_FILE  -->
+<!-- 			   			   WHERE USE_YN = 'Y'  -->
+<!-- 			   				 AND FILE_GROUP_KEY = B.FILE_GROUP_KEY) -->
+<!-- 			   			,'')									AS EACH_FILE_SIZE -->
+		  FROM  TMPL_CLSF_TREE A
+	 	  JOIN  PLT_SMS_TMPL B
+		    ON  A.TMPL_CLSF_ID = B.TMPL_CLSF_ID
+		   AND  B.USE_YN = 'Y'
+		  JOIN  PLT_COMM_CD C
+		    ON  C.CUSTCO_ID = #{CUSTCO_ID}::INT AND B.SMS_TMPL_TYPE_CD = C.CD_ID
+		   --AND  C.GROUP_CD_ID  = 'SMS_TP'
+		   AND  C.USE_YN  = 'Y'
+		 WHERE  1=1
+	<if test="TMPL_CLSF_ID != ''">
+		   AND  A.TMPL_CLSF_ID = #{TMPL_CLSF_ID}::INTEGER
+	</if>
+	<if test="TMPL_NAME != ''">
+		   AND  B.SMS_TMPL_NM LIKE ('%'|| #{TMPL_NAME} ||'%')
+	</if>
+	 AND SMS_TMPL_TYPE_CD NOT IN (SELECT CD_ID FROM PLT_COMM_CD PCC WHERE GROUP_CD_ID = 'MSG_TMPL_TP')
+	  ORDER BY  B.SMS_TMPL_ID DESC, B.SORT_ORD ASC
+    </select>
+    
+	<!-- SMS 발송 이력 리스트 조회 -->
+	<select id="selectSmsSendHistory"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+			SELECT  (ROW_NUMBER() OVER()) 									AS ROWNUM
+	           	   ,A.*
+	          FROM  (
+				SELECT  SEND_HIS.MTS_SNDNG_HSTRY_ID							AS MTS_SNDNG_HSTRY_ID
+					   ,SEND_HIS.SNDNG_SE_CD								AS SEND_TP
+					   ,MTS_CD.CD_NM										AS SEND_TP_NM
+					   ,SEND_HIS.DSPTCH_PHN_NO								AS SEND_NO
+					   ,SENDER.USER_NM 										AS USER_NM
+					   ,SENDER.LGN_ID 										AS USER_ID
+					   ,TO_CHAR(TO_TIMESTAMP(SEND_HIS.SNDNG_DT
+					   					, 'YYYYMMDDHH24MISS')
+					   		, 'YYYY-MM-DD HH24:MI:SS')						AS SNDNG_DT
+					   ,SEND_HIS.RCPTN_PHN_NO 								AS RECEIVE_NO
+					   ,SEND_HIS.SNDNG_CN									AS SNDNG_CN
+					   ,SEND_HIS.RSLT_CD									AS RSLT_CD
+					   ,CASE WHEN SEND_HIS.RSLT_CD = '0000' AND RSLT_MSG LIKE ('%' || 'Regist' || '%')
+					   		 THEN '발송완료'
+					   		 WHEN SEND_HIS.SNDNG_SE_CD = 'SMS' AND SEND_HIS.RSLT_CD = '00' AND RSLT_MSG LIKE ('%' || 'Select' || '%')
+					   		 THEN '발송완료'
+					   		 WHEN (SEND_HIS.SNDNG_SE_CD = 'MMS' OR SEND_HIS.SNDNG_SE_CD = 'LMS') AND SEND_HIS.RSLT_CD = '1000' AND RSLT_MSG LIKE ('%' || 'Select' || '%')
+					   		 THEN '발송완료'
+					   		 ELSE '실패'
+					   		  END											AS RSLT_CD_NM
+					   ,SEND_HIS.RSLT_MSG									AS RSLT_MSG
+				  FROM  PLT_MTS_SNDNG_HSTRY SEND_HIS
+				  JOIN  PLT_COMM_CD MTS_CD
+					ON  MTS_CD.CUSTCO_ID = #{CUSTCO_ID}::INT AND SEND_HIS.SNDNG_SE_CD = MTS_CD.CD_ID 
+				   AND  MTS_CD .GROUP_CD_ID = 'MTS_TP'
+				  JOIN  PLT_USER SENDER 
+					ON  SENDER.USER_ID = SEND_HIS.RGTR_ID
+				 WHERE  SEND_HIS.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+				   AND  SEND_HIS.SNDNG_SE_CD IN ('SMS', 'LMS', 'MMS')
+				   AND  NOT EXISTS (SELECT 1 FROM PLT_USER_CERT_SMS_HSTRY PUCSH WHERE PUCSH.MTS_SNDNG_HSTRY_ID = SEND_HIS.MTS_SNDNG_HSTRY_ID)
+				 <if test="START_DATE != ''">
+					<![CDATA[
+						AND  SEND_HIS.SNDNG_DT >= #{START_DATE}
+					]]>
+				 </if>
+				 <if test="END_DATE != ''">
+					<![CDATA[
+						AND  SEND_HIS.SNDNG_DT <= #{END_DATE}
+					]]>
+				 </if>
+				 <if test="SNDNG_ID != ''">
+					<![CDATA[
+						AND  SENDER.LGN_ID LIKE CONCAT(CONCAT('%',#{SNDNG_ID}),'%')
+					]]>
+				 </if>
+				 <if test="RECEIVE_NO != ''">
+					<![CDATA[
+						AND  REGEXP_REPLACE(SEND_HIS.RCPTN_PHN_NO, '-', '') LIKE ('%'|| #{RECEIVE_NO} ||'%')
+					]]>
+				 </if>
+				 <if test="SNDNG_CN != ''">
+					<![CDATA[
+						AND  LOWER(SEND_HIS.SNDNG_CN) LIKE LOWER(('%'|| #{SNDNG_CN} ||'%'))
+					]]>
+				 </if>
+		ORDER BY SEND_HIS.REG_DT DESC
+				) A
+
+	</select>
+</mapper>

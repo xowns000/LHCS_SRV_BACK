@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.dashboard.dao.PhoneDashboardOutboundMapper">
+
+	<select id="selectObndCallList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+			<![CDATA[
+			/* selectObndCallList 아웃바운드 모니터링 */			
+				SELECT
+					 CAM_NM
+					 ,TOTAL_CNT
+					 ,DIV_CNT
+					 ,( CAST(TOTAL_CNT AS INTEGER) - CAST(DIV_CNT AS INTEGER) ) AS NOT_DIV_CNT /* 미배분 건수*/
+					 ,CAM_BEGIN_DATE
+					 ,CAM_EOT_DATE
+					 ,REM
+					 ,CAM_ID
+					 ,CNT_Y
+					 ,CNT_N
+					 ,CNT_D
+					 ,CNT_J
+					 ,CNT_F
+					 ,CNT_G
+			]]>
+				<!-- <if test='CENT_TY.equals("G")'>  -->	 
+					 /* 공제쪽 (완전판매모니터링) */
+					 ,CNT_PF
+					 ,CNT_FA
+					 ,CNT_TN
+					 ,CNT_SN
+				<!-- </if> -->
+			<![CDATA[		 
+					 ,CENT_TY
+				FROM 
+				(	
+					SELECT
+				       a.CAM_NM 
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS WHERE CAM_ID = a.CAM_ID ) AS TOTAL_CNT      /* 아웃바운드 총건수 */
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS WHERE CAM_ID = a.CAM_ID AND DSTR_YN   = 'Y'  ) AS DIV_CNT        /* 배분건수 */
+				     , a.CAM_BEGIN_DATE 
+				     , a.CAM_EOT_DATE 
+				     , a.REM 
+				     , a.CAM_ID
+				     , a.CENT_TY
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00001'        ) AS CNT_Y         /* 처리완료건수 */
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00002'        ) AS CNT_N         /*처리미완료건수 */
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00003'        ) AS CNT_D         /*처리불가건수 */
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00004'        ) AS CNT_J         /*처리중건수 */
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00005'        ) AS CNT_F         /*최종시도실패 */
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00006'        ) AS CNT_G         /*기타(메시지 발송) */
+				]]>	
+					<!-- <if test='CENT_TY.equals("G")'>  -->
+			<![CDATA[
+					/* 공제쪽 (완전판매모니터링) */
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00007'        ) AS CNT_PF         /*처리완료 완판*/
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00008'        ) AS CNT_FA         /*처리완료 불판*/
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00009'        ) AS CNT_TN         /*처리완료 10회시도*/
+				     , ( SELECT COUNT(*) FROM PLT_PHN_CAMP_CUS_DST WHERE CAM_ID = a.CAM_ID AND FISH_TY='00010'        ) AS CNT_SN         /*처리완료 안내장발송*/
+			]]>
+				  	<!-- </if> -->
+			<![CDATA[	  
+				  FROM PLT_PHN_CAMP a
+				 WHERE a.USE_YN = 'Y'
+				   AND a.CAM_BEGIN_DATE >= REPLACE(#{START_OBND_DATE},'/','-') 
+				   AND a.CAM_EOT_DATE <= REPLACE(#{END_OBND_DATE},'/','-') 
+				   AND a.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					  
+			]]>
+			<if test="CAM_NM !='' and CAM_NM != null"> 
+			  <![CDATA[	AND a.CAM_NM  LIKE ('%'||#{CAM_NM}||'%')	   ]]>
+			</if>
+			<!-- 
+			<if test="CENT_TY !='' and CENT_TY != null"> 
+			  	<![CDATA[AND a.CENT_TY  =  #{CENT_TY}	   ]]>
+			 </if>
+			  -->
+				ORDER BY a.CAM_NM
+			 ) A
+	</select>
+
+
+</mapper>

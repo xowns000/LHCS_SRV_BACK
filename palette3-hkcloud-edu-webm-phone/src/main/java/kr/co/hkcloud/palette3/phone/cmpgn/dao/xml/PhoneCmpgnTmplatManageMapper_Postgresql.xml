@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.cmpgn.dao.PhoneCmpgnTmplatManageMapper">
+
+	<sql id="db2-with-ur">
+	</sql>
+	
+<!-- 캠페인 콤보 조회 -->
+<select id="selectRtn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER() AS ROW_NUMBER ,
+   TPL_SEQ, TPL_NM, USE_YN, FN_USER(CHG_USER_ID,'') CHG_USER_NM, CHG_DT
+            FROM     UC_CMP_TPL
+            WHERE    1 = 1 
+          <if test="TPL_NM != ''    and TPL_NM != null">    AND TPL_NM LIKE '%'||#{TPL_NM}||'%' </if>
+           AND REG_DT BETWEEN #{STRT_DATE}||'000000' AND #{END_DATE}||'235959'
+           ORDER BY TPL_SEQ DESC
+<include refid="db2-with-ur"/>
+</select>
+
+<select id="selectRtn2"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT ROW_NUMBER() OVER() AS ROW_NUMBER, A.COLM_ENG_NM, A.COLM_KOR_NM, A.FMT_CD, A.ORD, A.KEY_YN, DATA_SIZE, DATA_TYPE_CD, B.CUST_FND_KEY_YN
+            FROM     UC_CMP_TPL_COLM A, UC_CMP_COLM B
+            WHERE    A.TPL_SEQ = #{TPL_SEQ}
+            AND      A.COLM_ENG_NM = B.COLM_ENG_NM
+            ORDER BY A.ORD 
+<include refid="db2-with-ur"/>
+</select>
+
+<select id="selectRtn3"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER() AS ROW_NUMBER, COLM_ENG_NM, COLM_KOR_NM, DATA_TYPE_CD, FMT_CD, USE_YN, USE_YN, DATA_SIZE, FN_USER(CHG_USER_ID,'') CHG_USER_NM, CHG_DT
+            FROM     UC_CMP_COLM
+            WHERE    1 = 1 
+            AND COLM_ENG_NM NOT IN ( SELECT COLM_ENG_NM FROM UC_CMP_TPL_COLM WHERE TPL_SEQ = #{TPL_SEQ})
+            ORDER BY ORD 
+ <include refid="db2-with-ur"/>
+</select>           
+            
+
+<insert id="INSERT_UC_CMP_TPL_COLM"  parameterType= "java.util.HashMap" >
+INSERT INTO UC_CMP_TPL_COLM(TPL_SEQ, COLM_ENG_NM, COLM_KOR_NM, FMT_CD, ORD, KEY_YN, REG_USER_ID, REG_DT)
+            VALUES( #{TPL_SEQ}, #{COLM_ENG_NM}, #{COLM_KOR_NM}, #{FMT_CD},#{ORD} , #{KEY_YN}, #{REG_USER_ID}, UF_NOW()('CURRENT', 'YYYYMMDDHH24MISS', 0))            
+</insert>       
+
+
+<delete id="DELETE_UC_CMP_TPL_COLM"  parameterType= "java.util.HashMap" >
+DELETE FROM UC_CMP_TPL_COLM
+        WHERE  TPL_SEQ = #{TPL_SEQ}AND COLM_ENG_NM = #{COLM_ENG_NM}          
+</delete>     
+
+
+
+<insert id="INSERT_UC_CMP_TPL"  parameterType= "java.util.HashMap" >
+INSERT INTO UC_CMP_TPL(TPL_SEQ, TPL_NM, USE_YN, REG_USER_ID, REG_DT, CHG_USER_ID, CHG_DT)
+            VALUES( NEXTVAL FOR SQ_CMP_TPL_SEQ, #{TPL_NM}, #{USE_YN}, #{REG_USER_ID}, UF_NOW()('CURRENT', 'YYYYMMDDHH24MISS', 0) ,#{CHG_USER_ID}, UF_NOW()('CURRENT', 'YYYYMMDDHH24MISS', 0))      
+</insert>   
+
+
+<delete id="DELETE_UC_CMP_TPL"  parameterType= "java.util.HashMap" >
+DELETE FROM UC_CMP_TPL
+        WHERE  TPL_SEQ = #{TPL_SEQ}   
+</delete>  
+
+<!-- 고객Data 콤보 조회 -->
+<select id="selectRtnFileNmSet"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 1 STEP
+     , DATA_SEQ
+     , FILE_NM
+  FROM UC_CMP_DATA
+ WHERE 1=1
+ <if test="CAMP_SEQ != '' and CAMP_SEQ != null">   AND CAMP_SEQ = #{CAMP_SEQ}</if>    
+   AND DEL_FLG IS NULL   
+<include refid="db2-with-ur"/>
+</select>
+	
+</mapper>

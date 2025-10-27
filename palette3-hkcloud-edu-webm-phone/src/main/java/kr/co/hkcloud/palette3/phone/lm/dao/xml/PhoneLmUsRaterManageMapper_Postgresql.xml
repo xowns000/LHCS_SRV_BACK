@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+	namespace="kr.co.hkcloud.palette3.phone.lm.dao.PhoneLmUsRaterManageMapper">
+
+	<!-- LMS 담당자 조회 -->
+	<select id="selectRtnLmUsRater"
+		parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT ROWNUM AS ROW_NUMBER
+				 , RE.USER_ID
+         , RE.USER_NM
+         , RE.ASP_NEWCUST_KEY_NM
+	     , (SELECT LISTAGG(COALESCE(SUBSTR(BB.ATRT_GROUP_NM, 1), '권한미할당'),',') WITHIN GROUP (ORDER BY BB.ATRT_GROUP_NM) AS ATRT_GROUP_NM
+			  FROM PLT_USER_AUTH AA 
+			  LEFT OUTER JOIN (SELECT ATRT_GROUP_ID
+			                        , ATRT_GROUP_NM 
+			                     FROM PLT_AUTH
+			                   ) BB 
+			               ON AA.ATRT_GROUP_ID = BB.ATRT_GROUP_ID 
+	         WHERE AA.USER_ID = RE.USER_ID ) AS ATRT_GROUP_NM  -- 권한그룹명
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'A' AND ATTR_DIV_CD = RE.USER_ATTR_A) AS ATTR_DIV_NM_A /* 사용자소속A */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'B' AND ATTR_DIV_CD = RE.USER_ATTR_B) AS ATTR_DIV_NM_B /* 사용자소속B */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'C' AND ATTR_DIV_CD = RE.USER_ATTR_C) AS ATTR_DIV_NM_C /* 사용자소속C */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'D' AND ATTR_DIV_CD = RE.USER_ATTR_D) AS ATTR_DIV_NM_D /* 사용자소속D */ 
+	  FROM (
+	     		SELECT A.USER_ID                                                                    -- 사용자ID
+				     , A.USER_NM                                                                    -- 사용자이름
+				     , A.ETC_INFO01                                               AS LAST_LOGIN_DT  -- 최근접속일시
+		             , ATTR.USER_ATTR_A
+		             , ATTR.USER_ATTR_B
+		             , ATTR.USER_ATTR_C
+		             , ATTR.USER_ATTR_D
+					 , A.CUSTCO_ID AS ASP_NEWCUST_KEYS
+		             , TO_CHAR(A.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')               AS REG_DTTM      -- 등록일자
+					 , TAC.CO_NM AS ASP_NEWCUST_KEY_NM
+					 , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+				  FROM PLT_USER A
+				  LEFT OUTER JOIN PLT_CHT_USER_CHAT_SET D
+				  ON A.USER_ID = D.USER_ID
+				  LEFT OUTER JOIN PLT_USER_ATTR ATTR
+				  ON A.USER_ID = ATTR.USER_ID AND ATTR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				  LEFT OUTER JOIN PLT_ASP_CUS TAC
+				  ON #{ASP_NEWCUST_KEY} = TAC.CUSTCO_ID
+				  LEFT OUTER JOIN PLT_PHN_IP_INLN W
+         		  ON A.USER_ID = W.USER_ID AND W.CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+         		  INNER JOIN PLT_LM_US_RATER R ON R.USER_ID = A.USER_ID
+				 WHERE A.CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+				 AND R.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+         		AND A.USE_YN = 'Y'
+	        ) RE
+	</select>
+
+	<!-- 관리자 사용자 정보 조회 -->
+	<select id="selectRtnMngrUser" parameterType="java.util.HashMap"
+		resultType="java.util.HashMap">
+		SELECT ROWNUM AS ROW_NUMBER
+				 , RE.USER_ID
+         , RE.USER_NM
+         , RE.ASP_NEWCUST_KEY_NM
+	     , (SELECT LISTAGG(COALESCE(SUBSTR(BB.ATRT_GROUP_NM, 1), '권한미할당'),',') WITHIN GROUP (ORDER BY BB.ATRT_GROUP_NM) AS ATRT_GROUP_NM
+			  FROM PLT_USER_AUTH AA 
+			  LEFT OUTER JOIN (SELECT ATRT_GROUP_ID
+			                        , ATRT_GROUP_NM 
+			                     FROM PLT_AUTH
+			                   ) BB 
+			               ON AA.ATRT_GROUP_ID = BB.ATRT_GROUP_ID 
+	         WHERE AA.USER_ID = RE.USER_ID ) AS ATRT_GROUP_NM  -- 권한그룹명
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'A' AND ATTR_DIV_CD = RE.USER_ATTR_A) AS ATTR_DIV_NM_A /* 사용자소속A */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'B' AND ATTR_DIV_CD = RE.USER_ATTR_B) AS ATTR_DIV_NM_B /* 사용자소속B */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'C' AND ATTR_DIV_CD = RE.USER_ATTR_C) AS ATTR_DIV_NM_C /* 사용자소속C */
+	     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND ATTR_CD = 'D' AND ATTR_DIV_CD = RE.USER_ATTR_D) AS ATTR_DIV_NM_D /* 사용자소속D */ 
+	  FROM (
+	     		SELECT A.USER_ID                                                                    -- 사용자ID
+				     , A.USER_NM                                                                    -- 사용자이름
+				     , A.ETC_INFO01                                               AS LAST_LOGIN_DT  -- 최근접속일시
+		             , ATTR.USER_ATTR_A
+		             , ATTR.USER_ATTR_B
+		             , ATTR.USER_ATTR_C
+		             , ATTR.USER_ATTR_D
+					 , A.CUSTCO_ID AS ASP_NEWCUST_KEYS
+		             , TO_CHAR(A.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS')               AS REG_DTTM      -- 등록일자
+					 , TAC.CO_NM AS ASP_NEWCUST_KEY_NM
+					 , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+				  FROM PLT_USER A
+				  LEFT OUTER JOIN PLT_CHT_USER_CHAT_SET D
+				  ON A.USER_ID = D.USER_ID
+				  LEFT OUTER JOIN PLT_USER_ATTR ATTR
+				  ON A.USER_ID = ATTR.USER_ID AND ATTR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				  LEFT OUTER JOIN PLT_ASP_CUS TAC
+				  ON #{ASP_NEWCUST_KEY} = TAC.CUSTCO_ID
+				  LEFT OUTER JOIN PLT_PHN_IP_INLN W
+         		  ON A.USER_ID = W.USER_ID AND W.CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+				 WHERE A.CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+         		AND A.USE_YN = 'Y'
+         		<if test='USER_NM != null and USER_NM !=""'>
+         			AND A.USER_NM LIKE '%' || #{USER_NM} || '%'
+         		</if>
+         		<if test="START_DATE	!= '' and START_DATE != null">   AND TO_DATE(A.ETC_INFO01, 'YYYY/MM/DD HH24:MI:SS') >= TO_DATE(#{START_DATE}||'000000', 'YYYY/MM/DD HH24:MI:SS')  </if>
+				<if test="END_DATE 		!= '' and END_DATE != null">  <![CDATA[ AND TO_DATE(A.ETC_INFO01, 'YYYY/MM/DD HH24:MI:SS') <= TO_DATE(#{END_DATE}||'235959', 'YYYY/MM/DD HH24:MI:SS') ]]>   </if>
+				<if test='USER_ROLE != null and USER_ROLE !=""'>
+					AND EXISTS(
+						SELECT 1
+						FROM PLT_USER_AUTH
+						WHERE USER_ID = A.USER_ID
+						AND ATRT_GROUP_ID = #{USER_ROLE}
+					)
+				</if>
+				  
+				AND NOT EXISTS(
+					SELECT 1
+					FROM PLT_LM_US_RATER
+					WHERE USER_ID = A.USER_ID
+				)
+				
+	        ) RE
+	</select>
+	
+	<!-- LMS 담당자 등록 -->
+	<insert id="insertRtnLmUsRater" parameterType="java.util.HashMap">
+		INSERT INTO PLT_LM_US_RATER(
+			CUSTCO_ID
+			, USER_ID
+			, USER_NM
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+		) VALUES (
+			#{ASP_NEWCUST_KEY}
+			, #{USER_ID}
+			, #{USER_NM}
+	        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+        	, #{REG_ID}
+	        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+        	, #{REG_ID}
+		)
+	</insert>
+	
+	<!-- LMS 담당자 삭제 -->
+	<delete id="deleteRtnLmUsRater" parameterType="java.util.HashMap">
+		DELETE
+		FROM PLT_LM_US_RATER
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</delete>
+</mapper>

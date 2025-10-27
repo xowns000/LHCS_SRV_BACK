@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemMenuButtonMapper">
+    <!-- <mapper namespace="com.hcteletalk.teletalk.mng.auth.BTN.dao.BTNMapper"> -->
+
+    <!-- 메뉴ID로 버튼리스트를 조회한다. -->
+    <select id="SELECT_BTN" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT ROW_NUMBER() OVER() AS ROWNUM
+		, PB.BTN_ID /* 버튼ID */
+             , PB.SCRN_BTN_ID /* 화면버튼ID */
+             , PB.SCRN_BTN_NM /* 화면버튼명 */
+             , PB.BTN_TYPE /* 버튼타입코드 */
+             , (SELECT CD_NM
+                FROM PLT_COMM_CD
+                WHERE CUSTCO_ID = #{CUSTCO_ID}::INT
+                  AND GROUP_CD_ID = 'BUTN_TP'
+                  AND CD_ID = PB.BTN_TYPE ) AS BTN_TYPE_NM			/* 버튼타입 */
+	        , PB.LAYOUT_ID AS SCRN_BTN_LAYOUT_ID
+            , PL.LAYOUT_NM AS SCRN_BTN_LAYOUT_NM
+        FROM PLT_BTN PB
+       LEFT OUTER JOIN PLT_LAYOUT PL ON PL.LAYOUT_ID = PB.LAYOUT_ID
+        WHERE PB.MENU_ID = #{MENU_ID}:: INTEGER
+        ORDER BY PB.REG_DT
+    </select>
+
+    <!-- BTN(버튼) 테이블 데이터 등록 -->
+    <insert id="INSERT_BTN" parameterType="java.util.HashMap">
+        INSERT INTO PLT_BTN( BTN_ID /*버튼ID*/
+                           , MENU_ID /*메뉴ID*/
+                           , SCRN_BTN_ID /*화면버튼ID*/
+                           , SCRN_BTN_NM /*화면버튼명*/
+                           , BTN_TYPE /*버튼타입*/
+                           , RGTR_ID /*등일자ID*/
+                           , REG_DT /*등록일시*/
+                           , MDFR_ID /*등일자ID*/
+                           , MDFCN_DT /*등록일시*/
+                           , LAYOUT_ID
+        )
+        VALUES ( #{BTN_ID}
+               , #{MENU_ID}
+               , #{SCRN_BTN_ID}
+               , #{SCRN_BTN_NM}
+               , #{BTN_TYPE}
+               , #{USER_ID}
+               , TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+               , #{USER_ID}
+               , TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+               , <choose>
+                    <when test="LAYOUT_ID == null or LAYOUT_ID ==''">NULL</when>
+                    <otherwise>#{LAYOUT_ID}</otherwise>
+                </choose>
+        )
+
+    </insert>
+
+    <!-- BTN(버튼) 테이블 데이터 수정 -->
+    <update id="UPDATE_BTN" parameterType="java.util.HashMap">
+        UPDATE PLT_BTN
+        SET SCRN_BTN_ID = #{SCRN_BTN_ID}
+          , SCRN_BTN_NM = #{SCRN_BTN_NM}
+          , BTN_TYPE    = #{BTN_TYPE}
+          , MDFR_ID     = #{USER_ID}
+          , MDFCN_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+          , LAYOUT_ID = <choose>
+                            <when test="LAYOUT_ID == null or LAYOUT_ID ==''">NULL</when>
+                            <otherwise>#{LAYOUT_ID}</otherwise>
+                        </choose>
+        WHERE BTN_ID = #{BTN_ID}:: INTEGER
+    </update>
+
+    <!-- BTN(버튼) 데이터 삭제 -->
+    <delete id="DELETE_BTN" parameterType="java.util.HashMap">
+        DELETE FROM PLT_BTN
+        WHERE BTN_ID IN
+        <foreach collection="arrBtnId" item="BTN_ID" open="(" separator="," close=")">
+            #{BTN_ID}
+        </foreach>
+    </delete>
+
+    <!-- BTN(버튼) 데이터 삭제 : 메뉴ID로 삭제 -->
+    <delete id="DELETE_BTN_BYMENU" parameterType="java.util.HashMap">
+        DELETE
+        FROM PLT_BTN
+        WHERE MENU_ID = #{MENU_ID}
+    </delete>
+
+
+</mapper>

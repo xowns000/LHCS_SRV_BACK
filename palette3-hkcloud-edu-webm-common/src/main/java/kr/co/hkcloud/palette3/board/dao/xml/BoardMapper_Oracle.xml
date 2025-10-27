@@ -1,0 +1,1340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.board.dao.BoardMapper">
+<!-- 시스템 게시판 조회 -->
+<select id="selectRtnBrdSystem"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+
+SELECT A.BRD_ID                                                		   AS BRD_ID        -- 통합게시판ID
+     , A.BRD_NO                                                            AS BRD_NO        -- 게시물번호
+     , A.UPPER_BRD_NO                                                      AS UPPER_BRD_NO  -- 상위게시물번호
+     , A.LVL_NO                                                            AS LVL_NO        -- 게시물레벨
+     , LPAD(' ', A.LVL_NO * 12 + 1,  '&'||'nbsp;')
+                                              || CASE WHEN A.LVL_NO > 0
+                                                       THEN' <img src="/common/img/new/icon-reply.png"  style="display:inline"/> ' ELSE '' END
+                                              || CASE WHEN A.USE_YN ='0'
+                                                      THEN '<span class="cancel-line">' || A.BRD_TIT || '</span>'
+                                                      ELSE A.BRD_TIT END 
+                                              || CASE WHEN SYSDATE - B.NEW_DAY < A.FST_BRD_DT
+                                                      THEN ' <img src="/common/img/new/icon-new.png"  style="display:inline"/>' ELSE '' END AS BRD_TIT       -- 게시물제목
+     , A.BRD_RMK_NO                                                        AS BRD_RMK_NO    -- 게시물내용번호
+     , A.BRD_RMK                                                           AS BRD_RMK       -- 게시물내용
+     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = FST_USER_ID)         AS FST_USER_NM   -- 최초등록자ID
+     , TO_CHAR(A.FST_BRD_DT, 'YYYYMMDDHH24MISS')                           AS FST_BRD_DT    -- 최초등록일
+     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = LAST_USER_ID)        AS LAST_USER_NM  -- 마지막등록자ID
+     , TO_CHAR(A.LAST_BRD_DT, 'YYYYMMDDHH24MISS')                          AS LAST_BRD_DT   -- 마지막등록일
+     , (SELECT COUNT(FILE_GROUP_KEY) 
+          FROM PLT_FILE 
+         WHERE 1 = 1
+           AND FILE_GROUP_KEY = A.FILE_GROUP_KEY)                          AS FILE_CNT      -- 첨부파일 갯수
+     , CASE -- 챗봇공지사항
+            WHEN A.BRD_ID = '7' AND (SYSDATE BETWEEN A.BULTN_FR_DT AND A.BULTN_TO_DT AND A.BULTN_SPNS_DT IS NULL) THEN '1'
+            WHEN A.BRD_ID = '7' AND (SYSDATE > A.BULTN_TO_DT AND A.BULTN_SPNS_DT IS NULL) THEN '0'
+            WHEN A.BRD_ID = '7' AND (SYSDATE < A.BULTN_FR_DT AND SYSDATE < A.BULTN_TO_DT AND A.BULTN_SPNS_DT IS NULL) THEN '2'
+            -- 그 외 공지사항
+            WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') BETWEEN TO_CHAR(A.BULTN_FR_DT, 'YYYY/MM/DD') AND TO_CHAR(A.BULTN_TO_DT, 'YYYY/MM/DD') AND A.BULTN_SPNS_DT IS NULL) THEN '1'
+            WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') > TO_CHAR(A.BULTN_TO_DT, 'YYYY/MM/DD') AND A.BULTN_SPNS_DT IS NULL) THEN '0'
+            WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(A.BULTN_FR_DT, 'YYYY/MM/DD') AND TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(A.BULTN_TO_DT, 'YYYY/MM/DD') AND A.BULTN_SPNS_DT IS NULL) THEN '2'
+            WHEN (A.BULTN_SPNS_DT IS NOT NULL) THEN '9'
+        END AS NOTICE_STATE 																	-- 게시상태코드
+     , CASE -- 챗봇공지사항
+            WHEN A.BRD_ID = '7' AND (SYSDATE BETWEEN A.BULTN_FR_DT AND A.BULTN_TO_DT AND A.BULTN_SPNS_DT IS NULL) THEN '게시중'
+            WHEN A.BRD_ID = '7' AND (SYSDATE > A.BULTN_TO_DT AND A.BULTN_SPNS_DT IS NULL) THEN '게시완료'
+            WHEN A.BRD_ID = '7' AND (SYSDATE < A.BULTN_FR_DT AND SYSDATE < A.BULTN_TO_DT AND A.BULTN_SPNS_DT IS NULL) THEN '게시대기'
+            -- 그 외 공지사항
+            WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') BETWEEN TO_CHAR(A.BULTN_FR_DT, 'YYYY/MM/DD') AND TO_CHAR(A.BULTN_TO_DT, 'YYYY/MM/DD') AND A.BULTN_SPNS_DT IS NULL) THEN '게시중'
+            WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') > TO_CHAR(A.BULTN_TO_DT, 'YYYY/MM/DD') AND A.BULTN_SPNS_DT IS NULL) THEN '게시완료'
+            WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(A.BULTN_FR_DT, 'YYYY/MM/DD') AND TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(A.BULTN_TO_DT, 'YYYY/MM/DD') AND A.BULTN_SPNS_DT IS NULL) THEN '게시대기'
+            WHEN (A.BULTN_SPNS_DT IS NOT NULL) THEN '게시중지' END            AS NOTICE_STATE_NM -- 게시상태명
+     , TO_CHAR(A.BULTN_FR_DT, 'YYYY/MM/DD hh24:mi:ss')        				AS BULTN_FR_DT   -- 게시시작일자
+     , TO_CHAR(A.BULTN_TO_DT, 'YYYY/MM/DD hh24:mi:ss')       				AS BULTN_TO_DT   -- 게시종료일자
+     , TO_CHAR(A.BULTN_SPNS_DT, 'YYYY/MM/DD hh24:mi:ss')      				AS BULTN_SPNS_DT -- 게시중지일자
+     , (SELECT COUNT(RMK_NO) 
+          FROM PLT_BLBD_CMT CC
+         WHERE 1 = 1
+           AND CC.BRD_ID = A.BRD_ID 
+           AND CC.BRD_NO = A.BRD_NO)                                          AS RMK_CNT       -- 덧글갯수 
+     , A.ACCESS_IP                                                         AS ACCESS_IP     -- 등록자IP
+     , A.SELECT_NO                                                         AS SELECT_NO     -- 조회수
+     , A.ORD_SEQ                                                           AS ORD_SEQ       -- 정렬순서
+     , A.USE_YN                                                            AS USE_YN        -- 사용유무
+     , B.NOTI_YN                                                           AS NOTI_YN       -- 공지사항여부
+     , B.REPLE_YN                                                          AS REPLE_YN      -- 답글작성여부
+     , B.RMK_YN                                                            AS RMK_YN        -- 덧글작성여부
+     , B.FILE_YN                                                           AS FILE_YN       -- 첨부파일여부
+  FROM PLT_BLBD_MST A
+     , PLT_BLBD_MNG B
+  ]]>
+ WHERE 1 = 1
+   AND A.BRD_ID = B.BRD_ID
+   AND A.BRD_ID = #{BRD_ID}
+   AND A.BRD_TIT LIKE '%' || #{BRD_TIT} || '%' 
+   AND A.USE_YN = 'Y'
+   
+<if test="FST_USER_NM			!='' and FST_USER_NM 		!= null"> AND FST_USER_ID IN (SELECT USER_ID FROM PLT_USER WHERE USER_NM LIKE '%' || #{FST_USER_NM} || '%')		</if>
+<if test="LAST_USER_NM			!='' and LAST_USER_NM 		!= null"> AND LAST_USER_ID IN (SELECT USER_ID FROM PLT_USER WHERE USER_NM LIKE '%' || #{LAST_USER_NM} || '%')	</if>
+<if test="BULTN_FR_DT			!='' and BULTN_FR_DT 		!= null"> AND TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDD') >= TO_CHAR(#{BULTN_FR_DT}, 'YYYYMMDD')								</if>
+<if test="BULTN_TO_DT			!='' and BULTN_TO_DT 		!= null"> <![CDATA[ AND TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') <= TO_CHAR(#{BULTN_TO_DT}, 'YYYYMMDD') ]]>				</if>
+<if test="NOTICE_STATUS			!='' and NOTICE_STATUS 	!= null"> <![CDATA[ AND CASE WHEN (#{NOTICE_STATUS} = '1') THEN (TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDD') AND TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') AND A.BULTN_SPNS_DT IS NULL)
+	WHEN (#{NOTICE_STATUS} = '0') THEN (TO_CHAR(SYSDATE, 'YYYYMMDD') > TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') AND A.BULTN_SPNS_DT IS NULL) 
+    WHEN (#{NOTICE_STATUS} = '2') THEN (TO_CHAR(SYSDATE, 'YYYYMMDD') < TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD') < TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') AND A.BULTN_SPNS_DT IS NULL)
+    WHEN (#{NOTICE_STATUS} = '9') THEN (A.BULTN_SPNS_DT IS NOT NULL)
+    ELSE 1=1 END	 ]]> </if>
+
+ ORDER BY LVL_NO, BRD_NO DESC
+</select>
+
+<!-- 게시판별 리스트 조회 -->
+<select id="selectRtnBrdList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+WITH RECURSIVE BRD_TREE AS (
+	SELECT
+		PST_ID, CUSTCO_ID, BBS_ID, CUTT_TYPE_ID, UP_PST_ID, PST_GROUP_ID, PST_LVL, PST_TTL, PST_CN_NO, PST_CN, PST_TYPE_CD, FILE_GROUP_KEY, INQ_CNT, SORT_ORD, USE_YN
+		, POPUP_YN, PSTG_BGNG_DT, PSTG_END_DT, PSTG_STOP_DT, RGTR_IP, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT, CAST(PST_ID AS VARCHAR(500)) AS FULL_PATH
+	FROM PLT_PST
+	WHERE CUSTCO_ID = CAST(#{CUSTCO_ID} AS INTEGER)
+	AND BBS_ID = CAST(#{BBS_ID} AS INTEGER)
+	AND UP_PST_ID IS NULL
+	UNION ALL
+	SELECT
+		PP.PST_ID, PP.CUSTCO_ID, PP.BBS_ID, PP.CUTT_TYPE_ID, PP.UP_PST_ID, PP.PST_GROUP_ID, PP.PST_LVL, PP.PST_TTL, PP.PST_CN_NO, PP.PST_CN, PP.PST_TYPE_CD, PP.FILE_GROUP_KEY, PP.INQ_CNT, PP.SORT_ORD, PP.USE_YN
+		, PP.POPUP_YN, PP.PSTG_BGNG_DT, PP.PSTG_END_DT, PP.PSTG_STOP_DT, PP.RGTR_IP, PP.RGTR_ID, PP.REG_DT, PP.MDFR_ID, PP.MDFCN_DT
+		, CAST(BT.FULL_PATH || ' > ' || PP.PST_ID AS VARCHAR(500)) AS FULL_PATH
+	FROM PLT_PST PP
+	INNER JOIN BRD_TREE BT ON BT.PST_ID = PP.UP_PST_ID
+	WHERE PP.CUSTCO_ID = CAST(#{CUSTCO_ID} AS INTEGER)
+	AND PP.PST_ID = CAST(#{PST_ID} AS INTEGER)
+)
+SELECT
+*
+FROM (
+		SELECT
+			BT.PST_ID
+			, BT.BBS_ID
+			, BT.UP_PST_ID
+			, BT.PST_LVL
+			, LPAD(' ', BT.PST_LVL * 6 + 1, '&'||'nbsp;') AS NBSP
+			, BT.PST_TTL
+			, CASE WHEN TO_CHAR(SYSDATE::DATE - CONCAT(COALESCE(PB.NEW_DAY, 0), ' DAY')ERVAL, 'YYYYMMDD') < TO_CHAR(TO_DATE(BT.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYYMMDD') THEN 'Y' ELSE 'N' END  AS BRD_TIT_NEW
+			, (SELECT CO_NM FROM PLT_CUSTCO WHERE CUSTCO_ID = BT.CUSTCO_ID) AS ASP_NEWCUST_KEY
+			, BT.PST_CN_NO
+			, BT.PST_CN
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = BT.RGTR_ID) AS RGTR_NM
+			, BT.REG_DT
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = BT.MDFR_ID) AS MDFR_NM
+			, BT.MDFCN_DT
+			, (SELECT COUNT(FILE_GROUP_KEY) FROM PLT_FILE WHERE 1 = 1 AND FILE_GROUP_KEY = BT.FILE_GROUP_KEY) AS FILE_CNT
+			, CASE WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') BETWEEN TO_CHAR(TO_TIMESTAMP(BT.PSTG_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND TO_CHAR(TO_TIMESTAMP(BT.PSTG_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND BT.PSTG_STOP_DT IS NULL) THEN '1'
+					WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') > TO_CHAR(TO_TIMESTAMP(BT.PSTG_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND BT.PSTG_STOP_DT IS NULL) THEN '0'
+					WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(TO_TIMESTAMP(BT.PSTG_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(TO_TIMESTAMP(BT.PSTG_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND BT.PSTG_STOP_DT IS NULL) THEN '2'
+					WHEN (BT.PSTG_STOP_DT IS NOT NULL) THEN '9'
+		    	END AS NOTICE_STATE 																	-- 게시상태코드
+		 	, CASE WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') BETWEEN TO_CHAR(TO_TIMESTAMP(BT.PSTG_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND TO_CHAR(TO_TIMESTAMP(BT.PSTG_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND BT.PSTG_STOP_DT IS NULL) THEN '게시중'
+					WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') > TO_CHAR(TO_TIMESTAMP(BT.PSTG_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND BT.PSTG_STOP_DT IS NULL) THEN '게시완료'
+					WHEN (TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(TO_TIMESTAMP(BT.PSTG_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND TO_CHAR(SYSDATE, 'YYYY/MM/DD') < TO_CHAR(TO_TIMESTAMP(BT.PSTG_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AND BT.PSTG_STOP_DT IS NULL) THEN '게시대기'
+					WHEN (BT.PSTG_STOP_DT IS NOT NULL) THEN '게시중지'
+		        END AS NOTICE_STATE_NM -- 게시상태명
+			, TO_CHAR(TO_TIMESTAMP(BT.PSTG_BGNG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AS PSTG_BGNG_DT   -- 게시시작일자
+			, TO_CHAR(TO_TIMESTAMP(BT.PSTG_END_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AS PSTG_END_DT   -- 게시종료일자
+			, TO_CHAR(TO_TIMESTAMP(BT.PSTG_STOP_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD') AS PSTG_STOP_DT -- 게시중지일자
+			, (SELECT COUNT(CMNT_ID) FROM PLT_PST_CMNT CC WHERE 1 = 1 AND CC.PST_ID = BT.PST_ID) AS CMNT_CNT       -- 덧글갯수 
+			, BT.RGTR_IP                                                         AS ACCESS_IP     -- 등록자IP
+			, BT.INQ_CNT                                                         AS SELECT_NO     -- 조회수
+			, BT.SORT_ORD                                                           AS ORD_SEQ       -- 정렬순서
+			, BT.USE_YN                                                            AS USE_YN        -- 사용유무
+			, PB.NTCMTTR_YN                                                           AS NOTI_YN       -- 공지사항여부
+			, PB.ANS_PSBLTY_YN                                                          AS REPLE_YN      -- 답글작성여부
+			, PB.CMNT_PSBLTY_YN                                                            AS RMK_YN        -- 덧글작성여부
+			, PB.FILE_ATCH_YN                                                           AS FILE_YN       -- 첨부파일여부
+			, BT.PST_TYPE_CD														AS BRD_QUICK_TY -- 게시유형코드
+			, (SELECT CD_NM FROM PLT_COMM_CD PCC WHERE PCC.CUSTCO_ID = #{CUSTCO_ID} AND PCC.GROUP_CD_ID = 'BRD001' AND PCC.CD_ID = BT.PST_TYPE_CD) AS BBS_TYPE_NM	--게시유형명
+			, STRING_TO_ARRAY(BT.FULL_PATH, ' > ') AS FULL_PATH
+		FROM BRD_TREE BT
+		INNER JOIN PLT_BBS PB ON PB.CUSTCO_ID = BT.CUSTCO_ID AND PB.BBS_ID = BT.BBS_ID
+) A
+]]>
+WHERE 1 = 1
+<if test='PST_TTL != null and PST_TTL != ""'>AND A.PST_TTL LIKE '%' || #{PST_TTL} || '%'</if>
+<if test="RGTR_NM			!='' and RGTR_NM 		!= null"> AND RGTR_ID IN (SELECT USER_ID FROM PLT_USER WHERE USER_NM LIKE '%' || #{RGTR_NM} || '%')		</if>
+<if test="MDFR_NM			!='' and MDFR_NM 		!= null"> AND MDFR_ID IN (SELECT USER_ID FROM PLT_USER WHERE USER_NM LIKE '%' || #{MDFR_NM} || '%')	</if>
+<if test="PSTG_BGNG_DT			!='' and PSTG_BGNG_DT 		!= null"> AND TO_CHAR(A.PSTG_BGNG_DT::TIMESTAMP, 'YYYYMMDD') >= TO_CHAR(#{PSTG_BGNG_DT}::TIMESTAMP, 'YYYYMMDD')								</if>
+<if test="PSTG_END_DT			!='' and PSTG_END_DT 		!= null"> <![CDATA[ AND TO_CHAR(A.BULTN_TO_DT::TIMESTAMP, 'YYYYMMDD') <= TO_CHAR(#{PSTG_END_DT}::TIMESTAMP, 'YYYYMMDD') ]]>				</if>
+<if test="NOTICE_STATUS			!='' and NOTICE_STATUS 	!= null"> <![CDATA[ AND CASE WHEN (#{NOTICE_STATUS} = '1') THEN (TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDD') AND TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') AND A.BULTN_SPNS_DT IS NULL)
+	WHEN (#{NOTICE_STATUS} = '0') THEN (TO_CHAR(SYSDATE, 'YYYYMMDD') > TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') AND A.BULTN_SPNS_DT IS NULL) 
+    WHEN (#{NOTICE_STATUS} = '2') THEN (TO_CHAR(SYSDATE, 'YYYYMMDD') < TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD') < TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') AND A.BULTN_SPNS_DT IS NULL)
+    WHEN (#{NOTICE_STATUS} = '9') THEN (A.BULTN_SPNS_DT IS NOT NULL)
+    ELSE 1=1 END	 ]]> </if>
+ORDER BY CAST(FULL_PATH[1] AS VARCHAR) DESC, A.PST_LVL, CAST(FULL_PATH[2] AS VARCHAR) DESC
+</select>
+
+<!-- 시스템공지사항 데이터 조회 -->
+<select id="selectRtnSystemNotice"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+  SELECT  P1.*
+  FROM ( 
+         SELECT 
+            ROW_NUMBER() OVER(ORDER BY A.FST_BRD_DT DESC) AS ROW_NUMBER
+              , A.BRD_ID                                                     AS BRD_ID        -- 통합게시판ID
+              , A.BRD_NO                                                     AS BRD_NO        -- 게시물번호
+              , A.UPPER_BRD_NO                                               AS UPPER_BRD_NO  -- 상위게시물번호
+              , A.LVL_NO                                                     AS LVL_NO        -- 게시물레벨
+              , LPAD(' ', A.LVL_NO * 24 + 1, '&'||'nbsp;')
+              								  || CASE WHEN A.USE_YN ='0'
+                                                      THEN '<span class="cancel-line">'|| A.BRD_TIT || '</span>'
+                                                      ELSE A.BRD_TIT END 
+                                              || CASE WHEN SYSDATE - B.NEW_DAY < A.FST_BRD_DT
+                                                      THEN ' <img src="/common/img/icon/imgDocNew.gif"/>' ELSE '' END AS BRD_TIT       -- 게시물제목                  
+              , A.FST_USER_ID                                                AS FST_USER_ID   -- 최초등록자ID
+              , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = FST_USER_ID)  AS FST_USER_NM   -- 최초등록자명
+              , TO_CHAR(A.FST_BRD_DT, 'YYYY-MM-DD HH24:MI:SS')               AS FST_BRD_DT    -- 최초등록일
+              , A.ACCESS_IP                                                  AS ACCESS_IP     -- 등록자IP
+              , A.SELECT_NO                                                  AS SELECT_NO     -- 조회수
+              , A.ORD_SEQ                                                    AS ORD_SEQ       -- 정렬순서
+              , A.USE_YN                                                     AS USE_YN        -- 사용유무
+           FROM PLT_BLBD_MST A
+              , PLT_BLBD_MNG B
+          WHERE A.BRD_ID = B.BRD_ID
+            AND A.BRD_ID = '1'
+            AND A.USE_YN = 'Y'
+          ORDER BY A.FST_BRD_DT DESC
+      ) P1
+]]>
+</select>
+    
+<!-- 게시판사용 유무 조회 -->
+<select id="selectRtnBrdCheck"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT NTCMTTR_YN                     AS NOTI_YN       -- 공지사항여부
+     , ANS_PSBLTY_YN                    AS REPLE_YN      -- 답글작성여부
+     , CMNT_PSBLTY_YN                      AS RMK_YN        -- 덧글작성여부
+     , FILE_ATCH_YN                     AS FILE_YN       -- 첨부파일여부
+     , USE_YN                      AS USE_YN        -- 사용여부
+  FROM PLT_BBS
+  ]]>
+ WHERE 1 = 1 <!-- CUSTCO_ID = #{CUSTCO_ID} -->
+   AND BBS_ID = #{BBS_ID}
+
+</select>
+
+<!-- 실시간 공지 게시판 여부 확인 -->
+<select id="selectIsRtNoticeBoad"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT RT_NOTI_YN                      AS RT_NOTI_YN        -- 실시간 공지 여부
+  FROM PLT_BLBD_MNG 
+ WHERE 1 = 1 <!-- CUSTCO_ID = #{CUSTCO_ID} -->
+   AND BRD_ID = #{BRD_ID}
+</select>
+
+<!-- 실시간 공지 게시중지 & 중지해제 -->
+<update id="updateRtnCancelNoice" parameterType= "java.util.HashMap">
+<![CDATA[
+            
+UPDATE PLT_BLBD_MST
+   SET BULTN_SPNS_DT   = (CASE WHEN #{NOTICE_STATE} ='9' THEN NULL ELSE SYSDATE END)
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_NO          = #{BRD_NO}
+
+]]>
+</update>
+
+<!-- 실시간 공지 게시물 중지처리되었는지 조회 -->
+<select id="selectHaveCanceledYN" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT CASE WHEN BRD_NO IS NOT NULL AND BRD_NO != '' 
+              THEN 'Y' ELSE 'N' END AS HAVE_CANCELED_YN
+  FROM PLT_BLBD_MST
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_NO = #{BRD_NO}
+   AND BULTN_SPNS_DT = (CASE WHEN #{NOTICE_STATE} = '9' THEN NULL ELSE SYSDATE END)
+]]>
+</select>
+
+<!-- 시스템공지사항 데이터 조회 : 챗봇스킬 긴급공지 -->
+<select id="selectRtnChatbotSkillSystemNotice"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+  SELECT  P1.*
+  FROM ( 
+         SELECT ROW_NUMBER() OVER(ORDER BY A.FST_BRD_DT DESC) AS ROW_NUMBER
+              , A.BRD_ID                                      AS BRD_ID        -- 통합게시판ID
+              , A.BRD_NO                                      AS BRD_NO        -- 게시물번호
+              , A.BRD_TIT                                     AS BRD_TIT       -- 게시물제목                  
+              , TO_CHAR(A.BRD_RMK)                            AS BRD_RMK       -- 긴급공지 내용 (게시물내용)
+           FROM TWB_BBS02 A
+          WHERE A.BRD_ID = '7'
+            AND A.USE_YN = 'Y'
+            AND TO_CHAR(SYSDATE, 'YYYYMMDDhh24miss') BETWEEN TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDDhh24miss') AND TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDDhh24miss') -- 일시비교
+		    AND A.BULTN_SPNS_DT IS NULL -- 게시중지 확인
+          ORDER BY A.IT_PROCESSING DESC
+      ) P1
+</select>
+
+<!-- PLT_BLBD_MST(게시물관리) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_BLBD_MST"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_BLBD_MST
+       ( CUSTCO_ID
+       , ARTI_ID                       -- 게시물ID
+       , UNITY_BLBD_ID                 -- 통합게시판ID
+       , ARTI_LEVL                     -- 게시물레벨
+       , ARTI_STEP                     -- 게시물단계
+       , TITL                          -- 제목
+       , CONTN                         -- 내용
+       , BLBD_DIV_DTL_CD               -- 게시판분류상세코드
+       , DIV_DTL_CD1                   -- 분류상세코드1
+       , DIV_DTL_CD2                   -- 분류상세코드2
+       , ARTI_NO                       -- 게시물번호
+       , BULTN_FR_DT                   -- 게시시작일자
+       , BULTN_TO_DT                   -- 게시종료일자
+       , BULTN_SPNS_DT                 -- 게시중지일자
+       , IDX_STAT_CD                   -- 색인상태코드
+       , IDX_PROC_DTTM                 -- 색인처리일시
+       , CNTNT_ID                      -- 컨텐츠ID
+       , INQ_CNT                       -- 조회수
+       , USE_YN                        -- 사용여부
+       , REGR_DEPT_CD                  -- 등록자부서코드
+       , REGR_ID                       -- 등록자ID
+       , REG_DTTM                      -- 등록일시
+       , AMDR_DEPT_CD                  -- 수정자부서코드
+       , AMDR_ID                       -- 수정자ID
+       , UPD_DTTM                      -- 수정일시
+       , PROC_ID                       -- 처리자
+       , IT_PROCESSING                 -- 전산처리일시
+) VALUES ( NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{ARTI_ID}
+       , #{UNITY_BLBD_ID}
+       , #{ARTI_LEVL}
+       , #{ARTI_STEP}
+       , #{TITL}
+       , #{CONTN}
+       , #{BLBD_DIV_DTL_CD}
+       , #{DIV_DTL_CD1}
+       , #{DIV_DTL_CD2}
+       , (SELECT COALESCE(MAX(CAST(ARTI_NO AS INTEGER)), 0) + 1 FROM PLT_BLBD_MST WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY})
+       , #{BULTN_FR_DT}
+       , #{BULTN_TO_DT}
+       , #{BULTN_SPNS_DT}
+       , #{IDX_STAT_CD}
+       , #{IDX_PROC_DTTM}
+       , #{CNTNT_ID}
+       , #{INQ_CNT}
+       , #{USE_YN}
+       , #{REGR_DEPT_CD}
+       , #{REGR_ID}
+       , SYSDATE
+       , #{AMDR_DEPT_CD}
+       , #{AMDR_ID}
+       , #{UPD_DTTM}
+       , #{PROC_ID}
+       , SYSDATE
+       )
+</insert>
+	
+<!-- PLT_BLBD_MST(게시물관리) 테이블 수정 -->	
+<update id="UPDATE_PLT_BLBD_MST"  parameterType="java.util.HashMap">
+UPDATE PLT_BLBD_MST
+   SET IT_PROCESSING   = SYSDATE
+<if test="UNITY_BLBD_ID        !='' and UNITY_BLBD_ID        != null">   , UNITY_BLBD_ID             = #{UNITY_BLBD_ID}              -- 통합게시판ID </if>
+<if test="ARTI_LEVL            !='' and ARTI_LEVL            != null">   , ARTI_LEVL                 = #{ARTI_LEVL}                  -- 게시물레벨 </if>
+<if test="ARTI_STEP            !='' and ARTI_STEP            != null">   , ARTI_STEP                 = #{ARTI_STEP}                  -- 게시물단계 </if>
+<if test="TITL                 !='' and TITL                 != null">   , TITL                      = #{TITL}                       -- 제목 </if>
+<if test="CONTN                !='' and CONTN                != null">   , CONTN                     = #{CONTN}                      -- 내용 </if>
+<if test="BLBD_DIV_DTL_CD      !='' and BLBD_DIV_DTL_CD      != null">   , BLBD_DIV_DTL_CD           = #{BLBD_DIV_DTL_CD}            -- 게시판분류상세코드 </if>
+<if test="DIV_DTL_CD1          !='' and DIV_DTL_CD1          != null">   , DIV_DTL_CD1               = #{DIV_DTL_CD1}                -- 분류상세코드1 </if>
+<if test="DIV_DTL_CD2          !='' and DIV_DTL_CD2          != null">   , DIV_DTL_CD2               = #{DIV_DTL_CD2}                -- 분류상세코드2 </if>
+<if test="ARTI_NO              !='' and ARTI_NO              != null">   , ARTI_NO                   = #{ARTI_NO}                    -- 게시물번호 </if>
+<if test="BULTN_FR_DT          !='' and BULTN_FR_DT          != null">   , BULTN_FR_DT               = #{BULTN_FR_DT}                -- 게시시작일자 </if>
+<if test="BULTN_TO_DT          !='' and BULTN_TO_DT          != null">   , BULTN_TO_DT               = #{BULTN_TO_DT}                -- 게시종료일자 </if>
+<if test="BULTN_SPNS_DT        !='' and BULTN_SPNS_DT        != null">   , BULTN_SPNS_DT             = #{BULTN_SPNS_DT}              -- 게시중지일자 </if>
+<if test="IDX_STAT_CD          !='' and IDX_STAT_CD          != null">   , IDX_STAT_CD               = #{IDX_STAT_CD}                -- 색인상태코드 </if>
+<if test="IDX_PROC_DTTM        !='' and IDX_PROC_DTTM        != null">   , IDX_PROC_DTTM             = #{IDX_PROC_DTTM}              -- 색인처리일시 </if>
+<if test="CNTNT_ID             !='' and CNTNT_ID             != null">   , CNTNT_ID                  = #{CNTNT_ID}                   -- 컨텐츠ID </if>
+<if test="INQ_CNT              !='' and INQ_CNT              != null">   , INQ_CNT                   = #{INQ_CNT}                    -- 조회수 </if>
+<if test="USE_YN               !='' and USE_YN               != null">   , USE_YN                    = #{USE_YN}                     -- 사용여부 </if>
+<if test="REGR_DEPT_CD         !='' and REGR_DEPT_CD         != null">   , REGR_DEPT_CD              = #{REGR_DEPT_CD}               -- 등록자부서코드 </if>
+<if test="REGR_ID              !='' and REGR_ID              != null">   , REGR_ID                   = #{REGR_ID}                    -- 등록자ID </if>
+<if test="REG_DTTM             !='' and REG_DTTM             != null">   , REG_DTTM                  = #{REG_DTTM}                   -- 등록일시 </if>
+<if test="AMDR_DEPT_CD         !='' and AMDR_DEPT_CD         != null">   , AMDR_DEPT_CD              = #{AMDR_DEPT_CD}               -- 수정자부서코드 </if>
+<if test="AMDR_ID              !='' and AMDR_ID              != null">   , AMDR_ID                   = #{AMDR_ID}                    -- 수정자ID </if>
+<if test="UPD_DTTM             !='' and UPD_DTTM             != null">   , UPD_DTTM                  = #{UPD_DTTM}                   -- 수정일시 </if>
+<if test="PROC_ID              !='' and PROC_ID              != null">   , PROC_ID                   = #{PROC_ID}                    -- 처리자 </if>
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND ARTI_ID         = #{ARTI_ID}
+
+</update>
+
+<!-- PLT_BLBD_MST(게시물관리) 데이터 삭제 -->	
+<delete id="DELETE_PLT_BLBD_MST"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BLBD_MST
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND ARTI_ID         = #{ARTI_ID}     
+
+</delete>
+
+<!-- PLT_BLBD_MST(게시물관리) 테이블 데이터 조회 -->	
+<select id="SELECT_PLT_BLBD_MST"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT ARTI_ID                       -- 게시물ID
+     , UNITY_BLBD_ID                 -- 통합게시판ID
+     , ARTI_LEVL                     -- 게시물레벨
+     , ARTI_STEP                     -- 게시물단계
+     , TITL                          -- 제목
+     , CONTN                         -- 내용
+     , BLBD_DIV_DTL_CD               -- 게시판분류상세코드
+     , DIV_DTL_CD1                   -- 분류상세코드1
+     , DIV_DTL_CD2                   -- 분류상세코드2
+     , ARTI_NO                       -- 게시물번호
+     , BULTN_FR_DT                   -- 게시시작일자
+     , BULTN_TO_DT                   -- 게시종료일자
+     , BULTN_SPNS_DT                 -- 게시중지일자
+     , IDX_STAT_CD                   -- 색인상태코드
+     , IDX_PROC_DTTM                 -- 색인처리일시
+     , CNTNT_ID                      -- 컨텐츠ID
+     , INQ_CNT                       -- 조회수
+     , USE_YN                        -- 사용여부
+     , REGR_DEPT_CD                  -- 등록자부서코드
+     , REGR_ID                       -- 등록자ID
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+     , AMDR_DEPT_CD                  -- 수정자부서코드
+     , AMDR_ID                       -- 수정자ID
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+     , PROC_ID                       -- 처리자
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+  FROM PLT_BLBD_MST
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="ARTI_ID              !='' and ARTI_ID              != null">   AND ARTI_ID                   = #{ARTI_ID}                    --게시물ID </if>
+<if test="UNITY_BLBD_ID        !='' and UNITY_BLBD_ID        != null">   AND UNITY_BLBD_ID             = #{UNITY_BLBD_ID}              --통합게시판ID </if>
+</select>
+	
+<!-- PLT_BLBD_MST(게시물관리) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_BLBD_MST"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+    SELECT ROW_TBL.*
+     FROM ( 
+				SELECT 
+					ROW_NUMBER() OVER(ORDER BY USER_ID, USER_NM) AS ROW_NUMBER
+					 , ARTI_ID                       -- 게시물ID
+				     , UNITY_BLBD_ID                 -- 통합게시판ID
+				     , ARTI_LEVL                     -- 게시물레벨
+				     , ARTI_STEP                     -- 게시물단계
+				     , TITL                          -- 제목
+				     , CONTN                         -- 내용
+				     , BLBD_DIV_DTL_CD               -- 게시판분류상세코드
+				     , DIV_DTL_CD1                   -- 분류상세코드1
+				     , DIV_DTL_CD2                   -- 분류상세코드2
+				     , ARTI_NO                       -- 게시물번호
+				     , BULTN_FR_DT                   -- 게시시작일자
+				     , BULTN_TO_DT                   -- 게시종료일자
+				     , BULTN_SPNS_DT                 -- 게시중지일자
+				     , IDX_STAT_CD                   -- 색인상태코드
+				     , IDX_PROC_DTTM                 -- 색인처리일시
+				     , CNTNT_ID                      -- 컨텐츠ID
+				     , INQ_CNT                       -- 조회수
+				     , USE_YN                        -- 사용여부
+				     , REGR_DEPT_CD                  -- 등록자부서코드
+				     , REGR_ID                       -- 등록자ID
+				     , TO_CHAR(TO_DATE(REG_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+				     , AMDR_DEPT_CD                  -- 수정자부서코드
+				     , AMDR_ID                       -- 수정자ID
+				     , TO_CHAR(TO_DATE(UPD_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+				     , PROC_ID                       -- 처리자
+				     , TO_CHAR(TO_DATE(IT_PROCESSING, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+				  FROM PLT_BLBD_MST
+				 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				<if test="ARTI_ID              !='' and ARTI_ID              != null">   AND ARTI_ID                   = #{ARTI_ID}                     </if>
+				<if test="UNITY_BLBD_ID        !='' and UNITY_BLBD_ID        != null">   AND UNITY_BLBD_ID             = #{UNITY_BLBD_ID}              --통합게시판ID </if>
+				<if test="ARTI_LEVL            !='' and ARTI_LEVL            != null">   AND ARTI_LEVL                 = #{ARTI_LEVL}                  --게시물레벨 </if>
+				<if test="ARTI_STEP            !='' and ARTI_STEP            != null">   AND ARTI_STEP                 = #{ARTI_STEP}                  --게시물단계 </if>
+				<if test="TITL                 !='' and TITL                 != null">   AND TITL                      = #{TITL}                       --제목 </if>
+				<if test="CONTN                !='' and CONTN                != null">   AND CONTN                     = #{CONTN}                      --내용 </if>
+				<if test="BLBD_DIV_DTL_CD      !='' and BLBD_DIV_DTL_CD      != null">   AND BLBD_DIV_DTL_CD           = #{BLBD_DIV_DTL_CD}            --게시판분류상세코드 </if>
+				<if test="DIV_DTL_CD1          !='' and DIV_DTL_CD1          != null">   AND DIV_DTL_CD1               = #{DIV_DTL_CD1}                --분류상세코드1 </if>
+				<if test="DIV_DTL_CD2          !='' and DIV_DTL_CD2          != null">   AND DIV_DTL_CD2               = #{DIV_DTL_CD2}                --분류상세코드2 </if>
+				<if test="ARTI_NO              !='' and ARTI_NO              != null">   AND ARTI_NO                   = #{ARTI_NO}                    --게시물번호 </if>
+				<if test="BULTN_FR_DT          !='' and BULTN_FR_DT          != null">   AND BULTN_FR_DT               = #{BULTN_FR_DT}                --게시시작일자 </if>
+				<if test="BULTN_TO_DT          !='' and BULTN_TO_DT          != null">   AND BULTN_TO_DT               = #{BULTN_TO_DT}                --게시종료일자 </if>
+				<if test="BULTN_SPNS_DT        !='' and BULTN_SPNS_DT        != null">   AND BULTN_SPNS_DT             = #{BULTN_SPNS_DT}              --게시중지일자 </if>
+				<if test="IDX_STAT_CD          !='' and IDX_STAT_CD          != null">   AND IDX_STAT_CD               = #{IDX_STAT_CD}                --색인상태코드 </if>
+				<if test="IDX_PROC_DTTM        !='' and IDX_PROC_DTTM        != null">   AND IDX_PROC_DTTM             = #{IDX_PROC_DTTM}              --색인처리일시 </if>
+				<if test="CNTNT_ID             !='' and CNTNT_ID             != null">   AND CNTNT_ID                  = #{CNTNT_ID}                   --컨텐츠ID </if>
+				<if test="INQ_CNT              !='' and INQ_CNT              != null">   AND INQ_CNT                   = #{INQ_CNT}                    --조회수 </if>
+				<if test="USE_YN               !='' and USE_YN               != null">   AND USE_YN                    = #{USE_YN}                     --사용여부 </if>
+				<if test="REGR_DEPT_CD         !='' and REGR_DEPT_CD         != null">   AND REGR_DEPT_CD              = #{REGR_DEPT_CD}               --등록자부서코드 </if>
+				<if test="REGR_ID              !='' and REGR_ID              != null">   AND REGR_ID                   = #{REGR_ID}                    --등록자ID </if>
+				<if test="REG_DTTM             !='' and REG_DTTM             != null">   AND REG_DTTM                  = #{REG_DTTM}                   --등록일시 </if>
+				<if test="AMDR_DEPT_CD         !='' and AMDR_DEPT_CD         != null">   AND AMDR_DEPT_CD              = #{AMDR_DEPT_CD}               --수정자부서코드 </if>
+				<if test="AMDR_ID              !='' and AMDR_ID              != null">   AND AMDR_ID                   = #{AMDR_ID}                    --수정자ID </if>
+				<if test="UPD_DTTM             !='' and UPD_DTTM             != null">   AND UPD_DTTM                  = #{UPD_DTTM}                   --수정일시 </if>
+				<if test="PROC_ID              !='' and PROC_ID              != null">   AND PROC_ID                   = #{PROC_ID}                    --처리자 </if>
+				
+				ORDER BY USER_ID, USER_NM
+	) ROW_TBL
+</select>
+
+<!-- 게시판별 댓글 조회 -->
+<select id="selectRtnBrdRmk"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT A.BRD_ID                                                          AS BRD_ID        -- 통합게시판ID
+     , A.BRD_NO                                                          AS BRD_NO        -- 게시물번호
+     , A.RMK_NO                                                          AS RMK_NO        -- 댓글번호
+     , A.RMK                                                             AS RMK           -- 댓글
+     , A.REG_USER_ID                                                     AS REG_USER_ID   -- 등록자ID
+     , ( SELECT USER_NM 
+           FROM PLT_USER 
+          WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND USER_ID = REG_USER_ID)                                  AS REG_USER_NM   -- 등록자명
+     , TO_CHAR(A.REG_DT, 'YYYY/MM/DD HH24:MI:SS')                       AS REG_DT        -- 등록일
+  FROM PLT_BLBD_CMT A
+ WHERE A. CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND A.BRD_ID = #{BRD_ID}
+   AND A.BRD_NO = #{BRD_NO}
+ ORDER BY RMK_NO
+</select>
+
+<!-- PLT_BLBD_CMT(게시물댓글) 테이블 데이터 등록 -->
+<insert id="insertRtnBrdRmk"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_BLBD_CMT
+       ( CUSTCO_ID
+       , BRD_ID                       
+       , BRD_NO                       
+       , RMK_NO                       
+       , RMK                          
+       , REG_USER_ID                  
+       , REG_DT                       
+       , PROC_ID                      
+       , IT_PROCESSING                
+       ) 
+VALUES ( NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{BRD_ID}
+       , #{BRD_NO}
+       , CAST(
+       		CASE WHEN #{RMK_NO} = -1 
+              THEN (SELECT COALESCE(MAX(RMK_NO),0) + 1
+                      FROM PLT_BLBD_CMT A
+                     WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                       AND BRD_ID = #{BRD_ID} 
+                       AND BRD_NO = #{BRD_NO})
+              ELSE CAST(#{RMK_NO} AS INTEGER)
+              END AS INTEGER)
+       , #{RMK}
+       , #{REG_USER_ID}
+       , SYSDATE
+       , #{PROC_ID}
+       , SYSDATE
+       )
+</insert>
+
+<!-- PLT_BLBD_MST (게시물 마스터) 조회 수 수정 -->
+<update id="updateRtnSelectNo"  parameterType= "java.util.HashMap">
+ UPDATE PLT_PST
+    SET INQ_CNT = COALESCE(INQ_CNT, 0) + 1
+  WHERE CUSTCO_ID = #{CUSTCO_ID}
+    AND BBS_ID          = #{BBS_ID}
+    AND PST_ID          = #{PST_ID}
+</update>
+
+<!-- 게시글 및 게시글 하위 답글 업데이트 -->
+<update id="deleteRtnBrdAll"  parameterType= "java.util.HashMap">
+<![CDATA[
+	UPDATE PLT_BLBD_MST
+       SET USE_YN = 'N'
+         , PROC_ID = #{PROC_ID}
+         , IT_PROCESSING = SYSDATE
+     WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+       AND BRD_NO IN (
+       SELECT
+		  BRD_NO
+		FROM(
+		  SELECT LVL_NO , BRD_NO , BRD_ID, CUSTCO_ID
+		    FROM PLT_BLBD_MST
+		   START WITH BRD_NO = #{BRD_NO}
+		  CONNECT BY PRIOR  BRD_NO = UPPER_BRD_NO
+		)
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND BRD_ID =  #{BRD_ID}
+     )
+	AND BRD_ID = #{BRD_ID}
+]]>
+<!-- 
+<![CDATA[
+
+UPDATE PLT_BLBD_MST
+       SET USE_YN = 'N'
+         , PROC_ID = #{PROC_ID}
+         , IT_PROCESSING = SYSDATE
+     WHERE CUSTCO_ID = #{CUSTCO_ID}
+       AND BRD_NO IN (
+     	SELECT A.BRD_NO AS BRD_NO   
+	   		FROM
+			(
+			SELECT B._id, @lv2 := @lv2 + 1 AS level
+			FROM (
+						  SELECT @r AS _id, 
+									   ( SELECT @r := UPPER_BRD_NO  FROM PLT_BLBD_MST  WHERE BRD_NO = _id ) AS parent,
+									   @l := @l +1 AS lv
+						  FROM 
+									 (
+									  SELECT @r := #{BRD_NO},
+									  @l := 0
+									 ) vars,
+									PLT_BLBD_MST d
+						  WHERE CUSTCO_ID = #{CUSTCO_ID}
+						      AND @r <> '0'
+	                          AND LVL_NO = 0
+						  ORDER BY lv DESC
+					) B, (SELECT @lv2 := 0 ) vars2
+			) func
+			, (SELECT * FROM PLT_BLBD_MST WHERE CUSTCO_ID = #{CUSTCO_ID}) A 
+		WHERE func._id = A.BRD_NO
+		AND BRD_ID = #{BRD_ID}
+     )
+     AND BRD_ID = #{BRD_ID}
+  ]]>
+            -->
+</update>
+
+<!-- PLT_BLBD_MNG(통합게시판마스터) 데이터 삭제 -->
+<delete id="DELETE_MEW_BRD_MASTER"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BLBD_MNG
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID = #{BRD_ID}
+</delete>
+
+<!-- PLT_BLBD_CMT(게시물댓글) 데이터 삭제 -->
+<delete id="DELETE_MEW_BRD_RMK"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BLBD_CMT
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID = #{BRD_ID}
+   AND BRD_NO = #{BRD_NO}
+   AND RMK_NO = #{RMK_NO}
+</delete>
+
+<!-- PLT_BTN_AUTH(버튼권한), BTN(버튼) 실시간공지 중지버튼권한을 가지고온다. -->
+<select id="selectRtBtnAuthRole" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		CASE WHEN count(B.SCR_BTN_ID) ='0' THEN 'N' ELSE 'Y' END AS BTN_AUTH		-- 부여된 버튼권한 
+	FROM PLT_BTN_AUTH A
+	, PLT_BTN B
+	WHERE A.BTN_ID = B.BTN_ID
+	AND (B.SCR_BTN_ID = 'btnCancelNotice'
+	OR B.SCR_BTN_ID = 'btnCancelRefresh')
+	AND A.ATRT_GROUP_ID IN (
+		SELECT SA.ATRT_GROUP_ID
+		FROM PLT_USER_AUTH SA
+		WHERE SA.USER_ID = #{USER_ID}
+	)
+	AND A.MENU_ID = #{MENU_ID}	
+</select>
+
+<!-- PLT_BLBD_CMT(꼬리말 관리) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_BLBD_CMT"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_BLBD_CMT
+       ( CUSTCO_ID
+       , ARTI_ID                       -- 게시물ID
+       , COMMENT_ID                    -- 꼬리말ID
+       , COMMENT_CONTN                 -- 꼬리말내용
+       , USE_YN                        -- 사용여부
+       , WRTR_DEPT_CD                  -- 작성자부서코드
+       , WRTR_ID                       -- 작성자ID
+       , WRT_DTTM                      -- 작성일시
+       , PROC_ID                       -- 처리자
+       , IT_PROCESSING                 -- 전산처리일시
+) VALUES ( NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{ARTI_ID}
+       , #{COMMENT_ID}
+       , #{COMMENT_CONTN}
+       , 'Y'
+       , #{WRTR_DEPT_CD}
+       , #{WRTR_ID}
+       , SYSDATE
+       , #{PROC_ID}
+       , SYSDATE
+       )
+</insert>
+	
+<!-- PLT_BLBD_CMT(꼬리말 관리) 테이블 수정 -->	
+<update id="UPDATE_PLT_BLBD_CMT"  parameterType="java.util.HashMap">
+UPDATE PLT_BLBD_CMT
+   SET IT_PROCESSING   = SYSDATE
+<if test="COMMENT_CONTN        !='' and COMMENT_CONTN        != null">   , COMMENT_CONTN             = #{COMMENT_CONTN}              -- 꼬리말내용 </if>
+<if test="USE_YN               !='' and USE_YN               != null">   , USE_YN                    = #{USE_YN}                     -- 사용여부 </if>
+<if test="WRTR_DEPT_CD         !='' and WRTR_DEPT_CD         != null">   , WRTR_DEPT_CD              = #{WRTR_DEPT_CD}               -- 작성자부서코드 </if>
+<if test="WRTR_ID              !='' and WRTR_ID              != null">   , WRTR_ID                   = #{WRTR_ID}                    -- 작성자ID </if>
+<if test="WRT_DTTM             !='' and WRT_DTTM             != null">   , WRT_DTTM                  = #{WRT_DTTM}                   -- 작성일시 </if>
+<if test="PROC_ID              !='' and PROC_ID              != null">   , PROC_ID                   = #{PROC_ID}                    -- 처리자 </if>
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND ARTI_ID         = #{ARTI_ID}
+   AND COMMENT_ID      = #{COMMENT_ID}
+
+</update>
+
+<!-- PLT_BLBD_CMT(꼬리말 관리) 데이터 삭제 -->	
+<delete id="DELETE_PLT_BLBD_CMT"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BLBD_CMT
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND ARTI_ID         = #{ARTI_ID}     
+   AND COMMENT_ID      = #{COMMENT_ID}  
+
+</delete>
+
+<!-- PLT_BLBD_CMT(꼬리말 관리) 테이블 데이터 조회 -->	
+<select id="SELECT_PLT_BLBD_CMT"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+	ROW_TBL.*
+FROM(
+	SELECT
+		 ROW_NUMBER() OVER(ORDER BY ARTI_ID, COMMENT_ID) AS ROW_NUMBER 
+	     , ARTI_ID                       -- 게시물ID
+	     , COMMENT_ID                    -- 꼬리말ID
+	     , COMMENT_CONTN                 -- 꼬리말내용
+	     , USE_YN                        -- 사용여부
+	     , WRTR_DEPT_CD                  -- 작성자부서코드
+	     , WRTR_ID                       -- 작성자ID
+	     , TO_CHAR(WRT_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS WRT_DTTM      -- 작성일시
+	     , PROC_ID                       -- 처리자
+	     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+	  FROM PLT_BLBD_CMT
+	 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	<if test="ARTI_ID              !='' and ARTI_ID              != null">   AND ARTI_ID                   = #{ARTI_ID}                     </if>
+	<if test="ARTI_ID              !='' and ARTI_ID              != null">   AND ARTI_ID                   = #{ARTI_ID}                    -- 게시물ID </if>
+	<if test="COMMENT_ID           !='' and COMMENT_ID           != null">   AND COMMENT_ID                = #{COMMENT_ID}                 -- 꼬리말ID </if>
+	<if test="COMMENT_CONTN        !='' and COMMENT_CONTN        != null">   AND COMMENT_CONTN             = #{COMMENT_CONTN}              -- 꼬리말내용 </if>
+	<if test="USE_YN               !='' and USE_YN               != null">   AND USE_YN                    = #{USE_YN}                     -- 사용여부 </if>
+	<if test="WRTR_DEPT_CD         !='' and WRTR_DEPT_CD         != null">   AND WRTR_DEPT_CD              = #{WRTR_DEPT_CD}               -- 작성자부서코드 </if>
+	<if test="WRTR_ID              !='' and WRTR_ID              != null">   AND WRTR_ID                   = #{WRTR_ID}                    -- 작성자ID </if>
+	<if test="WRT_DTTM             !='' and WRT_DTTM             != null">   AND WRT_DTTM                  = #{WRT_DTTM}                   -- 작성일시 </if>
+	<if test="PROC_ID              !='' and PROC_ID              != null">   AND PROC_ID                   = #{PROC_ID}                    -- 처리자 </if>
+	ORDER BY ARTI_ID, COMMENT_ID
+) ROW_TBL
+</select>
+	
+<!-- PLT_BLBD_CMT(꼬리말 관리) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_BLBD_CMT"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_TBL.*
+     FROM ( 
+			SELECT 
+				ROW_NUMBER() OVER(ORDER BY USER_ID, USER_NM) AS ROW_NUMBER 
+				 , ARTI_ID                       -- 게시물ID
+			     , COMMENT_ID                    -- 꼬리말ID
+			     , COMMENT_CONTN                 -- 꼬리말내용
+			     , USE_YN                        -- 사용여부
+			     , WRTR_DEPT_CD                  -- 작성자부서코드
+			     , WRTR_ID                       -- 작성자ID
+			     , TO_CHAR(WRT_DTTM, 'YYYY/MM/DD HH24:MI:SS')      AS WRT_DTTM      -- 작성일시
+			     , PROC_ID                       -- 처리자
+			     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+			  FROM PLT_BLBD_CMT
+			 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			<if test="ARTI_ID              !='' and ARTI_ID              != null">   AND ARTI_ID                   = #{ARTI_ID}                     </if>
+			<if test="COMMENT_ID           !='' and COMMENT_ID           != null">   AND COMMENT_ID                = #{COMMENT_ID}                 -- 꼬리말ID </if>
+			<if test="COMMENT_CONTN        !='' and COMMENT_CONTN        != null">   AND COMMENT_CONTN             = #{COMMENT_CONTN}              -- 꼬리말내용 </if>
+			<if test="USE_YN               !='' and USE_YN               != null">   AND USE_YN                    = #{USE_YN}                     -- 사용여부 </if>
+			<if test="WRTR_DEPT_CD         !='' and WRTR_DEPT_CD         != null">   AND WRTR_DEPT_CD              = #{WRTR_DEPT_CD}               -- 작성자부서코드 </if>
+			<if test="WRTR_ID              !='' and WRTR_ID              != null">   AND WRTR_ID                   = #{WRTR_ID}                    -- 작성자ID </if>
+			<if test="WRT_DTTM             !='' and WRT_DTTM             != null">   AND WRT_DTTM                  = #{WRT_DTTM}                   -- 작성일시 </if>
+			<if test="PROC_ID              !='' and PROC_ID              != null">   AND PROC_ID                   = #{PROC_ID}                    -- 처리자 </if>
+			ORDER BY USER_ID, USER_NM
+			
+	) ROW_TBL
+	       
+</select>
+
+<!-- 게시판별 게시물 시퀀스 -->
+<select id="selectRtnBrdMaxBrd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT COALESCE(MAX(BRD_NO),0) + 1 AS BRD_NO
+  FROM PLT_BLBD_MST
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID = #{BRD_ID}
+]]>
+</select>
+
+<!-- PLT_BLBD_MST (게시물 마스터) 테이블 데이터 등록 -->
+<insert id="insertRtnBrd"  parameterType= "java.util.HashMap">
+<![CDATA[
+INSERT INTO PLT_BLBD_MST
+       ( CUSTCO_ID
+       , BRD_ID                        -- 통합게시판ID
+       , BRD_NO                        -- 게시물번호
+       , UPPER_BRD_NO                  -- 상위게시물번호
+       , LVL_NO                        -- 게시물레벨
+       , BRD_TIT                       -- 게시물제목
+       , BRD_RMK_NO                    -- 게시물내용번호
+       , BRD_RMK                       -- 게시물내용
+       , BULTN_FR_DT				   -- 게시시작일자
+       , BULTN_TO_DT				   -- 게시종료일자
+       , BULTN_SPNS_DT				   -- 게시중지일자
+       , PUP_YN						   -- 팝업여부
+       , FILE_GROUP_KEY				   -- 파일그룹키
+       , FST_USER_ID                   -- 최초등록자ID
+       , FST_BRD_DT                    -- 최초등록일
+       , LAST_BRD_DT                   -- 마지막등록일
+       , LAST_USER_ID                  -- 마지막등록자ID
+       , ACCESS_IP                     -- 등록자IP
+       , SELECT_NO                     -- 조회수
+       , ORD_SEQ                       -- 정렬순서
+       , USE_YN                        -- 사용여부
+       , PROC_ID                       -- 처리자
+       , IT_PROCESSING                 -- 전산처리일시
+       , KAGE_FILE_URL				   -- KAGE URL
+       , KAGE_ACS_KEY			   -- KAGE ACCESS KEY
+       , BRD_QUICK_TY				   -- 게시유형
+       )
+VALUES ( NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{BRD_ID}
+       , #{BRD_NO}
+       , CASE WHEN #{UPPER_BRD_NO} = '-1'
+              THEN '0'
+              ELSE #{UPPER_BRD_NO} END
+       , CASE WHEN CAST(#{LVL_NO} AS INTEGER) = -1 
+              THEN 0
+              ELSE CAST(#{LVL_NO} AS INTEGER) END
+       , #{BRD_TIT}
+       , #{BRD_RMK_NO}
+       , #{BRD_RMK}
+       , CASE WHEN #{BULTN_FR_DT} = '' THEN NULL::TIMESTAMP ELSE #{BULTN_FR_DT}::TIMESTAMP END
+       , CASE WHEN #{BULTN_TO_DT} = '' THEN NULL::TIMESTAMP ELSE #{BULTN_TO_DT} END
+       , CASE WHEN #{BULTN_SPNS_DT} = '' THEN NULL::TIMESTAMP ELSE #{BULTN_SPNS_DT}::TIMESTAMP END
+       , #{PUP_YN}
+       , #{FILE_GROUP_KEY}
+       , #{FST_USER_ID}
+       , SYSDATE
+       , SYSDATE
+       , #{LAST_USER_ID}
+       , #{ACCESS_IP}
+       , 0
+       , #{ORD_SEQ}
+       , 'Y'
+       , #{PROC_ID}
+       , SYSDATE
+       , #{KAGE_FILE_URL}
+       , #{KAGE_ACS_KEY}
+       , #{BRD_QUICK_TY}
+       )
+        ]]>
+</insert>
+
+<!-- PLT_FILE(공통첨부파일) 테이블 데이터 수정(파일그룹키) -->
+<update id="updateBfAttachDataUpDate"  parameterType= "java.util.HashMap">
+<![CDATA[
+UPDATE PLT_FILE
+   SET FILE_GROUP_KEY	= #{FILE_GROUP_KEY}           -- 파일그룹키
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND FILE_GROUP_KEY	= #{OLD_FILE_GROUP_KEY}
+    ]]>
+</update>
+
+<!-- PLT_BLBD_MST (게시물 마스터) 테이블 데이터 수정 -->
+<update id="updateRtnBrd"  parameterType= "java.util.HashMap">
+<![CDATA[
+UPDATE PLT_BLBD_MST
+   SET IT_PROCESSING   = SYSDATE
+     , BRD_TIT         = #{BRD_TIT}           -- 게시물제목
+     , BRD_RMK_NO      = #{BRD_RMK_NO}        -- 게시물내용번호
+     , BRD_RMK         = #{BRD_RMK}           -- 게시물내용
+     , BULTN_FR_DT	   = #{BULTN_FR_DT} 		  -- 게시시작일자
+     , BULTN_TO_DT	   = #{BULTN_TO_DT}		  -- 게시종료일자
+     , BULTN_SPNS_DT   = #{BULTN_SPNS_DT} 	  -- 게시중지일자
+     , PUP_YN		   = #{PUP_YN}			  -- 팝업여부
+     , FILE_GROUP_KEY  = #{FILE_GROUP_KEY}    -- 파일그룹키
+     , LAST_BRD_DT     = SYSDATE    -- 마지막등록일
+     , LAST_USER_ID    = #{LAST_USER_ID}      -- 마지막등록자ID
+     , ACCESS_IP       = #{ACCESS_IP}         -- 등록자IP
+     , PROC_ID         = #{PROC_ID}           -- 처리자
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID          = #{BRD_ID}
+   AND BRD_NO          = #{BRD_NO}
+    ]]>
+</update>
+
+<!-- MEW_BRD_FILE(게시물첨부) 데이터 삭제 -->
+<delete id="DELETE_MEW_BRD_FILE"  parameterType="java.util.HashMap">
+<![CDATA[
+DELETE FROM MEW_BRD_FILE
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID          = #{BRD_ID}
+   AND BRD_NO          = #{BRD_NO}
+   AND FILE_KEY        = #{FILE_KEY}
+]]>
+</delete>
+
+<!-- 게시판별 내용 조회 -->
+
+<!--  CLOB SELECT -->
+<resultMap id="mapSelectTwbClobTest" type="java.util.HashMap" >
+	<result property="BBS_ID" column="BBS_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="CUSTCO_ID" column="CUSTCO_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="CO_NM" column="CO_NM" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PST_ID" column="PST_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="UP_PST_ID" column="UP_PST_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PST_TTL" column="PST_TTL" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PST_LVL" column="PST_LVL" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PST_CN_NO" column="PST_CN_NO" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PST_CN" column="PST_CN" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PSTG_BGNG_DT" column="PSTG_BGNG_DT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PSTG_END_DT" column="PSTG_END_DT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="PSTG_STOP_DT" column="PSTG_STOP_DT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="RGTR_NM" column="RGTR_NM" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="REG_DT" column="REG_DT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="MDFR_NM" column="MDFR_NM" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="MDFCN_DT" column="MDFCN_DT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="NTCMTTR_YN" column="NTCMTTR_YN" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="ANS_PSBLTY_YN" column="ANS_PSBLTY_YN" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="CMNT_PSBLTY_YN" column="CMNT_PSBLTY_YN" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="FILE_ATCH_YN" column="FILE_ATCH_YN" jdbcType="VARCHAR" javaType="java.lang.String"/>
+	<result property="RTIME_NTC_YN" column="RTIME_NTC_YN" jdbcType="VARCHAR" javaType="java.lang.String"/>
+</resultMap>
+<!-- 회사명 (SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{CUSTCO_ID}) AS CO_NM-->
+<select id="selectRtnBrdDetail"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClobTest">
+SELECT
+	PB.BBS_ID
+	, PB.CUSTCO_ID
+	, (SELECT PC.CO_NM FROM PLT_CUSTCO PC WHERE PC.CUSTCO_ID = PB.CUSTCO_ID) AS CO_NM
+	, PP.PST_ID
+	, PP.UP_PST_ID
+	, PP.PST_TTL
+	, PP.PST_LVL
+	, PP.PST_CN_NO
+	, PP.PST_CN
+	, PP.PSTG_BGNG_DT
+	, PP.PSTG_END_DT
+	, PP.PSTG_STOP_DT
+	, PP.POPUP_YN
+	, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = RGTR_ID) AS RGTR_NM
+	, PP.REG_DT
+	, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = MDFR_ID) AS MDFR_NM
+	, PP.MDFCN_DT
+	, PP.INQ_CNT
+	, PB.NTCMTTR_YN
+	, PB.ANS_PSBLTY_YN
+	, PB.CMNT_PSBLTY_YN
+	, PB.FILE_ATCH_YN
+	, PB.RTIME_NTC_YN
+FROM PLT_BBS PB
+INNER JOIN PLT_PST PP ON PP.BBS_ID = PB.BBS_ID AND PP.CUSTCO_ID = PB.CUSTCO_ID
+WHERE PB.CUSTCO_ID = #{CUSTCO_ID}
+AND PB.BBS_ID = #{BBS_ID}
+AND PP.PST_ID = #{PST_ID}
+</select>
+
+<!-- 게시판별 첨부파일 조회 -->
+<select id="selectRtnBrdFile"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT B.FILE_GROUP_KEY                -- 파일그룹키
+     , B.FILE_KEY                      -- 파일키
+     , B.FILE_NM                       -- 파일명
+     , B.FILE_NM AS FILENAME_ORG       -- 파일명
+     , B.REAL_UPLOAD_NM                -- 실제업로드명
+     , B.FILE_PATH                     -- 파일경로
+     , B.TASK_TYPE_CD                     -- 업무구분
+     , B.FILE_SZ                     -- 파일사이즈
+     , B.FILE_EXTN                     -- 파일확장자
+     , B.DWNLD_CNT                     -- 다운로드수
+     , B.WRTR_DEPT_CD                  -- 작성자부서코드
+     , B.WRTR_ID                       -- 작성자ID
+     , B.PROC_ID                       -- 처리자
+     , TO_CHAR(B.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING                 -- 전산처리일시
+     , A.KAGE_FILE_URL
+     , A.KAGE_ACS_KEY
+  FROM PLT_BLBD_MST A
+     , PLT_FILE B
+ WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND B.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND A.FILE_GROUP_KEY = B.FILE_GROUP_KEY 
+   AND A.BRD_ID = #{BRD_ID}
+   AND A.BRD_NO = #{BRD_NO}
+]]>
+</select>
+
+<!-- MEW_BRD_FILE(게시물첨부) 테이블 데이터 등록 -->
+<insert id="INSERT_MEW_BRD_FILE"  parameterType= "java.util.HashMap">
+<![CDATA[
+INSERT INTO MEW_BRD_FILE
+       ( CUSTCO_ID
+       , BRD_ID                        -- 통합게시판ID
+       , BRD_NO                        -- 게시물번호
+       , FILE_KEY                      -- 파일키
+       , PROC_ID                        
+       , IT_PROCESSING                  
+       ) 
+VALUES ( NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{BRD_ID}
+       , #{BRD_NO}
+       , #{FILE_KEY}
+       , #{PROC_ID}
+       , SYSDATE
+       )
+]]>
+</insert>
+
+<!-- PLT_BLBD_MST(게시판) 테이블 수정(파일그룹키 초기화) -->
+<update id="UPDATE_BRD_FILEGRPCNT"  parameterType= "java.util.HashMap">
+UPDATE PLT_BLBD_MST
+   SET FILE_GROUP_KEY = ''
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID	= #{BRD_ID}
+   AND BRD_NO	= #{BRD_NO}
+</update>
+
+<!-- 게시판 기능 및 유형 조회 -->
+<select id="selectRtnBoardFunction"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClobTest">
+SELECT   BRD_TY									/*게시판 유형*/
+	   , NOTI_YN								/*공지사항 여부*/
+	   , REPLE_YN								/*답변허용 여부*/
+	   , RMK_YN									/*댓글 여부*/
+	   , FILE_YN								/*파일첨부 여부*/
+	   , RT_NOTI_YN								/*실시간공지사항 여부*/
+     , (SELECT  CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY /*회사명*/
+  FROM PLT_BLBD_MNG 
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID = #{BRD_ID}
+</select>
+
+<!-- BRD_ID에 맞는 메뉴명(게시판명) 조회  selectScheduleRtn-->
+<select id="selectRtnMenuName"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClobTest">
+SELECT   MENU_NM									/*게시판 유형*/
+  FROM PLT_MENU 
+ WHERE PGM_PARM = CONCAT('BRD_ID=', #{BRD_ID})
+</select>
+
+<!-- 응원메시지 수정 -->
+<update id="updateTopmsgRtn"  parameterType= "java.util.HashMap">
+UPDATE PLT_USER
+   SET TOPMSG = #{TOPMSG}
+ WHERE USER_ID = #{USER_ID}
+   
+</update>
+
+<!-- 프로필아이콘 수정 -->
+<update id="updateTopiconRtn"  parameterType= "java.util.HashMap">
+UPDATE PLT_USER
+   SET ICON = #{ICON}
+ WHERE USER_ID = #{USER_ID}
+   
+</update>
+
+
+<!-- 여기부터 -->
+
+<!-- 게시글 목록 조회 -->
+<select id="selectBoardList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+   SELECT ROW_NUMBER() OVER(ORDER BY P.REG_DT DESC) 										AS ROW_NUMBER
+		, PST_ID																			AS PST_ID			-- 게시물_ID
+		, P.CUSTCO_ID																		AS CUSTCO_ID		-- 고객사_ID
+		, BBS_ID																			AS BBS_ID			-- 게시판_ID
+		, CUTT_TYPE_ID																		AS CUTT_TYPE_ID		-- 상담_유형_ID
+		, UP_PST_ID																			AS UP_PST_ID		-- 상위_게시물_ID
+		, PST_GROUP_ID																		AS PST_GROUP_ID		-- 게시물_그룹_ID
+		, PST_LVL																			AS PST_LVL			-- 게시물_수준
+		, PST_TTL																			AS PST_TTL			-- 게시물_제목
+		, PST_CN_NO																			AS PST_CN_NO		-- 게시물_내용_번호
+		, PST_CN																			AS PST_CN			-- 게시물_내용
+		, PST_TYPE_CD																		AS PST_TYPE_CD		-- 게시물_유형_코드
+		, PC.CD_NM 																			AS PST_TYPE_CD_NM	-- 게시물_유형_이름
+		, FILE_GROUP_KEY																	AS FILE_GROUP_KEY	-- 파일_그룹_키
+		, INQ_CNT																			AS INQ_CNT			-- 조회_수
+		, P.SORT_ORD																		AS SORT_ORD			-- 정렬_순서
+		, P.USE_YN																			AS USE_YN			-- 사용_여부
+		, POPUP_YN																			AS POPUP_YN			-- 팝업_여부
+		, PSTG_BGNG_DT																		AS PSTG_BGNG_DT		-- 게시_시작_일시
+		, PSTG_END_DT																		AS PSTG_END_DT		-- 게시_종료_일시
+		, PSTG_STOP_DT																		AS PSTG_STOP_DT		-- 게시_중지_일시
+		, RGTR_IP																			AS RGTR_IP			-- 등록자_IP
+		, P.RGTR_ID																			AS RGTR_ID			-- 등록자_ID
+		, TO_CHAR(TO_TIMESTAMP(P.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI')			AS REG_DT			-- 등록_일시
+		, P.MDFR_ID																			AS MDFR_ID			-- 수정자_ID
+		, TO_CHAR(TO_TIMESTAMP(P.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI')		AS MDFCN_DT			-- 수정_일시
+		, U.USER_NM																			AS USER_NAME		-- 등록자 이름
+		, UU.USER_NM 																		AS EDITOR_NAME		-- 수정자 이름
+		, (SELECT COUNT(FILE_GROUP_KEY) 
+	         FROM PLT_FILE 
+	        WHERE FILE_GROUP_KEY = P.FILE_GROUP_KEY)                          				AS FILE_CNT      	-- 첨부파일 갯수
+	 FROM PLT_PST P LEFT OUTER JOIN PLT_USER U ON U.USER_ID = P.RGTR_ID
+	        	    LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID = P.MDFR_ID
+	        	    LEFT OUTER JOIN PLT_COMM_CD PC ON PC.CUSTCO_ID = P.CUSTCO_ID AND P.PST_TYPE_CD = PC.CD_ID
+	WHERE P.USE_YN = 'Y'
+	  AND P.CUSTCO_ID = #{CUSTCO_ID}
+	  AND PC.USE_YN = 'Y'
+	  AND P.BBS_ID != '2'
+	  	<if test="BOARD_LIST_FROM2  != '' and BOARD_LIST_FROM2 != null 
+	  		   or BOARD_LIST_FROM3  != '' and BOARD_LIST_FROM3 != null"> AND TO_CHAR(SYSDATE, 'YYYY-MM-DD') BETWEEN PSTG_BGNG_DT AND PSTG_END_DT	</if>
+		<if test="PST_TYPE_CD       !='' and PST_TYPE_CD       != null"> AND P.PST_TYPE_CD = #{PST_TYPE_CD}                     				</if>
+		<if test="PST_TTL           !='' and PST_TTL           != null"> <![CDATA[ 	AND P.PST_TTL LIKE CONCAT('%',#{PST_TTL},'%') 	]]>    		</if>
+		<if test="USER_NM           !='' and USER_NM           != null"> AND U.USER_NM LIKE CONCAT('%',#{USER_NM},'%')          				</if>
+		<if test="EDITOR_NM         !='' and EDITOR_NM         != null"> AND UU.USER_NM LIKE CONCAT('%',#{EDITOR_NM},'%')       				</if>
+		<if test="DETAIL_PST_ID     !='' and DETAIL_PST_ID     != null"> AND P.PST_ID = #{DETAIL_PST_ID}                       </if>
+	ORDER BY ROW_NUMBER
+	<if test="BOARD_LIST_FROM3  != '' and BOARD_LIST_FROM3 != null"> OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY							</if>
+
+</select>
+
+<!-- 최신 게시글 조회 -->
+<select id="selectGetNewBrd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT TO_CHAR(TO_TIMESTAMP(REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI') AS REG_DT
+  FROM PLT_PST 
+ WHERE USE_YN = 'Y' 
+   AND CUSTCO_ID = #{CUSTCO_ID}
+ORDER BY REG_DT DESC
+OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
+</select>
+
+<!-- 게시글 유형별 개수 조회 -->
+<select id="selectBoardTpCnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COALESCE((SELECT COUNT(PST_TYPE_CD)
+		  FROM PLT_PST
+		 WHERE PST_TYPE_CD = 'GENR'
+		   AND USE_YN = 'Y'
+		   AND CUSTCO_ID = #{CUSTCO_ID}
+	  GROUP BY PST_TYPE_CD),0) AS GENR_CNT
+	  , COALESCE((SELECT COUNT(PST_TYPE_CD)
+		  FROM PLT_PST
+		 WHERE PST_TYPE_CD = 'NOTI'
+		   AND USE_YN = 'Y'
+		   AND CUSTCO_ID = #{CUSTCO_ID}
+	  GROUP BY PST_TYPE_CD),0) AS NOTI_CNT
+	  , COALESCE((SELECT COUNT(PST_TYPE_CD)
+		  FROM PLT_PST
+		 WHERE PST_TYPE_CD = 'EMRG'
+		   AND USE_YN = 'Y'
+		   AND CUSTCO_ID = #{CUSTCO_ID}
+	  GROUP BY PST_TYPE_CD),0) AS EMRG_CNT
+FROM DUAL
+GROUP BY 1, 2, 3
+</select>
+
+
+<!-- 게시글 신규 등록 및 수정 -->
+<insert id="insertBoard"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_PST 
+	( PST_ID						-- 게시물_ID
+	, CUSTCO_ID						-- 고객사_ID
+	, BBS_ID						-- 게시판_ID
+	, CUTT_TYPE_ID					-- 상담_유형_ID
+	, UP_PST_ID						-- 상위_게시물_ID
+	, PST_GROUP_ID					-- 게시물_그룹_ID
+	, PST_LVL						-- 게시물_수준
+	, PST_TTL						-- 게시물_제목 
+	, PST_CN_NO						-- 게시물_내용_번호
+	, PST_CN						-- 게시물_내용 
+	, PST_TYPE_CD					-- 게시물_유형_코드 
+	, FILE_GROUP_KEY				-- 파일_그룹_키 
+	, INQ_CNT						-- 조회_수
+	, SORT_ORD						-- 정렬_순서
+	, USE_YN						-- 사용_여부 
+	, POPUP_YN						-- 팝업_여부 
+	, PSTG_BGNG_DT					-- 게시_시작_일시 
+	, PSTG_END_DT					-- 게시_종료_일시 
+	, PSTG_STOP_DT					-- 게시_중지_일시 
+	, RGTR_IP						-- 등록자_IP 
+	, RGTR_ID						-- 등록자_ID
+	, REG_DT						-- 등록_일시
+	, MDFR_ID						-- 수정자_ID
+	, MDFCN_DT						-- 수정_일시 
+	)
+VALUES
+	( #{PST_ID}
+	, #{CUSTCO_ID}
+	, #{BBS_ID}
+	, #{CUTT_TYPE_ID}
+	, #{UP_PST_ID}
+	, #{PST_GROUP_ID}
+	, #{PST_LVL}
+	<![CDATA[
+	, #{PST_TTL}
+	]]>
+	, #{PST_CN_NO}
+	<![CDATA[
+	, #{PST_CN}
+	]]>
+	, #{PST_TYPE_CD} 
+	, #{FILE_GROUP_KEY} 
+	, 0
+	, #{SORT_ORD}
+	, 'Y' 
+	, #{POPUP_YN} 
+	, #{PSTG_BGNG_DT} 
+	, #{PSTG_END_DT} 
+	, #{PSTG_STOP_DT} 
+	, #{RGTR_IP} 
+	, #{USER_ID} 
+	, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+	, #{MDFR_ID}
+	, #{MDFCN_DT}
+	)
+</insert>
+
+
+<!-- 게시글 수정 -->
+<update id="updateBoard"  parameterType= "java.util.HashMap">
+UPDATE PLT_PST SET 
+		PST_TTL				= #{PST_TTL}
+	  , PST_CN				= #{PST_CN}
+	  , PST_TYPE_CD			= #{PST_TYPE_CD}
+	  , FILE_GROUP_KEY		= #{FILE_GROUP_KEY}
+	  , PSTG_BGNG_DT		= #{PSTG_BGNG_DT}
+	  , PSTG_END_DT			= #{PSTG_END_DT}
+	  , MDFR_ID				= #{USER_ID}
+	  , MDFCN_DT			= TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+WHERE CUSTCO_ID = #{CUSTCO_ID}
+  AND BBS_ID = #{BBS_ID}
+  AND PST_ID = #{PST_ID}
+</update>
+
+<!-- 조회수 증가 -->
+<update id="increaseCnt"  parameterType= "java.util.HashMap">
+UPDATE PLT_PST
+   SET INQ_CNT = COALESCE(INQ_CNT, 0) + 1
+ WHERE CUSTCO_ID 	   = #{CUSTCO_ID}
+   AND BBS_ID          = #{BBS_ID}
+   AND PST_ID          = #{PST_ID}
+</update>
+
+<!-- 조회수 조회 -->
+<select id="selectCnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT INQ_CNT
+  FROM PLT_PST
+ WHERE CUSTCO_ID 	   = #{CUSTCO_ID}
+   AND BBS_ID          = #{BBS_ID}
+   AND PST_ID          = #{PST_ID}
+</select>
+
+
+<!-- 게시글 삭제 -->	
+<delete id="deleteBoard"  parameterType="java.util.HashMap">
+DELETE FROM PLT_PST
+ WHERE PST_ID			= #{PST_ID}::BIGINT
+   AND CUSTCO_ID 		= #{CUSTCO_ID}::BIGINT
+   AND BBS_ID 			= #{BBS_ID}::BIGINT
+</delete>
+
+<!-- 게시글 파일 리스트 조회 -->
+<select id="boardFileList"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClobTest">
+SELECT *
+  FROM PLT_FILE F LEFT OUTER JOIN PLT_PST P ON P.FILE_GROUP_KEY = F.FILE_GROUP_KEY
+ WHERE F.FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+   AND PST_ID = #{PST_ID}::BIGINT
+   AND TASK_TYPE_CD = #{TASK_TYPE_CD}
+   AND P.BBS_ID = #{BBS_ID}::BIGINT
+</select>
+
+<!-- 파일그룹키로 파일 전체 삭제 -->	
+<delete id="deleteBoardFile"  parameterType="java.util.HashMap">
+	DELETE FROM PLT_FILE
+	WHERE FILE_GROUP_KEY	= #{FILE_GROUP_KEY}
+</delete>
+
+<!-- 이미지파일 그룹키 통일 -->
+<update id="fileKeyUnity"  parameterType= "java.util.HashMap">
+ UPDATE PLT_FILE
+    SET FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+  WHERE FILE_KEY IN 
+  	<foreach collection="arrFileKey" item="FILE_KEY" open="(" separator="," close=")" >
+		#{FILE_KEY}
+	</foreach>
+	
+</update>
+
+<!-- 채팅 이미지 리스트 -->
+<select id="chatImageList"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClobTest">
+    SELECT ROW_TBL.*
+     FROM (
+		SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+			, PP.PST_ID 
+			, PP.PST_TTL
+			, PP.FILE_GROUP_KEY
+			, PF.FILE_KEY
+			, PF.FILE_PATH
+			, PF.STRG_FILE_NM
+			, PF.TASK_TYPE_CD
+			, PF.PATH_TYPE_CD
+			, PF.ACTL_FILE_NM
+			, PF.FILE_SZ
+		FROM PLT_PST PP
+		INNER JOIN PLT_FILE PF on PP.FILE_GROUP_KEY = PF.FILE_GROUP_KEY
+		WHERE PP.CUSTCO_ID = #{CUSTCO_ID}
+			AND BBS_ID = #{BBS_ID}
+			AND CUTT_TYPE_ID IN ( WITH RECURSIVE QSTN_TYPE_TREE AS (
+									SELECT QSTN_TYPE_ID
+									FROM PLT_CHT_QSTN_TYPE
+									WHERE QSTN_TYPE_ID = #{CUTT_TYPE_ID}
+									AND DEL_YN = 'N'
+									AND CUSTCO_ID = #{CUSTCO_ID}
+									UNION ALL
+									SELECT B.QSTN_TYPE_ID
+									FROM PLT_CHT_QSTN_TYPE B
+									INNER JOIN QSTN_TYPE_TREE C ON C.QSTN_TYPE_ID = B.UP_QSTN_TYPE_ID
+									WHERE B.DEL_YN = 'N'
+									AND CUSTCO_ID = #{CUSTCO_ID}
+								)
+								SELECT QTT.QSTN_TYPE_ID
+								FROM QSTN_TYPE_TREE QTT)
+			<if test="PST_TTL != '' and PST_TTL != null and PST_TTL != undefined">
+				AND PST_TTL LIKE ('%' || #{PST_TTL} || '%')
+			</if>
+	) ROW_TBL
+</select>
+
+
+<!-- 채팅 이미지 단일 삭제 -->	
+<delete id="deleteChatImage"  parameterType="java.util.HashMap">
+	DELETE FROM PLT_FILE
+	WHERE FILE_KEY	= #{FILE_KEY}
+</delete>
+
+
+
+<!-- 게시판 문의 조회 (테스트) -->
+<select id="pstQstnSelect"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+   SELECT ROW_NUMBER() OVER(ORDER BY P.REG_DT DESC) 										AS ROW_NUMBER
+		, PST_ID																			AS PST_ID			-- 게시물_ID
+		, P.CUSTCO_ID																		AS CUSTCO_ID		-- 고객사_ID
+		, BBS_ID																			AS BBS_ID			-- 게시판_ID
+		, CUTT_TYPE_ID																		AS CUTT_TYPE_ID		-- 상담_유형_ID
+		, UP_PST_ID																			AS UP_PST_ID		-- 상위_게시물_ID
+		, PST_GROUP_ID																		AS PST_GROUP_ID		-- 게시물_그룹_ID
+		, PST_LVL																			AS PST_LVL			-- 게시물_수준
+		, PST_TTL																			AS PST_TTL			-- 게시물_제목
+		, PST_CN_NO																			AS PST_CN_NO		-- 게시물_내용_번호
+		, PST_CN																			AS PST_CN			-- 게시물_내용
+		, PST_TYPE_CD																		AS PST_TYPE_CD		-- 게시물_유형_코드
+		, PC.CD_NM 																			AS PST_TYPE_CD_NM	-- 게시물_유형_이름
+		, FILE_GROUP_KEY																	AS FILE_GROUP_KEY	-- 파일_그룹_키
+		, INQ_CNT																			AS INQ_CNT			-- 조회_수
+		, P.SORT_ORD																		AS SORT_ORD			-- 정렬_순서
+		, P.USE_YN																			AS USE_YN			-- 사용_여부
+		, POPUP_YN																			AS POPUP_YN			-- 팝업_여부
+		, PSTG_BGNG_DT																		AS PSTG_BGNG_DT		-- 게시_시작_일시
+		, PSTG_END_DT																		AS PSTG_END_DT		-- 게시_종료_일시
+		, PSTG_STOP_DT																		AS PSTG_STOP_DT		-- 게시_중지_일시
+		, RGTR_IP																			AS RGTR_IP			-- 등록자_IP
+		, P.RGTR_ID																			AS RGTR_ID			-- 등록자_ID
+		, TO_CHAR(TO_TIMESTAMP(P.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI')			AS REG_DT			-- 등록_일시
+		, P.MDFR_ID																			AS MDFR_ID			-- 수정자_ID
+		, TO_CHAR(TO_TIMESTAMP(P.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI')		AS MDFCN_DT			-- 수정_일시
+		, U.USER_NM																			AS USER_NAME		-- 등록자 이름
+		, UU.USER_NM 																		AS EDITOR_NAME		-- 수정자 이름
+		, (SELECT COUNT(FILE_GROUP_KEY) 
+	         FROM PLT_FILE 
+	        WHERE FILE_GROUP_KEY = P.FILE_GROUP_KEY)                          				AS FILE_CNT      	-- 첨부파일 갯수
+	 FROM PLT_PST P LEFT OUTER JOIN PLT_USER U ON U.USER_ID = P.RGTR_ID
+	        	    LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID = P.MDFR_ID
+	        	    LEFT OUTER JOIN PLT_COMM_CD PC ON PC.CUSTCO_ID = P.CUSTCO_ID AND P.PST_TYPE_CD = PC.CD_ID
+	WHERE P.USE_YN = 'Y'
+	  AND P.CUSTCO_ID = #{CUSTCO_ID}
+	  AND PC.USE_YN = 'Y'
+	  AND P.BBS_ID != '2'
+	  	<if test="BOARD_LIST_FROM2  != '' and BOARD_LIST_FROM2 != null 
+	  		   or BOARD_LIST_FROM3  != '' and BOARD_LIST_FROM3 != null"> AND TO_CHAR(SYSDATE, 'YYYY-MM-DD') BETWEEN PSTG_BGNG_DT AND PSTG_END_DT	</if>
+		<if test="PST_TYPE_CD       !='' and PST_TYPE_CD       != null"> AND P.PST_TYPE_CD = #{PST_TYPE_CD}                     				</if>
+		<if test="PST_TTL           !='' and PST_TTL           != null"> <![CDATA[ 	AND P.PST_TTL LIKE CONCAT('%',#{PST_TTL},'%') 	]]>    		</if>
+		<if test="USER_NM           !='' and USER_NM           != null"> AND U.USER_NM LIKE CONCAT('%',#{USER_NM},'%')          				</if>
+		<if test="EDITOR_NM         !='' and EDITOR_NM         != null"> AND UU.USER_NM LIKE CONCAT('%',#{EDITOR_NM},'%')       				</if>
+		ORDER BY ROW_NUMBER
+<if test="BOARD_LIST_FROM3  != '' and BOARD_LIST_FROM3 != null"> OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY							</if>
+
+</select>
+
+<!-- 게시판 문의 답변 (테스트) -->
+<insert id="pstQstnInsert"  parameterType= "java.util.HashMap">
+	
+</insert>
+
+
+
+</mapper>
+

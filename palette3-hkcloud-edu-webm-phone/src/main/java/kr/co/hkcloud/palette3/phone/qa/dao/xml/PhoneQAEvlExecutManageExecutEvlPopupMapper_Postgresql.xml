@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- QA 대상 평가 조회 --> 
+<mapper namespace="kr.co.hkcloud.palette3.phone.qa.dao.PhoneQAEvlExecutManageExecutEvlPopupMapper">
+
+	<!-- 상담이력조회 -->
+<!-- QA평가지 조회 -->
+<select id="selectRtnEvSheet"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		 A.QA_ID					AS QA_ID
+		 , A.QA_YM					AS QA_YM
+		 , A.QA_TY_ID				AS QA_TY_ID
+	     , A.QA_TY_L_CD				AS QA_TY_L_CD
+	     , A.QA_TY_L				AS QA_TY_L
+	     , A.QA_TY_M_CD				AS QA_TY_M_CD
+	     , A.QA_TY_M				AS QA_TY_M
+	     , A.QA_TY_S				AS QA_TY_S
+	     , A.QA_TY_S_P				AS QA_TY_S_P
+	     , TQER.SCORE_CHK			AS SCORE_CHK
+	     , TQER.EVAL_CN				AS EVAL_CN
+	     , TQEM.QA_CN				AS QA_CN
+	     , TQEM.QA_SEQ				AS QA_SEQ
+	     , TQEM.USER_ID				AS USER_ID
+	  FROM PLT_PHN_QA_EVAL_SHT A
+	  LEFT JOIN PLT_PHN_QA_EVAL TQEM ON TQEM.CNSL_ID = #{CNSL_ID}
+	  LEFT JOIN PLT_PHN_QA_EVAL_RST TQER ON TQER.CNSL_ID = TQEM.CNSL_ID
+     WHERE A.QA_YM = #{QA_YM}
+       AND A.QA_TY_ID = #{QA_TY_ID}
+       AND A.QA_ID = TQER.QA_ID
+	 ORDER BY A.QA_TY_L_CD, A.QA_TY_M_CD, A.QA_TY_S_P DESC
+</select>
+
+<!-- QA평가지 조회 -->
+<select id="selectRtnEvSheet2"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		 A.QA_ID					AS QA_ID
+		 , A.QA_YM					AS QA_YM
+		 , A.QA_TY_ID				AS QA_TY_ID
+	     , A.QA_TY_L_CD				AS QA_TY_L_CD
+	     , A.QA_TY_L				AS QA_TY_L
+	     , A.QA_TY_M_CD				AS QA_TY_M_CD
+	     , A.QA_TY_M				AS QA_TY_M
+	     , A.QA_TY_S				AS QA_TY_S
+	     , A.QA_TY_S_P				AS QA_TY_S_P
+	     , TQER.SCORE_CHK			AS SCORE_CHK
+	     , TQER.EVAL_CN				AS EVAL_CN
+	     , TQEM.QA_CN				AS QA_CN
+	     , TQEM.QA_SEQ				AS QA_SEQ
+	     , TQEM.USER_ID				AS USER_ID
+	  FROM PLT_PHN_QA_EVAL_SHT A
+	  LEFT JOIN PLT_PHN_QA_EVAL TQEM ON TQEM.CNSL_ID = #{CNSL_ID}
+	  LEFT JOIN PLT_PHN_QA_EVAL_RST TQER ON TQER.CNSL_ID = TQEM.CNSL_ID
+     WHERE A.QA_YM = #{QA_YM}
+       AND A.QA_TY_ID = #{QA_TY_ID}
+	 ORDER BY A.QA_TY_L_CD, A.QA_TY_M_CD, A.QA_TY_S_P DESC
+</select>
+
+<select id ="selectRtnSEQ" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT QA_ID FROM PLT_PHN_QA_EVAL_RST
+	WHERE CNSL_ID = #{CNSL_ID}
+</select>
+
+
+<!-- QA 대상 평가등록 -->
+<update id="insertRtnQaRsltMst"  parameterType= "java.util.HashMap">
+UPDATE TWB_QA_EVAL_RESULT_MST
+	SET	QA_USER_ID = #{QA_USER_ID}
+	  , CHNG_ID = #{OD_USER_ID}
+	  , CHNG_DTIM = TO_CHAR(SYSTIMESTAMP,'YYYYMMDDHH24MISS')
+	  , QA_NOTIN = #{QA_NOTIN}
+	  , QA_CN = #{QA_CN}
+      WHERE CUSTCO_ID = #{CUSTCO_ID}
+      AND QA_YM = #{QA_YM}
+      AND QA_TY_CD = #{QA_TY_CD}
+      AND TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+      AND QA_SEQ = #{QA_SEQ}
+      AND USER_ID = #{USER_ID}
+</update>
+
+<!-- QA 대상 평가 등록 -->
+<insert id="insertRtn"  parameterType= "java.util.HashMap">
+<![CDATA[
+INSERT INTO PLT_PHN_QA_EVAL_RST
+       ( 
+	    CUSTCO_ID
+	  , QA_ID  
+	  , QA_YM
+	  , QA_TY_ID
+	  , QA_SEQ
+	  , CNSL_ID
+	  , USER_ID
+	  , SCORE_CHK
+	  , EVAL_CN
+      , REG_ID
+      , REG_DTIM
+      , CHNG_ID
+      , CHNG_DTIM
+      , CENT_TY
+       ) 
+VALUES ( 
+		#{CUSTCO_ID}
+	  , #{QA_ID}
+	  , #{QA_YM}
+	  , #{QA_TY_ID}
+	  , #{QA_SEQ}
+	  , #{CNSL_ID}
+	  , #{USER_ID}
+	  , #{SCORE_CHK}
+	  , #{EVAL_CN}
+      , #{REG_ID}
+      , TO_CHAR(SYSTIMESTAMP,'YYYYMMDDHH24MISS')
+      , #{REG_ID}
+      , TO_CHAR(SYSTIMESTAMP,'YYYYMMDDHH24MISS')
+      , #{CENT_TY}
+       )
+]]>
+</insert>
+
+<!-- QA 평가삭제 -->
+<delete id="deleteRtn" parameterType= "java.util.HashMap">
+DELETE FROM PLT_PHN_QA_EVAL_RST
+WHERE CNSL_ID = #{CNSL_ID}
+</delete>
+
+<!-- QA 평가저장 -->
+<update id="updateRtn" parameterType= "java.util.HashMap">
+UPDATE PLT_PHN_QA_EVAL 
+SET
+	QA_CN = #{QA_CN}
+	,QA_NOTIN = #{QA_NOTIN}
+	,QA_USER_ID = #{REG_ID}
+	,QA_FIN = 'N'
+WHERE CNSL_ID = #{CNSL_ID}
+</update>
+
+
+<!-- 상담이력상세조회 -->
+<select id="selectRtnDetails" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	NVL2(TQE.QA_ID,'Y','N')  AS QA_ID		/*등록여부*/
+	,TQE.QA_SEQ				AS QA_SEQ		/*QA회차*/
+	,TAC.CUST_NM  		 AS CUST_NAME	/*고객명*/
+	,TAC.CNSL_HIST_NO			 AS CNSL_ID		/*상담이력ID*/
+	,(SELECT USER_NM FROM PLT_USER WHERE USER_ID = TQE.REG_ID )	AS 	REG_ID					/*등록자*/
+	,TACD.CNSL_CNTN			 AS INQU_CTEN	/*상담질문*/
+	,TACD.CNSL_CNTN			 AS REPL_CTEN	/*상담답변*/ 
+	,(TAC.CNSL_BEGIN_DATE ||	TAC.CNSL_BEGIN_TIME) AS  CNSL_BEGIN_DTIM			/*상담시작일시*/
+	,(TAC.CNSL_EOT_DATE ||	TAC.CNSL_EOT_TIME) AS  CNSL_EOT_DTIM					/*상담종료일시*/
+	,TAC.RDWT_ID 			AS 	RDWT_ID												/*녹취ID*/
+	,TAC.AF_PROC_TIME		AS AF_PROC_TIME											/*후처리시간*/
+	,TAC.CUST_TEL_NO			AS CUST_TEL							/*암호화 필요 전화번호*/
+	,TAC.TEL_TIME			AS TEL_TIME												/*통화시간*/
+	,TAC.REG_DTIM			AS REG_DTIM												/*등록일시*/
+	,(SELECT USER_NM FROM PLT_USER WHERE USER_ID = TQE.CHNG_ID )	AS 	CHNG_ID			/*수정자*/
+	,TAC.CHNG_DTIM			AS CHNG_DTIM											/*수정일시*/
+FROM PLT_PHN_CNSL TAC
+LEFT JOIN PLT_PHN_QA_EVAL TQE ON TQE.CNSL_ID  = TAC.CNSL_HIST_NO 
+LEFT JOIN PLT_PHN_CNSL_DTL TACD ON TACD.CNSL_HIST_NO = TAC.CNSL_HIST_NO				/*상담질문*/
+WHERE TAC.CNSL_HIST_NO = #{CNSL_ID}
+  AND TAC.DEL_YN = 'N'
+ORDER BY TAC.CNSL_HIST_NO DESC
+</select>
+
+
+
+</mapper>

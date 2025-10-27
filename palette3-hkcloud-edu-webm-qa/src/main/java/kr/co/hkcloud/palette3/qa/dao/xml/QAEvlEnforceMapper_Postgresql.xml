@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.qa.dao.QAEvlEnforceMapper">
+
+	<select id="selectQaEnforceList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 			/* selectQaEnforceList - QA 평가시행 대상자 리스트 조회 */
+			(ROW_NUMBER() OVER(ORDER BY A.REG_DT ASC)) AS ROW_NUMBER
+			  ,A.QA_TRGT_ID
+			  ,CUTT.CUSL_ID
+			  ,U.USER_NM
+				<choose>
+					<when test="CHNL_CD == 'TEL'">
+		    			,(CASE 
+							  WHEN CUTT.PHN_HR <![CDATA[<]]> 3600 
+							  THEN 
+							  	TO_CHAR((CUTT.PHN_HR||' second')::INTERVAL, 'MI:SS')
+							  ELSE 
+								TO_CHAR((CUTT.PHN_HR||' second')::INTERVAL, 'HH24:MI:SS') 
+							  END ) AS CUTT_HR
+					</when>
+					<otherwise>
+						, TO_CHAR(TO_TIMESTAMP(CUTT.CUTT_END_DT, 'YYYYMMDDHH24MISS') - TO_TIMESTAMP(CUTT.CUTT_BGNG_DT, 'YYYYMMDDHH24MISS'), 'HH24:MI:SS') AS CUTT_HR
+					</otherwise>
+				</choose>
+			  ,CYCL.QA_CYCL_ID 
+			  ,CYCL.CYCL_NM
+			  ,MAX(TO_DATE(COALESCE(RSLT.MDFCN_DT,RSLT.REG_DT) ,'YYYYMMDDHH24MISS')) AS RSLT_DT
+			  ,SUM(RSLT.SCR) AS SCORE
+			  ,(CASE 
+				  WHEN MAX(RSLT.REG_DT) IS NULL  
+				  THEN 
+				  	'미완료'
+				  ELSE 
+					'완료' 
+				  END )AS EVL_YN
+			  ,(CASE 
+				  WHEN MAX(RSLT.REG_DT) IS NULL  
+				  THEN 
+				  	'N'
+				  ELSE 
+					'Y' 
+				  END )AS EVL_YN_CD
+				<choose>
+					<when test="CHNL_CD == 'TEL'">
+		    			, CUTT.REC_FILE_NM
+					</when>
+					<otherwise>
+						, CUTT.CHT_CUTT_ID
+						, CUTT.CUST_ID
+						, PCC.CHT_USER_KEY
+						, CUTT.SNDR_KEY
+						, CUTT.CHN_CLSF_CD
+					</otherwise>
+				</choose>
+			  ,B.FULL_PATH AS CUSL_TP
+		  FROM PLT_QA_TRGT_ALTMNT AS A
+		  		LEFT JOIN PLT_QA_TRGT_SLCTN AS SLCTN
+		  			ON A.QA_TRGT_ID = SLCTN.QA_TRGT_ID
+				LEFT JOIN PLT_CUTT_ITGRT_HSTRY AS HSTRY
+		  			ON SLCTN.ITGRT_HSTRY_ID = HSTRY.ITGRT_HSTRY_ID
+				<choose>
+					<when test="CHNL_CD == 'TEL'">
+				  		LEFT JOIN PLT_PHN_CUTT AS CUTT 
+				  			ON HSTRY.PHN_CUTT_ID = CUTT.PHN_CUTT_ID
+				  		LEFT JOIN PLT_PHN_CUTT_Dtl_EXPSN AS EXPSN
+						    ON EXPSN.PHN_CUTT_ID = CUTT.PHN_CUTT_ID 
+						    AND EXPSN.ATTR_ID IN (
+								   				  SELECT ATTR.ATTR_ID
+													FROM PLT_EXPSN_ATTR AS ATTR
+													LEFT JOIN PLT_CUTT_TYPE AS TYPE
+													  ON TYPE.CUTT_TYPE_ID = ATTR.ATTR_ID
+												   WHERE ATTR.EXPSN_ATTR_COL_ID = 'CUSL_TP_CL'
+													 AND ATTR.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+						          				 )
+					</when>
+					<otherwise>
+				  		LEFT JOIN PLT_CHT_CUTT AS CUTT 
+				  			ON HSTRY.CHT_CUTT_ID = CUTT.CHT_CUTT_ID
+				  		LEFT JOIN PLT_CHT_CUST PCC
+				  			ON CUTT.CUST_ID = PCC.CUST_ID
+				  			AND CUTT.SNDR_KEY = PCC.SNDR_KEY
+					</otherwise>
+				</choose>
+		  		LEFT JOIN PLT_USER AS U
+		  			ON U.USER_ID = CUTT.CUSL_ID
+		  		LEFT JOIN PLT_QA_CYCL AS CYCL
+		  			ON CYCL.QA_PLAN_ID = A.QA_PLAN_ID 
+		   			<if test="QA_CYCL_ID != null and QA_CYCL_ID != ''">
+		  			AND CYCL.QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		  			</if>
+		  		LEFT JOIN PLT_QA_RSLT AS RSLT
+		  			ON RSLT.QA_PLAN_ID = A.QA_PLAN_ID 
+		  			AND RSLT.QA_CYCL_ID = CYCL.QA_CYCL_ID 
+		  			AND RSLT.QA_MNGR_ID = A.QA_MNGR_ID 
+		  			AND RSLT.QA_TRGT_ID = A.QA_TRGT_ID
+		  		LEFT JOIN (
+							WITH RECURSIVE CTE AS
+							(
+								SELECT CUTT_TYPE_ID, UP_CUTT_TYPE_ID, CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_NM::VARCHAR as FULL_PATH
+								  FROM PLT_CUTT_TYPE
+								 WHERE UP_CUTT_TYPE_ID IN ( SELECT CUTT_TYPE_ID FROM PLT_CUTT_TYPE WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND UP_CUTT_TYPE_ID IS NULL )
+								UNION ALL 
+								SELECT CHILD.CUTT_TYPE_ID, CHILD.UP_CUTT_TYPE_ID, CHILD.CUTT_TYPE_SE_CD, CHILD.CUTT_TYPE_NM, CONCAT(CTE.FULL_PATH,' > ', CHILD.CUTT_TYPE_NM)
+								  FROM PLT_CUTT_TYPE AS CHILD 
+								 INNER JOIN CTE AS CTE ON CHILD.UP_CUTT_TYPE_ID = CTE.CUTT_TYPE_ID
+							) SELECT * FROM CTE
+						  ) AS B
+				<choose>
+					<when test="CHNL_CD == 'TEL'">
+		    			ON EXPSN.ATTR_VL::INTEGER = B.CUTT_TYPE_ID
+					</when>
+					<otherwise>
+						ON CUTT.CUTT_TYPE_ID = B.CUTT_TYPE_ID
+					</otherwise>
+				</choose>
+		 WHERE A.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND A.QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		 GROUP BY A.REG_DT
+		         ,A.QA_TRGT_ID
+			  	 ,CUTT.CUSL_ID
+			  	 ,U.USER_NM
+			  	 ,CYCL.QA_CYCL_ID 
+			  	 ,CYCL.CYCL_NM
+			  	 ,B.FULL_PATH
+				<choose>
+					<when test="CHNL_CD == 'TEL'">
+		    			, CUTT.PHN_HR
+			  	 		,CUTT.REC_FILE_NM
+					</when>
+					<otherwise>
+						, CUTT.CUTT_BGNG_DT
+						, CUTT.CUTT_END_DT
+						, CUTT.CHT_CUTT_ID
+						, CUTT.CUST_ID
+						, PCC.CHT_USER_KEY
+						, CUTT.SNDR_KEY
+						, CUTT.CHN_CLSF_CD
+					</otherwise>
+				</choose>
+	</select>
+	<select id="selectQaCyclStats" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectQaCyclStats - qa 상태 조회 */
+		SELECT P.QA_PLAN_ID 
+			  ,CYCL.CYCL_NM
+			  ,CYCL.QA_CYCL_ID
+			  ,CYCL.CYCL_BGNG_YMD 
+			  ,CYCL.CYCL_END_YMD 
+			  ,STTS.EVL_CMPTN_YN
+			  ,(CASE WHEN STTS.EVL_CMPTN_YN = 'Y' THEN '완료'
+			         WHEN COUNT(DISTINCT RSLT.QA_TRGT_ID) <![CDATA[>]]> 0 THEN '진행중'
+			         ELSE '대기'
+			   	 END
+			  )  AS EVL_CMPTN_NM
+			  ,(CASE WHEN STTS.EVL_CMPTN_YN = 'Y' THEN 'TERMIAT'/*종료*/
+			         WHEN COUNT(DISTINCT RSLT.QA_TRGT_ID) <![CDATA[>]]> 0 THEN 'ONGONG'/*진행중*/
+			         ELSE 'PRPARG'/*준비중*/
+			   	 END
+			   ) AS EVL_CMPTN_CD
+			  ,COUNT(DISTINCT ALTMNT.QA_TRGT_ID) AS TRGT_TOT_CNT
+			  ,COUNT(DISTINCT RSLT.QA_TRGT_ID) AS TRGT_COMP_CNT
+		  FROM PLT_QA_CYCL AS CYCL
+		  		LEFT JOIN PLT_QA_CYCL_STTS AS STTS 
+		  			ON STTS.QA_CYCL_ID = CYCL.QA_CYCL_ID 
+		  			   AND STTS.QA_PLAN_ID = CYCL.QA_PLAN_ID
+		  			   <if test="QA_MNGR_ID != null and QA_MNGR_ID != ''">
+		   			   AND STTS.QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   			   </if>
+		  		LEFT JOIN PLT_QA_TRGT_ALTMNT AS ALTMNT 
+		  			ON ALTMNT.QA_PLAN_ID = CYCL.QA_PLAN_ID
+		  			<if test="QA_MNGR_ID != null and QA_MNGR_ID != ''">
+		   			AND ALTMNT.QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   			</if>
+		  		LEFT JOIN PLT_QA_RSLT AS RSLT 
+		  			ON RSLT.QA_CYCL_ID = CYCL.QA_CYCL_ID
+		  			<if test="QA_MNGR_ID != null and QA_MNGR_ID != ''">
+		   			AND RSLT.QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   			</if>
+		  		LEFT JOIN PLT_QA_PLAN AS P
+		  			ON P.QA_PLAN_ID = CYCL.QA_PLAN_ID
+		 WHERE P.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		   <if test="ENFC_YR != null and ENFC_YR != ''">
+		   AND P.ENFC_YR = #{ENFC_YR}
+		   </if>
+		   <if test="PRGRS_STTS_CD != null and PRGRS_STTS_CD != ''">
+		   AND P.PRGRS_STTS_CD = #{PRGRS_STTS_CD}
+		   </if>
+		   <if test="ENFC_SE_CD != null and ENFC_SE_CD != ''">
+		   AND P.ENFC_SE_CD = #{ENFC_SE_CD}
+		   </if>
+		   <if test="PLAN_NM != null and PLAN_NM != ''">
+		   AND P.PLAN_NM LIKE CONCAT('%', #{PLAN_NM}, '%')
+		   </if>
+		   <if test="QA_CYCL_ID != null and QA_CYCL_ID != ''">
+		   AND CYCL.QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   </if>
+		   <if test="QA_PLAN_ID != null and QA_PLAN_ID != ''">
+		   AND P.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   </if>
+		 GROUP BY P.QA_PLAN_ID
+		 		 ,CYCL.CYCL_NM
+		 		 ,CYCL.QA_CYCL_ID
+		 		 ,CYCL.CYCL_BGNG_YMD 
+			  	 ,CYCL.CYCL_END_YMD 
+		 		 ,STTS.EVL_CMPTN_YN
+	</select>
+	<select id="selectQaRsltIdList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT EVL_ARTCL_ID
+		  FROM PLT_QA_RSLT
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   AND QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+	</select>
+	<select id="selectQaRsltOpnn" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT MNGR_OPNN, OBJC_CN
+		  FROM PLT_QA_RSLT_OPNN
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   AND QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+	</select>
+ 	<insert id="insertQaRslt" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_RSLT (
+					 QA_PLAN_ID
+					,QA_CYCL_ID
+					,QA_MNGR_ID
+					,QA_TRGT_ID
+					,EVL_ARTCL_ID
+					,SCR
+					,REG_DT
+			   ) VALUES
+			   (
+					 #{QA_PLAN_ID}::INTEGER
+					,#{QA_CYCL_ID}::INTEGER
+					,#{QA_MNGR_ID}::INTEGER
+					,#{QA_TRGT_ID}::INTEGER
+					,#{EVL_ARTCL_ID}::INTEGER
+					,#{SCR}::INTEGER
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				)
+	</insert>
+ 	<update id="updateQaRslt" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_RSLT
+		   SET SCR = #{SCR}::INTEGER
+			  ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   AND QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+		   AND EVL_ARTCL_ID = #{EVL_ARTCL_ID}::INTEGER
+	</update>
+ 	<insert id="insertQaRsltMulti" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_RSLT (
+					 QA_PLAN_ID
+					,QA_CYCL_ID
+					,QA_MNGR_ID
+					,QA_TRGT_ID
+					,EVL_ARTCL_ID
+					,SCR
+					,REG_DT
+			   ) VALUES
+				<foreach collection="LIST_DATA" item="ITEM" close="" separator=",">
+			   (
+					 #{QA_PLAN_ID}::INTEGER
+					,#{QA_CYCL_ID}::INTEGER
+					,#{QA_MNGR_ID}::INTEGER
+					,#{QA_TRGT_ID}::INTEGER
+					,#{ITEM.EVL_ARTCL_ID}::INTEGER
+					,#{ITEM.SCR}::INTEGER
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				)
+				</foreach>
+	</insert>
+ 	<update id="updateQaRsltMulti" parameterType= "java.util.HashMap">
+		<foreach collection="LIST_DATA" item="ITEM" index="index">
+		UPDATE PLT_QA_RSLT
+		   SET SCR = #{ITEM.SCR}::INTEGER
+			  ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   AND QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+		   AND EVL_ARTCL_ID = #{EVL_ARTCL_ID}::INTEGER
+		</foreach>
+	</update>
+ 	<insert id="insertQaRsltOpnn" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_RSLT_OPNN (
+					 QA_PLAN_ID
+					,QA_CYCL_ID
+					,QA_MNGR_ID
+					,QA_TRGT_ID
+					,MNGR_OPNN
+					,OBJC_CN
+					,REG_DT
+					) VALUES (
+					 #{QA_PLAN_ID}::INTEGER
+					,#{QA_CYCL_ID}::INTEGER
+					,#{QA_MNGR_ID}::INTEGER
+					,#{QA_TRGT_ID}::INTEGER
+					,#{MNGR_OPNN}
+					,#{OBJC_CN}				
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					)
+	</insert>
+ 	<update id="updateQaRsltOpnn" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_RSLT_OPNN
+		   SET MNGR_OPNN = #{MNGR_OPNN}
+		      ,OBJC_CN = #{OBJC_CN}
+			  ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   AND QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+	</update>
+	<delete id="deleteQaRslt" parameterType= "java.util.HashMap">
+		DELETE FROM PLT_QA_RSLT
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   AND QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+		   AND EVL_ARTCL_ID IN (
+			   <foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+		  	   #{ITEM}::INTEGER
+		   	   </foreach>
+		   )
+	</delete>
+	<update id="updateQCyclSttsComplete" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_CYCL_STTS
+		   SET EVL_CMPTN_YN = 'Y'
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+	</update>
+</mapper>

@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.expsnAttr.dao.ExpsnAttrMapper">
+
+	<select id="expsnAttrList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*확장속성 관리 목록 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.ExpsnAttrMapper.expsnAttrList)*/
+			ROW_NUMBER() OVER(ORDER BY PEA.SORT_ORD) AS ROW_NUMBER
+			, PEA.ATTR_ID
+			, PEA.BSC_PVSN_ATTR_YN
+			, PEA.SE
+			, PCC_SE.CD_NM AS SE_NM
+			, PEA.EXPSN_ATTR_NM
+			, PEA.EXPSN_ATTR_COL_ID
+			, PEA.DATA_TYPE_CD
+			, PCC_DATA.CD_NM AS DATA_TYPE_NM
+			, PEA.DATA_LEN
+			, PEA.GROUP_CD_ID
+			, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PEA.CUSTCO_ID AND GROUP_CD_ID = '*' AND CD_ID = PEA.GROUP_CD_ID) AS GROUP_CD_NM
+			, PEA.SIC_ID
+			, PCC_SIC.CD_NM AS SIC_NM
+			, PEA.SYS_BSC_YN
+			, COALESCE(PEA.INDI_INFO_ENCPT_YN, 'N') AS INDI_INFO_ENCPT_YN
+			, COALESCE(PEA.SRCH_STNG_YN, 'N') AS SRCH_STNG_YN
+			, PEA.ESNTL_YN
+			, PCC_ESNTL.CD_NM AS ESNTL_NM
+			, PEA.MDFCN_PSBLTY_YN
+			, PCC_MOD.CD_NM AS MDFCN_PSBLTY_NM
+			, PEA.USE_YN
+			, PEA.SCRN_EXPSR_YN
+			, PEA.HSTRY_LIST_EXPSR_YN
+			, PCC_USE.CD_NM AS USE_NM
+			, PEA.MSG_USE_YN
+			, PEA.MSG_CN
+			, PEA.DEL_YN
+			, PEA.EXPSN_ATTR_EXPLN
+			, PEA.SORT_ORD
+			, PEA.RGTR_ID
+			, PEA.REG_DT
+			, PEA.MDFR_ID
+			, PEA.MDFCN_DT
+			, PEA.CUSTCO_ID
+			, PEA.CPI_ID
+			<if test='PHN_CUTT_ID != null and PHN_CUTT_ID != ""'>
+			, PPCDE.PHN_CUTT_ID
+			, CASE WHEN PEA.EXPSN_ATTR_COL_ID = 'CUSL_CN' THEN CASE WHEN COALESCE(PEA.INDI_INFO_ENCPT_YN, 'N') = 'Y' THEN custco.gen_decrypt(PPCDC.CUTT_CN, #{PP_KEY_PP}, #{PP_ALG_PP}) ELSE PPCDC.CUTT_CN END
+		 		WHEN PEA.EXPSN_ATTR_COL_ID = 'CUSL_TP_CL' THEN
+				(
+					WITH RECURSIVE CUTT_TREE AS (
+						SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID, CUTT_TYPE_SE_CD, CUTT_TYPE_LVL, CAST(CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+						FROM PLT_CUTT_TYPE
+						WHERE UP_CUTT_TYPE_ID IS NULL
+						AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+						UNION ALL
+						SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_LVL, CAST(C.FULL_CUTT_TYPE_ID || ',' || B.CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID, CAST(C.FULL_PATH || ' > ' || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+						FROM PLT_CUTT_TYPE B
+						INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+						AND B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+						AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+					)
+					SELECT
+						CT.FULL_CUTT_TYPE_ID
+					FROM CUTT_TREE CT
+					WHERE CT.CUTT_TYPE_ID = PPCDE.ATTR_VL::INT
+				)
+	 		ELSE CASE WHEN COALESCE(PEA.INDI_INFO_ENCPT_YN, 'N') = 'Y' THEN custco.gen_decrypt(PPCDE.ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) ELSE PPCDE.ATTR_VL END END ATTR_VL
+			</if>
+			<if test='CHT_CUTT_ID != null and CHT_CUTT_ID != ""'>
+				, PPCDE.CHT_CUTT_ID
+				, CASE WHEN PEA.EXPSN_ATTR_COL_ID = 'CUSL_TP_CL' THEN
+				(
+				WITH RECURSIVE CUTT_TREE AS (
+				SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID, CUTT_TYPE_SE_CD, CUTT_TYPE_LVL, CAST(CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE
+				WHERE UP_CUTT_TYPE_ID IS NULL
+				AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+				UNION ALL
+				SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_LVL, CAST(C.FULL_CUTT_TYPE_ID || ',' || B.CUTT_TYPE_ID AS VARCHAR(300)) AS FULL_CUTT_TYPE_ID, CAST(C.FULL_PATH || ' > ' || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE B
+				INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+				AND B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+				AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+				)
+				SELECT
+				CT.FULL_CUTT_TYPE_ID
+				FROM CUTT_TREE CT
+				WHERE CT.CUTT_TYPE_ID = PPCDE.ATTR_VL::INT
+				)
+				ELSE CASE WHEN COALESCE(PEA.INDI_INFO_ENCPT_YN, 'N') = 'Y' THEN custco.gen_decrypt(PPCDE.ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) ELSE PPCDE.ATTR_VL END END ATTR_VL
+			</if>
+			, (CASE WHEN PCC.SYS_CD_YN IS NULL AND PEA.LNKG_ATTR_ID IS NOT NULL THEN 'Y'
+					WHEN PCC.SYS_CD_YN = 'Y' AND PEA.LNKG_ATTR_ID IS NULL THEN 'C'
+					WHEN PCC.SYS_CD_YN IS NOT NULL AND PEA.LNKG_ATTR_ID IS NULL THEN 'N'
+					ELSE PCC.SYS_CD_YN
+					END) AS SYS_CD_YN
+			<if test='CUTT_TRNSF_ID != null and CUTT_TRNSF_ID != ""'>
+			, PCTEA.ATTR_VL
+			, CASE WHEN PEA.DATA_TYPE_CD = 'COE' THEN (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PEA.CUSTCO_ID AND GROUP_CD_ID = PEA.GROUP_CD_ID AND CD_ID = PCTEA.ATTR_VL) ELSE PCTEA.ATTR_VL END AS ATTR_VL_NM
+			</if>
+		FROM PLT_EXPSN_ATTR PEA
+		LEFT OUTER JOIN PLT_COMM_CD PCC_SE ON PCC_SE.CUSTCO_ID = PEA.CUSTCO_ID AND PCC_SE.CD_ID = PEA.SE AND PCC_SE.GROUP_CD_ID = 'CATG_EXT_CL' --구분(고객정보, 상담내용, 캠페인)
+		LEFT OUTER JOIN PLT_COMM_CD PCC_DATA ON PCC_DATA.CUSTCO_ID = PEA.CUSTCO_ID AND PCC_DATA.CD_ID = PEA.DATA_TYPE_CD AND PCC_DATA.GROUP_CD_ID = 'EXPN_PT' --속성(문자형, ㅅ수자형, 단일선택형, 날짜형)
+		LEFT OUTER JOIN PLT_COMM_CD PCC_USE ON PCC_USE.CUSTCO_ID = PEA.CUSTCO_ID AND PCC_USE.CD_ID = PEA.USE_YN AND PCC_USE.GROUP_CD_ID = 'USE_WT' --사용여부(사용, 사용안함)
+		LEFT OUTER JOIN PLT_COMM_CD PCC_MOD ON PCC_MOD.CUSTCO_ID = PEA.CUSTCO_ID AND PCC_MOD.CD_ID = PEA.MDFCN_PSBLTY_YN AND PCC_MOD.GROUP_CD_ID = 'MODI_WT' --수정가능여부(가능, 불가능)
+		LEFT OUTER JOIN PLT_COMM_CD PCC_ESNTL ON PCC_ESNTL.CUSTCO_ID = PEA.CUSTCO_ID AND PCC_ESNTL.CD_ID = PEA.ESNTL_YN AND PCC_ESNTL.GROUP_CD_ID = 'REQR_WT' --필수여부(필수, 옵션)
+		LEFT OUTER JOIN PLT_COMM_CD PCC_SIC ON PCC_SIC.CUSTCO_ID = PEA.CUSTCO_ID AND PCC_SIC.CD_ID = PEA.SIC_ID AND PCC_SIC.GROUP_CD_ID = 'SIC' --표준산업분류
+		<if test='PHN_CUTT_ID != null and PHN_CUTT_ID != ""'>
+		LEFT OUTER JOIN PLT_PHN_CUTT_DTL_EXPSN PPCDE ON PPCDE.ATTR_ID = PEA.ATTR_ID AND PPCDE.PHN_CUTT_ID = #{PHN_CUTT_ID}::INT
+		LEFT OUTER JOIN PLT_PHN_CUTT_DTL_CN PPCDC ON PPCDC.PHN_CUTT_ID = PPCDE.PHN_CUTT_ID AND PPCDC.ATTR_ID = PPCDE.ATTR_ID
+		</if>
+
+		<if test='CHT_CUTT_ID != null and CHT_CUTT_ID != ""'>
+			LEFT OUTER JOIN PLT_CHT_CUTT_DTL_EXPSN PPCDE ON PPCDE.ATTR_ID = PEA.ATTR_ID AND PPCDE.CHT_CUTT_ID = #{CHT_CUTT_ID}::INT
+		</if>
+
+		<if test='CUTT_TRNSF_ID != null and CUTT_TRNSF_ID != ""'>
+		LEFT OUTER JOIN PLT_CUTT_TRNSF_EXPSN_ATTR PCTEA ON PCTEA.ATTR_ID = PEA.ATTR_ID AND PCTEA.CUTT_TRNSF_ID = #{CUTT_TRNSF_ID}::INT
+		</if>
+		LEFT JOIN PLT_COMM_CD PCC ON PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND PCC.CD_ID = PEA.GROUP_CD_ID
+		WHERE 1 = 1
+		AND PEA.BSC_PVSN_ATTR_YN = #{BSC_PVSN_ATTR_YN}
+		AND PEA.DEL_YN = 'N'
+		<if test="CUSTCO_ID !=null and CUSTCO_ID != ''"> AND PEA.CUSTCO_ID = #{CUSTCO_ID}::INTEGER </if>
+		<if test="SE !=null and SE != ''"> AND PEA.SE = #{SE} </if>
+		<if test="USE_YN !=null and USE_YN != ''"> AND PEA.USE_YN = #{USE_YN} </if>
+		<if test="MDFCN_PSBLTY_YN !=null and MDFCN_PSBLTY_YN != ''"> AND PEA.MDFCN_PSBLTY_YN = #{MDFCN_PSBLTY_YN} </if>
+		<if test="DATA_TYPE_CD !=null and DATA_TYPE_CD != ''"> AND PEA.DATA_TYPE_CD = #{DATA_TYPE_CD} </if>
+		<if test="EXPSN_ATTR_NM !=null and EXPSN_ATTR_NM != ''"> AND PEA.EXPSN_ATTR_NM LIKE '%' || #{EXPSN_ATTR_NM} || '%' </if>
+		<if test="EXPSN_ATTR_COL_ID !=null and EXPSN_ATTR_COL_ID != ''"> AND PEA.EXPSN_ATTR_COL_ID LIKE '%' || #{EXPSN_ATTR_COL_ID} || '%' </if>
+		<if test="SCH_CHAR !=null and SCH_CHAR != ''">
+			<choose>
+				<when test='SCH_CHAR == "ETC"'>
+				AND GET_FIRST_CHAR(PEA.EXPSN_ATTR_NM) NOT IN ('ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ')
+				</when>
+				<otherwise>
+				AND GET_FIRST_CHAR(PEA.EXPSN_ATTR_NM) = #{SCH_CHAR}
+				</otherwise>
+			</choose>
+		</if>
+	</select>
+		
+	<insert id="INSERT_EXPSN_ATTR"  parameterType= "java.util.HashMap">
+	INSERT /*확장속성 관리 등록 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.ExpsnAttrMapper.INSERT_EXPSN_ATTR)*/
+	INTO PLT_EXPSN_ATTR ( ATTR_ID
+			<if test="LNKG_ATTR_ID != NULL and LNKG_ATTR_ID != ''">, LNKG_ATTR_ID</if>
+	       	, SE
+	       	, EXPSN_ATTR_NM
+	       	, EXPSN_ATTR_COL_ID
+	       	, DATA_TYPE_CD
+	       	<if test="DATA_LEN != NULL and DATA_LEN != ''">, DATA_LEN</if>
+			<if test="GROUP_CD_ID != NULL and GROUP_CD_ID != ''">, GROUP_CD_ID</if>
+			<if test="SIC_ID != NULL and SIC_ID != ''">, SIC_ID</if>
+			<if test="BSC_PVSN_ATTR_YN != NULL and BSC_PVSN_ATTR_YN != ''">, BSC_PVSN_ATTR_YN</if>
+			<if test="SYS_BSC_YN != NULL and SYS_BSC_YN != ''">, SYS_BSC_YN</if>
+			<if test="SRCH_STNG_YN != NULL and SRCH_STNG_YN != ''">, SRCH_STNG_YN</if>
+			<if test="INDI_INFO_ENCPT_YN != NULL and INDI_INFO_ENCPT_YN != ''">, INDI_INFO_ENCPT_YN</if>
+	       	, ESNTL_YN
+	       	, MDFCN_PSBLTY_YN
+	       	, USE_YN
+	       	, SCRN_EXPSR_YN
+	       	, HSTRY_LIST_EXPSR_YN
+	       	, EXPSN_ATTR_EXPLN
+	       	, DEL_YN
+	       	, SORT_ORD
+	       	, RGTR_ID
+	       	, REG_DT
+			<if test="CUSTCO_ID != NULL and CUSTCO_ID != ''"> , CUSTCO_ID</if>
+			<if test="CPI_ID != NULL and CPI_ID != ''"> , CPI_ID</if>
+	       ) 
+	VALUES ( #{ATTR_ID}
+	       <if test="LNKG_ATTR_ID != NULL and LNKG_ATTR_ID != ''">, #{LNKG_ATTR_ID}::INTEGER</if>
+	       , #{SE}
+	       , #{EXPSN_ATTR_NM}
+	       , #{EXPSN_ATTR_COL_ID}
+	       , #{DATA_TYPE_CD}
+	       <if test="DATA_LEN != NULL and DATA_LEN != ''">, #{DATA_LEN}::INTEGER</if>
+		   <if test="GROUP_CD_ID != NULL and GROUP_CD_ID != ''">, #{GROUP_CD_ID}</if>
+		   <if test="SIC_ID != NULL and SIC_ID != ''">, #{SIC_ID}</if>
+	       <if test="BSC_PVSN_ATTR_YN != NULL and BSC_PVSN_ATTR_YN != ''">, #{BSC_PVSN_ATTR_YN}</if>
+	       <if test="SYS_BSC_YN != NULL and SYS_BSC_YN != ''">, #{SYS_BSC_YN}</if>
+	       <if test="SRCH_STNG_YN != NULL and SRCH_STNG_YN != ''">, #{SRCH_STNG_YN}</if>
+	       <if test="INDI_INFO_ENCPT_YN != NULL and INDI_INFO_ENCPT_YN != ''">, #{INDI_INFO_ENCPT_YN}</if>
+	       , #{ESNTL_YN}
+	       , #{MDFCN_PSBLTY_YN}
+	       , #{USE_YN}
+	       , <choose><when test='INDI_INFO_ENCPT_YN != NULL and INDI_INFO_ENCPT_YN != "" and INDI_INFO_ENCPT_YN == "Y"'>'N'</when><otherwise>#{SCRN_EXPSR_YN}</otherwise></choose>
+	       , COALESCE(#{HSTRY_LIST_EXPSR_YN}, 'N')
+	       , #{EXPSN_ATTR_EXPLN}
+	       , 'N'
+	       , (SELECT COALESCE(MAX(SORT_ORD), 0)+1 FROM PLT_EXPSN_ATTR WHERE SE = #{SE} <if test="BSC_PVSN_ATTR_YN != NULL and BSC_PVSN_ATTR_YN != ''"> AND BSC_PVSN_ATTR_YN = #{BSC_PVSN_ATTR_YN}</if> <if test="CUSTCO_ID != NULL and CUSTCO_ID != ''">AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER</if> <choose><when test='CPI_ID != NULL and CPI_ID != ""'>AND CPI_ID = #{CPI_ID}::INTEGER</when><otherwise>AND CPI_ID IS NULL</otherwise></choose>)
+	       , #{USER_ID}::INTEGER
+	       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test="CUSTCO_ID != NULL and CUSTCO_ID != ''"> , #{CUSTCO_ID}::INTEGER</if>
+			<if test="CPI_ID != NULL and CPI_ID != ''"> , #{CPI_ID}::INTEGER</if>
+	       )
+	</insert>
+		
+	<update id="UPDATE_EXPSN_ATTR"  parameterType= "java.util.HashMap">
+	UPDATE PLT_EXPSN_ATTR /*확장속성 관리 수정 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.ExpsnAttrMapper.UPDATE_EXPSN_ATTR)*/
+	   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+		<if test="SE !=null and SE != ''"> , SE = #{SE}</if>
+		<if test="EXPSN_ATTR_NM !=null and EXPSN_ATTR_NM != ''"> , EXPSN_ATTR_NM = #{EXPSN_ATTR_NM}</if>
+		<if test="EXPSN_ATTR_COL_ID !=null and EXPSN_ATTR_COL_ID != ''"> , EXPSN_ATTR_COL_ID = #{EXPSN_ATTR_COL_ID}</if>
+		<if test="DATA_TYPE_CD !=null and DATA_TYPE_CD != ''"> , DATA_TYPE_CD = #{DATA_TYPE_CD}</if>
+		<if test="DATA_LEN !=null and DATA_LEN != ''"> , DATA_LEN = #{DATA_LEN}::INTEGER</if>
+		<if test="GROUP_CD_ID !=null and GROUP_CD_ID != ''"> , GROUP_CD_ID = #{GROUP_CD_ID}</if>
+		<if test="SIC_ID !=null and SIC_ID != ''"> , SIC_ID = #{SIC_ID}</if>
+		<if test="ESNTL_YN !=null and ESNTL_YN != ''"> , ESNTL_YN = #{ESNTL_YN}</if>
+		<if test="SRCH_STNG_YN !=null and SRCH_STNG_YN != ''"> , SRCH_STNG_YN = #{SRCH_STNG_YN}</if>
+		<if test="MDFCN_PSBLTY_YN !=null and MDFCN_PSBLTY_YN != ''"> , MDFCN_PSBLTY_YN = #{MDFCN_PSBLTY_YN}</if>
+		<if test="USE_YN !=null and USE_YN != ''"> , USE_YN = #{USE_YN}</if>
+		<if test="SCRN_EXPSR_YN !=null and SCRN_EXPSR_YN != ''"> , SCRN_EXPSR_YN = #{SCRN_EXPSR_YN}</if>
+		<if test="HSTRY_LIST_EXPSR_YN !=null and HSTRY_LIST_EXPSR_YN != ''"> , HSTRY_LIST_EXPSR_YN = #{HSTRY_LIST_EXPSR_YN}</if>
+		<if test="EXPSN_ATTR_EXPLN !=null and EXPSN_ATTR_EXPLN != ''"> , EXPSN_ATTR_EXPLN = #{EXPSN_ATTR_EXPLN}</if>
+	 WHERE ATTR_ID = #{ATTR_ID}::INTEGER
+	</update>		
+	
+	<update id="DELETE_EXPSN_ATTR"  parameterType="java.util.HashMap">
+	UPDATE PLT_EXPSN_ATTR /*확장속성 관리 삭제 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.ExpsnAttrMapper.DELETE_EXPSN_ATTR)*/
+		SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	   		, MDFR_ID = #{USER_ID}::INTEGER
+			, DEL_YN = 'Y'
+	WHERE ATTR_ID IN 
+	<foreach collection="arrAttrId" item="ATTR_ID" open="(" separator="," close=")" >
+		#{ATTR_ID}::INTEGER
+	</foreach>
+	</update>
+
+	<update id="UPDATE_EXPSN_ATTR_RE_ORD"  parameterType="java.util.HashMap">
+	UPDATE PLT_EXPSN_ATTR PEA /*확장항목 순서 재정의 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.ExpsnAttrMapper.UPDATE_EXPSN_ATTR_RE_ORD)*/
+	SET SORT_ORD = B.RNUM
+	FROM (
+		SELECT
+			ROW_NUMBER() OVER() RNUM
+			, ATTR_ID
+		FROM (
+		<foreach collection="arrAttrId" item="ATTR_ID" index="index" open="(" separator=" UNION ALL " close=")"  >
+		SELECT #{ATTR_ID}::INTEGER AS ATTR_ID
+		</foreach>
+		) BB
+	) B 
+	WHERE PEA.ATTR_ID = B.ATTR_ID
+	</update>
+	
+	<select id="expsnAttrColIdDupleChk"  parameterType="java.util.HashMap" resultType="java.util.HashMap">			
+		SELECT PEA.EXPSN_ATTR_COL_ID  /*확장 항목 ID 중복체크 (kr.co.hkcloud.palette3.setting.expsnAttr.dao.ExpsnAttrMapper.expsnAttrColIdDupleChk)*/
+		FROM PLT_EXPSN_ATTR PEA
+		WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INT
+<!--		AND PEA.SE = #{SE}-->
+<!--		AND PEA.BSC_PVSN_ATTR_YN = 'N'-->
+		AND PEA.DEL_YN = 'N'
+		AND LOWER(PEA.EXPSN_ATTR_COL_ID) = LOWER(#{EXPSN_ATTR_COL_ID})
+		<if test='CPI_ID != null and CPI_ID != ""'>
+			AND PEA.CPI_ID = #{CPI_ID}::INT
+		</if>
+		<if test='ATTR_ID != null and ATTR_ID != ""'>
+			AND PEA.ATTR_ID <![CDATA[<>]]> #{ATTR_ID}::INT
+		</if>
+	</select>
+</mapper>

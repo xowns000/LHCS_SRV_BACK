@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.setting.dao.ChatSettingSystemMessageManageMapper">
+
+<select id="selectSystemMsgType" resultType="java.util.HashMap" >
+    SELECT 
+        CD 
+        , CD_NM
+    FROM PLT_COMN_CD
+    WHERE GROUP_CD = 'TALK017'
+	AND CD NOT IN ('****','00')
+</select>
+
+<!-- 시스템 메시지 조회 -->
+<select id="selectSystemMsgList" parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+<!-- 채팅 진행 시 시스템 메시지 구하는 부분에서 페이징 처리 구현 어려움 페이징 처리 삭제
+
+-->
+SELECT ROW_TBL.*
+	FROM (
+		SELECT ROW_NUMBER() OVER() AS ROW_NUMBER
+			, PCCSM.SYS_MSG_ID
+			, PCSM.MSG_SE_CD
+			, (SELECT CD_NM
+				FROM PLT_COMM_CD
+				WHERE CUSTCO_ID = PCCSM.CUSTCO_ID AND GROUP_CD_ID = 'MESG_CL'
+					AND CD_ID = PCSM.MSG_SE_CD)			AS MSG_SE_CD_NM
+			, PCSM.RCPTN_DSPTCH_CD
+			, (SELECT CD_NM
+				FROM PLT_COMM_CD
+				WHERE CUSTCO_ID = PCCSM.CUSTCO_ID AND GROUP_CD_ID = 'MESG_SND_RCV'
+					AND CD_ID = PCSM.RCPTN_DSPTCH_CD)	AS RCPTN_DSPTCH_CD_NM
+			, PCSM.MSG_TYPE_CD
+			, (SELECT CD_NM
+				FROM PLT_COMM_CD
+				WHERE CUSTCO_ID = PCCSM.CUSTCO_ID AND GROUP_CD_ID = 'MESG_TP'
+					AND CD_ID = PCSM.MSG_TYPE_CD)		AS MSG_TYPE_CD_NM
+			, PCCSM.MSG_HR
+			, PCCSM.MSG_CN
+			, PCSM.MSG_EXPLN
+			, PCSM.LNK_TYPE_CD
+			, PCCSM.USE_YN
+			, PCCSM.RGTR_ID
+			, (SELECT USER_NM
+				FROM PLT_USER
+				WHERE USER_ID = PCSM.RGTR_ID)			AS RGTR_NM
+			, PCCSM.REG_DT
+			, PCCSM.MDFR_ID
+			, PCCSM.MDFCN_DT
+		FROM PLT_CHT_CUSTCO_SYS_MSG PCCSM
+		LEFT JOIN PLT_CHT_SYS_MSG PCSM ON PCSM.SYS_MSG_ID = PCCSM.SYS_MSG_ID
+		WHERE PCCSM.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<if test="MSG_SE_CD != '' and MSG_SE_CD != null and MSG_SE_CD != undefined">
+			AND PCSM.MSG_SE_CD = #{MSG_SE_CD}
+		</if>
+		<if test="USE_YN != '' and USE_YN != null and USE_YN != undefined">
+			AND PCCSM.USE_YN = #{USE_YN}
+		</if>
+		<if test="SYS_MSG_ID != '' and SYS_MSG_ID != null and SYS_MSG_ID != undefined">
+			AND PCCSM.SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+		</if>
+		<if test="MSG_HR != '' and MSG_HR != null and MSG_HR != undefined">
+			AND PCCSM.MSG_HR = #{MSG_HR}::INTEGER
+		</if>
+		ORDER BY PCSM.REG_DT
+	) ROW_TBL
+<!-- 채팅 진행 시 시스템 메시지 구하는 부분에서 페이징 처리 구현 어려움 페이징 처리 삭제
+
+-->
+</select>
+
+<!-- 시스템메시지 링크 정보 조회 -->
+<select id="selectSystemMsgLinkData" parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+	SELECT
+		SYSTEM_MSG_LINKS_ID
+		, SYS_MSG_ID
+		, BTN_NM
+		, EXTRA
+		, URL_MOBILE
+		, URL_PC
+		, SCHEME_ADROID
+		, SCHEME_IOS
+		, SORT_ORD
+		, USE_YN
+		, REG_DEPT_CD
+		, REG_ID
+		, TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+		, UPD_DEPT_CD
+		, UPD_ID
+		, TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM
+		, PROC_ID
+		, TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+	FROM PLT_CHT_SYS_LNK 
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+	ORDER BY SORT_ORD ASC
+</select>
+
+
+
+<!--  시스템메시지 수정 일반타입-->
+<update id="modifySystemMsgByText" parameterType="java.util.HashMap">
+	UPDATE PLT_CHT_SYS_MSG
+	SET
+		MSG_CN = #{TEXT_MSG_CN}
+	<if test="TEXT_MSG_DESC != null and TEXT_MSG_DESC !=''">
+		, MSG_DESC= #{TEXT_MSG_DESC}
+	</if>
+		, USE_YN = #{TEXT_USE_YN}
+		, MSG_TIME = (CASE WHEN '' = #{TEXT_MSG_TIME} THEN NULL ELSE CAST(#{TEXT_MSG_TIME} AS INTEGER) END)
+		, UPD_ID = #{TEXT_UPD_ID}
+		, UPD_DTTM = NOW()
+		, UPD_DEPT_CD = #{TEXT_UPD_DEPT_CODE}
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND SYS_MSG_ID = #{TEXT_SYS_MSG_ID}
+</update>
+
+<!--  시스템메시지 수정 링크타입 -->
+<update id="modifySystemMsgByLink" parameterType="java.util.HashMap">
+	UPDATE PLT_CHT_SYS_MSG
+	SET
+		MSG_DESC= #{LINK_MSG_DESC}
+		, MSG_CN = #{LINK_MSG_CN}
+		, USE_YN = #{LINK_USE_YN}
+		, MSG_TIME = (CASE WHEN '' = #{LINK_MSG_TIME} THEN NULL ELSE CAST(#{LINK_MSG_TIME} AS INTEGER) END)
+		, UPD_ID = #{LINK_UPD_ID}
+		, UPD_DTTM = NOW()
+		, UPD_DEPT_CD = #{LINK_UPD_DEPT_CODE}
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+</update>
+
+<!--  시스템메시지 수정 -->
+<update id="updateSystemMsg" parameterType="java.util.HashMap">
+	UPDATE PLT_CHT_CUSTCO_SYS_MSG
+	SET MSG_CN = #{MSG_CN}
+		, MSG_HR = 
+		<choose>
+			<when test="MSG_HR != '' and MSG_HR != null and MSG_HR != undefined">
+				#{MSG_HR}::INTEGER
+			</when>
+			<otherwise>
+				'0'::INTEGER
+			</otherwise>
+		</choose>
+		, USE_YN = #{USE_YN}
+		, MDFR_ID = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+		AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND MSG_HR = #{BF_MSG_HR}::INTEGER
+</update>
+
+<!--  시스템메시지 수정 링크정보 -->
+<insert id="insertSystemLinksMsg" parameterType="java.util.HashMap">
+	
+	INSERT INTO PLT_CHT_SYS_LNK  (
+		    CUSTCO_ID
+		    ,SYSTEM_MSG_LINKS_ID
+		    ,SYS_MSG_ID
+		    ,BTN_NM
+		    ,EXTRA
+		    ,URL_MOBILE
+		    ,URL_PC
+		    ,SCHEME_ADROID
+		    ,SCHEME_IOS
+		    ,SORT_ORD
+		    ,USE_YN
+		    ,REG_DEPT_CD
+		    ,REG_ID
+		    ,REG_DTTM
+		    ,UPD_ID
+		    ,UPD_DTTM
+		    ,UPD_DEPT_CD
+		    ,PROC_ID
+		    ,IT_PROCESSING
+		) VALUES (
+		      NULLIF(#{ASP_NEWCUST_KEY},'')
+		    , #{SYSTEM_MSG_LINKS_ID}
+		    , #{SYS_MSG_ID}
+		    , #{BTN_NM}
+		    , NULL
+			, #{URL_MOBILE}
+		    , #{URL_PC}
+		    , NULL
+		    , NULL
+		    <choose>
+		    	<when test="SORT_ORD == null or SORT_ORD ==''">
+				, (SELECT MAX(SORT_ORD)+1 FROM PLT_CHT_SYS_LNK  WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER)
+		    	</when>
+				<otherwise>
+		    	,#{SORT_ORD}
+				</otherwise>
+		    </choose>
+		    , #{USE_YN}
+		    , #{LINK_UPD_DEPT_CODE}
+		    , #{LINK_UPD_ID}
+		    , NOW()
+			, #{LINK_UPD_ID}
+			, NOW()
+			, #{LINK_UPD_DEPT_CODE}
+		    , #{REG_ID}
+		    , NOW()
+		)
+		
+</insert>
+
+<!--  시스템메시지 수정 링크정보 -->
+<update id="updateSystemLinksMsg" parameterType="java.util.HashMap">
+	
+	UPDATE PLT_CHT_SYS_LNK  SET
+			BTN_NM = #{BTN_NM}
+			, URL_MOBILE = #{URL_MOBILE}
+			, URL_PC = #{URL_PC}
+			, SORT_ORD = #{SORT_ORD}
+			, USE_YN = #{USE_YN}
+			, UPD_ID = #{REG_ID}
+			, UPD_DTTM = NOW()
+			, UPD_DEPT_CD = #{DEPT_CODE}
+	WHERE   CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND   SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER 
+	  AND   SYSTEM_MSG_LINKS_ID = #{SYSTEM_MSG_LINKS_ID}
+	
+</update>
+
+<!-- 시스템 메시지 등록 -->
+<insert id="insertNewSystemMsg" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_CUSTCO_SYS_MSG (
+		SYS_MSG_ID
+		, CUSTCO_ID
+		, MSG_HR
+		, MSG_CN
+		, USE_YN
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	) VALUES (
+		#{SYS_MSG_ID}::INTEGER
+		, #{CUSTCO_ID}::INTEGER
+		<choose>
+			<when test="MSG_HR != '' and MSG_HR != null and MSG_HR != undefined">
+				, #{MSG_HR}::INTEGER
+			</when>
+			<otherwise>
+				, '0'::INTEGER
+			</otherwise>
+		</choose>
+		, #{MSG_CN}
+		, #{USE_YN}
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+</insert>
+
+<!-- 시스템 메시지 등록 -->
+<insert id="insertCustcoSystemMsg" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_CUSTCO_SYS_MSG (
+		CUSTCO_ID
+		, SYS_MSG_ID
+	) VALUES (
+		#{CUSTCO_ID}::INTEGER
+		, #{SYS_MSG_ID}::INTEGER
+	)
+</insert>
+
+<!-- 시스템 메시지 링크 정보 등록 -->
+<insert id="insertNewSystemLinksMsg" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_SYS_LNK  (
+	    CUSTCO_ID
+	    ,SYSTEM_MSG_LINKS_ID
+	    ,SYS_MSG_ID
+	    ,BTN_NM
+	    ,EXTRA
+	    ,URL_MOBILE
+	    ,URL_PC
+	    ,SCHEME_ADROID
+	    ,SCHEME_IOS
+	    ,SORT_ORD
+	    ,USE_YN
+	    ,REG_DEPT_CD
+	    ,REG_ID
+	    ,REG_DTTM
+	    ,PROC_ID
+	    ,IT_PROCESSING
+	) VALUES (
+	    NULLIF(#{ASP_NEWCUST_KEY},'')
+	    , #{SYSTEM_MSG_LINKS_ID}
+	    , #{SYS_MSG_ID}
+	    , #{BTN_NM}
+	    , NULL
+		, #{URL_MOBILE}
+	    , #{URL_PC}
+	    , NULL
+	    , NULL
+	    , #{SORT_ORD}
+	    , #{USE_YN}
+	    , #{DEPT_CODE}
+	    , #{REG_ID}
+	    , NOW()
+	    , #{REG_ID}
+	    , NOW()
+	)
+</insert>
+
+<!-- 시스템 메시지 삭제 -->
+<delete id="deleteSystemMsg" parameterType="java.util.HashMap">
+	DELETE FROM PLT_CHT_SYS_MSG
+	WHERE SYS_MSG_ID IN 
+		<foreach collection="arrSysMsgId" item="SYS_MSG_ID" open="(" separator="," close=")" >
+			#{SYS_MSG_ID}::INTEGER
+		</foreach>
+</delete>
+<!-- 시스템 메시지 삭제 -->
+<delete id="deleteCustcoSystemMsg" parameterType="java.util.HashMap">
+	DELETE FROM PLT_CHT_CUSTCO_SYS_MSG
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+		AND MSG_HR = #{MSG_HR}::INTEGER
+</delete>
+
+<!-- 시스템 메시지 링크 정보 삭제 -->
+<delete id="deleteSystemMsgLinks" parameterType="java.util.HashMap">
+	DELETE FROM PLT_CHT_SYS_LNK 
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND SYS_MSG_ID IN 
+		<foreach collection="arrSysMsgId" item="SYS_MSG_ID" open="(" separator="," close=")" >
+			#{SYS_MSG_ID}::INTEGER
+		</foreach>
+</delete>
+    
+<select id="commonSysMsgList" resultType="java.util.HashMap" >
+    SELECT PCSM.MSG_EXPLN
+        , PCSM.SYS_MSG_ID
+        , PCSM.MSG_SE_CD
+        , (SELECT CD_NM
+        	FROM PLT_COMM_CD
+        	WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'MESG_CL'
+        		AND CD_ID = PCSM.MSG_SE_CD)	AS MSG_SE_CD_NM
+    FROM PLT_CHT_SYS_MSG PCSM
+</select>
+
+</mapper>

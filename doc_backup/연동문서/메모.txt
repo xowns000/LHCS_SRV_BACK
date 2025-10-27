@@ -1,0 +1,21 @@
+데이터소스(마스터)관리:
+    - 서비스세팅시 API제공업체별 최초 1회만 등록한다.
+
+데이터연동(마스터별-기준데이터)관리:
+    - 서비스세팅시 최초 1회만 등록한다.
+    - 데이터소스(마스터)별 서비스되는 각 인터페이스를 등록한다.
+    - 각 인터페이스별 Request, Response 구조를 등록한다.(전문테스트를 통해 Response구조를 등록 할 수 있다.)
+    - 각 인터페이스별 필요시 초기데이터(기본값)를 세팅한다.
+    - 다른 인터페이스에서의 응답값을 Request Parameter에 세팅할 수 있다.
+
+고객사별 연동관리
+    - 고객사별로 기준정보로 데이터연동 인터페이스를 사용 할 수있도록 설정한다.
+    - 필요시 고객사별 부가정보를 관리한다.(access key, secret key, account id 등등)
+    - 필요시 고객사별 요청헤드(Authorization 등둥.)를 등록 할 수 있다.
+        ※ 현재 네이버의 Authorization경우는 별도 API를 호출하여아 함으로 kr.co.hkcloud.palette3.integration.commerce_api.naver.service.NaverServiceImpl 에서 별도 구성한다.
+        - access key : 27p2KaCJ0x4dXALj2cU2Ad
+        - secret key : $2a$04$vVAlxnhx.UnopcUogfJet.
+        - account id : skawns6465
+    - 필요시 고객사별 DB Table의 값을 Request Parameter에 세팅할 수 있다. (사전에 PLT_LKAG_LNKG_TBL 에 연동에사용할 테이블,컬럼을 등록하여야함)
+
+

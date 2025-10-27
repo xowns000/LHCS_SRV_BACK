@@ -1,0 +1,94 @@
+package kr.co.hkcloud.palette3.core.chat.messenger.hkcdv.naverbzc.app;
+
+
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Service;
+
+import kr.co.hkcloud.palette3.common.innb.app.InnbCreatCmmnService;
+import kr.co.hkcloud.palette3.common.twb.model.TelewebJSON;
+import kr.co.hkcloud.palette3.core.chat.messenger.hkcdv.naverbzc.domain.NaverbzcOnExpiredSessionEvent;
+import kr.co.hkcloud.palette3.core.chat.msg.app.TalkExpiredSessionService;
+import kr.co.hkcloud.palette3.core.chat.redis.util.TalkRedisChatUtils;
+import kr.co.hkcloud.palette3.exception.teleweb.TelewebAppException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.sf.json.JSONObject;
+
+
+/**
+ * 세션만료 수신 인터페이스 구현체
+ * 
+ * @author User
+ *
+ */
+@Slf4j
+@RequiredArgsConstructor
+@Service("hkcdvNaverbzcReceiveExpiredSession")
+public class HkcdvNaverbzcReceiveExpiredSessionImpl implements HkcdvNaverbzcReceiveExpiredSession
+{
+    private static final String CALLED_API = "/expired_session";
+
+    private final TalkRedisChatUtils        redisChatUtils;
+    private final TalkExpiredSessionService talkExpiredSessionService;
+    private final InnbCreatCmmnService         innbCreatCmmnService;
+
+
+    /**
+     * 세션만료 이벤트 수신
+     * 
+     * @praram            NaverbzcOnExpiredSessionEvent expiredSessionEvent
+     * @throws  Exception
+     * @version           5.0
+     */
+    @EventListener
+    public void onExpiredSession(final NaverbzcOnExpiredSessionEvent expiredSessionEvent) throws TelewebAppException
+    {
+        JSONObject expiredSessionJson = expiredSessionEvent.getExpiredSessionJson();
+        log.info("onExpiredSession - {}", expiredSessionJson.toString());
+
+        String userKey = expiredSessionJson.getString("user_key");
+        String senderKey = expiredSessionJson.getString("asp_sndrKey");
+        String custcoId = expiredSessionJson.getString("custco_id");
+        String chtCuttDtlId = Integer.toString(innbCreatCmmnService.createSeqNo("CHT_CUTT_DTL_ID"));
+
+        TelewebJSON objParams = new TelewebJSON();
+        objParams.setString("TALK_USER_KEY", userKey);
+        objParams.setString("CHT_USER_KEY", userKey);
+        objParams.setString("SNDR_KEY", senderKey);
+        objParams.setString("CUSTCO_ID", custcoId);
+        objParams.setString("CHN_CLSF_CD", expiredSessionJson.getString("call_typ_cd"));
+        objParams.setString("CHT_CUTT_DTL_ID", chtCuttDtlId);
+        
+        expiredSessionJson.put("CUSTCO_ID", custcoId);
+        expiredSessionJson.put("CHT_USER_KEY", userKey);
+        expiredSessionJson.put("RCPTN_DSPTCH_CD", "RCV");
+        expiredSessionJson.put("RCPTN_SNDPTY_ID", "2");
+        expiredSessionJson.put("CHT_CUTT_DTL_ID", chtCuttDtlId);
+
+        //해당건이 이관중인 지 체크한다.
+        //boolean isReadyToContact = redisChatUtils.isAgentReadyToContact(userKey);
+        boolean isUserReadyStates = redisChatUtils.isUserReadyStates(objParams);    // db 값만 체크 (sjh )
+
+        log.info("isReadyToContact={}", isUserReadyStates);
+
+        if(isUserReadyStates)       // db 값 체크로만 변경 (redis 는 ready 상태에서도 열림) , sjh 20200414
+        {
+            //세션만료 UPDATE 처리
+            talkExpiredSessionService.updadateExpiredSessionReady(objParams);
+
+            //고객의 접수포기, 대기포기, 전달대기포기 건을 세션만료
+            talkExpiredSessionService.processExpiredSessionReady(objParams, CALLED_API, expiredSessionJson);
+        } else {
+        	//문의유형에서 메시지형 버튼을 클릭한 경우
+        	//문의유형 처리에 의해 상담 대기테이블에서 삭제됨 - isUserReadyStates = false
+        	//상담대기테이블이 아닌 상담테이블에서 상담 정보를 체크해야함
+        	boolean isUserCuttStates = redisChatUtils.isUserCuttStates(objParams);
+        	if(isUserCuttStates) {
+        		redisChatUtils.updadateExpiredSessionCutt(objParams);
+        	}
+        }
+
+        //상담중인 건을 세션만료
+        talkExpiredSessionService.processExpiredSessionContract(objParams, CALLED_API, expiredSessionJson);
+    }
+}

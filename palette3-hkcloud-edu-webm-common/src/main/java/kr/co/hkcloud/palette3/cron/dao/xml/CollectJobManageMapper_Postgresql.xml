@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.cron.dao.CollectJobManageMapper">
+	<select id="selectCollectJobManageList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*	수집_작업_관리 목록 조회 - selectCollectJobManageList	*/
+			JOB_MNG_ID,
+			CLCT_JOB_CD,
+			SNDR_KEY,
+			JOB_NM,
+			STTS_CD,
+			JOB_BGNG_DT,
+			JOB_END_DT,
+			AFTR_JOB_BGNG_DT,
+			JOB_HR,
+			FAIL_CNT,
+			RGTR_ID,
+			REG_DT,
+			MDFR_ID,
+			MDFCN_DT,
+            LAST_SRCH_DT    /* 최종_검색_일시 */
+		FROM PLT_CLCT_JOB_MNG PCJM
+		<where>
+			<if test="STTS_CD != null and STTS_CD != ''">
+				AND PCJM.STTS_CD = #{STTS_CD}
+			</if>
+			<if test="CLCT_JOB != null and CLCT_JOB == 'CHT_CHN'">
+				AND PCJM.CLCT_JOB_CD IN('CHT_CHN_EMAIL','CHT_CHN_BBS','CHT_CHN_BATCH')
+			</if>
+			<if test="STTS_CD != null and STTS_CD == 'WAIT'">
+				AND TO_CHAR(NOW(), 'YYYYMMDDHH24MISS') >= PCJM.AFTR_JOB_BGNG_DT
+			</if>
+			<if test="JOB_MNG_ID != null and JOB_MNG_ID != ''">
+				AND JOB_MNG_ID = #{JOB_MNG_ID}::BIGINT
+			</if>
+		</where>
+		ORDER BY PCJM.JOB_MNG_ID DESC
+	</select>
+	
+	<insert id="insertCollectJobManage" parameterType="java.util.HashMap">
+		INSERT /*	수집_작업_관리 등록 - insertCollectJobManage	*/
+		INTO PLT_CLCT_JOB_MNG (
+			JOB_MNG_ID,
+			CLCT_JOB_CD,
+			SNDR_KEY,
+			JOB_NM,
+			STTS_CD,
+			JOB_BGNG_DT,
+			JOB_END_DT,
+			AFTR_JOB_BGNG_DT,
+			FAIL_CNT,
+			RGTR_ID,
+			REG_DT
+		)
+		VALUES (
+			#{JOB_MNG_ID}::BIGINT,
+			#{CLCT_JOB_CD},
+			#{SNDR_KEY}::BIGINT,
+			#{JOB_NM},
+			#{STTS_CD},
+			#{JOB_BGNG_DT},
+			#{JOB_END_DT},
+			#{AFTR_JOB_BGNG_DT},
+			0,
+			#{USER_ID}::BIGINT,
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	<update id="updateCollectJobManage" parameterType="java.util.HashMap" >
+		UPDATE PLT_CLCT_JOB_MNG /*	수집_작업_관리 수정 - updateCollectJobManage	*/
+		SET
+			<if test="JOB_NM != null and JOB_NM != ''">JOB_NM = #{JOB_NM},</if>
+			<if test="STTS_CD != null and STTS_CD != ''">STTS_CD = #{STTS_CD},</if>
+			<if test="JOB_BGNG_DT != null and JOB_BGNG_DT != ''">JOB_BGNG_DT = #{JOB_BGNG_DT},</if>
+			<if test="JOB_END_DT != null and JOB_END_DT != ''">JOB_END_DT = #{JOB_END_DT},</if>
+			<if test="AFTR_JOB_BGNG_DT != null and AFTR_JOB_BGNG_DT != ''">AFTR_JOB_BGNG_DT = #{AFTR_JOB_BGNG_DT},</if>
+			<if test="LAST_SRCH_DT != null and LAST_SRCH_DT != ''">LAST_SRCH_DT = #{LAST_SRCH_DT},</if>
+			<if test="JOB_HR != null and JOB_HR != ''">JOB_HR = #{JOB_HR}::FLOAT,</if>
+			<if test="FAIL_CNT_YN != null and FAIL_CNT_YN == 'Y'.toString()">FAIL_CNT = COALESCE(FAIL_CNT,0) + 1,</if>
+			MDFR_ID = #{USER_ID}::BIGINT,
+			MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		<where> 
+			<if test="JOB_MNG_ID != null and JOB_MNG_ID != ''">AND JOB_MNG_ID = #{JOB_MNG_ID}::BIGINT</if>
+			<if test="SNDR_KEY != null and SNDR_KEY != ''">AND SNDR_KEY = #{SNDR_KEY}::BIGINT</if>
+		</where>
+	</update>
+	
+	<insert id="insertCollectJobHistory" parameterType="java.util.HashMap">
+		INSERT /*	수집_작업_이력 등록 - insertCollectJobHistory	*/
+		INTO plt_clct_job_hstry (
+			JOB_MNG_ID,
+			JOB_BGNG_DT,
+			JOB_END_DT,
+			AFTR_JOB_BGNG_DT,
+			JOB_HR,
+			JOB_SCS_YN,
+			JOB_RSLT_MSG,
+			REG_DT
+		)
+		VALUES (
+			#{JOB_MNG_ID}::BIGINT,
+			#{JOB_BGNG_DT},
+			#{JOB_END_DT},
+			#{AFTR_JOB_BGNG_DT},
+			#{JOB_HR}::FLOAT,
+			#{JOB_SCS_YN},
+			#{JOB_RSLT_MSG},
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+</mapper>

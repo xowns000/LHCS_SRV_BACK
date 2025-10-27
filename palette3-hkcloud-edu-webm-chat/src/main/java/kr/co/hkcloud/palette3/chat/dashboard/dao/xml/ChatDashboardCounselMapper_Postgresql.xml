@@ -1,0 +1,2755 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.dashboard.dao.ChatDashboardCounselMapper">
+
+    <select id="selectRtnWorkTime" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT TO_CHAR(AAA.TODAY, 'YYYYMMDD') || AAA.WORK_TIME_FROM || '00' AS TODAY_WORK_TIME_START
+     , TO_CHAR(CASE WHEN AAA.WORK_TIME_FROM >= AAA.WORK_TIME_TO
+                    THEN (AAA.TODAY::DATE + CONCAT(1, ' DAY')::INTERVAL)
+                    ELSE AAA.TODAY
+               END , 'YYYYMMDD') || AAA.WORK_TIME_TO || '00'        AS TODAY_WORK_TIME_END
+]]>
+<if test="NEED_YESTERDAY_YN == 'Y'.toString()">
+     , TO_CHAR((AAA.TODAY::DATE - CONCAT(1, ' DAY')::INTERVAL), 'YYYYMMDD')
+            || (SELECT WORK_TIME_FROM
+                  FROM PLT_CHT_WRK_TIME_HST
+                 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                   AND TO_CHAR((AAA.TODAY::DATE - CONCAT(1, ' DAY')::INTERVAL), 'YYYYMMDD') BETWEEN MANAGE_DATE_FROM AND MANAGE_DATE_TO
+               )
+            || '00'
+       AS YESTERDAY_WORK_TIME_START
+</if>
+  FROM (
+<![CDATA[
+        SELECT AA.WORK_TIME_FROM
+             , AA.WORK_TIME_TO
+             , CASE WHEN AA.WORK_TIME_FROM > AA.WORK_TIME_TO
+                     AND TO_CHAR(NOW(), 'HH24MI') < AA.WORK_TIME_TO
+                    THEN (NOW()::DATE - CONCAT(1, ' DAY')::INTERVAL)
+                    ELSE NOW()
+               END AS TODAY
+          FROM (
+                SELECT WORK_TIME_FROM
+                     , WORK_TIME_TO
+                  FROM PLT_CHT_WRK_TIME_HST
+                 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                   AND TO_CHAR(NOW(), 'YYYYMMDD') BETWEEN MANAGE_DATE_FROM AND MANAGE_DATE_TO
+                ) AA
+        ) AAA
+]]>
+</select>
+
+<select id="selectContactStatus" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT TO_CHAR(NOW(),'YYYY-MM-DD HH24:MI:SS') AS SELECT_TIME
+     , AAA.NUMBER_INCOMING
+     , AAA.NUMBER_CUSTOMER_REQUEST
+     , AAA.NUMBER_COMPLETE
+     , AAA.NUMBER_PROGRESS + AAA.NUMBER_RELAY AS NUMBER_TOT_PROGRESS
+     , ROUND(  (AAA.NUMBER_PROGRESS + AAA.NUMBER_RELAY)
+             / DECODE(AAA.NUMBER_CUSTOMER_REQUEST, 0, 1, AAA.NUMBER_CUSTOMER_REQUEST)
+             * 100
+           , 1
+       ) AS RATE_RESPONSE
+     , AAA.NUMBER_ESCALATION
+     , AAA.NUMBER_DURING_CHATTING
+     , AAA.NUMBER_DURING_AFTER_TREATMENT
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_90
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_91
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_92
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_93
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_80
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_81
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_82
+     , AAA.NUMBER_CUSTOMER_GIVE_UP_83
+     
+     , TO_CHAR(TRUNC( ROUND(AAA.TOTAL_AWT_RESPONSE / DECODE(AAA.NUMBER_PROGRESS, 0, 1, AAA.NUMBER_PROGRESS), 0) /3600),'FM9900') || ':' ||  
+       TO_CHAR(TRUNC(MOD( ROUND(AAA.TOTAL_AWT_RESPONSE / DECODE(AAA.NUMBER_PROGRESS, 0, 1, AAA.NUMBER_PROGRESS), 0) ,3600)/60),'FM00') || ':' ||  
+       TO_CHAR(MOD( ROUND(AAA.TOTAL_AWT_RESPONSE / DECODE(AAA.NUMBER_PROGRESS, 0, 1, AAA.NUMBER_PROGRESS), 0) ,60),'FM00')
+              AS AVG_AWT_RESPONSE
+     , TO_CHAR(TRUNC( ROUND(AAA.TOTAL_AWT_GIVE_UP / DECODE(AAA.NUMBER_CUSTOMER_GIVE_UP, 0, 1, AAA.NUMBER_CUSTOMER_GIVE_UP), 0) /3600),'FM9900') || ':' ||  
+       TO_CHAR(TRUNC(MOD( ROUND(AAA.TOTAL_AWT_GIVE_UP / DECODE(AAA.NUMBER_CUSTOMER_GIVE_UP, 0, 1, AAA.NUMBER_CUSTOMER_GIVE_UP), 0) ,3600)/60),'FM00') || ':' ||  
+       TO_CHAR(MOD( ROUND(AAA.TOTAL_AWT_GIVE_UP / DECODE(AAA.NUMBER_CUSTOMER_GIVE_UP, 0, 1, AAA.NUMBER_CUSTOMER_GIVE_UP), 0) ,60),'FM00')
+              AS AVG_AWT_GIVE_UP
+     , TO_CHAR(TRUNC( ROUND( (AAA.TOTAL_AWT_RESPONSE + AAA.TOTAL_AWT_GIVE_UP) / DECODE( (AAA.NUMBER_PROGRESS + AAA.NUMBER_CUSTOMER_GIVE_UP), 0, 1, (AAA.NUMBER_PROGRESS + AAA.NUMBER_CUSTOMER_GIVE_UP)), 0) /3600),'FM9900') || ':' ||  
+       TO_CHAR(TRUNC(MOD( ROUND( (AAA.TOTAL_AWT_RESPONSE + AAA.TOTAL_AWT_GIVE_UP) / DECODE( (AAA.NUMBER_PROGRESS + AAA.NUMBER_CUSTOMER_GIVE_UP), 0, 1, (AAA.NUMBER_PROGRESS + AAA.NUMBER_CUSTOMER_GIVE_UP)), 0) ,3600)/60),'FM00') || ':' ||  
+       TO_CHAR(MOD( ROUND( (AAA.TOTAL_AWT_RESPONSE + AAA.TOTAL_AWT_GIVE_UP) / DECODE( (AAA.NUMBER_PROGRESS + AAA.NUMBER_CUSTOMER_GIVE_UP), 0, 1, (AAA.NUMBER_PROGRESS + AAA.NUMBER_CUSTOMER_GIVE_UP)), 0) ,60),'FM00')
+              AS AVG_AWT_ALL
+     , TO_CHAR(TRUNC( ROUND(AAA.TOTAL_CHATTING / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) /3600),'FM9900') || ':' ||  
+       TO_CHAR(TRUNC(MOD( ROUND(AAA.TOTAL_CHATTING / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,3600)/60),'FM00') || ':' ||  
+       TO_CHAR(MOD( ROUND(AAA.TOTAL_CHATTING / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,60),'FM00')
+              AS AVG_CHATTING
+     , TO_CHAR(TRUNC( ROUND(AAA.TOTAL_AFTER_TREATMENT / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) /3600),'FM9900') || ':' ||  
+       TO_CHAR(TRUNC(MOD( ROUND(AAA.TOTAL_AFTER_TREATMENT / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,3600)/60),'FM00') || ':' ||  
+       TO_CHAR(MOD( ROUND(AAA.TOTAL_AFTER_TREATMENT / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,60),'FM00')
+              AS AVG_AFTER_TREATMENT
+     , TO_CHAR(TRUNC( ROUND((AAA.TOTAL_CHATTING + AAA.TOTAL_AFTER_TREATMENT) / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) /3600),'FM9900') || ':' ||  
+       TO_CHAR(TRUNC(MOD( ROUND((AAA.TOTAL_CHATTING + AAA.TOTAL_AFTER_TREATMENT) / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,3600)/60),'FM00') || ':' ||  
+       TO_CHAR(MOD( ROUND((AAA.TOTAL_CHATTING + AAA.TOTAL_AFTER_TREATMENT) / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,60),'FM00')
+              AS AVG_CHATTING_AFTER_TREATMENT
+     , TO_CHAR(TRUNC( ROUND(AAA.TOTAL_CUST_MSG_TIME_SUM / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) /3600),'FM9900') || ':' ||  
+       TO_CHAR(TRUNC(MOD( ROUND(AAA.TOTAL_CUST_MSG_TIME_SUM / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,3600)/60),'FM00') || ':' ||  
+       TO_CHAR(MOD( ROUND(AAA.TOTAL_CUST_MSG_TIME_SUM / DECODE(AAA.NUMBER_CHATTING, 0, 1, AAA.NUMBER_CHATTING), 0) ,60),'FM00')
+              AS AVG_CUST_MSG_TIME_SUM
+  FROM (
+        SELECT 
+               DD.YYYYMMDD 
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_INCOMING
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('81'
+                                               , '83'
+                                               , '91'
+                                               , '92'
+                                               , '12'
+                                               , '20'
+                                               , '21'
+                                               --    , '14' -- 전달완료건은 진행건으로 보지 않음 (ABL생명)
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_REQUEST
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('12'
+                                               , '20'
+                                               , '21'
+                                               , '14'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_PROGRESS
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('14')
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_RELAY -- 전달건
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('91'
+                                               , '92'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.EXEC_RST_CD IN ('1'
+                                              , '3'
+                                                )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_COMPLETE
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.EXEC_RST_CD IN ('2'
+                                                )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_ESCALATION
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         -- AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('12'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_DURING_CHATTING
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         -- AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('20'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_DURING_AFTER_TREATMENT
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('90'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_90
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('91'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_91
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('92'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_92
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         -- AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('93'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_93
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('80'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_80
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('81'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_81
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('82'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_82
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('83'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP_83
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('12'
+                                               , '20'
+                                               , '21'
+                                               , '14'
+                                                 )
+                         AND CC.TALK_START_DT IS NOT NULL
+                         AND (CC.TALK_READY_DT IS NOT NULL OR CC.TALK_DIST_DT IS NOT NULL)
+        				THEN ( (TO_DATE(CC.TALK_START_DT, 'YYYYMMDDHH24MISS') 
+        				                        - TO_DATE(DECODE(CC.TALK_READY_DT, NULL, CC.TALK_DIST_DT, CC.TALK_READY_DT), 'YYYYMMDDHH24MISS')
+        				                          )
+        				                 ) * 24 * 60 * 60
+                        ELSE 0
+        			END
+        		   ) AS TOTAL_AWT_RESPONSE
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('91'
+                                               , '92'
+                                                 )
+                         AND CC.TALK_END_DT IS NOT NULL
+                         AND (CC.TALK_READY_DT IS NOT NULL OR CC.TALK_DIST_DT IS NOT NULL)
+        				THEN ( (TO_DATE(CC.TALK_END_DT, 'YYYYMMDDHH24MISS') 
+        				                        - TO_DATE(DECODE(CC.TALK_READY_DT, NULL, CC.TALK_DIST_DT, CC.TALK_READY_DT), 'YYYYMMDDHH24MISS')
+        				                          )
+        				                 ) * 24 * 60 * 60
+                        ELSE 0
+        			END
+        		   ) AS TOTAL_AWT_GIVE_UP
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         -- AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.TALK_POST_DT IS NOT NULL
+                         AND CC.TALK_START_DT IS NOT NULL
+                         AND CC.TALK_END_DT IS NOT NULL
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CHATTING
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         -- AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.TALK_END_DT IS NOT NULL
+                         AND CC.TALK_POST_DT IS NOT NULL
+                         AND CC.TALK_START_DT IS NOT NULL
+                        THEN ( (TO_DATE(COALESCE(CC.TALK_POST_DT, TALK_END_DT), 'YYYYMMDDHH24MISS') /*전달을 한 건 경우 채팅종료 값이 존재하지 않기 때문에 다음과 같이 처리*/ 
+                                                - TO_DATE(CC.TALK_START_DT                    , 'YYYYMMDDHH24MISS')
+                                                  )
+                                         ) * 24 * 60 * 60
+                        ELSE 0
+                    END
+                   ) AS TOTAL_CHATTING
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         -- AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.TALK_END_DT IS NOT NULL
+                         AND CC.TALK_POST_DT IS NOT NULL
+                        THEN ( (TO_DATE(CC.TALK_END_DT                      , 'YYYYMMDDHH24MISS') 
+                                                - TO_DATE(COALESCE(CC.TALK_POST_DT, TALK_END_DT), 'YYYYMMDDHH24MISS') /*전달을 한 건 경우 채팅종료 값이 존재하지 않기 때문에 다음과 같이 처리*/
+                                                  )
+                                         ) * 24 * 60 * 60
+                        ELSE 0
+                    END
+                   ) AS TOTAL_AFTER_TREATMENT
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         -- AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.CUST_MSG_TIME_SUM IS NOT NULL
+        				THEN CC.CUST_MSG_TIME_SUM
+                        ELSE 0
+        			END
+        		   ) AS TOTAL_CUST_MSG_TIME_SUM
+          FROM (
+                SELECT SUBSTR(#{TODAY_WORK_TIME_START}, 1, 8) AS YYYYMMDD
+                     ,        #{TODAY_WORK_TIME_START}        AS WORK_START
+                     ,        #{TODAY_WORK_TIME_END}          AS WORK_END
+                  
+                ) DD
+          LEFT
+          JOIN PLT_CHT_CUTT CC
+<![CDATA[
+            ON ((    DD.WORK_START <= CC.TALK_DIST_DT
+                 AND                  CC.TALK_DIST_DT < DD.WORK_END
+                 )
+]]>
+           AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+           AND CC.TALK_STAT_CD IN ('80'
+                                 , '82'
+                                 , '90'
+                                 , '81'
+                                 , '83'
+                                 , '91'
+                                 , '92'
+                                 , '12'
+                                 , '20'
+                                 , '21'
+                                 , '14'
+                                 , '93'
+                                   )
+		<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+	       AND EXISTS (SELECT 1
+	                     FROM PLT_USER
+	                    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                      AND USER_ID = CC.USER_ID
+	                      AND USER_ATTR_A = #{USER_ATTR_A}
+			<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+	                      AND USER_ATTR_C = #{USER_ATTR_C}
+			</if>
+	                   )
+		</if>
+                )
+         WHERE 1 = 1
+         GROUP BY DD.YYYYMMDD
+        ) AAA
+</select>
+
+<!-- 채팅상담메인 모니터링 대시보드 -->
+<select id="selectContactStatusInTalkMain" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT TO_CHAR(NOW(),'YYYY-MM-DD HH24:MI:SS') AS SELECT_TIME  -- 조회시간
+     , AAA.NUMBER_INCOMING                                      -- 인입
+     , AAA.NUMBER_CUSTOMER_REQUEST                              -- 요청
+     , AAA.NUMBER_COMPLETE                                      -- 상담완료(완결, 전달)
+     , AAA.NUMBER_ESCALATION                                    -- 상담완료(미결)
+     , AAA.NUMBER_DURING_CHATTING                               -- 상담중
+     , AAA.NUMBER_DURING_AFTER_TREATMENT                        -- 후처리중
+     
+  FROM (
+        SELECT 
+               DD.YYYYMMDD 
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_INCOMING
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('81'
+                                               , '83'
+                                               , '91'
+                                               , '92'
+                                               , '12'
+                                               , '20'
+                                               , '21'
+                                               , '14'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_REQUEST
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('12'
+                                               , '20'
+                                               , '21'
+                                               , '14'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_PROGRESS
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('91'
+                                               , '92'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_CUSTOMER_GIVE_UP
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.EXEC_RST_CD IN ('1'
+                                              , '3'
+                                                )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_COMPLETE
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.ORI_TALK_CONTACT_ID IS NULL
+                         AND CC.TALK_STAT_CD IN ('21'
+                                               , '14'
+                                                 )
+                         AND CC.EXEC_RST_CD IN ('2'
+                                                )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_ESCALATION
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.TALK_STAT_CD IN ('12'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_DURING_CHATTING
+             , SUM(CASE WHEN CC.TALK_CONTACT_ID IS NOT NULL
+                         AND CC.TALK_STAT_CD IN ('20'
+                                                 )
+                        THEN 1
+                        ELSE 0
+                    END
+                   ) AS NUMBER_DURING_AFTER_TREATMENT
+          FROM (
+                SELECT SUBSTR(TO_CHAR(NOW(), 'YYYYMMDD'), 1, 8) AS YYYYMMDD
+                     , (SELECT STNG_VL FROM PLT_CHT_ENV WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND STNG_CD = 'WORK_START_TIME')       AS WORK_START
+                     , (SELECT STNG_VL FROM PLT_CHT_ENV WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND STNG_CD = 'WORK_END_TIME')         AS WORK_END
+                  
+                ) DD
+          LEFT
+          JOIN PLT_CHT_CUTT CC
+<![CDATA[
+            ON ((     CC.TALK_DIST_DT >= CONCAT(DD.YYYYMMDD, DD.WORK_START) 
+                 AND  CC.TALK_DIST_DT <  CONCAT(DD.YYYYMMDD, DD.WORK_END)
+                 )
+]]>
+           AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+           AND CC.TALK_STAT_CD IN ('80'
+                                 , '82'
+                                 , '90'
+                                 , '81'
+                                 , '83'
+                                 , '91'
+                                 , '92'
+                                 , '12'
+                                 , '20'
+                                 , '21'
+                                 , '14'
+                                 , '93'
+                                   )
+                )
+         WHERE 1 = 1
+         GROUP BY DD.YYYYMMDD
+        ) AAA
+</select>
+    
+<!-- 고객 접수건 -->
+<select id="selectRtnInTalk"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(*) AS CNT
+  FROM PLT_CHT_USER_RDY
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND TALK_DIST_DT LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+   AND TALK_READY_CD = '10'
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+   AND SNDR_KEY = #{SNDR_KEY}
+</if>
+</select>
+
+<!-- 고객 상담건 -->
+<select id="selectRtnTalkConsulting"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(*) AS CNT
+  FROM PLT_CHT_CUTT
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND TALK_CONTACT_ID LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+   AND TALK_STAT_CD = '12'
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+   AND SNDR_KEY = #{SNDR_KEY}
+</if>
+</select>
+
+<!-- 대기중 상담사 -->
+<select id="selectRtnTalkReady"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(1) AS CNT
+  FROM PLT_CHT_RDY
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+   AND SNDR_KEY = #{SNDR_KEY}
+</if>
+</select>
+
+<!-- 채팅중 상담사 -->
+<select id="selectRtnTalkConsultingUser"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(1) AS CNT
+  FROM PLT_CHT_CUTT_ING
+ WHERE 1=1
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+   AND SNDR_KEY = #{SNDR_KEY}
+</if>
+</select>
+
+<!-- 총 상담건 -->
+<select id="selectRtnTalkTotData"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COALESCE(SUM(A.CNT),0) AS CNT
+  FROM (
+        SELECT SUBSTR(TALK_CONTACT_ID,1,8) AS TODAY
+             , 'CONTACT' AS POS
+             , COUNT(*) AS CNT
+          FROM PLT_CHT_CUTT
+         WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+           AND TALK_CONTACT_ID LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+           AND SNDR_KEY = #{SNDR_KEY}
+</if>
+         GROUP BY SUBSTR(TALK_CONTACT_ID,1,8)
+        UNION ALL 
+        SELECT SUBSTR(TALK_DIST_DT,1,8) AS TODAY
+             , 'READY' AS POS
+             , COUNT(*) AS CNT
+          FROM PLT_CHT_USER_RDY
+         WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+           AND TALK_DIST_DT LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+           AND SNDR_KEY = #{SNDR_KEY}
+</if>
+         GROUP BY SUBSTR(TALK_DIST_DT,1,8)
+       ) A
+</select>
+
+<!-- 상담완료건 -->
+<select id="selectRtnTalkConsultComplete"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(*) AS CNT
+  FROM PLT_CHT_CUTT
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND TALK_CONTACT_ID LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+   AND TALK_STAT_CD = '21'
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+   AND SNDR_KEY = #{SNDR_KEY}
+</if>
+</select>
+
+<!-- 상담완료율 -->
+<select id="selectRtnTalkConsultCompleteRate"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT A.TODAY
+     , A.T_CNT
+     , COALESCE(B.C_CNT,0) AS C_CNT
+     , COALESCE(ROUND(B.C_CNT / A.T_CNT,4) * 100 ,0) AS RATIO
+  FROM ( SELECT TODAY
+              , SUM(CNT) AS T_CNT
+           FROM (
+				    SELECT SUBSTR(TALK_CONTACT_ID,1,8) AS TODAY
+				         , TALK_STAT_CD
+				         , COUNT(*) AS CNT
+				      FROM PLT_CHT_CUTT
+				     WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				       AND TALK_CONTACT_ID LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+				<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+				       AND SNDR_KEY = #{SNDR_KEY}
+				</if>
+				     GROUP BY SUBSTR(TALK_CONTACT_ID,1,8), TALK_STAT_CD
+				     UNION ALL 
+				    SELECT SUBSTR(TALK_DIST_DT,1,8) AS TODAY
+				         , '10' AS TALK_STAT_CD
+				         , COUNT(*) AS CNT
+				      FROM PLT_CHT_USER_RDY
+				     WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				       AND TALK_DIST_DT LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+				<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+				       AND SNDR_KEY = #{SNDR_KEY}
+				</if>
+				     GROUP BY SUBSTR(TALK_DIST_DT,1,8)
+				)
+          GROUP BY TODAY
+       ) A
+  LEFT OUTER JOIN 
+     ( SELECT TODAY
+              , SUM(CNT) AS C_CNT 
+           FROM (
+				    SELECT SUBSTR(TALK_CONTACT_ID,1,8) AS TODAY
+				         , TALK_STAT_CD
+				         , COUNT(*) AS CNT
+				      FROM PLT_CHT_CUTT
+				     WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				       AND TALK_CONTACT_ID LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+				<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+				       AND SNDR_KEY = #{SNDR_KEY}
+				</if>
+				     GROUP BY SUBSTR(TALK_CONTACT_ID,1,8), TALK_STAT_CD
+				     UNION ALL 
+				    SELECT SUBSTR(TALK_DIST_DT,1,8) AS TODAY
+				         , '10' AS TALK_STAT_CD
+				         , COUNT(*) AS CNT
+				      FROM PLT_CHT_USER_RDY
+				     WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				       AND TALK_DIST_DT LIKE TO_CHAR(NOW(),'YYYYMMDD') || '%'
+				<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+				       AND SNDR_KEY = #{SNDR_KEY}
+				</if>
+				     GROUP BY SUBSTR(TALK_DIST_DT,1,8)
+				)
+          WHERE TALK_STAT_CD = '21'
+          GROUP BY TODAY
+       ) B
+ 	ON A.TODAY = B.TODAY
+</select>
+
+<!-- 상담사 현황 그리드 -->
+<select id="selectRtnTalkConsultUserList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT BAS01.DEPT_CD AS DEPT_NM_LIST /* REPLACE(FN_TWB_GET_DEPTNAME(BAS01.DEPT_CD, 'FULL'), '/', ' > ') AS DEPT_NM_LIST */
+     , BAS01.USER_ID
+     , BAS01.USER_NM
+     , CT2.CD_NM 			AS TALK_STAT_CD_NM
+     , TC.TALK_USER_KEY
+     , TC.TALK_TITLE
+     , TC.CUSTOMER_ID 
+     , TC.CUSTOMER_NM
+     , TO_CHAR(TO_DATE(TC.TALK_DIST_DT,'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS')  AS TALK_DIST_DT
+     , TO_CHAR(TO_DATE(TC.TALK_START_DT,'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS') AS TALK_CONTACT_DT
+     , CASE WHEN (SELECT COUNT(*) FROM PLT_CHT_CUTT_ING WHERE USER_ID = TC.USER_ID) > 0 THEN CT007_1.CD_NM
+            WHEN (SELECT COUNT(*) FROM PLT_CHT_RDY WHERE USER_ID = TC.USER_ID) > 0 THEN CT007_2.CD_NM
+       ELSE CT007_3.CD_NM END AS USER_STAT_NM
+     , COALESCE(TC.ORDER_NUMBER, 0) AS ORDER_NUMBER
+     , COALESCE(TC.MEMBER_YN, 'N') AS MEMBER_YN
+     , COALESCE(TC.CUSTOMER_SEQ, 0) AS CUSTOMER_SEQ
+  FROM PLT_USER BAS01
+  LEFT OUTER JOIN PLT_COMN_CD CT007_1 
+		ON CT007_1.GROUP_CD = 'TALK001' AND CT007_1.CD='1' AND CT007_1.CD_TYPE  = '1'
+  LEFT OUTER JOIN PLT_COMN_CD CT007_2 
+		ON CT007_2.GROUP_CD = 'TALK001' AND CT007_2.CD='2' AND CT007_2.CD_TYPE  = '1'		 		 	
+  LEFT OUTER JOIN PLT_COMN_CD CT007_3 
+		ON CT007_3.GROUP_CD = 'TALK001' AND CT007_3.CD='3' AND CT007_3.CD_TYPE  = '1'
+  LEFT OUTER JOIN
+     (
+       SELECT 
+			T1.TALK_CONTACT_ID
+	        ,T1.TALK_USER_KEY
+	        ,T1.SNDR_KEY
+	        ,T1.CUSTOMER_ID
+	        ,T1.TALK_START_DT
+	        ,T1.TALK_END_DT
+	        ,T1.TALK_SESSION_CD
+	        ,T1.CALL_TYP_CD
+	        ,T1.CNSL_TYP_CD
+	        ,T1.TALK_QST
+	        ,T1.TALK_ANS
+	        ,T1.TALK_TITLE
+	        ,T1.OWN_CHECK_YN
+	        ,T1.EXEC_RST_CD
+	        ,T1.CNSL_RST_CD
+	        ,T1.CST_TYP_CD
+	        ,T1.TALK_STAT_CD
+	        ,T1.USER_ID
+	        ,T1.TALK_DIST_DT
+	        ,T1.TALK_READ_DT
+	        ,T1.TALK_CONTACT_DT
+	        ,T1.TALK_ENT_CD
+	        ,T1.REGR_DEPT_CD
+	        ,T1.REGR_ID
+	        ,T1.TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+	        ,T1.AMDR_DEPT_CD
+	        ,T1.AMDR_ID
+	        ,TO_CHAR(T1.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM
+	        ,T1.PROC_ID
+	        ,T1.IT_PROCESSING
+	        ,T1.CHATBOT_YN
+	        ,T1.CHATBOT_STAT_CD
+	        ,T1.TALK_POST_DT
+	        ,T1.CUST_MSG_TIME
+	        ,T1.TALK_INQRY_CD
+	        ,T1.AUTO_GREETING_YN
+	        ,T1.ORDER_NUMBER
+	        ,T1.SYSMSG_SKIP_YN
+	        , T3.CUSTOMER_NM
+	        , COALESCE(T1.MEMBER_YN, 'N') AS MEMBER_YN
+	        , COALESCE(T1.CUSTOMER_SEQ, 0) AS CUSTOMER_SEQ
+         FROM PLT_CHT_CUTT T1 ,
+            ( SELECT USER_ID
+                   , MAX(TALK_CONTACT_ID) AS TALK_CONTACT_ID
+                FROM PLT_CHT_CUTT
+               WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+               <if test="SNDR_KEY !='' and SNDR_KEY != null">   
+                 AND SNDR_KEY = #{SNDR_KEY}
+               </if>
+               <if test="TALK_STAT_CD !='' and TALK_STAT_CD != null">
+                 AND TALK_STAT_CD    = #{TALK_STAT_CD}
+               </if>
+               GROUP BY USER_ID
+            )T2, 
+            PLT_CUS T3
+        WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+          AND T1.TALK_CONTACT_ID = T2.TALK_CONTACT_ID
+          AND T1.CUSTOMER_ID     = T3.CUSTOMER_ID
+     ) TC
+     ON BAS01.USER_ID = TC.USER_ID 
+  LEFT OUTER JOIN PLT_COMN_CD CT2 
+		ON CT2.GROUP_CD = 'TALK001' AND CT2.CD=TC.TALK_STAT_CD AND CT2.CD_TYPE  = '1'
+ WHERE BAS01.CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+<if test="DEPT_CD !='' and DEPT_CD != null">
+  AND BAS01.DEPT_CD = #{DEPT_CD}
+</if>
+<if test="USER_ID !='' and USER_ID != null">
+  AND BAS01.USER_ID = #{USER_ID}
+</if>
+ <if test="TALK_STAT_CD !='' and TALK_STAT_CD != null">
+  AND TC.TALK_STAT_CD = #{TALK_STAT_CD}
+</if>
+ ORDER BY TALK_STAT_CD_NM 
+</select>
+
+<!-- 상담유형별 현황 차트 데이터 -->
+<select id="selectRtnTalkCnslTypeCahrt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT TB1.DEPT_CD                               
+     , MAX(GROUP_T.DEPT_NM)  AS DEPT
+     , COUNT(CASE TTC.CNSL_TYP_CD WHEN 'TOP' THEN 1 END)   AS TOP_CNT
+     , COUNT(CASE TTC.CNSL_TYP_CD WHEN 'TOP1' THEN 1 END)  AS TOP1_CNT
+     , COUNT(CASE TTC.CNSL_TYP_CD WHEN 'TOP2' THEN 1 END)  AS TOP2_CNT
+     , COUNT(CASE TTC.CNSL_TYP_CD WHEN 'TOP03' THEN 1 END) AS TOP03_CNT
+  FROM PLT_CHT_CUTT TTC
+  INNER JOIN PLT_USER TB1
+    ON TTC.USER_ID = TB1.USER_ID
+  LEFT OUTER JOIN PLT_ORGZ GROUP_T
+  	ON GROUP_T.DEPT_CD = TB1.DEPT_CD
+ WHERE TTC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+--   AND TTC.TALK_START_DT LIKE TO_CHAR(NOW(), 'YYYYMM') || '%' -- 이번달
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+   AND TTC.SNDR_KEY = #{SNDR_KEY}
+</if>
+ GROUP BY TB1.DEPT_CD
+
+</select>
+
+<!-- 상담톡 월별 실적 차트 데이터 -->
+<select id="selectRtnMonthResultChart" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT R.*, R2.* 
+	 FROM 
+(     
+	SELECT A.YEAR
+		 , A.MONTH
+		 , A.MONTH_ENG
+		 , A.CNT
+	  FROM (
+			 SELECT TO_CHAR(NOW(), 'YYYY')                           AS YEAR
+				  , SUBSTR(TALK_START_DT, 5,2)                         AS MONTH
+				  , CASE WHEN SUBSTR(TALK_START_DT, 5,2) = '01' THEN 'JAN'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '02' THEN 'FEB'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '03' THEN 'MAR'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '04' THEN 'APR'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '05' THEN 'MAY'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '06' THEN 'JUN'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '07' THEN 'JUL'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '08' THEN 'AUG'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '09' THEN 'SEP'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '10' THEN 'OCT'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '11' THEN 'NOV'
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '12' THEN 'DEC'
+					 END                                               AS MONTH_ENG
+				  , CASE WHEN SUBSTR(TALK_START_DT, 5,2) = '01' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '01' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '02' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '02' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '03' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '03' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '04' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '04' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '05' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '05' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '06' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '06' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '07' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '07' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '08' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '08' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '09' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '09' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '10' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '10' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '11' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '11' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '12' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '12' THEN 1 END)
+					 END                                               AS CNT
+					
+			   FROM PLT_CHT_CUTT
+			  WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			    AND TALK_START_DT LIKE TO_CHAR(NOW(), 'YYYY') || '%'
+				AND TALK_STAT_CD IN ('21','14')
+			  GROUP BY SUBSTR(TALK_START_DT, 5,2)
+			) A
+	 ORDER BY MONTH
+) R ,
+(
+	 SELECT MAX(A.CNT) AS CHART_SIZE
+	  FROM (
+			 SELECT CASE WHEN SUBSTR(TALK_START_DT, 5,2) = '01' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '01' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '02' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '02' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '03' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '03' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '04' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '04' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '05' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '05' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '06' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '06' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '07' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '07' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '08' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '08' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '09' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '09' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '10' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '10' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '11' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '11' THEN 1 END)
+						 WHEN SUBSTR(TALK_START_DT, 5,2) = '12' THEN COUNT(CASE SUBSTR(TALK_START_DT, 5,2) WHEN '12' THEN 1 END)
+					 END                                               AS CNT
+					
+			   FROM PLT_CHT_CUTT
+			  WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			    AND TALK_START_DT LIKE TO_CHAR(NOW(), 'YYYY') || '%'
+				AND TALK_STAT_CD IN ('21','14')
+				<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+            	AND SNDR_KEY = #{SNDR_KEY}
+				</if>
+				
+			  GROUP BY SUBSTR(TALK_START_DT, 5,2)
+	  ) A
+) R2        
+
+
+</select>
+
+<!-- 상담원별 월간 랭킹 데이터 조회 -->
+<select id="selectRtnWeekUserRank" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT A.USER_ID
+     , B.USER_NM 		   AS USER_NM
+     , GROUP_T.DEPT_NM     AS DEPT_NM
+     , A.RK
+     , A.CNT
+  FROM (
+         SELECT USER_ID
+              , ROW_NUMBER() OVER (ORDER BY COUNT(CASE TALK_STAT_CD WHEN '21' THEN 1 END) DESC) AS RK
+              , COUNT(CASE TALK_STAT_CD WHEN '21' THEN 1 END)                             AS CNT
+           FROM PLT_CHT_CUTT
+          WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+            AND TALK_STAT_CD = '21' -- 상담완료
+            AND TALK_START_DT LIKE TO_CHAR(NOW(), 'YYYYMM') || '%'
+<if test="SNDR_KEY !='' and SNDR_KEY != null">   
+            AND SNDR_KEY = #{SNDR_KEY}
+</if>
+          GROUP BY USER_ID
+       ) A
+     INNER JOIN PLT_USER B
+        ON A.USER_ID = B.USER_ID
+     LEFT OUTER JOIN PLT_ORGZ GROUP_T
+  		ON GROUP_T.DEPT_CD = B.DEPT_CD
+<![CDATA[
+ WHERE 1 = 1
+   AND ROWNUM <= 10
+ ORDER BY A.RK
+]]>
+</select>
+
+<!-- 시간대별 접수현황 그래프 데이터 -->
+<!-- 상담설정에서 업무시간 설정값으로 가져옴 -->
+<!-- 20190905 HYG :: 상담모니터링 - 시간대별 접수현황 시간대가 상담가능시간대를 바라보게끔 수정 -->
+<select id="selectTimeStatsByCounselStatus" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+   SELECT TIMES.TIMES
+        , COALESCE(DATAS.CNT,0) AS CNT				/*요청건*/
+		, TIMES.RN
+		, COALESCE(INCOMING_DATAS.CNT,0) AS INC_CNT	/*인입건*/
+     FROM (
+            SELECT RE.TIMES
+			, RE.RN
+              FROM (
+					SELECT
+						AA.RN AS RN
+						, TIMES
+					FROM (
+						SELECT ROW_NUMBER() OVER(ORDER BY ABS(CD)) AS RN
+						     , LPAD(TO_CHAR(CD), 2, '0') || ':00' AS TIMES
+						  FROM PLT_COMN_CD
+						 WHERE GROUP_CD='TWB400'
+						   AND (ABS(CD) BETWEEN CAST(SUBSTR(#{WORK_START_TIME}, 1,2) AS INTEGER) 
+						                    AND CASE WHEN #{WORK_END_TIME} = '0000'
+						                             THEN CAST('23' AS INTEGER)
+						                             WHEN SUBSTR(#{WORK_END_TIME}, 3,2) != '00' 
+						                             THEN CAST(SUBSTR(#{WORK_END_TIME}, 1,2) AS INTEGER)
+						                             ELSE CAST(SUBSTR(#{WORK_END_TIME}, 1,2) AS INTEGER)-1
+						                        END
+						       )
+					 ) AA
+				) RE
+          ) TIMES
+     LEFT OUTER JOIN 
+          (
+            SELECT COUNT(*) AS CNT
+                 , TO_CHAR(TO_DATE(TALK_DIST_DT, 'YYYYMMDDHH24MISS'),'HH24') || ':00' AS TIMES
+              FROM PLT_CHT_CUTT CC
+             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+               AND ORI_TALK_CONTACT_ID IS NULL
+<![CDATA[
+               AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+                    AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+                    )
+]]>
+               AND TALK_STAT_CD IN ('81'
+                                  , '83'
+                                  , '91'
+                                  , '92'
+                                  , '12'
+                                  , '20'
+                                  , '21'
+                                  , '14'
+                                    ) /*요청건(NUMBER_CUSTOMER_REQUEST)만 잡음*/
+			<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+			   AND EXISTS (SELECT 1
+			                 FROM PLT_USER
+			                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                  AND USER_ID = CC.USER_ID
+			                  AND USER_ATTR_A = #{USER_ATTR_A}
+							<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+			                  AND USER_ATTR_C = #{USER_ATTR_C}
+							</if>
+			               )
+			</if>
+			<choose>
+				<when test="arrCheckAspSenderKey != null">
+               AND SNDR_KEY IN (<foreach collection="arrCheckAspSenderKey" item="item" separator=",">#{item}</foreach>)
+				</when>
+				<otherwise>
+               AND 1 = 2
+				</otherwise>			
+			</choose>
+             GROUP BY TO_CHAR(TO_DATE(TALK_DIST_DT,'YYYYMMDDHH24MISS'),'HH24') || ':00'
+          ) DATAS
+       ON TIMES.TIMES = DATAS.TIMES
+	   LEFT OUTER JOIN 
+          (
+            SELECT COUNT(*) AS CNT
+                 , TO_CHAR(TO_DATE(TALK_DIST_DT, 'YYYYMMDDHH24MISS'),'HH24') || ':00' AS TIMES
+              FROM PLT_CHT_CUTT CC
+             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+               AND TALK_CONTACT_ID IS NOT NULL
+               AND ORI_TALK_CONTACT_ID IS NULL
+<![CDATA[
+               AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+                    AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+                    )
+]]>
+  			<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+			   AND EXISTS (SELECT 1
+			                 FROM PLT_USER
+			                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                  AND USER_ID = CC.USER_ID
+			                  AND USER_ATTR_A = #{USER_ATTR_A}
+							<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+			                  AND USER_ATTR_C = #{USER_ATTR_C}
+							</if>
+			               )
+			</if>
+			<choose>
+				<when test="arrCheckAspSenderKey != null">
+               AND SNDR_KEY IN (<foreach collection="arrCheckAspSenderKey" item="item" separator=",">#{item}</foreach>)
+				</when>
+				<otherwise>
+               AND 1 = 2
+				</otherwise>			
+			</choose>
+             GROUP BY TO_CHAR(TO_DATE(TALK_DIST_DT,'YYYYMMDDHH24MISS'),'HH24') || ':00'
+          ) INCOMING_DATAS
+       ON TIMES.TIMES = INCOMING_DATAS.TIMES
+	   ORDER BY TIMES.RN ASC
+</select>
+
+<!-- 시간대별 완료 현황 -->
+<select id="selectTimeStatsByCounselDoneStatus" resultType="java.util.HashMap">
+   SELECT TIMES.TIMES
+        , COALESCE(DATA1.CNT,0) AS NUMBER_COMPLETE			/*완료건*/
+        , TIMES.RN
+        , COALESCE(DATA2.CNT,0) AS NUMBER_CUSTOMER_REQUEST	/*상담요청건*/
+        , COALESCE(DATA3.CNT,0) AS NUMBER_PROGRESS			/*상담진행건*/
+        , ROUND(COALESCE(DATA3.CNT,0) / DECODE(COALESCE(DATA2.CNT,0), 0, 1, COALESCE(DATA2.CNT,0)) 
+             * 100 , 2) AS RATE_RESPONSE	/*응대율*/
+     FROM (
+            SELECT RE.TIMES
+                 , RE.RN
+              FROM (
+                     SELECT AA.RN AS RN
+                          , TIMES
+                       FROM (
+                              SELECT ROW_NUMBER() OVER(ORDER BY ABS(CD)) AS RN
+                                   , LPAD(TO_CHAR(CD), 2, '0') || ':00' AS TIMES
+                                FROM PLT_COMN_CD
+                               WHERE GROUP_CD='TWB400'
+                                 AND (ABS(CD) BETWEEN CAST(SUBSTR(#{WORK_START_TIME}, 1,2) AS INTEGER) 
+						                                      AND CASE WHEN #{WORK_END_TIME} = '0000'
+						                                               THEN CAST('23' AS INTEGER)
+						                                               WHEN SUBSTR(#{WORK_END_TIME}, 3,2) != '00' 
+						                                               THEN CAST(SUBSTR(#{WORK_END_TIME}, 1,2) AS INTEGER)
+						                                               ELSE CAST(SUBSTR(#{WORK_END_TIME}, 1,2) AS INTEGER)-1
+						                                          END
+						                         )
+					                  ) AA
+				           ) RE
+          ) TIMES
+     LEFT OUTER JOIN 
+          (
+            SELECT COUNT(*) AS CNT
+                 , TO_CHAR(TO_DATE(TALK_END_DT, 'YYYYMMDDHH24MISS'),'HH24') || ':00' AS TIMES
+              FROM PLT_CHT_CUTT CC
+             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+               AND ORI_TALK_CONTACT_ID IS NULL
+               AND TALK_CONTACT_ID IS NOT NULL
+               AND CC.TALK_STAT_CD IN ('21', '14')
+               AND CC.EXEC_RST_CD IN ('1', '3')
+<![CDATA[
+               AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+                    AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+                    )
+]]>               
+<!-- 
+			<choose>
+				<when test="arrCheckAspSenderKey != null">
+               AND SNDR_KEY IN (<foreach collection="arrCheckAspSenderKey" item="item" separator=",">#{item}</foreach>)
+				</when>
+				<otherwise>
+               AND 1 = 2
+				</otherwise>			
+			</choose>
+-->
+			<choose>
+				<when test="SNDR_KEY != null and SNDR_KEY != ''">
+					AND SNDR_KEY = #{SNDR_KEY}
+				</when>
+			</choose>
+             GROUP BY TO_CHAR(TO_DATE(TALK_END_DT,'YYYYMMDDHH24MISS'),'HH24') || ':00'
+          ) DATA1
+       ON TIMES.TIMES = DATA1.TIMES
+       LEFT OUTER JOIN 
+          (
+            SELECT COUNT(*) AS CNT
+                 , TO_CHAR(TO_DATE(TALK_END_DT, 'YYYYMMDDHH24MISS'),'HH24') || ':00' AS TIMES
+              FROM PLT_CHT_CUTT CC
+             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+               AND TALK_CONTACT_ID IS NOT NULL
+               AND LENGTH(COALESCE(CC.ORI_TALK_CONTACT_ID, '')) = 0
+               AND CC.TALK_STAT_CD IN ('81'
+               							,'83'
+               							,'91'
+               							,'92'
+               							,'12'
+               							,'20'
+               							,'21'
+               							,'14')
+<![CDATA[
+               AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+                    AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+                    )
+]]>
+<!-- 
+			<choose>
+				<when test="arrCheckAspSenderKey != null">
+               AND SNDR_KEY IN (<foreach collection="arrCheckAspSenderKey" item="item" separator=",">#{item}</foreach>)
+				</when>
+				<otherwise>
+               AND 1 = 2
+				</otherwise>			
+			</choose>
+-->
+			<choose>
+				<when test="SNDR_KEY != null and SNDR_KEY != ''">
+					AND SNDR_KEY = #{SNDR_KEY}
+				</when>
+			</choose>
+             GROUP BY TO_CHAR(TO_DATE(TALK_END_DT,'YYYYMMDDHH24MISS'),'HH24') || ':00'
+          ) DATA2
+       ON TIMES.TIMES = DATA2.TIMES
+       LEFT OUTER JOIN 
+          (
+            SELECT COUNT(*) AS CNT
+                 , TO_CHAR(TO_DATE(TALK_END_DT, 'YYYYMMDDHH24MISS'),'HH24') || ':00' AS TIMES
+              FROM PLT_CHT_CUTT CC
+             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+               AND TALK_CONTACT_ID IS NOT NULL
+               AND LENGTH(COALESCE(CC.ORI_TALK_CONTACT_ID, '')) = 0
+               AND CC.TALK_STAT_CD IN ('12'
+               							,'20'
+               							,'21'
+               							,'14')
+<![CDATA[
+               AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+                    AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+                    )
+]]>
+<!-- 
+			<choose>
+				<when test="arrCheckAspSenderKey != null">
+               AND SNDR_KEY IN (<foreach collection="arrCheckAspSenderKey" item="item" separator=",">#{item}</foreach>)
+				</when>
+				<otherwise>
+               AND 1 = 2
+				</otherwise>			
+			</choose>
+-->
+			<choose>
+				<when test="SNDR_KEY != null and SNDR_KEY != ''">
+					AND SNDR_KEY = #{SNDR_KEY}
+				</when>
+			</choose>
+             GROUP BY TO_CHAR(TO_DATE(TALK_END_DT,'YYYYMMDDHH24MISS'),'HH24') || ':00'
+          ) DATA3
+       ON TIMES.TIMES = DATA3.TIMES
+	   ORDER BY TIMES.RN ASC
+</select>
+
+<!-- 채팅상담메인 대시보드 (READY) -->
+<select id="selectUserReadyStatusInTalkMain" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT DD.TALK_READY_CD
+     , SUM(CASE WHEN UR.TALK_USER_KEY IS NOT NULL
+                THEN CASE WHEN DD.TALK_READY_CD = '09'
+                          THEN 1
+                          WHEN DD.TALK_READY_CD = '10'
+                          THEN 1
+                          WHEN DD.TALK_READY_CD = '11'
+                          THEN 1
+                          ELSE 1
+                      END
+                ELSE 0
+            END
+           ) AS CNT
+          FROM (
+                SELECT AA.YYYYMMDD
+                     , AA.WORK_START
+                     , AA.WORK_END
+                     , BB.TALK_READY_CD
+                  FROM (
+                SELECT SUBSTR(TO_CHAR(NOW(), 'YYYYMMDD'), 1, 8) AS YYYYMMDD
+                     , (SELECT STNG_VL FROM PLT_CHT_ENV WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND STNG_CD = 'WORK_START_TIME')       AS WORK_START
+                     , (SELECT STNG_VL FROM PLT_CHT_ENV WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND STNG_CD = 'WORK_END_TIME')         AS WORK_END
+                  
+                        ) AA
+                 CROSS
+                  JOIN ((SELECT '09' AS TALK_READY_CD )
+                        UNION ALL 
+                        (SELECT '10' AS TALK_READY_CD )
+                        UNION ALL 
+                        (SELECT '11' AS TALK_READY_CD )
+                        ) BB
+                ) DD
+          LEFT
+          JOIN PLT_CHT_USER_RDY UR
+<![CDATA[
+            ON ((    DD.WORK_START <= UR.TALK_DIST_DT
+                 AND                  UR.TALK_DIST_DT < DD.WORK_END
+                 )
+]]>
+           AND DD.TALK_READY_CD = UR.TALK_READY_CD 
+           AND UR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                )
+ GROUP BY DD.TALK_READY_CD
+</select>
+
+<!-- 평균 대기시간 -->
+<select id="selectAvgReadyTimes" resultType="java.util.HashMap">
+	 
+SELECT CASE RE.AVGDELAYTIME WHEN '00 : 00 : 00'
+              THEN RE.AVGDELAYTIME
+            ELSE TO_CHAR(TRUNC( RE.AVGDELAYTIME /3600),'FM9900') || ' : ' ||  
+                 TO_CHAR(TRUNC(MOD( RE.AVGDELAYTIME ,3600)/60),'FM00') || ' : ' ||  
+                 TO_CHAR(MOD( RE.AVGDELAYTIME ,60),'FM00')
+        END AS AVGDELAYTIME 
+  FROM (
+         SELECT CASE WHEN AVG(NOW() - TO_DATE(TALK_READ_DT,'YYYYMMDDHH24MISS')) IS NULL 
+                       THEN '00 : 00 : 00'
+                     ELSE TO_CHAR( ABS( AVG(NOW() - TO_DATE(TALK_READ_DT,'YYYYMMDDHH24MISS')) * (24*60*60) ) )
+                 END AS AVGDELAYTIME
+           FROM PLT_CHT_USER_RDY
+          WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+            AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+                 AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+                )
+            AND TALK_READY_CD IN ('11','13')
+       ) RE
+       
+</select>
+
+<!-- 평균 누적 대기시간 -->
+<select id="selectStackAvgReadyTimes" resultType="java.util.HashMap">
+SELECT CASE RE.AVGDELAYTIME WHEN '00 : 00 : 00'
+              THEN RE.AVGDELAYTIME
+            ELSE TO_CHAR(TRUNC( RE.AVGDELAYTIME /3600),'FM9900') || ' : ' ||  
+                 TO_CHAR(TRUNC(MOD( RE.AVGDELAYTIME ,3600)/60),'FM00') || ' : ' ||  
+                 TO_CHAR(MOD( RE.AVGDELAYTIME ,60),'FM00')
+        END AS STACKAVGDELAYTIME 
+  FROM (
+         SELECT CASE WHEN AVG(TIMES) IS NULL 
+                      THEN '00 : 00 : 00' 
+				      ELSE TO_CHAR( ABS(AVG(TIMES)) )
+                 END AS AVGDELAYTIME
+           FROM (   
+                  SELECT CAST(NOW() - TO_DATE(TALK_READ_DT,'YYYYMMDDHH24MISS') AS INTEGER) * (24*60*60) AS TIMES
+                    FROM PLT_CHT_USER_RDY
+					WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+                         AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+                        )
+                    AND TALK_READY_CD IN ('11','13')
+                   UNION ALL
+                  SELECT CAST(TO_DATE(TALK_START_DT,'YYYYMMDDHH24MISS') - TO_DATE(TALK_READ_DT,'YYYYMMDDHH24MISS') AS INTEGER) * (24*60*60) AS TIMES
+                    FROM PLT_CHT_CUTT
+					WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+                         AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+                        )
+                    AND TALK_STAT_CD IN ('14','20','21')
+                ) TT
+       ) RE 
+</select>
+
+<!-- 평균 채팅 시간 -->
+<select id="selectAvgChatTimes" resultType="java.util.HashMap">
+
+SELECT CASE RE.AVGCHATTIME WHEN '00 : 00 : 00'
+              THEN RE.AVGCHATTIME
+            ELSE TO_CHAR(TRUNC( RE.AVGCHATTIME /3600),'FM9900') || ' : ' ||  
+                 TO_CHAR(TRUNC(MOD( RE.AVGCHATTIME ,3600)/60),'FM00') || ' : ' ||  
+                 TO_CHAR(MOD( RE.AVGCHATTIME ,60),'FM00')
+        END AS CHATTIMES
+  FROM (
+         SELECT CASE WHEN AVG(NOW() - TO_DATE(TALK_START_DT,'YYYYMMDDHH24MISS')) IS NULL THEN '00 : 00 : 00'
+                     ELSE TO_CHAR( ABS( AVG(NOW() - TO_DATE(TALK_START_DT,'YYYYMMDDHH24MISS')) ) )
+            END AS AVGCHATTIME
+           FROM PLT_CHT_CUTT
+          WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+            AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+                 AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+                )
+            AND TALK_STAT_CD = '12'
+       ) RE
+       
+</select>
+
+<!-- 평균 누적 채팅 시간 -->
+<select id="selectStackAvgChatTimes" resultType="java.util.HashMap">
+
+SELECT CASE RE.AVGCHATTIME WHEN '00 : 00 : 00'
+              THEN RE.AVGCHATTIME
+            ELSE TO_CHAR(TRUNC( RE.AVGCHATTIME /3600),'FM9900') || ' : ' ||  
+                 TO_CHAR(TRUNC(MOD( RE.AVGCHATTIME ,3600)/60),'FM00') || ' : ' ||  
+                 TO_CHAR(MOD( RE.AVGCHATTIME ,60),'FM00')
+        END AS STACKCHATTIMES
+   FROM (
+          SELECT CASE WHEN AVG(TIMES) IS NULL 
+                      THEN '00 : 00 : 00' 
+				      ELSE TO_CHAR( ABS(AVG(TIMES)) )
+                 END AS AVGCHATTIME
+            FROM (
+                   SELECT CAST(NOW() - TO_DATE(TALK_START_DT,'YYYYMMDDHH24MISS') AS INTEGER) * (24*60*60) AS TIMES
+                     FROM PLT_CHT_CUTT
+                    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                    AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+                         AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+                        )
+                    AND TO_DATE(TALK_DIST_DT,'YYYYMMDDHH24MISS') >= TO_DATE(#{TODAY_WORK_TIME_START},'YYYYMMDDHH24MISS')
+					AND TO_DATE(TALK_DIST_DT,'YYYYMMDDHH24MISS') <![CDATA[<]]> TO_DATE(#{TODAY_WORK_TIME_END},'YYYYMMDDHH24MISS')
+                    AND TALK_STAT_CD = '12'
+                      
+                    UNION ALL
+                    
+                   SELECT CASE WHEN TALK_POST_DT IS NOT NULL
+                               THEN CAST(TO_DATE(TALK_POST_DT,'YYYYMMDDHH24MISS') - TO_DATE(TALK_START_DT,'YYYYMMDDHH24MISS') AS INTEGER) * (24*60*60)
+                           END AS TIMES
+                     FROM PLT_CHT_CUTT
+                    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                    AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+                         AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+                        )
+                    AND TALK_STAT_CD IN ('14','20','21')
+                 ) A
+        ) RE
+        
+</select>
+
+<!-- 채팅 ON인 상담사 채팅허용 전체건수 조회 -->
+<select id="selectReadyCounselorTotalCnt" resultType="java.util.HashMap">
+	SELECT CASE WHEN SUM(max_chat_agent) IS NULL
+    THEN 0
+    ELSE SUM(max_chat_agent) END AS READY_COUNSELOR_TOTALCNT 
+    from PLT_CHT_RDY T1
+	INNER JOIN PLT_CHT_USER_CHAT_SET T2
+	on T1.user_id = T2.user_id
+ WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+   AND EXISTS (SELECT 1
+                 FROM PLT_USER
+                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                  AND USER_ID = T1.USER_ID
+                  AND USER_ATTR_A = #{USER_ATTR_A}
+	<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+   AND USER_ATTR_C = #{USER_ATTR_C}
+	</if>
+	           )
+</if>
+</select>
+
+<!-- 상담가능건수 조회 -->
+<select id="selectReadyCounselorCnt" resultType="java.util.HashMap">
+ 	SELECT 
+<![CDATA[
+	    CASE WHEN (P.MAX_CHAT_AGENT - VIEWDATA.TOTAL_CNT) < 0 THEN 0
+	    ELSE (P.MAX_CHAT_AGENT - VIEWDATA.TOTAL_CNT) END AS READY_COUNSELOR_CNT
+]]>
+	FROM (
+			SELECT 
+				CASE WHEN SUM(MAX_CHAT_AGENT) IS NULL THEN 0
+				ELSE SUM(MAX_CHAT_AGENT) END AS MAX_CHAT_AGENT 
+			FROM PLT_CHT_RDY T1
+				 , PLT_CHT_USER_CHAT_SET T2
+			WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			  AND T1.USER_ID = T2.USER_ID
+			<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+              AND EXISTS (SELECT 1
+                            FROM PLT_USER
+                           WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                             AND USER_ID = T1.USER_ID
+                             AND USER_ATTR_A = #{USER_ATTR_A}
+							<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+                             AND USER_ATTR_C = #{USER_ATTR_C}
+							</if>
+	                      )
+			</if>
+	) P
+    , (
+		SELECT 
+			CASE WHEN SUM(C.CNT + R.CNT) IS NULL
+				THEN 0
+				ELSE SUM(C.CNT + R.CNT) END AS TOTAL_CNT
+			from (
+				SELECT 
+					COUNT(T3.USER_ID) AS CNT 
+				FROM PLT_CHT_RDY T1
+				INNER JOIN PLT_CHT_CUTT T3
+				ON T1.USER_ID = T3.USER_ID AND T3.TALK_STAT_CD = '12'
+		     WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+              AND EXISTS (SELECT 1
+                            FROM PLT_USER
+                           WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                             AND USER_ID = T1.USER_ID
+                             AND USER_ATTR_A = #{USER_ATTR_A}
+							<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+                             AND USER_ATTR_C = #{USER_ATTR_C}
+							</if>
+	                      )
+			</if>
+			) C
+			, (
+				SELECT 
+					COUNT(T4.USER_ID) AS CNT 
+				FROM PLT_CHT_RDY T1
+				INNER JOIN PLT_CHT_USER_RDY T4
+				ON T1.USER_ID = T4.USER_ID AND T4.TALK_READY_CD = '11'
+		     WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+              AND EXISTS (SELECT 1
+                            FROM PLT_USER
+                           WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                             AND USER_ID = T1.USER_ID
+                             AND USER_ATTR_A = #{USER_ATTR_A}
+							<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+                             AND USER_ATTR_C = #{USER_ATTR_C}
+							</if>
+	                      )
+			</if>
+			) R
+	) VIEWDATA
+	
+
+<!--	SELECT 
+		COUNT(USER_ID) AS READY_COUNSELOR_CNT
+	FROM PLT_CHT_RDY
+	WHERE NOT EXISTS (
+		SELECT
+			USER_ID
+		FROM PLT_CHT_CUTT
+		WHERE IT_PROCESSING BETWEEN TO_DATE(TO_CHAR(NOW(),'YYYYMMDD')||'000000','YYYYMMDDHH24MISS') AND TO_DATE(TO_CHAR(NOW(),'YYYYMMDD')||'235959','YYYYMMDDHH24MISS')
+		AND TALK_STAT_CD = '12'
+		GROUP BY USER_ID
+	)
+-->
+</select>
+
+<!-- 상담중인 상담사 카운트 -->
+<select id="selectCounselCounselorCnt" resultType="java.util.HashMap">
+	SELECT 
+		COUNT(A.USER_ID) AS COUNSEL_COUNSELOR_CNT 
+	FROM (
+		SELECT 
+			USER_ID
+		FROM PLT_CHT_CUTT CC
+		WHERE CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		  AND TALK_STAT_CD = '12'
+		<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+          AND EXISTS (SELECT 1
+                        FROM PLT_USER
+                       WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                         AND USER_ID = CC.USER_ID
+                         AND USER_ATTR_A = #{USER_ATTR_A}
+						<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+                         AND USER_ATTR_C = #{USER_ATTR_C}
+						</if>
+	                  )
+		</if>
+		GROUP BY USER_ID
+	) A
+</select>
+
+
+<!-- 상담사 대기 ON/OFF 상태 -->
+<select id="selectCounselorStatByOnOff" resultType="java.util.HashMap">
+<!-- 전 상담사의 채팅 ON/OFF 상태 표시됨.
+	SELECT
+		RE.USER_ID
+		, RE.USER_NM
+		, RE.COUNSELOR_STAT
+	FROM ( SELECT 
+		      T1.USER_ID AS USER_ID
+			  , T1.USER_NM AS USER_NM
+			  , CASE WHEN T2.USER_ID IS NULL THEN 'OFF' ELSE 'ON' END AS COUNSELOR_STAT
+		   FROM PLT_USER T1
+		   LEFT OUTER JOIN PLT_CHT_RDY T2
+		   ON T1.USER_ID = T2.USER_ID
+		   WHERE T1.USE_YN = 'Y'
+	) RE
+	ORDER BY RE.COUNSELOR_STAT DESC, RE.USER_NM ASC
+-->
+<!-- 현재 채팅 ON인 상담사가 현재 상담중인 건이 있으면 상담중, 대기중 또는 후처리만 있다면 대기중으로 표시
+	SELECT
+	    T1.USER_ID
+	    , T2.USER_NM
+	    , CASE WHEN T1.CNT > 0 THEN '상담중' ELSE '대기중' END AS COUNSELOR_STAT
+	FROM (
+	    SELECT 
+	        T1.USER_ID
+	        , COUNT(T2.TALK_STAT_CD) AS CNT
+	    FROM PLT_CHT_RDY T1
+	    LEFT OUTER JOIN PLT_CHT_CUTT T2
+	    ON T1.USER_ID = T2.USER_ID
+	    AND T2.IT_PROCESSING BETWEEN TO_DATE(TO_CHAR(NOW(),'YYYYMMDD')||'000000','YYYYMMDDHH24MISS')
+	    AND TO_DATE(TO_CHAR(NOW(),'YYYYMMDD')||'235959','YYYYMMDDHH24MISS')
+	    AND T2.TALK_STAT_CD = '12'
+	    GROUP BY T1.USER_ID, T2.TALK_STAT_CD
+	) T1
+	INNER JOIN PLT_USER T2
+	ON T1.USER_ID = T2.USER_ID
+	ORDER BY T2.USER_NM ASC
+-->
+    SELECT
+        T1.USER_ID
+        ,T2.USER_NM
+    FROM PLT_CHT_RDY T1
+    INNER JOIN PLT_USER T2
+    ON T1.USER_ID = T2.USER_ID
+    WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+
+</select>
+
+<!-- 전체 상담 현황 -->
+<select id="selectCounselStatus" resultType="java.util.HashMap">
+<![CDATA[
+ SELECT CASE CAST(LV AS INTEGER) WHEN 1 THEN '유입건수' 
+                WHEN 2 THEN '상담완료 현황' 
+                WHEN 3 THEN '완결' 
+                WHEN 4 THEN '이관' 
+                WHEN 5 THEN '콜백'
+                WHEN 6 THEN '이전 콜백 완료'
+                WHEN 7 THEN '문의취소'
+                WHEN 8 THEN '고객포기'
+                WHEN 9 THEN '전달' END AS STATUS
+      , COALESCE(CASE CAST(LV AS INTEGER) WHEN 1 THEN TOTALCNT
+                WHEN 2 THEN (PROCCNT+NO_PROCCNT+CALLBACK)
+                WHEN 3 THEN PROCCNT
+                WHEN 4 THEN NO_PROCCNT
+                WHEN 5 THEN CALLBACK
+                WHEN 6 THEN CALLBACK_NOT_TODAY
+                WHEN 7 THEN BUSY
+                WHEN 8 THEN GIVEUP
+                WHEN 9 THEN DELIVERY_PROCCNT END, 0) AS CNT
+   FROM (
+          SELECT (SELECT COUNT(*) FROM PLT_CHT_CUTT 
+                   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+						 AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+						)
+                    AND ORI_TALK_CONTACT_ID IS NULL
+		         ) AS TOTALCNT
+               , TT.*
+            FROM (
+                   SELECT RE.PROCCNT
+                        , RE.NO_PROCCNT
+                        , RE.CALLBACK
+                        , (SELECT COUNT(*) FROM PLT_CHT_CUTT 
+                            WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+							AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+								 AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+								)
+                            AND TALK_STAT_CD IN ('90','91','92','93')
+                            AND ORI_TALK_CONTACT_ID IS NULL
+                          ) AS GIVEUP
+                        , (SELECT COUNT(*) FROM PLT_CHT_CUTT 
+                            WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                            AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+								 AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+								)
+                            AND TALK_STAT_CD IN ('80','81','82','83')
+                            AND ORI_TALK_CONTACT_ID IS NULL
+                          ) AS BUSY
+                        , (SELECT COUNT(*) FROM PLT_CHT_USER_RDY 
+                        	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                        	AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+								 AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+								)
+                            AND TALK_READY_CD IN ('09','10','11')
+                          ) AS READY_CNT
+                        , (SELECT COUNT(*) FROM PLT_CHT_CUTT
+                        	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                        	AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+								 AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+								)
+                            AND TALK_STAT_CD IN ('12','20')
+                        	AND ORI_TALK_CONTACT_ID IS NULL
+                          ) AS COUNSEL_CNT
+                        , (SELECT COUNT(*) FROM PLT_CHT_CUTT 
+							WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+							AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+								 AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+								)
+                            AND ORI_TALK_CONTACT_ID IS NOT NULL
+                          ) AS DELIVERY_PROCCNT
+                        , (SELECT COUNT(*) FROM PLT_CHT_CUTT 
+                           WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                             AND TALK_DIST_DT  < TO_CHAR(NOW(),'YYYYMMDD') || '000000'
+                             AND COALESCE(EXEC_RST_CD,'0') = '4' AND TALK_STAT_CD='12'
+                          ) AS CALLBACK_NOT_TODAY
+                     FROM (
+                            SELECT COUNT(CASE EXEC_RST_CD WHEN '1' THEN 1 END) AS PROCCNT
+                                 , COUNT(CASE EXEC_RST_CD WHEN '2' THEN 1 END) AS NO_PROCCNT
+                              -- , COUNT(CASE EXEC_RST_CD WHEN '3' THEN 1 END) AS DELIVERY_PROCCNT
+                                 , COALESCE(SUM(CASE WHEN EXEC_RST_CD ='4' AND TALK_STAT_CD='12' THEN 1 ELSE 0 END ),0) AS CALLBACK   
+                              FROM PLT_CHT_CUTT
+                             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                               AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+								    AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+								   )
+                          ) RE
+                ) TT
+	     ) EE,
+	     ( SELECT CD AS LV FROM PLT_COMN_CD WHERE GROUP_CD='TWB400' AND ABS(CD) < 10 AND ABS(CD) > 0) A
+]]>
+</select>
+
+<!-- 서비스별 상담요청 현황(변경 이전)
+<select id="selectInqryTypeStatus" resultType="java.util.HashMap">
+ SELECT INQRY_TYPE
+      , CNT
+   FROM (
+          SELECT TTCY.INQRY_TYP_NM AS INQRY_TYPE
+               , TTCY.INQRY_TYP_CD AS INQRY_CD
+               , COALESCE(INQRY.CNT,0) AS CNT
+            FROM PLT_CHT_INQ_TYP TTCY
+            LEFT OUTER JOIN (
+                              SELECT TT.PARENT_INQRY_TYP_CD
+                                   , COUNT(TT.PARENT_INQRY_TYP_CD) AS CNT
+                                FROM (
+										SELECT 
+											 CASE WHEN INQRY_TYP_DIV_CD = '1' THEN INQRY_TYP_CD
+											 ELSE (SELECT INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = B.SPST_INQRY_TYP_CD) END AS PARENT_INQRY_TYP_CD
+
+										FROM (
+										   SELECT 
+										   TALK_INQRY_CD 
+											 FROM PLT_CHT_CUTT CC
+											WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+											AND TALK_INQRY_CD IS NOT NULL
+											AND ORI_TALK_CONTACT_ID IS NULL
+											<![CDATA[
+                                            AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+                                                 AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+                                                 )
+                                            ]]>
+                                            AND TALK_STAT_CD IN ('81'
+                                                               , '83'
+                                                               , '91'
+                                                               , '92'
+                                                               , '12'
+                                                               , '20'
+                                                               , '21'
+                                                               , '14'
+                                                                 ) /*요청건(NUMBER_CUSTOMER_REQUEST)만 잡음*/
+											<if test="USER_ATTR_B != 'B01'">	/*전체관리자가 아니면*/
+			                                AND EXISTS (SELECT 1
+			                                              FROM PLT_USER
+			                                             WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                                               AND USER_ID = CC.USER_ID
+			                                               AND USER_ATTR_A = #{USER_ATTR_A}
+			 	                            			<if test="USER_ATTR_B != 'B02'">	/*센터관리자가 아니면*/
+			                                               AND USER_ATTR_C = #{USER_ATTR_C}
+			 	                            			</if>
+			                                            )
+											</if>
+										 ) A
+										 INNER JOIN (SELECT INQRY_TYP_DIV_CD, INQRY_TYP_NM, SPST_INQRY_TYP_CD, INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) B
+										 ON A.TALK_INQRY_CD = B.INQRY_TYP_CD
+									) TT
+                               GROUP BY TT.PARENT_INQRY_TYP_CD
+                            ) INQRY
+                           ON TTCY.INQRY_TYP_CD = INQRY.PARENT_INQRY_TYP_CD
+                        WHERE TTCY.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                          AND TTCY.SPST_INQRY_TYP_CD = '*'
+                          AND TTCY.USE_YN = 'Y'
+                        ORDER BY TTCY.INQRY_TYP_CD
+        ) B
+</select>
+-->
+
+<!-- 서비스별 상담요청 현황 (변경후) 
+	작성자 KTJ 220725
+ -->
+<select id="selectInqryTypeStatus" resultType="java.util.HashMap">
+	SELECT COUNT(PARENT_INQRY_TYP_CD) AS CNT,
+            INQRY_TYP_PARENT_NM,
+            PARENT_INQRY_TYP_CD
+    FROM (SELECT (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE INQRY_TYP_CD = PARENT_INQRY_TYP_CD) AS INQRY_TYP_PARENT_NM,
+    		PARENT_INQRY_TYP_CD,
+    		INQRY_TYP_NM,
+    		TALK_INQRY_CD
+    	FROM (SELECT 
+        		A.INQRY_TYP_NM,
+        		B.TALK_INQRY_CD,
+            	CASE WHEN A.INQRY_TYP_DIV_CD = '*' THEN A.INQRY_TYP_CD
+                    WHEN A.INQRY_TYP_DIV_CD = '1' THEN A.SPST_INQRY_TYP_CD
+                    WHEN A.INQRY_TYP_DIV_CD = '2' THEN (SELECT SPST_INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE INQRY_TYP_CD = A.SPST_INQRY_TYP_CD)
+                    WHEN A.INQRY_TYP_DIV_CD = '3' THEN (SELECT SPST_INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE INQRY_TYP_CD = (SELECT SPST_INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE INQRY_TYP_CD = A.SPST_INQRY_TYP_CD))
+                    WHEN A.INQRY_TYP_DIV_CD = '4' THEN (SELECT SPST_INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE INQRY_TYP_CD = (SELECT SPST_INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE INQRY_TYP_CD = (SELECT SPST_INQRY_TYP_CD FROM PLT_CHT_INQ_TYP WHERE INQRY_TYP_CD = A.SPST_INQRY_TYP_CD))) END AS PARENT_INQRY_TYP_CD
+        	FROM PLT_CHT_INQ_TYP A, PLT_CHT_CUTT B
+        	WHERE  A.INQRY_TYP_CD = B.TALK_INQRY_CD
+            	AND B.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				AND B.TALK_INQRY_CD IS NOT NULL
+				AND B.ORI_TALK_CONTACT_ID IS NULL
+				<![CDATA[
+                AND ( #{TODAY_WORK_TIME_START} <= B.TALK_DIST_DT AND  B.TALK_DIST_DT < #{TODAY_WORK_TIME_END} )
+                ]]>
+                <!-- 
+                <if test="USER_ATTR_B != 'B01'">	/*전체관리자가 아니면*/
+			    	AND EXISTS (SELECT 1
+			    				FROM PLT_USER
+			    				WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+							    	AND USER_ID = CC.USER_ID
+							    	AND USER_ATTR_A = #{USER_ATTR_A}
+							 		<if test="USER_ATTR_B != 'B02'">	/*센터관리자가 아니면*/
+							    		AND USER_ATTR_C = #{USER_ATTR_C}
+							 		</if>
+							    )
+				</if>
+				-->
+                AND B.TALK_STAT_CD IN ('81'
+                                      ,'83'
+                                      ,'91'
+                                      ,'92'
+                                      ,'12'
+                                      ,'20'
+                                      ,'21'
+                                      ,'14') /*요청건(NUMBER_CUSTOMER_REQUEST)만 잡음*/
+            )
+     	)
+   GROUP BY PARENT_INQRY_TYP_CD, INQRY_TYP_PARENT_NM
+</select>
+
+<!-- 플친별 상담요청 현황 -->
+<select id="selectAspSenderKeyStatus" resultType="java.util.HashMap">
+SELECT MAX(DSPTCH_PRF_NM)         AS DSPTCH_PRF_NM
+     , COUNT(TALK_CONTACT_ID) AS CNT
+  FROM PLT_ASP_CUS_CHN B03
+  LEFT
+  JOIN PLT_CHT_CUTT CC
+    ON B03.SNDR_KEY = CC.SNDR_KEY
+<![CDATA[
+   AND (    #{TODAY_WORK_TIME_START} <= TALK_DIST_DT
+        AND                             TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+        )
+]]>
+   <!-- AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}  -->
+   AND CC.ORI_TALK_CONTACT_ID IS NULL
+   AND CC.TALK_STAT_CD IN ('81'
+                         , '83'
+                         , '91'
+                         , '92'
+                         , '12'
+                         , '20'
+                         , '21'
+                         , '14'
+                           ) /*요청건(NUMBER_CUSTOMER_REQUEST)만 잡음*/
+<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+   AND EXISTS (SELECT 1
+                 FROM PLT_USER
+                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                  AND USER_ID = CC.USER_ID
+                  AND USER_ATTR_A = #{USER_ATTR_A}
+ 			<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+                  AND USER_ATTR_C = #{USER_ATTR_C}
+ 			</if>
+               )
+</if>
+ WHERE B03.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+ GROUP BY B03.SNDR_KEY
+ ORDER BY B03.SNDR_KEY
+</select>
+
+<select id="selectUserReadyStatus" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT DD.TALK_READY_CD
+     , SUM(CASE WHEN UR.TALK_USER_KEY IS NOT NULL
+                THEN CASE WHEN DD.TALK_READY_CD = '09'
+                          THEN 1
+                          WHEN DD.TALK_READY_CD = '10'
+                          THEN 1
+                          WHEN DD.TALK_READY_CD = '11'
+						<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+			               AND EXISTS (SELECT 1
+			                             FROM PLT_USER
+			                            WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			                              AND USER_ID = UR.USER_ID
+			                              AND USER_ATTR_A = #{USER_ATTR_A}
+			 	           				<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+			                              AND USER_ATTR_C = #{USER_ATTR_C}
+			 	           				</if>
+			                           )
+						</if>
+                          THEN 1
+                          ELSE 1
+                      END
+                ELSE 0
+            END
+           ) AS CNT
+          FROM (
+                SELECT AA.YYYYMMDD
+                     , AA.WORK_START
+                     , AA.WORK_END
+                     , BB.TALK_READY_CD
+                  FROM (
+                SELECT SUBSTR(#{TODAY_WORK_TIME_START}, 1, 8) AS YYYYMMDD
+                     ,        #{TODAY_WORK_TIME_START}        AS WORK_START
+                     ,        #{TODAY_WORK_TIME_END}          AS WORK_END
+                  
+                        ) AA
+                 CROSS
+                  JOIN ((SELECT '09' AS TALK_READY_CD )
+                        UNION ALL 
+                        (SELECT '10' AS TALK_READY_CD )
+                        UNION ALL 
+                        (SELECT '11' AS TALK_READY_CD )
+                        ) BB
+                ) DD
+          LEFT
+          JOIN PLT_CHT_USER_RDY UR
+<![CDATA[
+            ON ((    DD.WORK_START <= UR.TALK_DIST_DT
+                 AND                  UR.TALK_DIST_DT < DD.WORK_END
+                 )
+]]>
+           AND DD.TALK_READY_CD = UR.TALK_READY_CD 
+           AND UR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                )
+ GROUP BY DD.TALK_READY_CD
+</select>
+
+<!-- 접수건 카운트_문의유형 선택안함 -->
+<select id="selectCountByAcceptStatus" resultType="java.util.HashMap">
+	SELECT 
+		COUNT(*) AS CNT 
+	FROM PLT_CHT_USER_RDY
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND TALK_READY_CD IN ('09')
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+		 AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 접수건 카운트_문의유형 선택-->
+<select id="selectCountByAcceptInqryStatus" resultType="java.util.HashMap">
+	SELECT 
+		COUNT(*) AS CNT 
+	FROM PLT_CHT_USER_RDY
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND TALK_READY_CD IN ('10')
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+		 AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 대기건 카운트 -->
+<select id="selectCountByReadyStatus" resultType="java.util.HashMap">
+	SELECT 
+		COUNT(*) AS CNT 
+	FROM PLT_CHT_USER_RDY
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND TALK_READY_CD IN ('11')
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+		 AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 상담건 카운트 -->
+<select id="selectCountByCounselStatus" resultType="java.util.HashMap">
+	SELECT 
+		COUNT(*) AS CNT
+	FROM PLT_CHT_CUTT
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND TALK_STAT_CD = '12'
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+		 AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 후처리건 카운트 -->
+<select id="selectInqryAfterProcStatus" resultType="java.util.HashMap">
+	SELECT 
+		COUNT(*) AS CNT
+	FROM PLT_CHT_CUTT
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND TALK_STAT_CD = '20'
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> TALK_DIST_DT
+		 AND                                         TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 인입(접수) 선택시 리스트 조회 -->
+<select id="selectAcceptList_new" resultType="java.util.HashMap">
+SELECT (SELECT DSPTCH_PRF_NM AS CD_NM
+          FROM PLT_ASP_CUS_CHN
+         WHERE SNDR_KEY = UR.SNDR_KEY)               AS SNDR_KEY_NM -- 채널명
+     , COALESCE( (SELECT CASE WHEN TID IS NULL OR TID = '' 
+                           THEN '비회원' 
+                         ELSE '회원' 
+                     END
+               FROM PLT_CUS
+              WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                AND CUSTOMER_ID = UR.TALK_USER_KEY
+            )
+            , '비회원')                                            AS MEMBER_YN -- 회원/비회원
+     , SUBSTR(UR.TALK_DIST_DT, 1, 4)
+            || '/' || SUBSTR(UR.TALK_DIST_DT, 5, 2)
+            || '/' || SUBSTR(UR.TALK_DIST_DT, 7, 2)
+            || ' ' || SUBSTR(UR.TALK_DIST_DT, 9, 2)
+            || ':' || SUBSTR(UR.TALK_DIST_DT, 11, 2)
+            || ':' || SUBSTR(UR.TALK_DIST_DT, 13, 2)             AS TALK_DIST_DT -- 인입(접수)일시
+  FROM (
+         SELECT AA.YYYYMMDD
+              , AA.WORK_START
+              , AA.WORK_END
+              , BB.TALK_READY_CD
+           FROM (SELECT SUBSTR(#{TODAY_WORK_TIME_START}, 1, 8) AS YYYYMMDD
+                      ,        #{TODAY_WORK_TIME_START}        AS WORK_START
+                      ,        #{TODAY_WORK_TIME_END}          AS WORK_END
+                   
+                ) AA
+          CROSS
+           JOIN ((SELECT '09' AS TALK_READY_CD )
+                       ) BB
+       ) DD
+-- LEFT
+  JOIN PLT_CHT_USER_RDY UR
+<![CDATA[
+    ON
+    ( (    UR.TALK_DIST_DT >= DD.WORK_START
+       AND UR.TALK_DIST_DT <  DD.WORK_END
+      )
+]]>
+      AND DD.TALK_READY_CD = UR.TALK_READY_CD
+      AND UR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    )
+ ORDER BY UR.TALK_DIST_DT
+</select>
+
+<!-- 배정대기 선택시 리스트 조회 -->
+<select id="selectAcceptInqryList_new" resultType="java.util.HashMap">
+SELECT (SELECT DSPTCH_PRF_NM AS CD_NM
+          FROM PLT_ASP_CUS_CHN
+         WHERE SNDR_KEY = UR.SNDR_KEY)               AS SNDR_KEY_NM --채널명
+     , COALESCE( (SELECT CASE WHEN TID IS NULL OR TID = '' 
+                           THEN '비회원' 
+                         ELSE '회원' 
+                      END
+               FROM PLT_CUS
+              WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                AND CUSTOMER_ID = UR.TALK_USER_KEY
+             )
+             , '비회원'
+          )                                                      AS MEMBER_YN --회원/비회원
+     , SUBSTR(UR.TALK_DIST_DT, 1, 4)
+            || '/' || SUBSTR(UR.TALK_DIST_DT, 5, 2)
+            || '/' || SUBSTR(UR.TALK_DIST_DT, 7, 2)
+            || ' ' || SUBSTR(UR.TALK_DIST_DT, 9, 2)
+            || ':' || SUBSTR(UR.TALK_DIST_DT, 11, 2)
+            || ':' || SUBSTR(UR.TALK_DIST_DT, 13, 2)             AS TALK_DIST_DT --인입(접수)일시
+    , SUBSTR(UR.TALK_READY_DT, 1, 4)
+            || '/' || SUBSTR(UR.TALK_READY_DT, 5, 2)
+            || '/' || SUBSTR(UR.TALK_READY_DT, 7, 2)
+            || ' ' || SUBSTR(UR.TALK_READY_DT, 9, 2)
+            || ':' || SUBSTR(UR.TALK_READY_DT, 11, 2)
+            || ':' || SUBSTR(UR.TALK_READY_DT, 13, 2)            AS TALK_READY_DT --요청일시
+     , CASE WHEN TTIT.INQRY_TYP_DIV_CD = '1'
+              THEN TTIT.INQRY_TYP_NM
+            WHEN TTIT.INQRY_TYP_DIV_CD = '2'
+              THEN (SELECT INQRY_TYP_NM
+                      FROM PLT_CHT_INQ_TYP
+                     WHERE CUSTCO_ID = 'HKCTALKMNG'
+                       AND INQRY_TYP_CD = TTIT.SPST_INQRY_TYP_CD)
+        END                                                      AS INQRY_TYP_NM  --문의유형 1레벨
+     , UR.BOT_INQRY_NM                                           AS BOT_INQRY_NM  --문의서비스(챗봇연동시)
+  FROM (
+         SELECT AA.YYYYMMDD
+              , AA.WORK_START
+              , AA.WORK_END
+              , BB.TALK_READY_CD
+           FROM (
+                  SELECT SUBSTR(#{TODAY_WORK_TIME_START}, 1, 8) AS YYYYMMDD
+                       ,        #{TODAY_WORK_TIME_START}        AS WORK_START
+                       ,        #{TODAY_WORK_TIME_END}          AS WORK_END
+                    
+                ) AA
+          CROSS
+           JOIN ((SELECT '10' AS TALK_READY_CD )
+                        ) BB
+       ) DD
+-- LEFT
+  JOIN PLT_CHT_USER_RDY UR
+<![CDATA[
+    ON ( (    UR.TALK_DIST_DT >= DD.WORK_START 
+          AND UR.TALK_DIST_DT <  DD.WORK_END
+         )
+]]>
+   AND DD.TALK_READY_CD = UR.TALK_READY_CD
+   AND UR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+       )
+  LEFT OUTER JOIN PLT_CHT_INQ_TYP TTIT
+    ON UR.TALK_INQRY_CD = TTIT.INQRY_TYP_CD
+   AND TTIT.USE_YN = 'Y'
+   AND TTIT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+ ORDER BY UR.TALK_DIST_DT
+</select>
+
+<!-- 상담대기 선택시 리스트 조회 -->
+<select id="selectReadyList_new" resultType="java.util.HashMap">
+SELECT (SELECT DSPTCH_PRF_NM AS CD_NM 
+          FROM PLT_ASP_CUS_CHN
+         WHERE SNDR_KEY = UR.SNDR_KEY)         AS SNDR_KEY_NM --채널명
+     , COALESCE( (SELECT CASE WHEN TID IS NULL OR TID = '' 
+                           THEN '비회원' 
+                         ELSE '회원' 
+                     END
+               FROM PLT_CUS
+              WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                AND CUSTOMER_ID = UR.TALK_USER_KEY
+            )
+            , '비회원'
+          )                                                AS MEMBER_YN --회원/비회원
+     , SUBSTR(UR.TALK_DIST_DT, 1, 4)
+            || '/' || SUBSTR(UR.TALK_DIST_DT, 5, 2)
+            || '/' || SUBSTR(UR.TALK_DIST_DT, 7, 2)
+            || ' ' || SUBSTR(UR.TALK_DIST_DT, 9, 2)
+            || ':' || SUBSTR(UR.TALK_DIST_DT, 11, 2)
+            || ':' || SUBSTR(UR.TALK_DIST_DT, 13, 2)       AS TALK_DIST_DT --인입(접수)일시
+     , CASE WHEN TTIT.INQRY_TYP_DIV_CD = '1'
+              THEN TTIT.INQRY_TYP_NM
+            WHEN TTIT.INQRY_TYP_DIV_CD = '2'
+              THEN (SELECT INQRY_TYP_NM
+                      FROM PLT_CHT_INQ_TYP
+                     WHERE CUSTCO_ID = 'HKCTALKMNG'
+                       AND INQRY_TYP_CD = TTIT.SPST_INQRY_TYP_CD)
+        END                                                AS INQRY_TYP_NM --문의유형 1레벨
+     , UR.BOT_INQRY_NM                                     AS BOT_INQRY_NM --문의서비스(챗봇연동시)
+     , (SELECT USER_NM
+          FROM PLT_USER
+         WHERE USER_ID = UR.USER_ID)                       AS USER_NM --상담사명
+     , SUBSTR(UR.TALK_READ_DT, 1, 4)
+            || '/' || SUBSTR(UR.TALK_READ_DT, 5, 2)
+            || '/' || SUBSTR(UR.TALK_READ_DT, 7, 2)
+            || ' ' || SUBSTR(UR.TALK_READ_DT, 9, 2)
+            || ':' || SUBSTR(UR.TALK_READ_DT, 11, 2)
+            || ':' || SUBSTR(UR.TALK_READ_DT, 13, 2)       AS TALK_READ_DT --배정일시
+     , TO_CHAR(TRUNC( (CAST(TO_CHAR(NOW() - TO_DATE(UR.TALK_READ_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ' : ' ||  
+       TO_CHAR(TRUNC(MOD( (CAST(TO_CHAR(NOW() - TO_DATE(UR.TALK_READ_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ' : ' ||  
+       TO_CHAR(MOD( (CAST(TO_CHAR(NOW() - TO_DATE(UR.TALK_READ_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')
+                                                           AS WAIT_TIME --대기시간
+  FROM (
+         SELECT AA.YYYYMMDD
+              , AA.WORK_START
+              , AA.WORK_END
+              , BB.TALK_READY_CD
+           FROM (
+                  SELECT SUBSTR(#{TODAY_WORK_TIME_START}, 1, 8) AS YYYYMMDD
+                       ,        #{TODAY_WORK_TIME_START}        AS WORK_START
+                       ,        #{TODAY_WORK_TIME_END}          AS WORK_END
+                    
+                ) AA
+          CROSS
+           JOIN ((SELECT '11' AS TALK_READY_CD )
+                ) BB
+       ) DD
+-- LEFT
+  JOIN PLT_CHT_USER_RDY UR
+<![CDATA[
+    ON
+    ( (    UR.TALK_DIST_DT >= DD.WORK_START
+       AND UR.TALK_DIST_DT <  DD.WORK_END
+      )
+]]>
+      AND DD.TALK_READY_CD = UR.TALK_READY_CD
+      AND UR.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+	  AND EXISTS (SELECT 1
+	                FROM PLT_USER
+	               WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                 AND USER_ID = UR.USER_ID
+	                 AND USER_ATTR_A = #{USER_ATTR_A}
+                     <if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+	                 AND USER_ATTR_C = #{USER_ATTR_C}
+                     </if>
+	             )
+</if>  
+    )
+  LEFT OUTER JOIN PLT_CHT_INQ_TYP TTIT
+    ON UR.TALK_INQRY_CD = TTIT.INQRY_TYP_CD
+   AND TTIT.USE_YN = 'Y'
+   AND TTIT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+ ORDER BY UR.TALK_DIST_DT
+</select>
+
+<!-- 상담 선택시 리스트 조회 -->
+<select id="selectCounselList_new" resultType="java.util.HashMap">
+SELECT TMP.SNDR_KEY_NM                AS SNDR_KEY_NM --채널명
+     , TMP.MEMBER_YN                        AS MEMBER_YN         --회원/비회원
+     , TMP.TALK_DIST_DT                     AS TALK_DIST_DT      --인입(접수)일시
+     , TMP.INQRY_TYP_NM                     AS INQRY_TYP_NM      --문의유형1레벨
+     , TMP.BOT_INQRY_NM                     AS BOT_INQRY_NM      --문의서비스(챗봇연동시)
+     , TMP.USER_NM                          AS USER_NM           --사용자명
+     , TMP.TALK_START_DT                    AS TALK_START_DT     --상담시작일시
+     , TMP.COUNSEL_TIME                     AS COUNSEL_TIME      --상담시간
+     , CASE WHEN TMP.LAST_AGENT_TIME > TMP.LAST_CUST_TIME
+            THEN TO_CHAR(TO_DATE(FLOOR(CAST( NOW() - TO_DATE(TO_CHAR(TMP.LAST_AGENT_TIME, 'YYYYMMDDHH24MISS'), 'YYYYMMDDHH24MISS') AS INTEGER) * (24*60*60)),'sssss'),'HH24:MI:SS')
+            ELSE '00:00:00' 
+        END                                 AS NORESPONSETIME    --고객무응답시간
+  FROM (
+         SELECT (
+                  SELECT DSPTCH_PRF_NM AS CD_NM
+                    FROM PLT_ASP_CUS_CHN
+                   WHERE SNDR_KEY = CC.SNDR_KEY
+                )                                                     AS SNDR_KEY_NM
+              , COALESCE( (SELECT CASE WHEN TID IS NULL OR TID = '' 
+                                    THEN '비회원' 
+                                  ELSE '회원' 
+                              END
+                        FROM PLT_CUS
+                       WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                         AND CUSTOMER_ID = CC.TALK_USER_KEY
+                     )
+                     , '비회원'
+                   )                                                  AS MEMBER_YN
+               , SUBSTR(CC.TALK_DIST_DT, 1, 4)
+                      || '/' || SUBSTR(CC.TALK_DIST_DT, 5, 2)
+                      || '/' || SUBSTR(CC.TALK_DIST_DT, 7, 2)
+                      || ' ' || SUBSTR(CC.TALK_DIST_DT, 9, 2)
+                      || ':' || SUBSTR(CC.TALK_DIST_DT, 11, 2)
+                      || ':' || SUBSTR(CC.TALK_DIST_DT, 13, 2)        AS TALK_DIST_DT
+               , CASE WHEN TTIT.INQRY_TYP_DIV_CD = '1'
+                        THEN TTIT.INQRY_TYP_NM
+                      WHEN TTIT.INQRY_TYP_DIV_CD = '2'
+                        THEN (SELECT INQRY_TYP_NM
+                                FROM PLT_CHT_INQ_TYP
+                               WHERE CUSTCO_ID = 'HKCTALKMNG'
+                                 AND INQRY_TYP_CD = TTIT.SPST_INQRY_TYP_CD)
+                  END                                                 AS INQRY_TYP_NM --문의유형 1레벨
+               , CC.BOT_INQRY_NM
+               , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = CC.USER_ID) AS USER_NM
+               , SUBSTR(CC.TALK_START_DT, 1, 4)
+                      || '/' || SUBSTR(CC.TALK_START_DT, 5, 2)
+                      || '/' || SUBSTR(CC.TALK_START_DT, 7, 2)
+                      || ' ' || SUBSTR(CC.TALK_START_DT, 9, 2)
+                      || ':' || SUBSTR(CC.TALK_START_DT, 11, 2)
+                      || ':' || SUBSTR(CC.TALK_START_DT, 13, 2)       AS TALK_START_DT
+               , TO_CHAR(TRUNC( (CAST(TO_CHAR(NOW() - TO_DATE(CC.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ' : ' ||  
+                 TO_CHAR(TRUNC(MOD( (CAST(TO_CHAR(NOW() - TO_DATE(CC.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ' : ' ||  
+                 TO_CHAR(MOD( (CAST(TO_CHAR(NOW() - TO_DATE(CC.TALK_START_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')
+                                                                      AS COUNSEL_TIME
+              
+               , ( SELECT MAX(IT_PROCESSING) 
+                     FROM PLT_CHT_CUTT_DTL
+                    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                      AND TALK_CONTACT_ID = CC.TALK_CONTACT_ID
+                      AND SNDRCV_CD IN ('SND','TRAN')
+                      AND USER_ID != 'system'
+                      AND TYPE IN ('text','photo','TX','IM')
+                 )                                                    AS LAST_AGENT_TIME
+               , ( SELECT MAX(IT_PROCESSING) 
+                     FROM PLT_CHT_CUTT_DTL
+                    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                      AND TALK_CONTACT_ID = CC.TALK_CONTACT_ID
+                      AND SNDRCV_CD IN ('RCV')
+                      AND USER_ID != 'system'
+                      AND TYPE IN ('text','photo','TX','IM')
+                 )                                                    AS LAST_CUST_TIME
+            FROM (
+                   SELECT AA.YYYYMMDD
+                        , AA.WORK_START
+                        , AA.WORK_END
+                     FROM (
+                            SELECT SUBSTR(#{TODAY_WORK_TIME_START}, 1, 8) AS YYYYMMDD
+                                 ,        #{TODAY_WORK_TIME_START}        AS WORK_START
+                                 ,        #{TODAY_WORK_TIME_END}          AS WORK_END
+                              
+                          ) AA
+                 ) DD
+            -- LEFT
+            JOIN PLT_CHT_CUTT CC
+<![CDATA[
+              ON ((    CC.TALK_DIST_DT >= DD.WORK_START
+                   AND CC.TALK_DIST_DT < DD.WORK_END
+                  )
+]]>
+                  AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                  AND CC.TALK_STAT_CD = '12'
+				<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+	              AND EXISTS (SELECT 1
+	                            FROM PLT_USER
+	                           WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                             AND USER_ID = CC.USER_ID
+	                             AND USER_ATTR_A = #{USER_ATTR_A}
+								<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+	                             AND USER_ATTR_C = #{USER_ATTR_C}
+								</if>
+	                         )
+				</if> 
+                 )
+            LEFT OUTER JOIN PLT_CHT_INQ_TYP TTIT
+              ON CC.TALK_INQRY_CD = TTIT.INQRY_TYP_CD
+             AND TTIT.USE_YN = 'Y'
+             AND TTIT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+           ORDER BY CC.TALK_DIST_DT
+       ) TMP
+</select>
+
+<!-- 후처리 선택시 리스트 조회 -->
+<select id="selectAfterList_new" resultType="java.util.HashMap">
+SELECT (SELECT DSPTCH_PRF_NM AS CD_NM
+          FROM PLT_ASP_CUS_CHN
+         WHERE SNDR_KEY = CC.SNDR_KEY)          AS SNDR_KEY_NM --채널명
+     , COALESCE( (SELECT CASE WHEN TID IS NULL OR TID = '' 
+                           THEN '비회원' 
+                         ELSE '회원' 
+                     END
+               FROM PLT_CUS
+              WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                AND CUSTOMER_ID = CC.TALK_USER_KEY
+            )
+            , '비회원'
+          )                                                AS MEMBER_YN --회원/비회원
+     , SUBSTR(CC.TALK_DIST_DT, 1, 4)
+            || '/' || SUBSTR(CC.TALK_DIST_DT, 5, 2)
+            || '/' || SUBSTR(CC.TALK_DIST_DT, 7, 2)
+            || ' ' || SUBSTR(CC.TALK_DIST_DT, 9, 2)
+            || ':' || SUBSTR(CC.TALK_DIST_DT, 11, 2)
+            || ':' || SUBSTR(CC.TALK_DIST_DT, 13, 2)       AS TALK_DIST_DT --인입(접수)일시
+     , CASE WHEN TTIT.INQRY_TYP_DIV_CD = '1'
+              THEN TTIT.INQRY_TYP_NM
+            WHEN TTIT.INQRY_TYP_DIV_CD = '2'
+              THEN (SELECT INQRY_TYP_NM
+                      FROM PLT_CHT_INQ_TYP
+                     WHERE CUSTCO_ID = 'HKCTALKMNG'
+                       AND INQRY_TYP_CD = TTIT.SPST_INQRY_TYP_CD)
+        END                                                AS INQRY_TYP_NM --문의유형 1레벨
+     , CC.BOT_INQRY_NM                                     AS BOT_INQRY_NM --문의서비스(챗봇연동시)
+     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = CC.USER_ID) AS USER_NM --상담사명
+     , SUBSTR(CC.TALK_POST_DT, 1, 4)
+            || '/' || SUBSTR(CC.TALK_POST_DT, 5, 2)
+            || '/' || SUBSTR(CC.TALK_POST_DT, 7, 2)
+            || ' ' || SUBSTR(CC.TALK_POST_DT, 9, 2)
+            || ':' || SUBSTR(CC.TALK_POST_DT, 11, 2)
+            || ':' || SUBSTR(CC.TALK_POST_DT, 13, 2)       AS TALK_POST_DT --채팅종료일시(후처리시작일시)
+     , TO_CHAR(TRUNC( (CAST(TO_CHAR(NOW() - TO_DATE(CC.TALK_POST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) /3600),'FM9900') || ' : ' ||  
+       TO_CHAR(TRUNC(MOD( (CAST(TO_CHAR(NOW() - TO_DATE(CC.TALK_POST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,3600)/60),'FM00') || ' : ' ||  
+       TO_CHAR(MOD( (CAST(TO_CHAR(NOW() - TO_DATE(CC.TALK_POST_DT, 'YYYYMMDDHH24MISS')) AS INTEGER) * (24*60*60)) ,60),'FM00')
+                                                           AS AFTER_TIME --후처리시간
+  FROM (
+         SELECT AA.YYYYMMDD
+              , AA.WORK_START
+              , AA.WORK_END
+           FROM (
+                  SELECT SUBSTR(#{TODAY_WORK_TIME_START}, 1, 8) AS YYYYMMDD
+                       ,        #{TODAY_WORK_TIME_START}        AS WORK_START
+                       ,        #{TODAY_WORK_TIME_END}          AS WORK_END
+                    
+                ) AA
+       ) DD
+-- LEFT
+  JOIN PLT_CHT_CUTT CC
+<![CDATA[
+    ON ((    CC.TALK_DIST_DT >= DD.WORK_START
+         AND CC.TALK_DIST_DT <  DD.WORK_END
+        )
+]]>
+        AND CC.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+        AND CC.TALK_STAT_CD = '20'
+		<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+	    AND EXISTS (SELECT 1
+	                  FROM PLT_USER
+	                 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                   AND USER_ID = CC.USER_ID
+	                   AND USER_ATTR_A = #{USER_ATTR_A}
+					<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+	                   AND USER_ATTR_C = #{USER_ATTR_C}
+					</if>
+	               )
+		</if> 
+       )
+  LEFT OUTER JOIN PLT_CHT_INQ_TYP TTIT
+    ON CC.TALK_INQRY_CD = TTIT.INQRY_TYP_CD
+   AND TTIT.USE_YN = 'Y'
+   AND TTIT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+ ORDER BY CC.TALK_DIST_DT
+</select>
+
+<!-- 접수건 리스트(문의유형 선택 전) -->
+<select id="selectAcceptList" resultType="java.util.HashMap">
+	SELECT 
+	    -- T1.TALK_USER_KEY
+        (SELECT DSPTCH_PRF_NM AS CD_NM FROM PLT_ASP_CUS_CHN WHERE SNDR_KEY = T1.SNDR_KEY) AS SNDR_KEY_NM
+        , CASE WHEN T2.TID IS NULL OR T2.TID = '' THEN '비회원' ELSE '회원' END AS CUSTOMER_MEMBER
+        -- , COALESCE(T2.CUSTOMER_NM, '알수없음') AS CUSTOMER_NAME
+	    , CASE WHEN T1.BOT_INQRY_NM IS NULL OR T1.BOT_INQRY_NM = '' 
+			THEN (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T1.TALK_INQRY_CD AND USE_YN = 'Y') 
+			ELSE BOT_INQRY_NM END AS INQRY_NM
+	    , T1.USER_ID
+	    , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = T1.USER_ID) AS USER_NM
+	    , TO_CHAR(TO_DATE(T1.TALK_DIST_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS TALK_DIST_DT
+	    , T1.ORDER_NUMBER
+	    , COALESCE(T2.CUSTOMER_SEQ, 0) AS CUSTOMER_SEQ
+	    , COALESCE(T2.MEMBER_YN, 'N') AS MEMBER_YN
+	FROM PLT_CHT_USER_RDY T1
+	LEFT OUTER JOIN PLT_CUS T2
+	ON T1.TALK_USER_KEY = T2.CUSTOMER_ID
+	WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND T1.TALK_READY_CD IN ('09')
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> T1.TALK_DIST_DT
+		 AND                                         T1.TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 접수건 리스트(문의유형 선택 후) -->
+<select id="selectAcceptInqryList" resultType="java.util.HashMap">
+	SELECT 
+	    -- T1.TALK_USER_KEY
+        (SELECT DSPTCH_PRF_NM AS CD_NM FROM PLT_ASP_CUS_CHN WHERE SNDR_KEY = T1.SNDR_KEY) AS SNDR_KEY_NM
+        , CASE WHEN T2.TID IS NULL OR '' THEN '비회원' ELSE '회원' END AS CUSTOMER_MEMBER
+        -- , COALESCE(T2.CUSTOMER_NM, '알수없음') AS CUSTOMER_NAME
+	    , CASE WHEN T1.BOT_INQRY_NM IS NULL OR T1.BOT_INQRY_NM = ''
+			THEN (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T1.TALK_INQRY_CD AND USE_YN = 'Y') 
+			ELSE BOT_INQRY_NM END AS INQRY_NM
+	    , T1.USER_ID
+	    , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = T1.USER_ID) AS USER_NM
+	    , TO_CHAR(TO_DATE(T1.TALK_DIST_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS TALK_DIST_DT
+	    , T1.ORDER_NUMBER
+	    , COALESCE(T2.CUSTOMER_SEQ, 0) AS CUSTOMER_SEQ
+	    , COALESCE(T2.MEMBER_YN, 'N') AS MEMBER_YN
+	FROM PLT_CHT_USER_RDY T1
+	LEFT OUTER JOIN PLT_CUS T2
+	ON T1.TALK_USER_KEY = T2.CUSTOMER_ID
+	WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND T1.TALK_READY_CD IN ('10')
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> T1.TALK_DIST_DT
+		 AND                                         T1.TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 대기건 리스트 -->
+<select id="selectReadyList" resultType="java.util.HashMap">
+	SELECT 
+	    -- T1.TALK_USER_KEY
+        (SELECT DSPTCH_PRF_NM AS CD_NM FROM PLT_ASP_CUS_CHN WHERE SNDR_KEY = T1.SNDR_KEY) AS SNDR_KEY_NM
+        , CASE WHEN T2.TID IS NULL OR T2.TID = '' THEN '비회원' ELSE '회원' END AS CUSTOMER_MEMBER
+        -- , COALESCE(T2.CUSTOMER_NM, '알수없음') AS CUSTOMER_NAME
+	    , CASE WHEN T1.BOT_INQRY_NM IS NULL OR T1.BOT_INQRY_NM = '' 
+			THEN (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T1.TALK_INQRY_CD AND USE_YN = 'Y') 
+			ELSE BOT_INQRY_NM END AS INQRY_NM
+	    , T1.USER_ID
+	    , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = T1.USER_ID) AS USER_NM
+	    , TO_CHAR(TO_DATE(T1.TALK_DIST_DT, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS TALK_DIST_DT
+	    , T1.ORDER_NUMBER
+	    , COALESCE(T2.CUSTOMER_SEQ, 0) AS CUSTOMER_SEQ
+	    , COALESCE(T2.MEMBER_YN, 'N') AS MEMBER_YN
+	FROM PLT_CHT_USER_RDY T1
+	LEFT OUTER JOIN PLT_CUS T2
+	ON T1.TALK_USER_KEY = T2.CUSTOMER_ID
+	WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND T1.TALK_READY_CD IN ('11')
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> T1.TALK_DIST_DT
+		 AND                                         T1.TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 상담중 리스트 -->
+<select id="selectCounselList" resultType="java.util.HashMap">
+<![CDATA[
+SELECT 
+	 -- TALK_USER_KEY
+	 -- , CUSTOMER_NAME
+	 SNDR_KEY_NM
+     , CUSTOMER_MEMBER
+     , CASE INQRY_NM WHEN NULL THEN '문의유형없음' ELSE INQRY_NM END AS INQRY_NM
+     , USER_ID
+     , USER_NM
+     , TALK_START_DT
+     , ORDER_NUMBER
+     , MEMBER_YN
+     , CUSTOMER_SEQ
+     , CASE WHEN LAST_AGENT_TIME > LAST_CUST_TIME
+            THEN TO_CHAR(TO_DATE(CAST( NOW() - TO_DATE(TO_CHAR(LAST_AGENT_TIME, 'YYYYMMDDHH24MISS'), 'YYYYMMDDHH24MISS')  AS INTEGER) * (24*60*60),'sssss'),'HH24:MI:SS')
+            ELSE '00:00:00' 
+        END AS NORESPONSETIME
+  FROM (
+         SELECT 
+         	  -- T1.TALK_USER_KEY
+              -- , COALESCE(T2.CUSTOMER_NM, '알수없음') AS CUSTOMER_NAME
+              (SELECT DSPTCH_PRF_NM AS CD_NM FROM PLT_ASP_CUS_CHN WHERE SNDR_KEY = T1.SNDR_KEY) AS SNDR_KEY_NM
+			  , CASE WHEN T2.TID IS NULL OR T2.TID = '' THEN '비회원' ELSE '회원' END AS CUSTOMER_MEMBER
+              , CASE WHEN T1.BOT_INQRY_NM IS NULL OR T1.BOT_INQRY_NM = '' 
+				THEN (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T1.TALK_INQRY_CD AND USE_YN = 'Y') 
+				ELSE BOT_INQRY_NM END AS INQRY_NM
+              , T1.USER_ID
+              , T1.TALK_INQRY_CD
+              , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = T1.USER_ID) AS USER_NM
+              , TO_CHAR(TO_DATE(T1.TALK_DIST_DT, 'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS') AS TALK_START_DT
+              , T1.ORDER_NUMBER
+              , COALESCE(T2.MEMBER_YN, 'N') AS MEMBER_YN
+              , COALESCE(T2.CUSTOMER_SEQ, 0) AS CUSTOMER_SEQ
+              , ( SELECT MAX(IT_PROCESSING) 
+              	    FROM PLT_CHT_CUTT_DTL
+                   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                     AND TALK_CONTACT_ID = T1.TALK_CONTACT_ID
+                     AND SNDRCV_CD IN ('SND','TRAN')
+                     AND USER_ID <> 'system'
+                     AND TYPE IN ('text','photo','TX','IM')
+                ) AS LAST_AGENT_TIME
+              , ( SELECT MAX(IT_PROCESSING) 
+              	    FROM PLT_CHT_CUTT_DTL
+              	   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+              	     AND TALK_CONTACT_ID = T1.TALK_CONTACT_ID
+              	     AND SNDRCV_CD IN ('RCV')
+              	     AND USER_ID <> 'system'
+              	     AND TYPE IN ('text','photo','TX','IM')
+                ) AS LAST_CUST_TIME
+           FROM PLT_CHT_CUTT T1
+           LEFT OUTER JOIN PLT_CUS T2
+             ON T1.TALK_USER_KEY = T2.CUSTOMER_ID
+          WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+          AND T1.TALK_STAT_CD = '12'
+		  AND (    #{TODAY_WORK_TIME_START} <= T1.TALK_DIST_DT
+			   AND                             T1.TALK_DIST_DT < #{TODAY_WORK_TIME_END}
+			  )
+       ) RE
+]]>
+</select>
+
+<!-- 후처리 리스트 -->
+<select id="selectAfterList" resultType="java.util.HashMap">
+    	SELECT 
+        -- T1.TALK_USER_KEY
+	    -- , COALESCE(T2.CUSTOMER_NM, '알수없음') AS CUSTOMER_NAME
+	    (SELECT DSPTCH_PRF_NM AS CD_NM FROM PLT_ASP_CUS_CHN WHERE SNDR_KEY = T1.SNDR_KEY) AS SNDR_KEY_NM
+		, CASE WHEN T2.TID IS NULL OR T2.TID = '' THEN '비회원' ELSE '회원' END AS CUSTOMER_MEMBER
+	    , CASE WHEN T1.BOT_INQRY_NM IS NULL OR T1.BOT_INQRY_NM = '' 
+			THEN (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T1.TALK_INQRY_CD AND USE_YN = 'Y') 
+			ELSE BOT_INQRY_NM END AS INQRY_NM
+        , T1.USER_ID
+	    , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = T1.USER_ID) AS USER_NM
+        , TO_CHAR(TO_DATE(T1.TALK_DIST_DT, 'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS') AS TALK_POST_DT
+        , T1.ORDER_NUMBER
+        , COALESCE(T2.MEMBER_YN, 'N') AS MEMBER_YN
+        , COALESCE(T2.CUSTOMER_SEQ, 0) AS CUSTOMER_SEQ
+	FROM PLT_CHT_CUTT T1
+	LEFT OUTER JOIN PLT_CUS T2
+	ON T1.TALK_USER_KEY = T2.CUSTOMER_ID
+	WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND T1.TALK_STAT_CD = '20'
+	AND (    #{TODAY_WORK_TIME_START} <![CDATA[<=]]> T1.TALK_DIST_DT
+		 AND                                         T1.TALK_DIST_DT <![CDATA[<]]> #{TODAY_WORK_TIME_END}
+		)
+</select>
+
+<!-- 상담중인 상담사 리스트 -->
+<select id="selectCountselorList" resultType="java.util.HashMap">
+SELECT TB.USER_ID
+     , TB.USER_NM
+  FROM PLT_USER TB
+ INNER JOIN (
+              SELECT USER_ID
+                FROM PLT_CHT_CUTT
+               WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                 AND TALK_STAT_CD = '12'
+               GROUP BY USER_ID
+            ) TCL
+    ON TB.USER_ID = TCL.USER_ID
+ WHERE TB.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="USER_ATTR_B != 'B01'"><!-- 전체관리자가 아니면 -->
+   AND USER_ATTR_A = #{USER_ATTR_A}
+	<if test="USER_ATTR_B != 'B02'"><!-- 센터관리자가 아니면 -->
+   AND USER_ATTR_C = #{USER_ATTR_C}
+	</if>
+</if>
+</select>
+
+<!-- 마지막 고객 상담 이력의 주문번호와 회원여부 -->
+<select id="getLastUserChatInfo"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	COALESCE(A.MEMBER_YN, 'N') AS MEMBER_YN
+	, A.ORDER_NUMBER 
+FROM (
+    SELECT
+	    MEMBER_YN
+	    , ORDER_NUMBER
+    FROM PLT_CHT_CUTT
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+    AND TALK_STAT_CD IN ('20','21')
+    AND (MEMBER_YN='N' OR MEMBER_YN IS NULL)
+    AND ORDER_NUMBER IS NOT NULL
+    ORDER BY IT_PROCESSING DESC
+) A
+WHERE ROWNUM = 1
+</select>
+
+<!-- 마지막으로 저장된 회원번호 -->
+<select id="getUserCustseq"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+    A.CUSTOMER_SEQ
+    , A.MEMBER_YN
+FROM (
+	SELECT 
+	    CUSTOMER_SEQ
+	    , MEMBER_YN
+	FROM PLT_CHT_CUTT
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+	AND TALK_STAT_CD IN ('20','21')
+	AND CUSTOMER_SEQ IS NOT NULL
+	ORDER BY IT_PROCESSING DESC
+) A
+WHERE ROWNUM = 1
+</select>
+
+<!-- 회사별 사용자 소속 조회 -->
+<select id="selectATTRCustUser" resultType="java.util.HashMap">
+    	SELECT USER_ATTR_A
+    		, USER_ATTR_B
+    		, USER_ATTR_C
+    		, USER_ATTR_D
+    		, (SELECT ATTR_DIV_NM 
+    			FROM PLT_USER_ATTR PUA, PLT_USER_BLNG PUB 
+    			WHERE PUA.CUSTCO_ID = PUB.CUSTCO_ID 
+    				AND PUA.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    				AND PUA.USER_ID = #{USER_ID} 
+    				AND PUB.ATTR_DIV_CD = PUA.USER_ATTR_A)			AS USER_ATTR_NM_A
+            , (SELECT ATTR_DIV_NM 
+    			FROM PLT_USER_ATTR PUA, PLT_USER_BLNG PUB 
+    			WHERE PUA.CUSTCO_ID = PUB.CUSTCO_ID 
+    				AND PUA.CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+    				AND PUA.USER_ID = #{USER_ID} 
+    				AND PUB.ATTR_DIV_CD = PUA.USER_ATTR_B)			AS USER_ATTR_NM_B
+    		, (SELECT ATTR_DIV_NM 
+    			FROM PLT_USER_ATTR PUA, PLT_USER_BLNG PUB 
+    			WHERE PUA.CUSTCO_ID = PUB.CUSTCO_ID 
+    				AND PUA.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    				AND PUA.USER_ID = #{USER_ID} 
+    				AND PUB.ATTR_DIV_CD = PUA.USER_ATTR_C)			AS USER_ATTR_NM_C
+    		, (SELECT ATTR_DIV_NM 
+    			FROM PLT_USER_ATTR PUA, PLT_USER_BLNG PUB 
+    			WHERE PUA.CUSTCO_ID = PUB.CUSTCO_ID 
+    				AND PUA.CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+    				AND PUA.USER_ID = #{USER_ID} 
+    				AND PUB.ATTR_DIV_CD = PUA.USER_ATTR_D)			AS USER_ATTR_NM_D
+	FROM PLT_USER_ATTR 
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND USER_ID = #{USER_ID}
+</select>
+
+
+
+
+<!-- 총인입 건수 -->
+<select id="selectCuttTotStat"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT		/* selectCuttTotStat - 총인입 */
+		PCCT.TOT_STAT
+	    , PCCAW.ALTMNT_WAIT_STAT
+	    , PCCW.WAIT_STAT
+	    , PCCI.ING_STAT
+	    , PCCA.AFTPRCS_STAT
+    FROM 
+    	(SELECT COUNT(CHT_CUTT_ID) AS TOT_STAT
+	    	FROM PLT_CHT_CUTT
+	    	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			    <![CDATA[
+				    	AND ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+				    	AND ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+				]]>
+		) AS PCCT
+		, (SELECT COUNT(CHT_CUTT_ID) AS ALTMNT_WAIT_STAT
+	    	FROM PLT_CHT_CUTT
+	    	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	    		AND CUTT_STTS_CD = 'ALTMNT_WAIT'
+			    <![CDATA[
+				    	AND ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+				    	AND ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+				]]>
+		) AS PCCAW
+		, (SELECT COUNT(CHT_CUTT_ID) AS WAIT_STAT
+	    	FROM PLT_CHT_CUTT
+	    	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	    		AND CUTT_STTS_CD = 'WAIT'
+			    <![CDATA[
+				    	AND ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+				    	AND ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+				]]>
+		) AS PCCW
+		, (SELECT COUNT(CHT_CUTT_ID) AS ING_STAT
+	    	FROM PLT_CHT_CUTT
+	    	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	    		AND CUTT_STTS_CD = 'ING'
+			    <![CDATA[
+				    	AND ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+				    	AND ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+				]]>
+		) AS PCCI
+		, (SELECT COUNT(CHT_CUTT_ID) AS AFTPRCS_STAT
+	    	FROM PLT_CHT_CUTT
+	    	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	    		AND CUTT_STTS_CD IN ('AFTPRCS','AFTPRCS_NORSPNS')
+			    <![CDATA[
+				    	AND ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+				    	AND ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+				]]>
+		) AS PCCA
+</select>
+
+<!-- 채널별 상담요청 현황 -->
+<select id="selectChnCuttTotStat"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT		/* selectChnCuttTotStat - 채널별 요청건수 */
+		PCC.SNDR_KEY
+		, PCC.DSPTCH_PRF_NM
+		, PCC.CHN_CLSF_CD
+		, (SELECT CD_NM
+			FROM PLT_COMM_CD
+			WHERE CUSTCO_ID = PCC.CUSTCO_ID AND GROUP_CD_ID = 'CHNL_CL'
+				AND CD_ID = PCC.CHN_CLSF_CD)	AS CHN_CLSF_NM
+		, (SELECT COUNT(CHT_CUTT_ID)
+			FROM PLT_CHT_CUTT
+			WHERE SNDR_KEY = PCC.SNDR_KEY
+		    <![CDATA[
+			    	AND ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+			    	AND ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+			]]>
+			)		AS CUTT_CNT
+	FROM PLT_CUSTCO_CHN PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PCC.ATALK_YN = 'N'
+		AND PCC.SNDR_KEY IN (SELECT SNDR_KEY 
+							FROM PLT_CUSTCO_CHN
+							WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+								AND SRVC_MAINT_YN = 'Y')
+</select>
+
+<!-- 시간대별 인입 현황 -->
+<select id="selectAltmntTimeCuttStat"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectAltmntTimeCuttStat - 시간대별 채팅상담건수 */
+		PCC.SNDR_KEY
+		, (SELECT DSPTCH_PRF_NM
+			FROM PLT_CUSTCO_CHN
+			WHERE SNDR_KEY = PCC.SNDR_KEY)	AS DSPTCH_PRF_NM
+		, TO_CHAR(TO_TIMESTAMP(PCC.ALTMNT_RDY_REG_DT, 'YYYYMMDDHH24MISS'), 'HH24') AS HOUR
+		, COUNT(*) AS CNT
+	FROM PLT_CHT_CUTT PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<![CDATA[
+		    	AND PCC.ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+		    	AND PCC.ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+		]]>
+		AND PCC.SNDR_KEY IN (SELECT SNDR_KEY 
+							FROM PLT_CUSTCO_CHN
+							WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+								AND SRVC_MAINT_YN = 'Y')
+	GROUP BY PCC.SNDR_KEY,HOUR
+	ORDER BY PCC.SNDR_KEY,HOUR
+</select>
+
+<!-- 시간대별 종료 현황 -->
+<select id="selectEndTimeCuttStat"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectEndTimeCuttStat - 시간대별 채팅상담건수 */
+		PCC.SNDR_KEY
+		, (SELECT DSPTCH_PRF_NM
+			FROM PLT_CUSTCO_CHN
+			WHERE SNDR_KEY = PCC.SNDR_KEY)	AS DSPTCH_PRF_NM
+		, TO_CHAR(TO_TIMESTAMP(PCC.CUTT_HSTRY_REG_DT, 'YYYYMMDDHH24MISS'), 'HH24') AS HOUR
+		, COUNT(*) AS CNT
+	FROM PLT_CHT_CUTT PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<![CDATA[
+		    	AND PCC.ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+		    	AND PCC.ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+		]]>
+	AND PCC.CUTT_HSTRY_REG_DT IS NOT NULL
+	AND PCC.SNDR_KEY IN (SELECT SNDR_KEY 
+						FROM PLT_CUSTCO_CHN
+						WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+							AND SRVC_MAINT_YN = 'Y')
+	GROUP BY PCC.SNDR_KEY,HOUR
+	ORDER BY PCC.SNDR_KEY,HOUR
+</select>
+
+<!-- 배정가능건수 -->
+<select id="selectAltmntCnt"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectAltmntCnt - 고객사 채팅설정-배정가능건수 세팅값 조회 */
+		STNG_VL
+	FROM PLT_CHT_STNG
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND STNG_CD = 'ROUTE_WAITING_CNT'
+</select>
+
+<!-- 현재 배정/총요청/총인입 건수 -->
+<select id="selectStatCnt"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectStatCnt - 현재 배정,총요청,총인입 건수 */
+		COUNT(CASE WHEN CUTT_STTS_CD IN ('WAIT','ING','TRAN_WAIT','CLBK_WAIT') THEN 1 ELSE NULL END) AS ALTMNT_CNT,
+		COUNT(CASE WHEN CUTT_STTS_CD NOT IN ('DMND_NPSBL','ALTMNT_NPSBL','DMND_NOCHC') THEN 1 ELSE NULL END) AS REQ_CNT,
+		COUNT(CHT_CUTT_ID) AS TOT_CNT
+	FROM PLT_CHT_CUTT PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<![CDATA[
+		    	AND PCC.ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+		    	AND PCC.ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+		]]>
+</select>
+
+<!-- 상담완료현황 -->
+<select id="selectEndCnt"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectEndCnt - 상담완료현황 */
+		COUNT(CASE WHEN CUTT_STTS_CD LIKE ('%'||'CMPL'||'%') THEN 1 ELSE NULL END) AS END_CNT
+	FROM PLT_CHT_CUTT PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<![CDATA[
+		    	AND PCC.ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+		    	AND PCC.ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+		]]>
+</select>
+
+<!-- 평균 대기/상담처리 시간수 -->
+<select id="selectAvgTime"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectAvgTime - 평균 대기,상담처리 시간 */
+		TO_CHAR(AVG(
+			CASE WHEN PCC.CUTT_RDY_REG_DT IS NOT NULL
+				AND PCC.ALTMNT_RDY_REG_DT IS NOT NULL
+				AND PCC.CUTT_STTS_CD NOT LIKE ('%'||'GIVEUP'||'%') 
+			THEN TO_TIMESTAMP(PCC.CUTT_RDY_REG_DT,'YYYYMMDDHH24MISS')-TO_TIMESTAMP(PCC.ALTMNT_RDY_REG_DT,'YYYYMMDDHH24MISS') 
+			ELSE '0' END
+			),'YYYYMMDDHH24MISS')	AS WAIT_AVG
+		, TO_CHAR(AVG(
+			CASE WHEN PCC.CUTT_RDY_REG_DT IS NOT NULL
+				AND PCC.ALTMNT_RDY_REG_DT IS NOT NULL
+				AND PCC.CUTT_STTS_CD LIKE ('%'||'GIVEUP'||'%') 
+			THEN TO_TIMESTAMP(PCC.CUTT_RDY_REG_DT,'YYYYMMDDHH24MISS')-TO_TIMESTAMP(PCC.ALTMNT_RDY_REG_DT,'YYYYMMDDHH24MISS') 
+			ELSE '0' END
+			),'YYYYMMDDHH24MISS')	AS GIVEUP_AVG
+		, TO_CHAR(AVG(
+			CASE WHEN PCC.CUTT_BGNG_DT IS NOT NULL
+				AND PCC.CUTT_END_DT IS NOT NULL
+			THEN TO_TIMESTAMP(PCC.CUTT_END_DT,'YYYYMMDDHH24MISS')-TO_TIMESTAMP(PCC.CUTT_BGNG_DT,'YYYYMMDDHH24MISS') 
+			ELSE '0' END
+			),'YYYYMMDDHH24MISS')	AS CUTT_AVG
+		, TO_CHAR(AVG(
+			CASE WHEN PCC.CUTT_STTS_CD LIKE ('%'||'CMPL'||'%')
+			THEN TO_TIMESTAMP(PCC.CUTT_HSTRY_REG_DT,'YYYYMMDDHH24MISS')-TO_TIMESTAMP(PCC.CUTT_END_DT,'YYYYMMDDHH24MISS') 
+			ELSE '0' END
+			),'YYYYMMDDHH24MISS')	AS AFTPRCS_AVG
+		, TO_CHAR(AVG(
+			CASE WHEN PCC.CUTT_RDY_REG_DT IS NOT NULL
+				AND PCC.CUTT_HSTRY_REG_DT IS NOT NULL
+			THEN TO_TIMESTAMP(PCC.CUTT_HSTRY_REG_DT,'YYYYMMDDHH24MISS')-TO_TIMESTAMP(PCC.CUTT_RDY_REG_DT,'YYYYMMDDHH24MISS') 
+			ELSE '0' END
+			),'YYYYMMDDHH24MISS')	AS TOTAL_AVG
+	FROM PLT_CHT_CUTT PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<![CDATA[
+		    	AND PCC.ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+		    	AND PCC.ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+		]]>
+</select>
+
+<!-- 고객포기건수 -->
+<select id="selectGiveUpCnt"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectGiveUpCnt - 고객포기건수 */
+		COUNT(CASE WHEN CUTT_STTS_CD = 'DMND_GIVEUP' THEN 1 ELSE NULL END) AS DMND_GIVEUP_CNT
+		, COUNT(CASE WHEN CUTT_STTS_CD = 'ALTMNT_GIVEUP' THEN 1 ELSE NULL END) AS ALTMNT_GIVEUP_CNT
+		, COUNT(CASE WHEN CUTT_STTS_CD = 'WAIT_GIVEUP' THEN 1 ELSE NULL END) AS WAIT_GIVEUP_CNT
+		, COUNT(CASE WHEN CUTT_STTS_CD = 'TRAN_WAIT_GIVEUP' THEN 1 ELSE NULL END) AS TRAN_WAIT_GIVEUP_CNT
+	FROM PLT_CHT_CUTT PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<![CDATA[
+		    	AND PCC.ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+		    	AND PCC.ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+		]]>
+</select>
+
+<!-- busy(요청불가)건수 -->
+<select id="selectBusyCnt"   parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT	/* selectBusyCnt - busy(요청불가)건수 */
+		COUNT(CASE WHEN CUTT_STTS_CD = 'DMND_NPSBL' THEN 1 ELSE NULL END) AS DMND_NPSBL_CNT
+		, COUNT(CASE WHEN CUTT_STTS_CD = 'ALTMNT_NPSBL' THEN 1 ELSE NULL END) AS ALTMNT_NPSBL_CNT
+		, COUNT(CASE WHEN CUTT_STTS_CD = 'DMND_NOCHC' THEN 1 ELSE NULL END) AS DMND_NOCHC_CNT
+		, COUNT(CASE WHEN CUTT_STTS_CD = 'CUSL_ALTMNT_NPSBL' THEN 1 ELSE NULL END) AS CUSL_ALTMNT_NPSBL_CNT
+	FROM PLT_CHT_CUTT PCC
+	WHERE PCC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<![CDATA[
+		    	AND PCC.ALTMNT_RDY_REG_DT >= TO_CHAR(NOW(),'YYYYMMDD000000')
+		    	AND PCC.ALTMNT_RDY_REG_DT <= TO_CHAR(NOW(),'YYYYMMDD999999')
+		]]>
+</select>
+
+</mapper>

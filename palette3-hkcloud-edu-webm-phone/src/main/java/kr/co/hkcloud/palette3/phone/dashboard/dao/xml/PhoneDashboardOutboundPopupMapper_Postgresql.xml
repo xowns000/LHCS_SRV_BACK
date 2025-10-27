@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <!-- 상담유형 관리 -->
+<mapper namespace="kr.co.hkcloud.palette3.phone.dashboard.dao.PhoneDashboardOutboundPopupMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="HOUSE_TEL_NO" column="HOUSE_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CO_TEL_NO" column="CO_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="MOBIL_NO" column="MOBIL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CARD_NO" column="CARD_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="ACT_NO" column="ACT_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+	<select id="selectObndIngList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		/* selectObndIngList 아웃바운드 진행 현황  */
+		SELECT
+				     t1.CAM_ID
+				     ,t2.CUST_NO
+				    , t2.CUST_NM
+				     , (SELECT USER_NM FROM PLT_USER
+					 	WHERE USER_ID  = t1.CSLT_ID
+					 	) AS CSLT_NM  							/* 상담원 명 */
+				     , t2.HOUSE_TEL_NO           AS HOUSE_TEL_NO
+				     , t2.CO_TEL_NO            AS CO_TEL_NO
+				     , t2.MOBIL_NO           AS MOBIL_NO
+				     , COALESCE(t4.CNTC_CNT, 0) AS CNTC_CNT
+					 , COALESCE(t5.CNTC_DATE, 0) AS CNTC_DATE
+				     , COALESCE(t1.TRY_CNT, 0) AS TRY_CNT
+				     , t1.CHNG_DTIM
+				     , t1.FISH_TY
+				     , t1.FISH_TY AS O_FISH_TY
+                     <!-- <if test='CENT_TY.equals("G")'>  -->
+                     , t3.SECU_NO
+                     <!-- </if> -->
+                     , (
+	                       SELECT CNSL_CNTN
+	                       FROM
+	                      (SELECT CNSL_CNTN FROM PLT_PHN_CNSL_DTL ORDER BY REG_DTIM DESC)
+	                      WHERE ROWNUM = 1    
+                     ) AS CNSL_CNTN /* 최신 상담이력 비고 */
+                     , (SELECT SUBSTR(CNSL_SAVE_DTIM, -6) FROM PLT_PHN_CNSL WHERE CNSL_HIST_NO  = t1.CNSL_HIST_NO) AS CNSL_SAVE_TIME  /* 상담정보 저장시간(녹취파일) */
+                     , (SELECT RDWT_ID FROM PLT_PHN_CNSL WHERE CNSL_HIST_NO  = t1.CNSL_HIST_NO) AS RDWT_ID				 /* 상담정보(녹취파일키) */
+                     , (SELECT CNSL_BEGIN_TIME FROM PLT_PHN_CNSL WHERE CNSL_HIST_NO  = t1.CNSL_HIST_NO) AS CNSL_BEGIN_TIME /* 상담정보(저장시작시간) */
+				  FROM PLT_PHN_CAMP_CUS_DST t1 ,PLT_PHN_OBD_CUS t2, PLT_PHN_OBD_CUS_ADD t3
+                   <!--    <if test='CENT_TY.equals("G")'> 
+				     , (SELECT CAM_ID, CUST_NO, CUST_NM, HOUSE_TEL_NO, CO_TEL_NO, MOBIL_NO  
+						FROM PLT_PHN_OBD_CUS
+						WHERE CAM_ID = #{CAM_ID}) t2
+                     , PLT_PHN_OBD_CUS_ADD t3 /* 공제 아웃바운드 고객부가 정보 */
+                     </if>-->
+                    <!-- <if test='CENT_TY.equals("E")'> 
+				     , (SELECT CAM_ID, RES_NO AS CUST_NO, CUST_NM, '' AS HOUSE_TEL_NO, '' AS CO_TEL_NO, MOBIL_NO  
+						FROM TB_OB_BI_CUST
+						WHERE CAM_ID = #{CAM_ID}) t2
+                     </if> --> 
+                     
+                     ,(SELECT CUST_NO,  COUNT(*) AS CNTC_CNT /*접촉건수*/
+			            FROM (
+			                     SELECT  CUST_NO, CNTC_DATE, SUM(CNTC_CNT) AS CNT
+			                     FROM PLT_PHN_CAMP_CUS_CNT
+			                     where CAM_ID = #{CAM_ID}
+			                     group by  CUST_NO, CNTC_DATE /* 접촉일자 */
+			                     HAVING SUM(CNTC_CNT) > 1
+			             ) GROUP BY CUST_NO
+			         ) t4
+                     ,(SELECT CUST_NO, count(*) AS CNTC_DATE
+				    		FROM PLT_PHN_CAMP_CUS_CNT
+				    		WHERE CAM_ID = #{CAM_ID}
+				    	<if test="CNTC_DATE != '' and CNTC_DATE != null"> 
+								AND CNTC_DATE = #{CNTC_DATE}
+						</if>
+				    		GROUP BY  CUST_NO
+		    		  ) t5
+				 WHERE t1.CAM_ID  = #{CAM_ID}
+				   AND t1.CAM_ID  = t2.CAM_ID
+				   <!-- <if test='CENT_TY.equals("G")'>  -->
+                   AND t1.CAM_ID  = t3.CAM_ID
+                   <!-- </if> -->
+				   AND t1.CUST_NO = t2.CUST_NO
+                   <!-- <if test='CENT_TY.equals("G")'>  -->
+                   AND t1.CUST_NO = t3.CUST_NO 
+                   <!-- </if> -->
+                   AND t1.CUST_NO = t4.CUST_NO(+)
+                   AND t1.CUST_NO = t5.CUST_NO(+)
+				   
+		
+		<if test="FISH_TY != '' and FISH_TY != null"> 
+				AND t1.FISH_TY = #{FISH_TY} 
+		</if>
+		<if test="CSLT_ID != '' and CSLT_ID != null"> 
+				AND t1.CSLT_ID = #{CSLT_ID} 
+		</if>
+	 	<if test="CUST_NM != '' and CUST_NM != null"> 
+				AND t2.CUST_NM LIKE ('%' || #{CUST_NM} || '%') 
+		</if>
+		ORDER BY CSLT_NM , t2.CUST_NM
+	</select>
+	
+	<!--  아웃바운드 진행 현황 처리결과 변경 -->
+	<update id="updateEotTyChange"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateEotTyChange 아웃바운드 진행 현황 처리결과 변경   */
+		UPDATE PLT_PHN_CAMP_CUS_DST SET
+			FISH_TY = #{FISH_TY},
+			CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS'),
+		    CHNG_MAN  = #{CHNG_MAN}
+		WHERE CAM_ID  = #{CAM_ID}
+		  AND CUST_NO = #{CUST_NO}
+		]]>
+	</update>
+	
+</mapper>

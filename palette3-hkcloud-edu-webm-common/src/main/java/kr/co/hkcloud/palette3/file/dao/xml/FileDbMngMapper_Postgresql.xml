@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.common.file.dao.FileDbMngMapper">
+	
+	<!-- 첨부파일을 조회 -->
+	<select id="selectFileList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT FILE_GROUP_KEY /* selectFileList */
+			, FILE_KEY
+			, STRG_FILE_NM
+			, ACTL_FILE_NM
+			, FILE_SZ
+			, FILE_EXTN
+			, COALESCE(DWNLD_CNT, 0) AS DWNLD_CNT
+			, CUSTCO_ID
+			, FILE_PATH
+			, TASK_TYPE_CD
+			, PATH_TYPE_CD
+			, TRGT_TYPE_CD
+			, MIME_TYPE_CD
+		FROM PLT_FILE
+		WHERE FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+	</select>
+	
+	<select id="selectList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT FILE_GROUP_KEY /* selectList */
+			 , FILE_KEY
+			 , STRG_FILE_NM
+			 , ACTL_FILE_NM
+			 , FILE_SZ
+			 , FILE_EXTN
+			 , COALESCE(DWNLD_CNT, 0) AS DWNLD_CNT
+			 , CUSTCO_ID
+			 , FILE_PATH
+			 , TASK_TYPE_CD
+			 , PATH_TYPE_CD
+			 , TRGT_TYPE_CD
+			 , MIME_TYPE_CD
+		FROM PLT_FILE
+		WHERE FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+	</select>
+	
+	<delete id="deleteFileGroup" parameterType="java.util.HashMap">
+		DELETE FROM PLT_FILE
+		WHERE
+			CUSTCO_ID = #{CUSTCO_ID}::BIGINT 
+			AND FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+	</delete>
+
+</mapper>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.sms.dao.PhoneAtalkMessageManageMapper">
+
+    <!-- SMS 발송 이력 리스트 조회 -->
+	<select id="atalkSendHistory"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+			SELECT  (ROW_NUMBER() OVER()) 									AS ROWNUM
+	           	   ,A.*
+	          FROM  (
+				SELECT  SEND_HIS.MTS_SNDNG_HSTRY_ID							AS MTS_SNDNG_HSTRY_ID
+					   ,SEND_HIS.SNDNG_SE_CD								AS SEND_TP
+					   ,MTS_CD.CD_NM										AS SEND_TP_NM
+					   ,SEND_HIS.DSPTCH_PHN_NO								AS SEND_NO
+					   ,SENDER.USER_NM 										AS USER_NM
+					   ,SENDER.LGN_ID 										AS USER_ID
+					   ,TO_CHAR(TO_TIMESTAMP(SEND_HIS.SNDNG_DT
+					   					, 'YYYYMMDDHH24MISS')
+					   		, 'YYYY-MM-DD HH24:MI:SS')						AS SNDNG_DT
+					   ,SEND_HIS.RCPTN_PHN_NO 								AS RECEIVE_NO
+					   ,SEND_HIS.SNDNG_CN									AS SNDNG_CN
+					   ,SEND_HIS.RSLT_CD									AS RSLT_CD
+					   ,CASE WHEN SEND_HIS.RSLT_CD = '0000' AND RSLT_MSG LIKE ('%' || 'Regist' || '%')
+					   		 THEN '결과대기'
+					   		 WHEN SEND_HIS.RSLT_CD = '1000' AND RSLT_MSG LIKE ('%' || 'Select' || '%')
+					   		 THEN '발송완료'
+					   		 ELSE '실패'
+					   		  END											AS RSLT_CD_NM
+					   ,SEND_HIS.RSLT_MSG									AS RSLT_MSG
+				  FROM  PLT_MTS_SNDNG_HSTRY SEND_HIS
+				  JOIN  PLT_COMM_CD MTS_CD
+					ON  MTS_CD.CUSTCO_ID = #{CUSTCO_ID}::INT
+				   AND  SEND_HIS.SNDNG_SE_CD = MTS_CD.CD_ID 
+				   AND  MTS_CD .GROUP_CD_ID = 'MTS_TP'
+				  JOIN  PLT_USER SENDER 
+					ON  SENDER.USER_ID = SEND_HIS.RGTR_ID
+				 WHERE  SEND_HIS.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+				   AND  SEND_HIS.SNDNG_SE_CD = 'ATALK' 
+				 <if test="START_DATE != ''">
+					<![CDATA[
+						AND  SEND_HIS.SNDNG_DT >= #{START_DATE}
+					]]>
+				 </if>
+				 <if test="END_DATE != ''">
+					<![CDATA[
+						AND  SEND_HIS.SNDNG_DT <= #{END_DATE}
+					]]>
+				 </if>
+				 <if test="SNDNG_ID != ''">
+					<![CDATA[
+						AND  SENDER.LGN_ID LIKE CONCAT(CONCAT('%',#{SNDNG_ID}),'%')
+					]]>
+				 </if>
+				 <if test="RECEIVE_NO != ''">
+					<![CDATA[
+						AND  REGEXP_REPLACE(SEND_HIS.RCPTN_PHN_NO, '-', '') LIKE ('%'|| #{RECEIVE_NO} ||'%')
+					]]>
+				 </if>
+				 <if test="SNDNG_CN != ''">
+					<![CDATA[
+						AND  LOWER(SEND_HIS.SNDNG_CN) LIKE LOWER(('%'|| #{SNDNG_CN} ||'%'))
+					]]>
+				 </if>
+		ORDER BY SEND_HIS.REG_DT DESC
+				) A
+
+	</select>
+    
+    <!-- 알림톡 대량발송 / 알림톡 템플릿 목록 조회 -->
+	<select id="atalkTmpls" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		/* 알림톡 대량발송 - PhoneAtalkMessageManageMapper_Postgresql.atalkTmpls - 알림톡 템플릿 목록 조회  */
+		SELECT  TMPL.ATALK_ID			AS ATALK_ID
+			   ,TMPL.TMPL_STTS			AS TMPL_STTS
+			   ,PCC.DSPTCH_PRF_NM		AS DSPTCH_PRF_NM
+			   ,TMPL.DSPTCH_PRF_KEY		AS DSPTCH_PRF_KEY
+			   ,STTS.CD_NM				AS TMPL_STTS_NM 
+			   ,TMPL.TMPL_IGI_STTS 		AS TMPL_IGI_STTS
+			   ,IGI.CD_NM				AS TMPL_IGI_STTS_NM
+			   ,TMPL.TMPL_NM 			AS TMPL_NM
+			   ,TMPL.TMPL_CN			AS TMPL_CN
+			   ,USR.USER_NM				AS USER_NM
+		  FROM  PLT_ATALK TMPL
+		  JOIN  PLT_COMM_CD IGI
+			ON  IGI.CUSTCO_ID = #{CUSTCO_ID}::INT AND TMPL.TMPL_IGI_STTS = IGI.CD_ID
+		   AND  IGI.GROUP_CD_ID = 'MTS_ISPT_STAT_CD'
+		   AND  IGI.USE_YN = 'Y'
+		  JOIN  PLT_COMM_CD STTS
+			ON  STTS.CUSTCO_ID = #{CUSTCO_ID}::INT AND TMPL.TMPL_STTS = STTS.CD_ID
+		   AND  STTS.GROUP_CD_ID = 'MTS_TMPL_STAT_CD'
+		   AND  STTS.USE_YN = 'Y'
+		  JOIN  PLT_USER USR
+			ON  TMPL.RGTR_ID = USR.USER_ID
+		  JOIN	PLT_CUSTCO_CHN PCC
+		  	ON	PCC.DSPTCH_PRF_KEY = TMPL.DSPTCH_PRF_KEY
+		 WHERE  TMPL.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		   AND  TMPL.TMPL_IGI_STTS = 'APR'
+		   AND  TMPL.TMPL_STTS IN ('R', 'A')
+		   -- AND  TMPL.TMPL_MSG_TYPE = 'BA'
+		   -- AND  TMPL.TMPL_EPSZ_TYPE = 'NONE'
+		   --AND  TMPL.TMPL_CN NOT LIKE CONCAT('%', '#{' ,'%')
+		   --AND  TMPL.ADD_INFO NOT LIKE CONCAT('%', '#{' ,'%')
+		   --AND  TMPL.EPSZ_INDCT_MPIT_INFO NOT LIKE CONCAT('%', '#{' ,'%')
+		   --AND  TMPL.HEAD NOT LIKE CONCAT('%', '#{' ,'%')
+		   --AND  TMPL.ARTCL_EPSZ NOT LIKE CONCAT('%', '#{' ,'%')
+		   --AND  TMPL.ARTCL_LIST NOT LIKE CONCAT('%', '#{' ,'%')
+		   AND  TMPL.USE_YN = 'Y'
+		<if test="TMPL_NAME != ''">
+		   AND  TMPL.TMPL_NM LIKE CONCAT('%', #{TMPL_NAME}, '%')
+		</if>
+	  ORDER BY  ATALK_ID DESC
+	</select>
+	
+</mapper>

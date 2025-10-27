@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.core.chat.msg.dao.TalkExpiredSessionMapper">
+<!-- <mapper namespace="com.hcteletalk.teletalk.core.msg.dao.TalkExpiredSessionMapper"> -->
+
+<!-- 고객접수, 대기 건을 세션 만료를 위해 변경한다 -->
+<select id="UPDATE_EXPIRED_SESSION_READY"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+UPDATE PLT_CHT_RDY			/* UPDATE_EXPIRED_SESSION_READY - 고객접수, 대기 건을 세션 만료를 위해 변경한다 */
+   SET ALTMNT_STTS_CD = (CASE WHEN ALTMNT_STTS_CD = 'QSTN_CHCING' THEN 'DMND_GIVEUP'
+                             WHEN ALTMNT_STTS_CD = 'ALTMNT_WAIT' THEN 'ALTMNT_GIVEUP'
+                             WHEN ALTMNT_STTS_CD = 'CHATBOT' THEN 'DMND_NOCHC'
+                             WHEN ALTMNT_STTS_CD = 'WAIT' THEN 'WAIT_GIVEUP'
+                             WHEN ALTMNT_STTS_CD = 'TRAN_WAIT' THEN 'TRAN_WAIT_GIVEUP'
+                             WHEN ALTMNT_STTS_CD = 'CLBK_WAIT' THEN 'AFTPRCS'
+                        END)
+     , MDFR_ID = (CASE WHEN ALTMNT_STTS_CD = 'DMND_GIVEUP' THEN '2'::INTEGER
+		               WHEN ALTMNT_STTS_CD = 'ALTMNT_GIVEUP' THEN '2'::INTEGER
+		               WHEN ALTMNT_STTS_CD = 'DMND_NOCHC' THEN '2'::INTEGER
+		               WHEN ALTMNT_STTS_CD = 'WAIT_GIVEUP' THEN #{USER_ID}::INTEGER
+		               WHEN ALTMNT_STTS_CD = 'TRAN_WAIT_GIVEUP' THEN #{USER_ID}::INTEGER
+		               WHEN ALTMNT_STTS_CD = 'CLBK_WAIT' THEN #{USER_ID}::INTEGER
+		          END)
+     , MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+ WHERE ALTMNT_STTS_CD IN ('QSTN_CHCING', 'ALTMNT_WAIT', 'WAIT', 'TRAN_WAIT', 'CLBK_WAIT', 'CHATBOT')
+   AND CUST_ID = (SELECT CUST_ID
+   					FROM PLT_CHT_CUST
+   					WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+   					ORDER BY CUST_ID
+					LIMIT 1)::INTEGER
+   AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+]]>
+</select>
+
+<!-- 고객 포기 건을 조회한다 -->
+<select id="SELECT_EXPIRED_SESSION_READY"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT			/* SELECT_EXPIRED_SESSION_READY - 고객 포기 건을 조회한다 */ 
+	PCR.CHT_RDY_ID
+	 , PCR.CUST_ID
+	 , (SELECT CHT_USER_KEY
+	 	FROM PLT_CHT_CUST
+	 	WHERE CUST_ID = PCR.CUST_ID
+	 		AND SNDR_KEY = PCR.SNDR_KEY) AS CHT_USER_KEY
+     , PCR.CUSTCO_ID
+     , PCR.SNDR_KEY
+     , PCR.ALTMNT_STTS_CD
+     , PCR.CUSL_ID
+     , PCR.CUSL_ID AS USER_ID
+  FROM PLT_CHT_RDY PCR
+ WHERE PCR.ALTMNT_STTS_CD IN ('DMND_GIVEUP', 'ALTMNT_GIVEUP', 'WAIT_GIVEUP', 'TRAN_WAIT_GIVEUP', 'DMND_NOCHC', 'AFTPRCS')
+   AND CUST_ID = (SELECT CUST_ID
+   					FROM PLT_CHT_CUST
+   					WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+   					ORDER BY CUST_ID
+					LIMIT 1)::INTEGER
+   AND PCR.SNDR_KEY = #{SNDR_KEY}::INTEGER
+]]>
+</select>
+
+<!-- 고객포기건 대기중에서 상담중으로 데이터 이관 --> 
+<insert id="INSERT_TALK_USER_READY_TO_CONTACT"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_CHT_CUTT
+     (
+        CHT_CUTT_ID
+        , CUSTCO_ID
+        , CUST_ID
+        , SNDR_KEY
+        , CUSL_ID
+        , CUTT_BGNG_DT
+        , CUTT_END_DT
+        , CHN_CLSF_CD
+        , PRCS_RSLT_CD
+        , CUTT_STTS_CD
+        , ALTMNT_RDY_REG_DT
+        , CUTT_RDY_REG_DT
+        , QSTN_CHC_RDY_DT
+        , CHBT_YN
+        , CHBT_STTS_CD
+        , QSTN_TYPE_ID
+        , CLBK_YN
+        , CLBK_BGNG_DT
+        , CHBT_SRVC_NM
+        , CHBT_SRVC_CD
+        , CHBT_QSTN_TYPE_NM
+        , CHBT_QSTN_TYPE_CD
+        , CHBT_DMND_ID
+        , DSGN_CUSL_ID
+        , RGTR_ID
+        , REG_DT
+        , MDFR_ID
+        , MDFCN_DT
+     )
+SELECT #{CHT_CUTT_ID}::INTEGER
+        , CUSTCO_ID
+        , CUST_ID
+        , SNDR_KEY
+        , CUSL_ID
+        , CUTT_RDY_REG_DT
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , CHN_TYPE_CD
+        , ALTMNT_STTS_CD
+        , ALTMNT_STTS_CD
+        , ALTMNT_RDY_REG_DT
+        , CUTT_RDY_REG_DT
+        , QSTN_CHC_RDY_DT
+        , CHBT_YN
+        , CHBT_STTS_CD
+        , QSTN_TYPE_ID
+        , CLBK_YN
+        , CLBK_BGNG_DT
+        , CHBT_SRVC_NM
+        , CHBT_SRVC_CD
+        , CHBT_QSTN_TYPE_NM
+        , CHBT_QSTN_TYPE_CD
+        , CHBT_DMND_ID
+        , DSGN_CUSL_ID
+	    , CASE WHEN ALTMNT_STTS_CD = 'DMND_GIVEUP' THEN '2'::INTEGER
+	           WHEN ALTMNT_STTS_CD = 'ALTMNT_GIVEUP' THEN '2'::INTEGER
+	           WHEN ALTMNT_STTS_CD = 'DMND_NOCHC' THEN '2'::INTEGER
+	           <choose>
+				   <when test="USER_ID != '' and USER_ID != null and USER_ID != undefined">
+			           WHEN ALTMNT_STTS_CD = 'WAIT_GIVEUP' THEN #{USER_ID}::INTEGER
+			           WHEN ALTMNT_STTS_CD = 'TRAN_WAIT_GIVEUP' THEN #{USER_ID}::INTEGER 
+				   </when>
+				   <otherwise>
+			           WHEN ALTMNT_STTS_CD = 'WAIT_GIVEUP' THEN '2'::INTEGER
+			           WHEN ALTMNT_STTS_CD = 'TRAN_WAIT_GIVEUP' THEN '2'::INTEGER 
+				   </otherwise>
+			   </choose>
+	           END
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	    , CASE WHEN ALTMNT_STTS_CD = 'DMND_GIVEUP' THEN '2'::INTEGER
+	           WHEN ALTMNT_STTS_CD = 'ALTMNT_GIVEUP' THEN '2'::INTEGER
+	           WHEN ALTMNT_STTS_CD = 'DMND_NOCHC' THEN '2'::INTEGER
+	           <choose>
+				   <when test="USER_ID != '' and USER_ID != null and USER_ID != undefined">
+			           WHEN ALTMNT_STTS_CD = 'WAIT_GIVEUP' THEN #{USER_ID}::INTEGER
+			           WHEN ALTMNT_STTS_CD = 'TRAN_WAIT_GIVEUP' THEN #{USER_ID}::INTEGER 
+				   </when>
+				   <otherwise>
+			           WHEN ALTMNT_STTS_CD = 'WAIT_GIVEUP' THEN '2'::INTEGER
+			           WHEN ALTMNT_STTS_CD = 'TRAN_WAIT_GIVEUP' THEN '2'::INTEGER 
+				   </otherwise>
+			   </choose>
+	           END
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+  FROM PLT_CHT_RDY
+ WHERE CHT_RDY_ID = #{CHT_RDY_ID}::INTEGER
+   AND SNDR_KEY = #{SNDR_KEY}::INTEGER
+   AND ALTMNT_STTS_CD IN ('DMND_GIVEUP', 'ALTMNT_GIVEUP', 'WAIT_GIVEUP', 'TRAN_WAIT_GIVEUP', 'DMND_NOCHC')
+   AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+</insert>
+
+<!-- 고객포기건 대기중에서 상담중으로 데이터 이관 --> 
+<update id="UPDATE_TALK_USER_READY_TO_CONTACT"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_CUTT	/*UPDATE_TALK_USER_READY_TO_CONTACT - 고객포기건 UPDATE*/
+	SET CUTT_STTS_CD = (CASE WHEN CUTT_STTS_CD = 'QSTN_CHCING' THEN 'DMND_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'ALTMNT_WAIT' THEN 'ALTMNT_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'WAIT' THEN 'WAIT_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'TRAN_WAIT' THEN 'TRAN_WAIT_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'CHATBOT' THEN 'DMND_NOCHC'
+                             WHEN CUTT_STTS_CD = 'CLBK_WAIT' THEN 'AFTPRCS'
+                        END)
+		, PRCS_RSLT_CD = (CASE WHEN CUTT_STTS_CD = 'QSTN_CHCING' THEN 'DMND_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'ALTMNT_WAIT' THEN 'ALTMNT_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'WAIT' THEN 'WAIT_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'TRAN_WAIT' THEN 'TRAN_WAIT_GIVEUP'
+                             WHEN CUTT_STTS_CD = 'CHATBOT' THEN 'DMND_NOCHC'
+                             WHEN CUTT_STTS_CD = 'CLBK_WAIT' THEN 'AFTPRCS'
+                        END)
+		, CUTT_END_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+		AND CUTT_STTS_CD IN ('QSTN_CHCING', 'ALTMNT_WAIT', 'WAIT', 'TRAN_WAIT', 'CLBK_WAIT', 'CHATBOT')
+		AND CUST_ID = (SELECT CUST_ID
+	   					FROM PLT_CHT_CUST
+	   					WHERE CHT_USER_KEY = #{CHT_USER_KEY}
+	   					ORDER BY CUST_ID
+   						LIMIT 1)::INTEGER
+</update>
+
+</mapper>

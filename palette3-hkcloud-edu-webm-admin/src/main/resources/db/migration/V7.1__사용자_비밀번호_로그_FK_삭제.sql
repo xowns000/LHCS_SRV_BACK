@@ -1,0 +1,1 @@
+ALTER TABLE plt_user_pswd_log DROP CONSTRAINT r_user_pswd_log_2__user_log_4c;

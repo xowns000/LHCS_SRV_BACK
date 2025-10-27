@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.omnione.dao.OmniOneCertMapper">
+
+	<select id="omniGetInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* 고객사별 OMNIONE 설정 정보 조회   (kr.co.hkcloud.palette3.omnione.dao.OmniOneCertMapper.omniGetInfo)*/
+			CUSTCO_CD
+			, SRVC_KEY
+		FROM CUSTCO.PLT_CERT_CUSTCO_SRVC_KEY PCCS
+		INNER JOIN CUSTCO.PLT_CERT_SRVC_GDS_DTL PCSGD ON PCSGD.SRVC_GDS_DTL_ID = PCCS.SRVC_GDS_DTL_ID
+		WHERE PCCS.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INT
+		AND PCSGD.SRVC_GDS_ID = #{SRVC_GDS_ID}::INT
+		AND PCSGD.SRVC_GDS_DTL_CD = 'OMNIONE'
+	</select>
+	
+	<insert id="omniOneRequestReg" parameterType="java.util.HashMap">
+		INSERT /*OmniOne 간편인증 요청 이력 저장 (kr.co.hkcloud.palette3.omnione.dao.OmniOneCertMapper.omniOneRequestReg)*/
+		INTO PLT_OMNI_DMND (
+			CUSL_ID
+			, CUST_ID
+			, CUST_NM
+			, PHN_NO
+			, BRDT
+			, CERT_PVSN_CO_CD
+			, AUTHRT_TOKEN
+			, CERT_DMND_DT
+		)
+		VALUES( 
+			#{USER_ID}::INT
+			, #{CUST_ID}::INT
+			, #{CUST_NM}
+			, #{PHN_NO}
+			, #{YYYYMMDD}
+			, #{PROV_OG}
+			, #{authToken}
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+   <insert id="omniOneResultReg" parameterType="java.util.HashMap">
+	    INSERT  /*OmniOne 간편인증 결과 이력 저장 (kr.co.hkcloud.palette3.omnione.dao.OmniOneCertMapper.omniOneResultReg)*/
+	    INTO PLT_OMNI_RSLT(
+			CUSL_ID
+			, CUST_ID
+			, CUST_NM
+			, PHN_NO
+			, BRDT
+			, CERT_PVSN_CO_CD
+			, AUTHRT_TOKEN
+			, RSLT_CD
+			, RSLT_ORGNL_TOKEN
+			, RSLT_DECPT_TOKEN
+			, REG_DT
+		)
+		VALUES( 
+			#{USER_ID}::INT
+			, #{CUST_ID}::INT
+			, #{name}
+			, #{phone}
+			, #{birth}
+			, #{PROV_OG}
+			, #{authToken}
+			, #{RSLT_CD}
+			, #{RESULT}
+			, #{DECRYPT_RESULT}
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+</mapper>

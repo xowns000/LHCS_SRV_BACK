@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemBatchManageMapper">
+
+<!-- ######################################################################### -->
+<!-- PLT_BAT(배치관리) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_BAT"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_BAT
+       ( BATCH_KEY                     /* --배치키 */ 
+       , BATCH_NM                      /* --배치명 */ 
+       , BATCH_EXECUT_CLASS            /* --배치실행클래스 */ 
+       , BATCH_EXECUT_CYCLE            /* --배치실행주기 */ 
+       , BATCH_STTUS                   /* --배치상태코드 */ 
+       , BATCH_EXECUT_LC               /* --배치실행위치 */ 
+       , BATCH_PARAMTR_SMPLE           /* --배치파라미터샘플 */ 
+       , USE_YN                        /* --사용여부 */ 
+        <if test="LAST_EXECUT_DT				!='' and LAST_EXECUT_DT 			!= null"> , LAST_EXECUT_DT </if> /* --마지막실행일시 */ 
+       , PROC_ID                       /* --처리자 */ 
+       , IT_PROCESSING                 /* --전산처리일시 */ 
+) VALUES (
+		 #{BATCH_KEY}
+       , #{BATCH_NM}
+       , #{BATCH_EXECUT_CLASS}
+       , #{BATCH_EXECUT_CYCLE}
+       , #{BATCH_STTUS}
+       , #{BATCH_EXECUT_LC}
+       , #{BATCH_PARAMTR_SMPLE}
+       , #{USE_YN}
+       <if test="LAST_EXECUT_DT				!='' and LAST_EXECUT_DT 			!= null"> , , #{LAST_EXECUT_DT}</if> 
+       , #{PROC_ID}
+       , NOW()
+       )
+</insert>
+	
+<!-- PLT_BAT(배치관리) 테이블 수정 -->
+<update id="UPDATE_PLT_BAT"  parameterType= "java.util.HashMap">
+UPDATE PLT_BAT
+   SET IT_PROCESSING   = NOW()
+  <if test="BATCH_NM			!='' and BATCH_NM !=null">				,BATCH_NM			= #{BATCH_NM} </if>   /* --배치명 */ 
+  <if test="BATCH_EXECUT_CLASS	!='' and BATCH_EXECUT_CLASS !=null">	,BATCH_EXECUT_CLASS	= #{BATCH_EXECUT_CLASS} </if>   /* --배치실행클래스 */ 
+  <if test="BATCH_EXECUT_CYCLE	!='' and BATCH_EXECUT_CYCLE !=null">	,BATCH_EXECUT_CYCLE	= #{BATCH_EXECUT_CYCLE} </if>   /* --배치실행주기 */ 
+  <if test="BATCH_STTUS			!='' and BATCH_STTUS !=null">			,BATCH_STTUS		= #{BATCH_STTUS} </if>   /* --배치상태코드 */ 
+  <if test="BATCH_EXECUT_LC		!='' and BATCH_EXECUT_LC !=null">		,BATCH_EXECUT_LC	= #{BATCH_EXECUT_LC} </if>   /* --배치실행위치 */ 
+  <if test="BATCH_PARAMTR_SMPLE	!='' and BATCH_PARAMTR_SMPLE !=null">	,BATCH_PARAMTR_SMPLE= #{BATCH_PARAMTR_SMPLE} </if>   /* --배치파라미터샘플 */ 
+  <if test="USE_YN				!='' and USE_YN !=null">				,USE_YN				= #{USE_YN} </if>   /* --사용여부 */ 
+  <if test="LAST_EXECUT_DT		!='' and LAST_EXECUT_DT !=null">		,LAST_EXECUT_DT		= #{LAST_EXECUT_DT} </if>   /* --마지막실행일시 */ 
+  <if test="PROC_ID				!='' and PROC_ID !=null">				,PROC_ID			= #{PROC_ID} </if>   /* --처리자 */ 
+ WHERE 1 = 1
+   AND BATCH_KEY       = #{BATCH_KEY}
+</update>
+
+<!-- PLT_BAT(배치관리) 데이터 삭제 -->
+<delete id="DELETE_PLT_BAT"  parameterType= "java.util.HashMap">
+DELETE FROM PLT_BAT
+ WHERE 1 = 1
+   AND BATCH_KEY       = #{BATCH_KEY}      
+</delete>
+
+<!-- PLT_BAT(배치관리) 테이블 데이터 조회 -->
+<select id="SELECT_PLT_BAT"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT BATCH_KEY                     /* --배치키 */ 
+     , BATCH_NM                      /* --배치명 */ 
+     , BATCH_EXECUT_CLASS            /* --배치실행클래스 */ 
+     , BATCH_EXECUT_CYCLE            /* --배치실행주기 */ 
+     , BATCH_STTUS                   /* --배치상태코드 */ 
+     , BATCH_EXECUT_LC               /* --배치실행위치 */ 
+     , BATCH_PARAMTR_SMPLE           /* --배치파라미터샘플 */ 
+     , USE_YN                        /* --사용여부 */ 
+     , TO_CHAR(LAST_EXECUT_DT, 'YYYY/MM/DD HH24:MI:SS') AS LAST_EXECUT_DT /* --마지막실행일시 */ 
+     , PROC_ID                       /* --처리자 */ 
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS')  AS IT_PROCESSING  /* --전산처리일시 */ 
+  FROM PLT_BAT
+ WHERE 1 = 1
+  <if test="BATCH_KEY			!='' and BATCH_KEY !=null">				AND BATCH_KEY			= #{BATCH_KEY} </if>   /* --배치명 */ 
+  <if test="BATCH_NM			!='' and BATCH_NM !=null">				AND BATCH_NM			= #{BATCH_NM} </if>   /* --배치명 */ 
+  <if test="BATCH_EXECUT_CLASS	!='' and BATCH_EXECUT_CLASS !=null">	AND BATCH_EXECUT_CLASS	= #{BATCH_EXECUT_CLASS} </if>   /* --배치실행클래스 */ 
+  <if test="BATCH_EXECUT_CYCLE	!='' and BATCH_EXECUT_CYCLE !=null">	AND BATCH_EXECUT_CYCLE	= #{BATCH_EXECUT_CYCLE} </if>   /* --배치실행주기 */ 
+  <if test="BATCH_STTUS			!='' and BATCH_STTUS !=null">			AND BATCH_STTUS			= #{BATCH_STTUS} </if>   /* --배치상태코드 */ 
+  <if test="BATCH_EXECUT_LC		!='' and BATCH_EXECUT_LC !=null">		AND BATCH_EXECUT_LC		= #{BATCH_EXECUT_LC} </if>   /* --배치실행위치 */ 
+  <if test="BATCH_PARAMTR_SMPLE	!='' and BATCH_PARAMTR_SMPLE !=null">	AND BATCH_PARAMTR_SMPLE	= #{BATCH_PARAMTR_SMPLE} </if>   /* --배치파라미터샘플 */ 
+  <if test="USE_YN				!='' and USE_YN !=null">				AND USE_YN				= #{USE_YN} </if>   /* --사용여부 */ 
+  <if test="LAST_EXECUT_DT		!='' and LAST_EXECUT_DT !=null">		AND LAST_EXECUT_DT		= #{LAST_EXECUT_DT} </if>   /* --마지막실행일시 */ 
+  <if test="PROC_ID				!='' and PROC_ID !=null">				AND PROC_ID				= #{PROC_ID} </if>   /* --처리자 */ 
+</select>
+	
+<!-- PLT_BAT(배치관리) 테이블 데이터 페이징 조회 -->
+<select id="SELECT_PAGE_PLT_BAT"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_TBL.*
+     FROM ( 
+              SELECT
+              		ROW_NUMBER() OVER(ORDER BY BATCH_KEY) AS ROW_NUMBER 
+                   , BATCH_KEY                     /* --배치키 */ 
+                   , BATCH_NM                      /* --배치명 */ 
+                   , BATCH_EXECUT_CLASS            /* --배치실행클래스 */ 
+                   , BATCH_EXECUT_CYCLE            /* --배치실행주기 */ 
+                   , BATCH_STTUS                   /* --배치상태코드 */ 
+                   , BATCH_EXECUT_LC               /* --배치실행위치 */ 
+                   , BATCH_PARAMTR_SMPLE           /* --배치파라미터샘플 */ 
+                   , USE_YN                        /* --사용여부 */ 
+                   , TO_CHAR(LAST_EXECUT_DT, 'YYYY/MM/DD HH24:MI:SS') AS LAST_EXECUT_DT  /* --마지막실행일시 */ 
+                   , PROC_ID                       /* --처리자 */ 
+                   , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS')  AS IT_PROCESSING   /* --전산처리일시 */ 
+                FROM PLT_BAT
+               WHERE 1 = 1
+				<if test="BATCH_KEY			!='' and BATCH_KEY !=null">				AND BATCH_KEY			= #{BATCH_KEY, jdbcType=VARCHAR} </if>   /* --배치명 */ 
+				<if test="BATCH_NM			!='' and BATCH_NM !=null">				AND BATCH_NM			= #{BATCH_NM, jdbcType=VARCHAR} </if>   /* --배치명 */ 
+				<if test="BATCH_EXECUT_CLASS	!='' and BATCH_EXECUT_CLASS !=null">	AND BATCH_EXECUT_CLASS	= #{BATCH_EXECUT_CLASS} </if>   /* --배치실행클래스 */ 
+				<if test="BATCH_EXECUT_CYCLE	!='' and BATCH_EXECUT_CYCLE !=null">	AND BATCH_EXECUT_CYCLE	= #{BATCH_EXECUT_CYCLE} </if>   /* --배치실행주기 */ 
+				<if test="BATCH_STTUS			!='' and BATCH_STTUS !=null">			AND BATCH_STTUS			= #{BATCH_STTUS, jdbcType=VARCHAR} </if>   /* --배치상태코드 */ 
+				<if test="BATCH_EXECUT_LC		!='' and BATCH_EXECUT_LC !=null">		AND BATCH_EXECUT_LC		= #{BATCH_EXECUT_LC} </if>   /* --배치실행위치 */ 
+				<if test="BATCH_PARAMTR_SMPLE	!='' and BATCH_PARAMTR_SMPLE !=null">	AND BATCH_PARAMTR_SMPLE	= #{BATCH_PARAMTR_SMPLE} </if>   /* --배치파라미터샘플 */ 
+				<if test="USE_YN				!='' and USE_YN !=null">				AND USE_YN				= #{USE_YN, jdbcType=VARCHAR} </if>   /* --사용여부 */ 
+				<if test="LAST_EXECUT_DT		!='' and LAST_EXECUT_DT !=null">		AND LAST_EXECUT_DT		= #{LAST_EXECUT_DT} </if>   /* --마지막실행일시 */ 
+				<if test="PROC_ID				!='' and PROC_ID !=null">				AND PROC_ID				= #{PROC_ID} </if>   /* --처리자 */
+				ORDER BY BATCH_KEY
+	) ROW_TBL
+	
+</select>
+
+<!-- PLT_BAT(배치관리) 테이블 데이터 조회 -->
+<select id="SELECT_PLT_BAT_MNG"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT 	A.BATCH_KEY                     -- 배치아이디
+	     , A.BATCH_NM                       -- 배치명
+	     , A.BATCH_EXECUT_CLASS            -- 배치실행클래스
+	     , A.BATCH_EXECUT_CYCLE            -- 배치실행주기
+	     , A.BATCH_STTUS                   -- 배치상태
+	     , A.USE_YN                        -- 배치사용여부
+	     , A.BATCH_EXECUT_LC               -- 배치실행위치
+	     , A.BATCH_PARAMTR_SMPLE           -- 배치파라미터샘플    
+	     , TO_CHAR(A.LAST_EXECUT_DT, 'YYYYMMDD HH24:MI:SS')  AS LAST_EXECUT_DT  -- 마지막실행일시
+	     , A.PROC_ID                       -- 처리자
+	     , TO_CHAR(A.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일자
+	     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TWB002' AND CD = A.BATCH_STTUS) AS BATCH_STTUS_NM
+	     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TWB001' AND CD = A.USE_YN) AS USE_YN_NM
+	     , CASE WHEN BB.PROCESS_CODE = '00' OR BB.PROCESS_CODE = '99' 
+	            THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TWB005' AND CD = BB.PROCESS_CODE)
+	            ELSE '-' END AS PROCESS_NM
+FROM PLT_BAT A
+LEFT OUTER JOIN  
+	(
+        SELECT A.BATCH_KEY
+             , A.PROCESS_CODE
+          FROM PLT_BAT_LOG A
+             , (
+                SELECT BATCH_KEY
+                     , MAX(BATCH_ID) AS BATCH_ID 
+                  FROM PLT_BAT_LOG 
+                 GROUP BY BATCH_KEY 
+               ) B
+         WHERE A.BATCH_KEY = B.BATCH_KEY
+           AND A.BATCH_ID = B.BATCH_ID 
+       ) BB
+ ON A.BATCH_KEY = BB.BATCH_KEY
+ WHERE 1=1
+  <if test="BATCH_KEY			!='' and BATCH_KEY !=null">				AND A.BATCH_KEY				= #{BATCH_KEY, jdbcType=VARCHAR} </if>   /* --배치명 */ 
+  <if test="BATCH_NM			!='' and BATCH_NM !=null">				AND A.BATCH_NM				LIKE '%'|| #{BATCH_NM, jdbcType=VARCHAR}|| '%') </if>   /* --배치명 */ 
+  <if test="BATCH_EXECUT_CLASS	!='' and BATCH_EXECUT_CLASS !=null">	AND A.BATCH_EXECUT_CLASS	= #{BATCH_EXECUT_CLASS} </if>   /* --배치실행클래스 */ 
+  <if test="BATCH_EXECUT_CYCLE	!='' and BATCH_EXECUT_CYCLE !=null">	AND A.BATCH_EXECUT_CYCLE	= #{BATCH_EXECUT_CYCLE} </if>   /* --배치실행주기 */ 
+  <if test="BATCH_STTUS			!='' and BATCH_STTUS !=null">			AND A.BATCH_STTUS			= #{BATCH_STTUS, jdbcType=VARCHAR} </if>   /* --배치상태코드 */ 
+  <if test="BATCH_EXECUT_LC		!='' and BATCH_EXECUT_LC !=null">		AND A.BATCH_EXECUT_LC		= #{BATCH_EXECUT_LC} </if>   /* --배치실행위치 */ 
+  <if test="BATCH_PARAMTR_SMPLE	!='' and BATCH_PARAMTR_SMPLE !=null">	AND A.BATCH_PARAMTR_SMPLE	= #{BATCH_PARAMTR_SMPLE} </if>   /* --배치파라미터샘플 */ 
+  <if test="USE_YN				!='' and USE_YN !=null">				AND A.USE_YN				= #{USE_YN, jdbcType=VARCHAR} </if>   /* --사용여부 */ 
+  <if test="LAST_EXECUT_DT		!='' and LAST_EXECUT_DT !=null">		AND A.LAST_EXECUT_DT		= #{LAST_EXECUT_DT} </if>   /* --마지막실행일시 */ 
+  <if test="PROC_ID				!='' and PROC_ID !=null">				AND A.PROC_ID				= #{PROC_ID} </if>   /* --처리자 */ 
+  ORDER BY A.BATCH_NM ASC
+
+</select>
+
+</mapper>

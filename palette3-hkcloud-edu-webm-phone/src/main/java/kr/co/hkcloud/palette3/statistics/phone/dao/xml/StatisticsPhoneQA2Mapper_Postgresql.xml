@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneQA2Mapper">
+
+	<select id="selectRtn" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	  SELECT AA.*
+	  	, ROWNUM AS ROW_NUMBER
+	  FROM(
+		  SELECT A.CUSTCO_ID AS ASP_NEWCUST_KEY
+				, (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_CUST_NM
+				, A.QA_ID
+				, A.QA_EVA_ID
+				, A.QA_NM
+				, A.QA_TY
+				, COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT008' AND CD = A.QA_TY), '-') AS QA_TY_NM
+				, TO_CHAR(TO_DATE(A.QA_ST_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_ST_DTTM
+				, TO_CHAR(TO_DATE(A.QA_EN_DTTM,'YYYYMMDD'), 'YYYY-MM-DD') AS QA_EN_DTTM
+				, COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT013' AND CD = A.QA_TA_ST), '-') AS QA_TA_ST_NM
+				, A.QA_TG_TY
+	      , COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT016' AND CD = A.QA_TG_TY), '-') AS QA_TG_TY_NM
+				, COALESCE(A.QA_TG_CNT, 0) AS QA_TG_CNT
+				, COALESCE((SELECT COUNT(1) FROM PLT_QA_DATA WHERE QA_ID = A.QA_ID AND QA_DATA_QAID IS NOT NULL),0) AS QA_DIV_CNT
+				, COALESCE((SELECT COUNT(1) FROM (SELECT QA_DATA_QAID FROM PLT_QA_DATA WHERE QA_ID = A.QA_ID AND QA_DATA_QAID IS NOT NULL GROUP BY QA_DATA_QAID)),0) AS QA_USER_CNT
+	      ,(SELECT COUNT(1) FROM PLT_QA_DATA AA WHERE AA.QA_ID = A.QA_ID AND EXISTS (SELECT (1) FROM PLT_QA_DATA_RST BB WHERE AA.QA_DATA_ID = BB.QA_DATA_ID AND BB.QA_DATA_RST_CN = B.QA_EVA_CN)) AS CP_CNT
+				, DECODE(A.QA_TG_CNT, NULL, 'N', 'Y') AS QA_TG_YN
+			FROM PLT_QA A
+			LEFT OUTER JOIN PLT_QA_EVA B ON A.CUSTCO_ID = B.CUSTCO_ID AND A.QA_EVA_ID = B.QA_EVA_ID
+			WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			<if test='QA_TY != null and QA_TY != ""'>
+				AND A.QA_TY = #{QA_TY}
+			</if>
+			<if test='QA_NM != null and QA_NM != ""'>
+				AND A.QA_NM LIKE '%' || #{QA_NM} || '%'
+			</if>
+			<if test="START_DATE	!= '' and START_DATE != null">   AND TO_DATE(A.QA_EN_DTTM, 'YYYYMMDD') >= TO_DATE(REPLACE(#{START_DATE},'-','')||'000000', 'YYYYMMDDHH24MISS')  </if>
+			<if test="END_DATE 		!= '' and END_DATE != null">  <![CDATA[ AND TO_DATE(A.QA_ST_DTTM, 'YYYYMMDD') <= TO_DATE(REPLACE(#{END_DATE},'-','') ||'235959', 'YYYYMMDDHH24MISS') ]]>   </if>
+			ORDER BY QA_ID DESC
+	  ) AA
+	</select>
+		
+</mapper>

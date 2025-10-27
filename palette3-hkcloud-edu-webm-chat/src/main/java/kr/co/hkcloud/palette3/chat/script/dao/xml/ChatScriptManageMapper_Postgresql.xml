@@ -1,0 +1,735 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.script.dao.ChatScriptManageMapper">
+
+<resultMap id="mapSelectTwbClob" type="java.util.HashMap" >
+		<result property="SCRIPT_ID" column="SCRIPT_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="UPPER_SCRIPT_ID" column="UPPER_SCRIPT_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="LVL_NO" column="LVL_NO" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="SCRIPT_TIT" column="SCRIPT_TIT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="SCRIPT_RMK_NO" column="SCRIPT_RMK_NO" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="SCRIPT_RMK"       column="SCRIPT_RMK"       jdbcType="VARCHAR"    javaType="java.lang.String"/>
+		<result property="FILE_GROUP_KEY" column="FILE_GROUP_KEY" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="FST_USER_ID" column="FST_USER_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="FST_SCRIPT_DT" column="FST_SCRIPT_DT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="LAST_USER_ID" column="LAST_USER_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="LAST_SCRIPT_DT" column="LAST_SCRIPT_DT" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="ACCESS_IP" column="ACCESS_IP" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="SELECT_NO" column="SELECT_NO" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="ORD_SEQ" column="ORD_SEQ" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="USE_YN" column="USE_YN" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="PROC_ID" column="PROC_ID" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="IT_PROCESSING" column="IT_PROCESSING" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="ADD_SHORT_KEY" column="ADD_SHORT_KEY" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="NEW_SHORT_KEY" column="NEW_SHORT_KEY" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		<result property="SHORT_KEY" column="SHORT_KEY" jdbcType="VARCHAR" javaType="java.lang.String"/>
+		
+</resultMap>
+    
+<!-- ######################################################################### -->
+<!-- 스크립트 데이터 조회 -->
+<!-- 20180405 KMG 수정 : 사용자의 공통 스크립트 사용여부에 따라 조건이 달라진다 -->
+<!-- 공통스크립트 사용 -->
+<select id="selectRtnScriptMngByBaseScript"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClob">
+
+	SELECT 
+       ROW_TBL.*
+     FROM ( 
+			SELECT 
+				RE.* 
+			FROM (
+				SELECT
+					ROW_NUMBER() OVER(ORDER BY SCRIPT_AUTH_TYPE, ORD_SEQ ASC) AS ROW_NUMBER 
+					 ,  SCRIPT_ID
+				     , UPPER_SCRIPT_ID
+				     , LVL_NO
+				     , CASE WHEN SCRIPT_AUTH_TYPE = 'admin' THEN '* ' || SCRIPT_TIT ELSE SCRIPT_TIT END AS SCRIPT_TIT
+				     , SCRIPT_RMK_NO
+				     , SCRIPT_RMK
+				     , FILE_GROUP_KEY
+				     , FST_USER_ID
+				     , TO_CHAR(FST_SCRIPT_DT, 'YYYY/MM/DD') AS FST_SCRIPT_DT
+				     , LAST_USER_ID
+				     , TO_CHAR(LAST_SCRIPT_DT, 'YYYY/MM/DD') AS LAST_SCRIPT_DT
+				     , ACCESS_IP
+				     , SELECT_NO
+				     , ORD_SEQ
+				     , USE_YN
+				     , PROC_ID
+				     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+				     , SCRIPT_AUTH_TYPE
+				  FROM PLT_CHT_SCRT
+				WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND	SCRIPT_AUTH_TYPE = 'admin'
+					OR FST_USER_ID = #{USER_ID}
+					ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC
+			) RE
+			WHERE 1=1
+			<if test="SCRIPT_TIT !='' and SCRIPT_TIT != null">
+			   AND RE.SCRIPT_TIT LIKE '%' || #{SCRIPT_TIT} || '%'
+			</if>
+			<if test="USE_YN !='' and USE_YN != null">
+			   AND RE.USE_YN = #{USE_YN}
+			</if>
+				ORDER BY SCRIPT_AUTH_TYPE, ORD_SEQ ASC
+	 ) ROW_TBL
+		
+	       			     
+
+</select>
+
+<!-- 공통스크립트 미사용 -->
+<select id="selectRtnScriptMngByUserScript"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClob">
+
+SELECT ROW_TBL.*
+     FROM ( 
+			SELECT ROW_NUMBER() OVER(ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC) AS ROW_NUMBER
+			     , SCRIPT_ID
+			     , UPPER_SCRIPT_ID
+			     , LVL_NO
+			     , CASE WHEN SCRIPT_AUTH_TYPE = 'admin' THEN '* ' || SCRIPT_TIT ELSE SCRIPT_TIT END AS SCRIPT_TIT
+			     , SCRIPT_RMK_NO
+			     , SCRIPT_RMK
+			     , FILE_GROUP_KEY
+			     , FST_USER_ID
+			     , TO_CHAR(FST_SCRIPT_DT, 'YYYY/MM/DD') AS FST_SCRIPT_DT
+			     , LAST_USER_ID
+			     , TO_CHAR(LAST_SCRIPT_DT, 'YYYY/MM/DD') AS LAST_SCRIPT_DT
+			     , ACCESS_IP
+			     , SELECT_NO
+			     , ORD_SEQ
+			     , USE_YN
+			     , PROC_ID
+			     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING 
+			  FROM PLT_CHT_SCRT
+			WHERE  CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				AND	SCRIPT_AUTH_TYPE = 'counseler'
+				AND FST_USER_ID = #{USER_ID}
+				<if test="SCRIPT_TIT !='' and SCRIPT_TIT != null">
+				   AND SCRIPT_TIT LIKE '%' || #{SCRIPT_TIT} || '%'
+				</if>
+				<if test="USE_YN !='' and USE_YN != null">
+				   AND USE_YN = #{USE_YN}
+				</if>
+				ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC    
+	) ROW_TBL
+
+<!-- ORDER BY SCRIPT_AUTH_TYPE, ORD_SEQ, SCRIPT_TIT ASC --> 
+
+</select>
+
+<!-- 공통스크립트 조회 -->
+<select id="selectRtnScriptMngByAdmin"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClob">
+
+SELECT ROW_TBL.*
+     FROM ( 
+			SELECT 
+				<choose>
+					<when test="SORT_NAME != '' and SORT_NAME != null">
+						<if test="SORT_NAME =='SCRIPT_TIT'">
+							<if test="SORT_TYPE == 'DESC'">
+							ROW_NUMBER() OVER(SCRIPT_TIT DESC) AS ROW_NUMBER
+							</if>
+							<if test="SORT_TYPE == 'ASC'">
+							ROW_NUMBER() OVER(SCRIPT_TIT ASC) AS ROW_NUMBER
+							</if>
+						</if>
+						<if test="SORT_NAME =='LAST_SCRIPT_DT'">
+							<if test="SORT_TYPE == 'DESC'">
+							ROW_NUMBER() OVER(LAST_SCRIPT_DT DESC) AS ROW_NUMBER
+							</if>
+							<if test="SORT_TYPE == 'ASC'">
+							ROW_NUMBER() OVER(LAST_SCRIPT_DT ASC) AS ROW_NUMBER
+							</if>
+						</if>
+					</when>
+					<otherwise>
+						ROW_NUMBER() OVER(ORD_SEQ, LAST_SCRIPT_DT DESC) AS ROW_NUMBER
+					</otherwise>
+				</choose>   
+			     , SCRIPT_ID
+			     , UPPER_SCRIPT_ID
+			     , LVL_NO
+			     , CASE WHEN SCRIPT_AUTH_TYPE = 'admin' THEN '* ' || SCRIPT_TIT ELSE SCRIPT_TIT END AS SCRIPT_TIT
+			     , SCRIPT_RMK_NO
+			     , SCRIPT_RMK
+			     , FILE_GROUP_KEY
+			     , FST_USER_ID
+			     , TO_CHAR(FST_SCRIPT_DT, 'YYYY/MM/DD') AS FST_SCRIPT_DT
+			     , LAST_USER_ID
+			     , TO_CHAR(LAST_SCRIPT_DT, 'YYYY/MM/DD') AS LAST_SCRIPT_DT
+			     , ACCESS_IP
+			     , SELECT_NO
+			     , ORD_SEQ
+			     , USE_YN
+			     , PROC_ID
+			     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING 
+			  FROM PLT_CHT_SCRT
+			WHERE  CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					AND	SCRIPT_AUTH_TYPE = 'admin'
+				<choose>
+					<when test="SCRIPT_TIT !='' and SCRIPT_TIT != null">
+						AND SCRIPT_TIT LIKE '%' || #{SCRIPT_TIT} || '%'
+					</when>
+					<otherwise>
+						<if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+					   		AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+						</if>
+						<if test="INQRY_TYP_CD_2 !='' and INQRY_TYP_CD_2 != null">
+					   		AND INQRY_TYP_CD_2 = #{INQRY_TYP_CD_2}
+						</if>
+					</otherwise>
+				</choose>
+				<if test="USE_YN !='' and USE_YN != null">
+				   	AND USE_YN = #{USE_YN}
+				</if>				
+				<choose>
+					<when test="SORT_NAME != '' and SORT_NAME != null">
+						<if test="SORT_NAME =='SCRIPT_TIT'">
+							<if test="SORT_TYPE == 'DESC'">
+							ORDER BY SCRIPT_TIT DESC
+							</if>
+							<if test="SORT_TYPE == 'ASC'">
+							ORDER BY SCRIPT_TIT ASC
+							</if>
+						</if>
+						<if test="SORT_NAME =='LAST_SCRIPT_DT'">
+							<if test="SORT_TYPE == 'DESC'">
+							ORDER BY LAST_SCRIPT_DT DESC
+							</if>
+							<if test="SORT_TYPE == 'ASC'">
+							ORDER BY LAST_SCRIPT_DT ASC
+							</if>
+						</if>
+					</when>
+					<otherwise>
+						ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC
+					</otherwise>
+				</choose>     
+	) ROW_TBL
+	
+
+<!-- ORDER BY SCRIPT_AUTH_TYPE, ORD_SEQ, SCRIPT_TIT ASC --> 
+
+</select>
+
+<!-- 컨설턴트 스크립트 조회-->
+<select id="selectRtnScriptMngByCounseler"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClob">
+
+SELECT ROW_TBL.*
+     FROM ( 
+    		SELECT 
+    		<choose>
+				<when test="SORT_NAME != '' and SORT_NAME != null">
+					<if test="SORT_NAME =='SCRIPT_TIT'">
+						<if test="SORT_TYPE == 'DESC'">
+						ROW_NUMBER() OVER(ORDER BY SCRIPT_TIT DESC) AS ROW_NUMBER 
+						</if>
+						<if test="SORT_TYPE == 'ASC'">
+						ROW_NUMBER() OVER(ORDER BY SCRIPT_TIT ASC) AS ROW_NUMBER 
+						</if>
+					</if>
+					<if test="SORT_NAME =='LAST_SCRIPT_DT'">
+						<if test="SORT_TYPE == 'DESC'">
+						ROW_NUMBER() OVER(ORDER BY LAST_SCRIPT_DT DESC) AS ROW_NUMBER 
+						</if>
+						<if test="SORT_TYPE == 'ASC'">
+						ROW_NUMBER() OVER(ORDER BY LAST_SCRIPT_DT ASC) AS ROW_NUMBER 
+						</if>
+					</if>
+				</when>
+				<otherwise>
+					ROW_NUMBER() OVER(ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC) AS ROW_NUMBER 
+				</otherwise>
+			</choose> 
+    			 , SCRIPT_ID
+			     , UPPER_SCRIPT_ID
+			     , LVL_NO
+			     , CASE WHEN SCRIPT_AUTH_TYPE = 'admin' THEN '* ' || SCRIPT_TIT ELSE SCRIPT_TIT END AS SCRIPT_TIT
+			     , SCRIPT_RMK_NO
+			     , SCRIPT_RMK
+			     , FILE_GROUP_KEY
+			     , FST_USER_ID
+			     , TO_CHAR(FST_SCRIPT_DT, 'YYYY/MM/DD') AS FST_SCRIPT_DT
+			     , LAST_USER_ID
+			     , TO_CHAR(LAST_SCRIPT_DT, 'YYYY/MM/DD') AS LAST_SCRIPT_DT
+			     , ACCESS_IP
+			     , SELECT_NO
+			     , ORD_SEQ
+			     , USE_YN
+			     , PROC_ID
+			     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING 
+			  FROM PLT_CHT_SCRT
+			WHERE  CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				AND	SCRIPT_AUTH_TYPE = 'counseler'
+				AND FST_USER_ID = #{USER_ID}
+				<if test="SCRIPT_TIT !='' and SCRIPT_TIT != null">
+				   AND SCRIPT_TIT LIKE '%' ||  #{SCRIPT_TIT} || '%'
+				</if>
+				<if test="USE_YN !='' and USE_YN != null">
+				   AND USE_YN = #{USE_YN}
+				</if>
+			<choose>
+				<when test="SORT_NAME != '' and SORT_NAME != null">
+					<if test="SORT_NAME =='SCRIPT_TIT'">
+						<if test="SORT_TYPE == 'DESC'">
+						ORDER BY SCRIPT_TIT DESC
+						</if>
+						<if test="SORT_TYPE == 'ASC'">
+						ORDER BY SCRIPT_TIT ASC
+						</if>
+					</if>
+					<if test="SORT_NAME =='LAST_SCRIPT_DT'">
+						<if test="SORT_TYPE == 'DESC'">
+						ORDER BY LAST_SCRIPT_DT DESC
+						</if>
+						<if test="SORT_TYPE == 'ASC'">
+						ORDER BY LAST_SCRIPT_DT ASC
+						</if>
+					</if>
+				</when>
+				<otherwise>
+					ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC
+				</otherwise>
+			</choose> 
+	 ) ROW_TBL
+		
+<!-- ORDER BY SCRIPT_AUTH_TYPE, ORD_SEQ, SCRIPT_TIT ASC --> 
+
+</select>
+
+<!-- 스크립트 전체 조회-->
+<select id="selectRtnScripts"  parameterType= "java.util.HashMap" resultMap="mapSelectTwbClob">
+
+	SELECT
+		ROW_TBL.*
+     FROM ( 
+    		SELECT
+    			<choose>
+					<when test="SORT_BY != '' and SORT_BY != null">
+						<if test="SORT_BY =='SCRIPT_TIT'">
+							<if test="DECENDING == 'DESC'">
+							ROW_NUMBER() OVER(ORDER BY SCRIPT_TIT DESC) AS ROW_NUMBER 
+							</if>
+							<if test="DECENDING == 'ASC'">
+							ROW_NUMBER() OVER(ORDER BY SCRIPT_TIT ASC) AS ROW_NUMBER 
+							</if>
+						</if>
+						<if test="SORT_BY =='LAST_SCRIPT_DT'">
+							<if test="DECENDING == 'DESC'">
+							ROW_NUMBER() OVER(ORDER BY LAST_SCRIPT_DT DESC) AS ROW_NUMBER 
+							</if>
+							<if test="DECENDING == 'ASC'">
+							ROW_NUMBER() OVER(ORDER BY LAST_SCRIPT_DT ASC) AS ROW_NUMBER 
+							</if>
+						</if>
+						<if test="SORT_BY =='SCRIPT_AUTH_TYPE'">
+							<if test="DECENDING == 'DESC'">
+							ROW_NUMBER() OVER(ORDER BY SCRIPT_AUTH_TYPE DESC) AS ROW_NUMBER 
+							</if>
+							<if test="DECENDING == 'ASC'">
+							ROW_NUMBER() OVER(ORDER BY SCRIPT_AUTH_TYPE ASC) AS ROW_NUMBER 
+							</if>
+						</if>
+					</when>
+					<otherwise>
+						ROW_NUMBER() OVER(ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC) AS ROW_NUMBER 
+					</otherwise>
+				</choose> 
+    			 ,SCRIPT_ID
+			     , UPPER_SCRIPT_ID
+			     , LVL_NO
+			     , CASE WHEN SCRIPT_AUTH_TYPE = 'admin' THEN '* ' || SCRIPT_TIT ELSE SCRIPT_TIT END AS SCRIPT_TIT
+			     , SCRIPT_RMK_NO
+			     , SCRIPT_RMK
+			     , FILE_GROUP_KEY
+			     , FST_USER_ID
+			     , TO_CHAR(FST_SCRIPT_DT, 'YYYY/MM/DD') AS FST_SCRIPT_DT
+			     , LAST_USER_ID
+			     , TO_CHAR(LAST_SCRIPT_DT, 'YYYY/MM/DD') AS LAST_SCRIPT_DT
+			     , ACCESS_IP
+			     , SELECT_NO
+			     , ORD_SEQ
+			     , USE_YN
+			     , PROC_ID
+			     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING 
+			     , SCRIPT_AUTH_TYPE
+			     , (SELECT SHORT_KEY FROM PLT_CHT_SRT_KEY WHERE SCRIPT_ID = A.SCRIPT_ID AND ACTION_TYPE = 'ADD' AND USER_ID=#{USER_ID}) ADD_SHORT_KEY
+                 , (SELECT SHORT_KEY FROM PLT_CHT_SRT_KEY WHERE SCRIPT_ID = A.SCRIPT_ID AND ACTION_TYPE = 'NEW' AND USER_ID=#{USER_ID}) NEW_SHORT_KEY
+			  FROM PLT_CHT_SCRT A
+			WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} --회사구분
+				
+				<if test="SCRIPT_AUTH_TYPE !='' and SCRIPT_AUTH_TYPE != null">
+				   AND	SCRIPT_AUTH_TYPE = #{SCRIPT_AUTH_TYPE}
+				</if>
+				
+				AND ( CASE 	WHEN SCRIPT_AUTH_TYPE = 'admin'
+					   						THEN 1 
+					   		WHEN SCRIPT_AUTH_TYPE = 'counseler' AND FST_USER_ID = #{USER_ID}
+					   			  			THEN 1	
+					   		ELSE 0 END ) = 1 
+				<choose>
+					<when test="SCRIPT_TIT !='' and SCRIPT_TIT != null">
+						AND SCRIPT_TIT LIKE '%' || #{SCRIPT_TIT} || '%'
+					</when>
+					<otherwise>
+						<if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+					   		AND ( CASE 	WHEN SCRIPT_AUTH_TYPE = 'admin' AND INQRY_TYP_CD IS NOT NULL AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+					   						THEN 1 
+					   			  		WHEN SCRIPT_AUTH_TYPE = 'counseler'
+					   			  			THEN 1
+					   			  		WHEN SCRIPT_AUTH_TYPE = 'admin' AND (INQRY_TYP_CD = '' OR INQRY_TYP_CD IS NULL )
+					   			  			THEN 1	
+					   			  ELSE 0 END ) = 1
+						</if>
+						<if test="INQRY_TYP_CD_2 !='' and INQRY_TYP_CD_2 != null">
+					   		AND ( CASE 	WHEN SCRIPT_AUTH_TYPE = 'admin' AND INQRY_TYP_CD_2 IS NOT NULL AND INQRY_TYP_CD_2 = #{INQRY_TYP_CD_2}
+					   						THEN 1 
+					   			  		WHEN SCRIPT_AUTH_TYPE = 'counseler'
+					   			  			THEN 1
+					   			  		WHEN SCRIPT_AUTH_TYPE = 'admin' AND (INQRY_TYP_CD = '' OR INQRY_TYP_CD IS NULL )
+					   			  			THEN 1	
+					   			  ELSE 0 END ) = 1 
+						</if>
+					</otherwise>
+				</choose>
+					AND USE_YN = 'Y' --사용여부 Y인것만 조회 (ABL생명, 스크립트 승인 기능 커스터마이징)
+			<choose>
+				<when test="SORT_BY != '' and SORT_BY != null">
+					<if test="SORT_BY =='SCRIPT_TIT'">
+						<if test="DECENDING == 'DESC'">
+						ORDER BY SCRIPT_TIT DESC
+						</if>
+						<if test="DECENDING == 'ASC'">
+						ORDER BY SCRIPT_TIT ASC
+						</if>
+					</if>
+					<if test="SORT_BY =='LAST_SCRIPT_DT'">
+						<if test="DECENDING == 'DESC'">
+						ORDER BY LAST_SCRIPT_DT DESC
+						</if>
+						<if test="DECENDING == 'ASC'">
+						ORDER BY LAST_SCRIPT_DT ASC
+						</if>
+					</if>
+					<if test="SORT_BY =='SCRIPT_AUTH_TYPE'">
+						<if test="DECENDING == 'DESC'">
+						ORDER BY SCRIPT_AUTH_TYPE DESC
+						</if>
+						<if test="DECENDING == 'ASC'">
+						ORDER BY SCRIPT_AUTH_TYPE ASC
+						</if>
+					</if>
+				</when>
+				<otherwise>
+					ORDER BY ORD_SEQ, LAST_SCRIPT_DT DESC
+				</otherwise>
+			</choose> 
+	 ) ROW_TBL
+		
+<!-- ORDER BY SCRIPT_AUTH_TYPE, ORD_SEQ, SCRIPT_TIT ASC --> 
+
+</select>
+
+<!-- 스크립트 데이터 조회 -->
+<select id="selectRtnScriptMngList" parameterType= "java.util.HashMap" resultMap="mapSelectTwbClob">
+
+
+SELECT ROW_TBL.*
+     FROM ( 
+     		SELECT 
+     			ROW_NUMBER() OVER(ORDER BY TTS.ORD_SEQ ASC, TTS.LAST_SCRIPT_DT DESC) AS ROW_NUMBER 
+				, TTS.SCRIPT_ID
+			    , TTS.UPPER_SCRIPT_ID
+				, TTS.LVL_NO
+				, TTS.INQRY_TYP_CD
+				, TTS.INQRY_TYP_CD_2
+				, TTS.SCRIPT_TIT
+				, TTS.SCRIPT_RMK_NO
+				, TTS.SCRIPT_RMK
+				, TTS.SCRIPT_AUTH_TYPE --스크립트구분코드
+				, (SELECT CD_NM
+				    FROM PLT_COMN_CD
+				   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+				     AND GROUP_CD = 'TALK037'
+				     AND CD = TTS.SCRIPT_AUTH_TYPE)                         AS SCRIPT_AUTH_TYPE_NM --스크립트구분명
+				, TTS.FILE_GROUP_KEY
+				, TTS.FST_USER_ID
+				, FST_USER_ID || '(' || (SELECT USER_NM
+				                           FROM PLT_USER
+				                          WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%')
+				                            AND USER_ID = TTS.FST_USER_ID)  
+				              || ')'                                        AS FST_USER_NM
+				, TO_CHAR(TTS.FST_SCRIPT_DT, 'YYYY/MM/DD HH24:MI:SS')           AS FST_SCRIPT_DT
+				, TTS.LAST_USER_ID
+				, LAST_USER_ID || '(' || (SELECT USER_NM
+				                           FROM PLT_USER
+				                          WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%')
+				                            AND USER_ID = TTS.LAST_USER_ID)  
+				               || ')'                                       AS LAST_USER_NM
+				, TO_CHAR(TTS.LAST_SCRIPT_DT, 'YYYY/MM/DD HH24:MI:SS')          AS LAST_SCRIPT_DT
+				, TTS.ACCESS_IP
+				, TTS.SELECT_NO
+				, TTS.ORD_SEQ
+				, TTS.USE_YN
+				, (SELECT CD_NM
+				    FROM PLT_COMN_CD
+				   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+				     AND GROUP_CD = 'SCRT001'
+				     AND CD = TTS.USE_YN)                                   AS USE_YN_NM --스크립트상태명
+				, TTS.PROC_ID
+				, TO_CHAR(TTS.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING 
+			FROM PLT_CHT_SCRT TTS
+			WHERE  CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			AND SCRIPT_AUTH_TYPE = 'admin' <!-- 스크립트 승인기능 개발하면서 상담원, 공통 모두 조회 가능 (조회조건 '스크립트권한'으로 처리)-->
+			<if test="SEARCH_AUTH_TYPE !='' and SEARCH_AUTH_TYPE != null">
+			AND SCRIPT_AUTH_TYPE = #{SEARCH_AUTH_TYPE}
+			</if>
+			<if test="SCRIPT_TIT !='' and SCRIPT_TIT != null">
+			AND SCRIPT_TIT LIKE '%' ||  #{SCRIPT_TIT} || '%'
+			</if>
+			<if test="SEARCH_USE_YN !='' and SEARCH_USE_YN != null">
+			AND USE_YN = #{SEARCH_USE_YN}
+			</if>
+			<if test="SEARCH_FST_USER != '' and SEARCH_FST_USER != null" >
+				<choose>
+					 <when test="SRH_FST_USER == '01'"> <!--닉네임 -->
+						AND TTS.FST_USER_ID IN (SELECT USER_ID FROM PLT_USER WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND USER_NICK LIKE '%' || #{SEARCH_FST_USER} || '%') 
+						AND TTS.FST_USER_ID IS NOT NULL
+					 </when>
+					 <when test="SRH_FST_USER == '02'"> <!--ID-->
+					 	AND TTS.FST_USER_ID LIKE '%' || #{SEARCH_FST_USER} || '%' 
+						AND TTS.FST_USER_ID IS NOT NULL
+					 </when>
+					 <when test="SRH_FST_USER == '03'"> <!--성명 -->
+					 	AND TTS.FST_USER_ID IN (SELECT USER_ID FROM PLT_USER WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND USER_NM LIKE '%' || #{SEARCH_FST_USER} || '%') 
+						AND TTS.FST_USER_ID IS NOT NULL
+					 </when>
+				 </choose>
+			</if>
+			<if test="SEARCH_LAST_USER != '' and SEARCH_LAST_USER != null" >
+				<choose>
+					 <when test="SRH_LAST_USER == '01'"> <!--닉네임 -->
+						AND TTS.LAST_USER_ID IN (SELECT USER_ID FROM PLT_USER WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND USER_NICK LIKE '%' || #{SEARCH_LAST_USER} || '%') 
+						AND TTS.LAST_USER_ID IS NOT NULL
+					 </when>
+					 <when test="SRH_LAST_USER == '02'"> <!--ID-->
+					 	AND TTS.LAST_USER_ID LIKE '%' || #{SEARCH_LAST_USER} || '%' 
+						AND TTS.LAST_USER_ID IS NOT NULL
+					 </when>
+					 <when test="SRH_LAST_USER == '03'"> <!--성명 -->
+					 	AND TTS.LAST_USER_ID IN (SELECT USER_ID FROM PLT_USER WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND USER_NM LIKE '%' || #{SEARCH_LAST_USER} || '%') 
+						AND TTS.LAST_USER_ID IS NOT NULL
+					 </when>
+				 </choose>
+			</if>
+			<!-- 안쓰는것으로보임. 화면 및 서비스쪽에 USER, SRH_USER 사용부분없고 쿼리내 CC로 alias된게없음.
+			<if test="USER !='' and USER != null">
+				<choose>
+					 <when test="SRH_USER == '01'"> 닉네임
+						AND CC.USER_ID IN(SELECT USER_ID FROM TWB_BAS01 WHERE CUSTCO_ID = #{CUSTCO_ID} AND USER_NICK LIKE '%' || #{USER} || '%') 
+						AND CC.USER_ID IS NOT NULL
+					 </when>
+					 <when test="SRH_USER == '02'"> ID
+					 	AND CC.USER_ID LIKE '%' || #{USER} || '%' 
+						AND CC.USER_ID IS NOT NULL
+					 </when>
+					 <when test="SRH_USER == '03'"> 성명
+					 	AND CC.USER_ID IN(SELECT USER_ID FROM TWB_BAS01 WHERE CUSTCO_ID = #{CUSTCO_ID} AND USER_NM LIKE '%' || #{USER} || '%') 
+						AND CC.USER_ID IS NOT NULL
+					 </when>
+				 </choose>
+			</if>
+			-->
+			<if test="SEARCH_INQRY_TYP_CD !='' and SEARCH_INQRY_TYP_CD != null">
+			AND INQRY_TYP_CD = #{SEARCH_INQRY_TYP_CD}
+			</if>
+			<if test="SEARCH_INQRY_TYP_CD_2 !='' and SEARCH_INQRY_TYP_CD_2 != null">
+			AND INQRY_TYP_CD_2 = #{SEARCH_INQRY_TYP_CD_2}
+			</if>
+			ORDER BY ORD_SEQ ASC, LAST_SCRIPT_DT DESC
+     ) ROW_TBL	 
+				
+
+</select>
+
+
+<!-- 스크립트 신규등록 -->
+<insert id="insertRtnScriptMng" parameterType= "java.util.HashMap">
+
+INSERT INTO PLT_CHT_SCRT 
+       ( CUSTCO_ID
+       , SCRIPT_ID
+       , UPPER_SCRIPT_ID
+       , LVL_NO
+       , SCRIPT_TIT
+       , SCRIPT_RMK_NO
+       , SCRIPT_RMK
+       , FILE_GROUP_KEY
+       , FST_USER_ID
+       , FST_SCRIPT_DT
+       , LAST_USER_ID
+       , LAST_SCRIPT_DT
+       , ACCESS_IP
+       , SELECT_NO
+       , ORD_SEQ
+       , USE_YN
+       , PROC_ID
+       , IT_PROCESSING
+       , SCRIPT_AUTH_TYPE
+       , INQRY_TYP_CD
+       , INQRY_TYP_CD_2
+) VALUES 
+       ( NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{SCRIPT_ID}
+       , 1
+       , 1
+       , #{SCRIPT_TIT}
+       , ''
+       , #{SCRIPT_RMK}
+       , ''
+       , #{USER_ID}
+       , NOW()
+       , #{USER_ID}
+       , NOW()
+       , ''
+       , NULL
+       , #{ORD_SEQ}
+       , #{USE_YN}
+       , #{USER_ID}
+       , NOW()
+       , #{SCRIPT_AUTH_TYPE}
+       , #{INQRY_TYP_CD}
+       , #{INQRY_TYP_CD_2}
+)
+
+</insert>
+
+<!-- 스크립트 수정 -->
+<update id="updateRtnScriptMng" parameterType="java.util.HashMap">
+
+UPDATE PLT_CHT_SCRT 
+   SET LAST_USER_ID = #{LAST_USER_ID}
+     , LAST_SCRIPT_DT = NOW()
+<if test="SCRIPT_TIT !='' and SCRIPT_TIT  != null">  
+     , SCRIPT_TIT = #{SCRIPT_TIT}
+</if>
+<if test="SCRIPT_AUTH_TYPE !='' and SCRIPT_AUTH_TYPE  != null">  
+     , SCRIPT_AUTH_TYPE = #{SCRIPT_AUTH_TYPE}
+</if>
+     , SCRIPT_RMK = #{SCRIPT_RMK}
+     , ORD_SEQ = #{ORD_SEQ}
+     , USE_YN = #{USE_YN}
+     , INQRY_TYP_CD = #{INQRY_TYP_CD}
+     , INQRY_TYP_CD_2 = #{INQRY_TYP_CD_2}
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	  AND SCRIPT_ID = #{SCRIPT_ID}
+</update>
+
+<!-- 스크립트 삭제 -->
+<delete id="deleteRtnScriptMng" parameterType="java.util.HashMap">
+
+DELETE FROM PLT_CHT_SCRT
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND SCRIPT_ID = #{SCRIPT_ID}
+   
+</delete>
+
+<!-- 상담사 개인 단축키 -->
+<select id="existScriptCommand" parameterType="java.util.HashMap" resultMap="mapSelectTwbClob">
+	SELECT 
+		T2.SHORT_KEY
+		, T1.SCRIPT_ID
+		, T1.SCRIPT_TIT
+	FROM PLT_CHT_SRT_KEY T2
+	LEFT OUTER JOIN PLT_CHT_SCRT T1
+		ON T1.SCRIPT_ID = T2.SCRIPT_ID
+	WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+	 AND T2.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	 AND T2.USER_ID  	 = #{USER_ID}
+	 AND  T2.SHORT_KEY 	 = #{SHORT_KEY}
+</select>
+	
+<!-- 스크립트 조회 상세 -->
+<select id="getScript" parameterType="java.util.HashMap" resultMap="mapSelectTwbClob">
+	SELECT 
+		 T1.*
+		, (SELECT SHORT_KEY FROM PLT_CHT_SRT_KEY WHERE SCRIPT_ID = T1.SCRIPT_ID AND ACTION_TYPE = 'ADD' AND USER_ID=#{USER_ID}) ADD_COMMAND
+        , (SELECT SHORT_KEY FROM PLT_CHT_SRT_KEY WHERE SCRIPT_ID = T1.SCRIPT_ID AND ACTION_TYPE = 'NEW' AND USER_ID=#{USER_ID}) NEW_COMMAND
+	/*	채팅스크립트 -> 전화 스크립트
+	FROM PLT_CHT_SCRT T1
+	*/
+	FROM PLT_PHN_SCRT T1
+	WHERE T1.SCRIPT_ID  = #{SCRIPT_ID}
+	 
+</select>
+	
+<!-- 상담사 개인 단축키 등록 -->
+<insert id="insertUserScriptShortKey" parameterType="java.util.HashMap">
+
+MERGE INTO PLT_CHT_SRT_KEY A
+      USING DUAL
+        ON( 
+        	A.USER_ID = #{USER_ID} 
+        	AND A.SHORT_KEY = #{SHORT_KEY} 
+        	AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+        	)
+      WHEN MATCHED THEN
+            UPDATE
+               SET 
+				 SHORT_KEY_VALUE = #{SHORT_KEY_VALUE}
+			    , AMDR_ID = #{USER_ID}
+			    , UPD_DTTM = CURRENT_TIMESTAMP
+			    , PROC_ID = #{USER_ID}
+			    , SCRIPT_ID = #{SCRIPT_ID}
+		        , ACTION_TYPE = #{ACTION_TYPE} 
+			    , IT_PROCESSING = CURRENT_TIMESTAMP
+      WHEN NOT MATCHED THEN
+        INSERT (
+                USER_ID
+		        , SHORT_KEY
+		        , CUSTCO_ID
+		        , SHORT_KEY_VALUE
+		        , REGR_ID
+		        , REG_DTTM
+		        , PROC_ID
+		        , IT_PROCESSING
+		        , SCRIPT_ID
+		        , ACTION_TYPE
+            )
+        VALUES( 
+				#{USER_ID}
+		        , #{SHORT_KEY}
+		        , #{ASP_NEWCUST_KEY}
+		        , #{SHORT_KEY_VALUE}
+		        , #{USER_ID}
+		        , CURRENT_TIMESTAMP
+		        , #{USER_ID}
+		        , CURRENT_TIMESTAMP
+		        , #{SCRIPT_ID}
+		        , #{ACTION_TYPE} 
+            )
+</insert>
+
+<!-- 상담사 개인 단축키 삭제 -->
+<delete id="deleteUserScriptShortKey" parameterType="java.util.HashMap">
+	DELETE FROM PLT_CHT_SRT_KEY
+	 WHERE USER_ID = #{USER_ID}
+	   AND SCRIPT_ID = #{SCRIPT_ID} 
+	   AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	   AND ACTION_TYPE = #{ACTION_TYPE}
+
+</delete>
+
+<!-- 상담사 개인 단축키 삭제 -->
+<delete id="deleteUserShortKey" parameterType="java.util.HashMap">
+	DELETE FROM PLT_CHT_SRT_KEY
+	 WHERE USER_ID = #{USER_ID}
+	   AND SHORT_KEY = #{SHORT_KEY} 
+	   AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	   AND ACTION_TYPE = #{ACTION_TYPE}
+
+</delete>
+	
+</mapper>

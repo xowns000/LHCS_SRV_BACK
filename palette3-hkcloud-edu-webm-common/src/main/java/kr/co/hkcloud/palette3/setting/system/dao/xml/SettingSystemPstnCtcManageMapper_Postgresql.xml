@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemPstnCtcManageMapper">
+
+<!-- 위치정보 리스트 조회 -->
+<select id="selectPstn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ROW_NUMBER() OVER(ORDER BY P.REG_DT DESC) AS ROW_NUMBER
+	 , PSTN_ID			AS PSTN_ID
+	 , CUSTCO_ID		AS CUSTCO_ID
+	 , PSTN_NM 			AS PSTN_NM
+	 , ZIP 				AS ZIP
+	 , ADDR 			AS ADDR
+	 , DTL_ADDR 		AS DTL_ADDR
+	 , ADDR_URL 		AS ADDR_URL
+	 , LAT 				AS LAT
+	 , LOT 				AS LOT
+	 , EXPLN 			AS EXPLN
+	 , P.USE_YN 		AS USE_YN
+	 , DEL_YN 			AS DEL_YN
+	 , P.RGTR_ID 		AS RGTR_ID
+	 , TO_CHAR(TO_TIMESTAMP(P.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD')		AS REG_DT			-- 등록_일시 *
+	 , P.MDFR_ID 		AS MDFR_ID
+	 , TO_CHAR(TO_TIMESTAMP(P.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD')		AS MDFCN_DT			-- 수정_일시
+	 , RGN_CD 			AS RGN_CD
+	 , U.USER_NM		AS USER_NM		-- 등록자 이름
+	 , UU.USER_NM 		AS EDITOR_NM	-- 수정자 이름
+	 , (SELECT CD_NM
+		  FROM PLT_COMM_CD
+		 WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'AREA'
+		   AND CD_ID = P.RGN_CD
+		   AND USE_YN = 'Y') AS SPLIT_ADDR
+ FROM PLT_PSTN P LEFT OUTER JOIN PLT_USER U ON U.USER_ID::BIGINT = P.RGTR_ID::BIGINT
+       	       	 LEFT OUTER JOIN PLT_USER UU ON UU.USER_ID::BIGINT = P.MDFR_ID::BIGINT
+WHERE DEL_YN = 'N'
+  AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+</select>
+
+<!-- 위치정보 등록 -->
+<insert id="insertPstn"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_PSTN
+	( PSTN_ID
+	, CUSTCO_ID
+	, PSTN_NM
+	, ZIP
+	, ADDR
+	, DTL_ADDR
+	, ADDR_URL
+	, LAT
+	, LOT
+	, EXPLN
+	, USE_YN
+	, DEL_YN
+	, RGTR_ID
+	, REG_DT
+	, MDFR_ID
+	, MDFCN_DT
+	, RGN_CD
+)
+VALUES
+	( #{PSTN_ID}::BIGINT
+	, #{CUSTCO_ID}::BIGINT
+	, #{PSTN_NM}
+	, #{ZIP}
+	, #{ADDR}
+	, #{DTL_ADDR}
+	, #{ADDR_URL}
+	, #{LAT}::NUMERIC
+	, #{LOT}::NUMERIC
+	, #{EXPLN}
+	, #{USE_YN}
+	, 'N'
+	, #{USER_ID}
+	, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	, #{MDFR_ID}
+	, #{MDFCN_DT}
+	, (SELECT CD_ID
+		     FROM PLT_COMM_CD
+		    WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'AREA'
+			  AND CD_NM = #{RGN_CD}
+			  AND USE_YN = 'Y')
+)
+</insert>
+
+<!-- 위치정보 수정 -->
+<update id="updatePstn"  parameterType= "java.util.HashMap">
+UPDATE PLT_PSTN 
+   SET PSTN_NM = #{PSTN_NM}
+	 , ZIP = #{ZIP}
+	 , ADDR = #{ADDR}
+	 , DTL_ADDR = #{DTL_ADDR}
+	 , ADDR_URL = #{ADDR_URL}
+	 , LAT = #{LAT}::NUMERIC
+	 , LOT = #{LOT}::NUMERIC
+	 , EXPLN = #{EXPLN}
+	 , USE_YN = #{USE_YN}
+	 , MDFR_ID = #{USER_ID}
+	 , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	 , RGN_CD = (SELECT CD_ID
+			       FROM PLT_COMM_CD
+			      WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'AREA'
+				    AND CD_NM = #{RGN_CD}
+				    AND USE_YN = 'Y')
+WHERE PSTN_ID = #{PSTN_ID}::BIGINT
+  AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+</update>
+
+<!-- 위치정보 삭제 -->
+<update id="deletePstn"  parameterType= "java.util.HashMap">
+UPDATE PLT_PSTN 
+   SET DEL_YN = 'Y'
+ WHERE PSTN_ID = #{PSTN_ID}::BIGINT
+</update>
+
+
+<!-- 연락처정보 리스트 조회 -->
+<select id="selectCtc"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ROW_NUMBER() OVER(ORDER BY PC.REG_DT DESC) AS ROW_NUMBER
+		, PC.CTC_ID
+		, PC.CUSTCO_ID
+		, PC.TASK_NM
+		, PC.TELNO
+		, PC.TKCG_DEPT_NM
+		, PC.USE_YN
+		, PC.PHN_TRAN_TRGT_YN
+		, PC.DEL_YN
+		, PC.EXPLN
+		, TO_CHAR(TO_TIMESTAMP(PC.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS REG_DT
+		, PC.RGTR_ID
+		, TO_CHAR(TO_TIMESTAMP(PC.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS MDFCN_DT
+		, PC.MDFR_ID
+		, PC.RGN_CD
+		, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'AREA' AND CD_ID = PC.RGN_CD) AS RGN_NM
+		, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PC.RGTR_ID) AS USER_NM
+		, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PC.MDFR_ID) AS EDITOR_NM
+	FROM PLT_CTC PC
+	WHERE PC.DEL_YN = 'N'
+	AND PC.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+	<if test='PHN_TRAN_TRGT_YN != null and PHN_TRAN_TRGT_YN != ""'>
+	AND PC.PHN_TRAN_TRGT_YN = #{PHN_TRAN_TRGT_YN}
+	</if>
+	<if test='SCH_KEY != null and SCH_KEY != ""'>
+		<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+			<choose>
+				<when test='SCH_KEY == "TKCG_DEPT_NM"'>AND PC.TKCG_DEPT_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+				<when test='SCH_KEY == "TASK_NM"'>AND PC.TASK_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+				<when test='SCH_KEY == "TELNO"'>AND PC.TELNO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+			</choose>
+		</if>
+	</if>
+</select>
+
+<!-- 연락처정보 등록 -->
+<insert id="insertCtc"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_CTC
+	( CTC_ID
+	, CUSTCO_ID
+	, TASK_NM
+	, TELNO
+	, TKCG_DEPT_NM
+	, USE_YN
+	, PHN_TRAN_TRGT_YN
+	, DEL_YN
+	, EXPLN
+	, REG_DT
+	, RGTR_ID
+	, MDFCN_DT
+	, MDFR_ID
+	, RGN_CD
+)
+VALUES
+	( #{CTC_ID}::BIGINT
+	, #{CUSTCO_ID}::BIGINT
+	, #{TASK_NM}
+	, #{TELNO}
+	, #{TKCG_DEPT_NM}
+	, #{USE_YN}
+	, #{PHN_TRAN_TRGT_YN}
+	, 'N'
+	, #{EXPLN}
+	, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	, #{USER_ID}::BIGINT
+	, #{MDFCN_DT}
+	, #{MDFR_ID}
+	, #{RGN_CD}
+)
+</insert>
+
+<!-- 연락처정보 수정 -->
+<update id="updateCtc"  parameterType= "java.util.HashMap">
+UPDATE PLT_CTC
+   SET TASK_NM = #{TASK_NM}
+	 , TELNO = #{TELNO}
+	 , TKCG_DEPT_NM = #{TKCG_DEPT_NM}
+	 , USE_YN = #{USE_YN}
+	 , PHN_TRAN_TRGT_YN = #{PHN_TRAN_TRGT_YN}
+	 , EXPLN = #{EXPLN}
+	 , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	 , MDFR_ID = #{USER_ID}::BIGINT
+	 , RGN_CD = #{RGN_CD}
+ WHERE CTC_ID = #{CTC_ID}::BIGINT
+   AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+</update>
+	 
+<!-- 연락처정보 삭제 -->
+<update id="deleteCtc"  parameterType= "java.util.HashMap">
+UPDATE PLT_CTC 
+   SET DEL_YN = 'Y'
+ WHERE CTC_ID = #{CTC_ID}::BIGINT
+   AND CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+</update>
+
+</mapper>

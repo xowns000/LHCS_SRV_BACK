@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundSurveyResultListMapper">
+
+<!-- 데이터 ResultMap -->	
+<resultMap id="selectHashMap" type="java.util.HashMap" >
+	<!-- 부분 암복호화  -->
+	<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+</resultMap>
+
+<!-- 설문지 조회 -->
+<select id="selectRtnServayList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	/* selectRtnServayList 설문지 조회 */
+	SELECT
+	    A.QUEST_ID AS S_ID
+		, A.QUEST_NM AS S_NM
+		, A.CENT_TY
+		, (SELECT CD_NM FROM PLT_COMN_CD where GROUP_CD='TWB500' AND CD = A.CENT_TY) AS CENT_TY_NM /* 센터구분명 */
+		, QUEST_CNTN AS S_TEXT
+		, TO_CHAR(TO_DATE(A.CHNG_DTIM, 'YYYYMMDDHH24MISS') , 'YYYY-MM-DD') AS INPUT_DATE
+		, A.CHNG_MAN AS INPUT_EMP
+		, BAS01.USER_NM AS INPUT_EMP_NM
+		, (SELECT COUNT(1) FROM PLT_PHN_SURV_QST WHERE QUEST_ID = A.QUEST_ID) AS FLD_Q_CNT
+		, (SELECT COUNT(1) FROM (SELECT QUEST_ID, CUST_NO FROM PLT_PHN_SURV_RST GROUP BY QUEST_ID, CUST_NO) WHERE QUEST_ID = A.QUEST_ID) AS FLD_CUST_CNT
+	FROM
+	    PLT_PHN_SURV A
+		LEFT OUTER JOIN PLT_USER BAS01
+			ON A.CHNG_MAN  = BAS01.USER_ID
+	WHERE
+		TO_DATE(A.CHNG_DTIM, 'YYYYMMDDHH24MISS') <![CDATA[ >= ]]> TO_DATE(CONCAT(#{SEARCH_DT_FROM} , '000000'), 'YYYYMMDDHH24MISS') 
+	    AND TO_DATE(A.CHNG_DTIM, 'YYYYMMDDHH24MISS') <![CDATA[ <= ]]> TO_DATE(CONCAT(#{SEARCH_DT_TO} , '235959'), 'YYYYMMDDHH24MISS')
+	<if test="CENT_TY !='' and CENT_TY !=null">
+		AND A.CENT_TY = #{CENT_TY} 
+	</if>
+	<if test="SEARCH_FLD_NM !='' and SEARCH_FLD_NM !=null">
+		AND A.QUEST_NM LIKE '%' || #{SEARCH_FLD_NM} || '%' 
+	</if>
+	ORDER BY
+		A.QUEST_ID DESC
+</select>	
+
+<!-- 설문지문항 조회 -->
+<select id="selectRtnServayQList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	/* selectRtnServayQList 설문지문항 조회 */
+	SELECT 
+		Q_NO
+		, QUEST_ID AS FLD_SID
+		, Q_CNTN AS Q_DESC
+		, ANS_FORM AS ANS_TYPE
+		, CASE
+			WHEN ANS_FORM = '01' THEN '객관식'
+			WHEN ANS_FORM = '02' THEN '주관식'
+			ELSE ''
+		END AS ANS_TYPE_NM
+	FROM
+		PLT_PHN_SURV_QST
+	WHERE
+		QUEST_ID = #{FLD_SID}
+	ORDER BY
+		CAST(Q_NO AS INTEGER)
+</select>	
+
+<!-- 설문지결과 조회 -주관식 -->
+<select id="selectRtnResult_short"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+</select>
+
+<!-- 설문지항목답변총인원수 조회 -->
+<select id="selectRtnResultQAnsTotCnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT COUNT(1) AS TOT_CNT
+	FROM PLT_PHN_SURV_RST 
+	WHERE QUEST_ID = #{FLD_SID} AND Q_NO = #{Q_NO}
+</select>
+
+</mapper>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.lkag.mst.dao.LkagMstMapper">
+    <select id="selectList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /* 연동마스터목록 selectList - kr.co.hkcloud.palette3.admin.lkag.mst.dao.LkagMstMapper */
+        ROW_NUMBER() OVER( ORDER BY
+                <choose>
+                    <when test="SRCH_ORDER_BY != null and SRCH_ORDER_BY !=''"> ${SRCH_ORDER_BY}  </when>
+                    <otherwise>A.LKAG_MST_ID DESC</otherwise>
+                </choose> ) AS ROW_NUMBER
+        , A.LKAG_MST_ID
+        , A.LKAG_BEAN_ID
+        , A.MST_NM
+        , A.USE_YN
+        , A.REG_DT
+        , (SELECT PU.USER_NM FROM CUSTCO.PLT_USER PU WHERE PU.USER_ID = A.RGTR_ID) AS RGTR_NM
+        , A.MDFCN_DT
+        , (SELECT PU.USER_NM FROM CUSTCO.PLT_USER PU WHERE PU.USER_ID = A.MDFR_ID) AS MDFR_NM
+        , (SELECT COUNT(1) FROM CUSTCO.PLT_LKAG_MNG WHERE LKAG_MST_ID = A.LKAG_MST_ID AND DEL_YN ='N') AS REG_IF /* 등록된 연동 I/F */
+        , (SELECT COUNT(1)
+            FROM CUSTCO.PLT_CERT_CUSTCO_LKAG CCL
+            INNER JOIN CUSTCO.PLT_LKAG_MNG LM ON LM.LKAG_ID = CCL.LKAG_ID AND LM.DEL_YN ='N'
+            WHERE LM.LKAG_MST_ID = A.LKAG_MST_ID ) AS USE_IF   /* 사용중인 연동 I/F */
+        FROM CUSTCO.PLT_LKAG_MST A
+        WHERE DEL_YN ='N'
+        <if test='SRCH_USE_YN != null and SRCH_USE_YN !=""'>
+            AND A.USE_YN =  #{SRCH_USE_YN}
+        </if>
+        <if test='SRCH_KEYWORD != null and SRCH_KEYWORD !=""'>
+            AND A.MST_NM LIKE CONCAT(CONCAT('%',#{SRCH_KEYWORD}),'%')
+        </if>
+    </select>
+    <select id="selectBox" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            LKAG_MST_ID AS CD ,
+            MST_NM AS CD_NM
+        FROM CUSTCO.PLT_LKAG_MST
+        WHERE USE_YN = 'Y' AND DEL_YN ='N'
+        ORDER BY MST_NM ASC
+    </select>
+
+    <update id="insert" parameterType="java.util.HashMap">
+        INSERT  /* 연동마스터 등록 insert - kr.co.hkcloud.palette3.admin.lkag.mst.dao.LkagMstMapper */
+          INTO CUSTCO.PLT_LKAG_MST ( LKAG_MST_ID, LKAG_BEAN_ID, MST_NM, USE_YN, DEL_YN, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT )
+        VALUES (
+            #{LKAG_MST_ID}::INTEGER, #{LKAG_BEAN_ID}, #{MST_NM}, #{USE_YN}, 'N', #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'), #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+        )
+    </update>
+
+    <update id="update" parameterType="java.util.HashMap">
+        UPDATE CUSTCO.PLT_LKAG_MST /* 연동마스터 수정 update - kr.co.hkcloud.palette3.admin.lkag.mst.dao.LkagMstMapper */
+        SET
+            LKAG_BEAN_ID = #{LKAG_BEAN_ID},
+            MST_NM = #{MST_NM},
+            USE_YN = #{USE_YN},
+            MDFR_ID = #{USER_ID}::INTEGER,
+            MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+        WHERE LKAG_MST_ID = #{LKAG_MST_ID}::INTEGER
+    </update>
+
+    <update id="delete" parameterType="java.util.HashMap">
+        UPDATE CUSTCO.PLT_LKAG_MST /* 연동마스터 삭제 delete - kr.co.hkcloud.palette3.admin.lkag.mst.dao.LkagMstMapper */
+           SET DEL_YN = 'Y'
+        WHERE LKAG_MST_ID IN
+        <foreach collection="ITEM_LIST" item="item" open="(" separator="," close=")" >
+            #{item.LKAG_MST_ID}::INTEGER
+        </foreach>
+    </update>
+    <select id="dpcnChkMstNm" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 1  FROM CUSTCO.PLT_LKAG_MST WHERE MST_NM = #{MST_NM}
+    </select>
+</mapper>

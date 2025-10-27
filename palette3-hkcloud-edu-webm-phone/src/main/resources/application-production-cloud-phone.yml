@@ -1,0 +1,49 @@
+###################################################
+# localphone profile
+###################################################
+spring.profiles:
+  -production-cloud-phone
+
+##spring.profiles.include: "phone"
+spring.profiles.include: 
+  -phone
+
+###################################################
+#
+# 전화(phone) 속성
+# -------------------------------------------------
+# include 'phone' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "phone"
+# ----------------------------------------
+# PhoneProperties
+# ----------------------------------------
+phone:
+  enabled: true
+  #전화메인 예약콜 활성 여부
+  main-resve-call-enabled: true
+  #전화메인 전광판 활성 여부
+  main-check-board-enabled: true
+  scpdb-agent-ini-path: 
+  # ----------------------------------------
+  # CTI (티플렉스)
+  # ----------------------------------------
+  cti-server:
+    #cti 서버 url 
+    url: ${palette.cti-server.url}
+    #cti 서버 port
+    cti-port: ${palette.cti-server.cti-port}
+    #cti 2차비밀번호 (문자열을 그대로 받고 싶으면 '로 문자열을 감싼다) 
+    #cti-secret-pw: '!4bswkd..?'
+    cti-secret-pw: ${palette.cti-server.cti-secret-pw}
+    #cti 아웃바운드 번호 (문자열을 그대로 받고 싶으면 '로 문자열을 감싼다)
+    cti-outbound-number: ${palette.cti-server.cti-outbound-number}
+    #녹취 포트
+    recording-port: ${palette.cti-server.recording-port}
+    #녹취 경로 (처음 저장되었을때)
+    recording-path: ${palette.cti-server.recording-path}
+    #녹취 경로 (저장된지 하루가 지난 경로)
+    recording-backup-path: ${palette.cti-server.recording-backup-path}
+     

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.integration.dao.CommerceLkagMapper">
+    <select id="selectLnkgTbl" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+       SELECT ${LNKG_COL_NM}
+         FROM ${LNKG_SCHEMA_ID}.${LNKG_TBL_NM}
+        WHERE 1=1
+          <if test='LNKG_ATTR_ID != null and LNKG_ATTR_ID !="" and LNKG_ATTR_ID !="0"'>
+            AND ATTR_ID = #{LNKG_ATTR_ID}::INTEGER
+          </if>
+          AND ${LNKG_KEY_COL} = #{custId}::INTEGER
+    </select>
+
+    <select id="selectCustCellphone" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT CUST_PHN_NO
+        FROM ${LNKG_SCHEMA_ID}.PLT_CUST
+        WHERE 1=1
+        AND CUST_ID = #{custId}::INTEGER
+    </select>
+
+    <select id="selectLnkgCommonCodeInfo" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT LKAG_CD_ID, LKAG_CD_VL, LKAG_CD_NM, EXPLN
+        FROM CUSTCO.PLT_LKAG_CD_MNG
+        WHERE 1=1
+        AND LKAG_GROUP_CD_ID = #{LKAG_GROUP_CD_ID}
+        <if test='LKAG_CD_ID != null and LKAG_CD_ID !=""'>
+        AND LKAG_CD_ID = #{LKAG_CD_ID}
+        </if>
+        <if test='LKAG_CD_VL != null and LKAG_CD_VL !=""'>
+            AND LKAG_CD_VL = #{LKAG_CD_VL}
+        </if>
+    </select>
+
+    <select id="selectInsertParamRspns" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT PLRA.LKAG_ID AS RSPNS_LKAG_ID /* 응답에서 params 변수 채워야하는경우 . */
+        FROM CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA
+        INNER JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLPA.RSPNS_ARTCL_ID = PLRA.RSPNS_ARTCL_ID
+        WHERE PLPA.LKAG_ID = #{LKAG_ID}::INTEGER
+          AND PLPA.RSPNS_ARTCL_ID IS NOT NULL
+        GROUP BY PLRA.LKAG_ID
+    </select>
+
+</mapper>

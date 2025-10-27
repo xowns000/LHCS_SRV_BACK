@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.center.dao.PhoneCenterNtcnTalkTmplatManageMapper">
+	<sql id="search">
+		<!-- 센터구분 -->
+		<if test="CENT_TY !='' and CENT_TY != null">
+			AND A.CENT_TY = #{CENT_TY}
+		</if>
+		<!-- SMS유형 -->
+		<if test="NTCN_TALK_TY !='' and NTCN_TALK_TY != null">
+			AND NTCN_TALK_TY = #{NTCN_TALK_TY}
+		</if>
+		<!-- SMS템플릿 -->
+		<if test="NTCN_TALK_TMPLT !='' and NTCN_TALK_TMPLT != null">
+			AND NTCN_TALK_TMPLT = #{NTCN_TALK_TMPLT}
+		</if>
+		<!-- SMS문구 -->
+		<if test="SMS_CON !='' and SMS_CON != null">
+			<!-- 고객명 -->
+			<if test="SMS_CON == '01'">
+				AND CUST_NM_ADD_YN = 'Y'
+			</if>
+			<!-- 조합 -->
+			<if test="SMS_CON == '02'">
+				AND CU_INFO_ADD_YN = 'Y'
+			</if>
+			<!-- 코드 -->
+			<if test="SMS_CON == '03'">
+				AND CODE_INFO_ADD_YN = 'Y'
+			</if>
+		</if>
+		<!-- 사용여부 -->
+		<if test="USE_YN !='' and USE_YN != null">
+			AND A.USE_YN = #{USE_YN}
+		</if>
+		<!-- 제목 -->
+		<if test="TIT !='' and TIT != null">
+			AND TIT LIKE '%' || #{TIT} || '%'
+		</if>
+		<!-- SMS번호 -->
+		<if test="NTCN_TALK_NO !='' and NTCN_TALK_NO != null">
+			AND NTCN_TALK_NO = #{NTCN_TALK_NO}
+		</if>		
+		<!-- 즐겨찾기 -->
+		<if test="SEL_SCR_DISP_YN !='' and SEL_SCR_DISP_YN != null">
+			<if test="SEL_SCR_DISP_YN == '01'">
+				AND SCR_DISP_YN = 'Y'
+			</if>
+			<if test="SEL_SCR_DISP_YN == '02'">
+				AND (SCR_DISP_YN = '' OR SCR_DISP_YN IS NULL)
+			</if>
+		</if>
+	</sql>
+
+	<!-- 알림톡템플릿관리 건수 조회 -->
+	<select id="selectNtcnTalkMngCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectSmsMngCnt */
+		SELECT COUNT(1) AS CNT 
+		  FROM PLT_PHN_NTCN_TALK_TMPL
+		 WHERE CENT_TY = #{CENT_TY}
+		   AND NTCN_TALK_TY = #{NTCN_TALK_TY}
+		   AND NTCN_TALK_TMPLT = #{NTCN_TALK_TMPLT}
+		   <if test="NTCN_TALK_NO !='' and NTCN_TALK_NO != null">
+		   		AND NTCN_TALK_NO != #{NTCN_TALK_NO}
+		   </if>
+	</select>
+	
+	<!-- 알림톡템플릿관리 목록 조회 -->
+	<select id="selectNtcnTalkMngList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectSmsMngList */
+		SELECT ROW_TBL.*
+	         , PAG_TBL.*
+	     FROM (
+		SELECT A.NTCN_TALK_NO           	/* SMS번호 */
+		     , A.CENT_TY          	/* 센터구분 */
+		     , B.CD_NM AS CENT_TY_NM	/* 센터구분명 */
+		     , A.NTCN_TALK_TY           	/* SMS유형 */
+		     , C.CD_NM AS NTCN_TALK_TY_NM	/* SMS유형명 */
+		     , A.NTCN_TALK_TMPLT			/* SMS템플릿 */
+		     , D.CD_NM AS NTCN_TALK_TMPLT_NM	/* SMS템플릿명 */
+		     , A.TIT              	/* 제목 */
+		     , A.NTCN_TALK_CNTN         	/* SMS내용 */
+		     , A.NTCN_TALK_TOT_SEND_YN	/* SMS일괄전송여부 */
+		     , A.CUST_NM_ADD_YN		/* 고객명추가여부 */
+		     , A.CU_INFO_ADD_YN		/* 조합정보추가여부 */
+		     , A.CODE_INFO_ADD_YN	/* 코드정보추가여부 */
+		     , A.USE_YN           	/* 사용여부 */
+		     , A.REG_DTIM         	/* 등록일시 */
+		     , A.REG_MAN          	/* 등록자 */
+		     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.REG_MAN) AS REG_MAN_NM /* 등록자명 */
+		     , A.CHNG_DTIM        	/* 변경일시 */
+		     , A.CHNG_MAN        	/* 변경자 */
+		     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.CHNG_MAN) AS CHNG_MAN_NM /* 변경자명 */
+		     , A.SCR_DISP_YN        	/* 즐겨찾기 */
+		  FROM PLT_PHN_NTCN_TALK_TMPL A
+		  LEFT OUTER JOIN PLT_COMN_CD B
+		    ON A.CENT_TY = B.CD
+		   AND B.USE_YN = 'Y'
+		   AND B.CD != '****'
+		   AND B.GROUP_CD = 'TWB500'
+		  LEFT OUTER JOIN PLT_COMN_CD C
+		    ON A.NTCN_TALK_TY = C.CD
+		   AND C.USE_YN = 'Y'
+		   AND C.CD != '****'
+		   AND C.GROUP_CD = DECODE(A.CENT_TY, 'G', 'TWB503', 'C', 'TWB511', 'E', 'TWB512')
+		  LEFT OUTER JOIN PLT_COMN_CD D
+		    ON A.NTCN_TALK_TMPLT = D.CD
+		   AND D.USE_YN = 'Y'
+		   AND D.CD != '****'
+		   AND D.GROUP_CD = 'RE020'
+		 <where>
+		 	<include refid="search" />
+		 </where>
+	 	ORDER BY NTCN_TALK_NO DESC
+	 	) ROW_TBL
+		, (
+				SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+				  FROM PLT_PHN_NTCN_TALK_TMPL A
+				  <where>
+				 	 <include refid="search" />
+				  </where> 
+		) PAG_TBL
+	</select>
+	
+	<!-- 알림톡템플릿관리 등록 -->
+	<insert id="insertNtcnTalkMng" parameterType="java.util.HashMap">
+		<!-- <selectKey keyProperty="NTCN_TALK_NO" resultType="int" order="BEFORE">
+		    SELECT COALESCE(MAX(TO_NUMBER(NTCN_TALK_NO)), 0)+1
+		      FROM PLT_PHN_NTCN_TALK_TMPL
+		</selectKey> -->
+		/* insertSmsMng */
+		INSERT 
+		      INTO PLT_PHN_NTCN_TALK_TMPL(
+		           NTCN_TALK_NO           /* SMS번호 */
+		         , CENT_TY          /* 센터구분 */
+		         , NTCN_TALK_TY           /* 알림톡유형 */
+		         , NTCN_TALK_TMPLT		/* 알림톡템플릿 */
+		         , TIT              /* 제목 */
+		         , NTCN_TALK_CNTN         /* SMS내용 */
+		         , NTCN_TALK_TOT_SEND_YN	/* SMS일괄전송여부 */
+		         , CUST_NM_ADD_YN	/* 고객명추가여부 */
+		         , CU_INFO_ADD_YN	/* 조합정보추가여부 */
+		         , CODE_INFO_ADD_YN	/* 코드정보추가여부 */
+		         , USE_YN             /* 사용여부 */
+		         , REG_DTIM         /* 등록일시 */
+		         , REG_MAN          /* 등록자 */
+		         , SCR_DISP_YN    /* 즐겨찾기 */
+		         )
+		    VALUES(#{SEQ}
+		         , #{CENT_TY}
+		         , #{NTCN_TALK_TY}
+		         , #{NTCN_TALK_TMPLT}
+		         , #{TIT}
+		         , #{NTCN_TALK_CNTN}
+		         , #{NTCN_TALK_TOT_SEND_YN}
+		         , #{CUST_NM_ADD_YN}
+		         , #{CU_INFO_ADD_YN}
+		         , #{CODE_INFO_ADD_YN}
+		         , #{USE_YN}
+		         , #{REG_DTIM}
+		         , #{REG_MAN}
+		         , #{SCR_DISP_YN}
+		         )
+	</insert>
+	
+	
+	
+	<!-- 알림톡템플릿관리 수정 -->
+	<update id="updateNtcnTalkMng" parameterType="java.util.HashMap">
+		/* updateSmsMng */
+		UPDATE PLT_PHN_NTCN_TALK_TMPL
+		   SET CENT_TY = #{CENT_TY}         			/* 센터구분 */
+		     , NTCN_TALK_TY = #{NTCN_TALK_TY}           			/* SMS유형 */
+		     , NTCN_TALK_TMPLT = #{NTCN_TALK_TMPLT}           		/* SMS템플릿 */
+		     , TIT = #{TIT}              				/* 제목 */
+		     , NTCN_TALK_CNTN = #{NTCN_TALK_CNTN}         			/* SMS내용 */
+		     , NTCN_TALK_TOT_SEND_YN = #{NTCN_TALK_TOT_SEND_YN}		/* SMS일괄전송여부  */
+		     , CUST_NM_ADD_YN = #{CUST_NM_ADD_YN}		/* 고객명추가여부  */
+		     , CU_INFO_ADD_YN = #{CU_INFO_ADD_YN}		/* 조합정보추가여부  */
+		     , CODE_INFO_ADD_YN = #{CODE_INFO_ADD_YN}	/* 코드정보추가여부  */
+		     , USE_YN = #{USE_YN}           			/* 사용여부 */
+		     , CHNG_DTIM = #{CHNG_DTIM}        			/* 변경일시 */
+		     , CHNG_MAN = #{CHNG_MAN}         			/* 변경자 */
+		     , SCR_DISP_YN = #{SCR_DISP_YN}         		/* 즐겨찾기 */
+		 WHERE NTCN_TALK_NO = #{NTCN_TALK_NO}
+	</update>
+	
+	<!-- 알림톡템플릿관리 삭제 -->
+	<delete id="deleteNtcnTalkMng" parameterType="java.util.HashMap">
+		/* deleteSmsMng */
+		DELETE FROM PLT_PHN_NTCN_TALK_TMPL
+		 WHERE NTCN_TALK_NO = #{NTCN_TALK_NO}
+	</delete>
+	
+	
+</mapper>

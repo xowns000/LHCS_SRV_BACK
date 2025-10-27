@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.email.dao.EmailMapper">
+
+	
+	<insert id="insertEmailSendingHistory" parameterType="java.util.HashMap">
+	INSERT /*	이메일_발송_이력 저장 - (kr.co.hkcloud.palette3.email.dao.EmailMapper.insertEmailSendingHistory)	*/
+	INTO PLT_EML_SNDNG_HSTRY (
+		EML_SNDNG_ID
+		, CUSTCO_ID
+		, SNDR_EML
+		, RCVR_EML
+		, RFRNC_EML
+		, HID_RFRNC_EML
+		, TTL
+		, CN
+		, FILE_GROUP_KEY
+		, SNDNG_TYPE_CD
+		, RSVT_DT
+		<if test="CUST_ID != null and CUST_ID != ''">
+		, CUST_ID
+		</if>
+		<if test="CHT_CUTT_ID != null and CHT_CUTT_ID != ''">
+		, CHT_CUTT_ID
+		</if>
+		<if test="SRVY_TRGT_ID != null and SRVY_TRGT_ID != ''">
+		, SRVY_TRGT_ID
+		</if>
+		, RGTR_ID
+		, REG_DT
+	) VALUES (
+		#{EML_SNDNG_ID}::BIGINT
+		, #{CUSTCO_ID}::BIGINT
+		, #{SNDR_EML}
+		, #{RCVR_EML}
+		, #{RFRNC_EML}
+		, #{HID_RFRNC_EML}
+		, #{TTL}
+		, #{CN}
+		, #{FILE_GROUP_KEY}
+		, #{SNDNG_TYPE_CD}
+		, #{RSVT_DT}
+		<if test="CUST_ID != null and CUST_ID != ''">
+		, #{CUST_ID}::BIGINT
+		</if>
+		<if test="CHT_CUTT_ID != null and CHT_CUTT_ID != ''">
+		, #{CHT_CUTT_ID}::BIGINT
+		</if>
+		<if test="SRVY_TRGT_ID != null and SRVY_TRGT_ID != ''">
+		, #{SRVY_TRGT_ID}::BIGINT
+		</if>
+		, #{USER_ID}::BIGINT
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+		
+	</insert>
+	
+	<update id="updateEmailSendingHistory" parameterType="java.util.HashMap">
+	UPDATE /*	이메일_발송_이력 수정 - (kr.co.hkcloud.palette3.email.dao.EmailMapper.updateEmailSendingHistory)	*/
+	PLT_EML_SNDNG_HSTRY SET 
+		SNDNG_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, RSLT_CD = #{RSLT_CD}::VARCHAR
+		<if test="RSLT_MSG != null and RSLT_MSG != ''">
+		, RSLT_MSG = #{RSLT_MSG}
+		</if>
+		, MDFR_ID = #{USER_ID}::BIGINT
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE 
+		CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+		AND EML_SNDNG_ID = #{EML_SNDNG_ID}::BIGINT
+	</update>
+	
+	
+	<select id="selectSendEmail" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*	이메일 발송 내역 조회 - (kr.co.hkcloud.palette3.email.dao.EmailMapper.selectSendEmail)	*/
+			EML_SNDNG_ID
+			, CUSTCO_ID
+			, SNDR_EML
+			, RCVR_EML
+			, RFRNC_EML
+			, HID_RFRNC_EML
+			, TTL
+			, CN
+			, FILE_GROUP_KEY
+			, SNDNG_TYPE_CD
+			, RSVT_DT
+			, SNDNG_DT
+			, RSLT_CD
+			, RSLT_MSG
+			, CUST_ID
+			, CHT_CUTT_ID
+			, RGTR_ID
+			, REG_DT
+			, MDFR_ID
+			, MDFCN_DT
+		FROM PLT_EML_SNDNG_HSTRY PESH
+		WHERE 
+			CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+			<choose>
+				<when test="EML_SNDNG_ID != null and EML_SNDNG_ID != ''">
+					AND EML_SNDNG_ID = #{EML_SNDNG_ID}::BIGINT
+				</when>
+				<when test="CHT_CUTT_ID != null and CHT_CUTT_ID != ''">
+					AND CHT_CUTT_ID = #{CHT_CUTT_ID}::BIGINT
+				</when>
+			</choose>
+	</select>
+	
+	
+	<select id="selectCustcoSmtpSetting" parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+		SELECT /*	selectCustcoSmtpSetting - 고객사 SMTP 설정 정보	*/
+			PCCES.SNDR_KEY
+			, PCCES.ACNT
+			, CUSTCO.GEN_DECRYPT(PCCES.PSWD, #{PP_KEY_PP}, #{PP_ALG_PP}) AS PSWD
+			, PCCES.SNDR_EML
+			, PCCES.SNDR_NM
+			, PCCES.SMTP_SRVR
+			, PCCES.SMTP_PORT
+			, PCCES.SMTP_RPRS_YN
+		FROM PLT_CUSTCO_CHN_EML_STNG PCCES
+		INNER JOIN PLT_CUSTCO_CHN PCC ON PCC.SNDR_KEY = PCCES.SNDR_KEY AND PCC.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+		<where>
+			<choose>
+				<when test="CHT_CUTT_ID != null and CHT_CUTT_ID != ''">PCCES.SNDR_KEY = (SELECT SNDR_KEY FROM PLT_CHT_CUTT_EML WHERE CHT_CUTT_ID = #{CHT_CUTT_ID}::BIGINT)</when>
+				<otherwise>PCCES.SMTP_RPRS_YN = 'Y'</otherwise>
+			</choose>
+		</where>
+	</select>
+	
+	
+	<!-- 설문 참여자 확장 항목 조회 -->
+	<select id="selectSrvyExpsnAttrList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* selectSrvyExpsnAttrList - 참여자 확장 항목 조회 */
+			PEA.ATTR_ID
+			, PEA.EXPSN_ATTR_COL_ID
+			, PEA.EXPSN_ATTR_NM
+			, PEA.ESNTL_YN
+			, PEA.SORT_ORD
+		FROM PLT_EXPSN_ATTR PEA
+		WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PEA.SE = #{SE}
+		AND PEA.SRVY_ID = #{SRVY_ID}::INTEGER
+		AND PEA.DEL_YN = 'N'
+		AND PEA.BSC_PVSN_ATTR_YN = 'N'
+		AND PEA.SCRN_EXPSR_YN = 'Y'
+		ORDER BY PEA.SORT_ORD
+	</select>
+	
+	
+	<select id="selectEmailTemplate" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			PET.EML_TMPL_ID,
+			PET.TMPL_CLSF_ID,
+			PET.TMPL_TYPE_CD,
+			PET.TMPL_NM,
+			PET.TMPL_CN,
+			PET.FILE_GROUP_KEY,
+			PET.SORT_ORD,
+			PET.USE_YN,
+			PET.DEL_YN
+		FROM PLT_EML_TMPL PET
+		INNER JOIN PLT_TMPL_CLSF PTC ON PTC.TMPL_CLSF_ID = PET.TMPL_CLSF_ID AND PTC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		WHERE PET.TMPL_TYPE_CD = #{TMPL_TYPE_CD}
+			AND PET.USE_YN = 'Y'
+			AND PET.DEL_YN = 'N'
+		ORDER BY PET.SORT_ORD
+	</select>
+	
+	<select id="selectReservationEmailList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/* selectReservationEmailList - 예약 발송 이메일 조회 */
+			EML_SNDNG_ID,
+			CUSTCO_ID,
+			SNDR_EML,
+			RCVR_EML,
+			RFRNC_EML,
+			HID_RFRNC_EML,
+			TTL,
+			CN,
+			FILE_GROUP_KEY,
+			SNDNG_TYPE_CD,
+			RSVT_DT,
+			SNDNG_DT,
+			RSLT_CD,
+			RSLT_MSG,
+			CUST_ID,
+			CHT_CUTT_ID,
+			RGTR_ID,
+			REG_DT,
+			MDFR_ID,
+			MDFCN_DT
+		FROM PLT_EML_SNDNG_HSTRY PESH
+		WHERE to_char(now(), 'yyyymmddhh24miss') > RSVT_DT 
+			AND SNDNG_DT IS NULL
+			AND RSLT_CD  IS NULL
+	</select>
+	
+	
+	<select id="selectEmailSendingHistory" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			ROW_NUMBER() OVER(ORDER BY PESH.EML_SNDNG_ID DESC) AS ROW_NUMBER,
+			PESH.EML_SNDNG_ID, 
+			PESH.CUSTCO_ID, 
+			PESH.SNDR_EML, 
+			PESH.RCVR_EML, 
+			PESH.TTL, 
+			PESH.SNDNG_TYPE_CD, 
+			PESH.RSVT_DT, 
+			PESH.SNDNG_DT,
+			TO_CHAR(TO_TIMESTAMP(PESH.SNDNG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') AS SNDNG_DT_F, 
+			PESH.RSLT_CD,
+			PESH.RSLT_MSG, 
+			PESH.SRVY_TRGT_ID, 
+			PESH.RGTR_ID, 
+			PCC.CD_NM AS SNDNG_TYPE_NM,
+			U.LGN_ID,
+			U.USER_NM AS RGTR_NM,
+			(CASE 
+				WHEN CUST_ID IS NOT NULL THEN 
+					(SELECT CUST_PHN_NO FROM PLT_CUST PC WHERE PC.CUST_ID = PESH.CUST_ID)
+				WHEN SRVY_TRGT_ID IS NOT NULL THEN 
+					(SELECT CUSTCO.GEN_DECRYPT(CUST_PHN_NO, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_SRVY_TRGT PST WHERE PST.SRVY_TRGT_ID = PESH.SRVY_TRGT_ID)
+				ELSE ''
+			END) AS PHN_NO
+		FROM PLT_EML_SNDNG_HSTRY PESH
+		LEFT JOIN PLT_USER U
+			ON U.USER_ID = PESH.RGTR_ID 
+		LEFT OUTER JOIN PLT_COMM_CD PCC 
+			ON PCC.CD_ID = PESH.SNDNG_TYPE_CD AND PCC.GROUP_CD_ID = 'EML_TP' AND PCC.CUSTCO_ID = #{CUSTCO_ID}::BIGINT 
+		WHERE 
+			PESH.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+			<if test="START_DATE != ''">
+				<![CDATA[
+					AND PESH.REG_DT >= #{START_DATE}
+				]]>
+			 </if>
+			 <if test="END_DATE != ''">
+				<![CDATA[
+					AND PESH.REG_DT <= #{END_DATE}
+				]]>
+			 </if>
+			<if test="LGN_ID != null and LGN_ID != ''">
+				AND U.LGN_ID LIKE '%'||#{LGN_ID}||'%'
+			</if>
+			<if test="RCVR_EML != null and RCVR_EML != ''">
+				AND PESH.RCVR_EML LIKE '%'||#{RCVR_EML}||'%'
+			</if>
+	</select>
+
+</mapper>

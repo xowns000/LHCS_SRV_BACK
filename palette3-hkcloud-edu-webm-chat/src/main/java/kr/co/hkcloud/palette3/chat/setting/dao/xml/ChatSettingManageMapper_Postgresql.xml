@@ -1,0 +1,584 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.setting.dao.ChatSettingManageMapper">
+
+    <!-- ######################################################################### -->
+<!-- 안내메세지 데이터 페이징 조회 -->
+<select id="selectRtnPageMsgList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+    SELECT ROW_TBL.*
+     FROM ( 
+	        SELECT 
+	        	 ROW_NUMBER() OVER(ORDER BY MSG.MSG_TIME, MSG.MSG_ID) AS ROW_NUMBER
+	        	 , MSG.MSG_ID                                                                   /* 상담톡키 */
+	             , TO_CHAR(TO_DATE( MSG.MSG_TIME *60, 'sssss'), 'HH24:MI:SS') 		 AS MSG_TIME    /* 메세지 시간 */
+	             , MSG.MSG_CN                                               AS CONTENT     /* 메세지 내용 */
+	             , MSG.USE_YN                                                                   /* 사용여부 */
+	             , CT2.CD_NM                									 AS USE_YN_NM   /* 사용여부명 */
+	             , MSG.AMDR_ID                                                                  /* 수정자ID */
+	             , USR.USER_NM                                                                  /* 수정자명 */
+	             , TO_CHAR(MSG.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS')                AS UPD_DTTM    /* 수정일시 */
+	          FROM PLT_CHT_INFO_MSG MSG
+	          LEFT OUTER JOIN PLT_USER USR
+	         	ON MSG.AMDR_ID = USR.USER_ID
+	          LEFT OUTER JOIN PLT_COMN_CD CT2 
+				ON CT2.GROUP_CD = 'TWB001' AND CT2.CD=MSG.USE_YN AND CT2.CD_TYPE  = '1'
+			  WHERE MSG.CUSTCO_ID = #{CUSTCO_ID}
+	         ORDER BY MSG.MSG_TIME , MSG.MSG_ID
+    ) ROW_TBL
+
+</select>
+
+<insert id="insertRtnMsg" parameterType="java.util.HashMap">
+
+INSERT INTO PLT_CHT_INFO_MSG
+       ( CUSTCO_ID
+       , MSG_ID         /* 메세지 ID */
+       , MSG_TIME       /* 메세지 시간 */
+       , MSG_CN    /* 메세지 내용 */
+       , USE_YN         /* 사용여부 */
+       , REGR_ID        /* 등록자ID */
+       , REG_DTTM       /* 등록일시 */
+       , AMDR_ID        /* 수정자ID */
+       , UPD_DTTM       /* 수정일시 */
+       , PROC_ID        /* 처리자 */
+       , IT_PROCESSING  /* 전산처리일시 */
+       )
+VALUES ( NULLIF(#{CUSTCO_ID},'')
+       , #{MSG_ID}
+       , CAST(DATE_FORMAT(STR_TO_DATE(#{MSG_TIME}, 'mi:ss'), 'MI') AS SIGNED)
+       , #{CONTENT}
+       , #{USE_YN}
+       , #{REGR_ID}
+       , NOW()
+       , #{AMDR_ID}
+       , NOW()
+       , #{PROC_ID}
+       , NOW()
+       )
+
+</insert>
+
+<update id="updateRtnMsg" parameterType="java.util.HashMap">
+
+UPDATE PLT_CHT_INFO_MSG
+   SET MSG_TIME      = CAST(DATE_FORMAT(STR_TO_DATE(#{MSG_TIME}, 'mi:ss'), 'MI') AS SIGNED)
+     , MSG_CN   = #{CONTENT}
+     , USE_YN        = #{USE_YN}
+     , AMDR_ID       = #{AMDR_ID}
+     , UPD_DTTM      = NOW()
+     , PROC_ID       = #{PROC_ID}
+     , IT_PROCESSING = NOW()
+     
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+   AND MSG_ID = #{MSG_ID}
+
+</update>
+
+<delete id="deleteRtnMsg" parameterType="java.util.HashMap" >
+DELETE FROM PLT_CHT_INFO_MSG
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+   AND MSG_ID IN
+ 
+<if test="MSG_ID != null and !MSG_ID.isEmpty">
+	<foreach collection="MSG_ID" item="MSG_ID" open="(" separator=", " close=")">
+		#{MSG_ID}
+	</foreach>
+</if>
+</delete>
+
+<select id="selectRtnHistoryOfWorkTime" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT F.MANAGE_DATE_FROM
+     , F.MANAGE_DATE_TO
+     , F.WORK_TIME_FROM
+     , F.WORK_TIME_TO
+     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = F.REG_ID) AS REGR_NM
+     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = F.UPD_ID) AS AMDR_NM
+     , F.ID
+  FROM PLT_CHT_WRK_TIME_HST F
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+   AND USE_YN = 'Y'
+</select>
+
+<select id="selectRtnHistoryOfWorkTimeLast" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT MANAGE_DATE_FROM
+     , MANAGE_DATE_TO
+     , WORK_TIME_FROM
+     , WORK_TIME_TO
+     , ID
+  FROM PLT_CHT_WRK_TIME_HST
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+   AND MANAGE_DATE_TO = '21001231'
+   AND USE_YN = 'Y'
+</select>
+
+<select id="selectRtnHistoryOfWorkTimeBefore" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT MANAGE_DATE_FROM
+     , MANAGE_DATE_TO
+     , WORK_TIME_FROM
+     , WORK_TIME_TO
+     , ID
+  FROM PLT_CHT_WRK_TIME_HST
+ WHERE CUSTCO_ID = #{CUSTCO_ID}
+   AND ID = (SELECT MAX(ID)
+               FROM PLT_CHT_WRK_TIME_HST
+              WHERE CUSTCO_ID = #{CUSTCO_ID}
+                AND ID != #{ID}
+             )
+   AND USE_YN = 'Y'
+</select>
+
+<!-- 상담설정 정보 조회 --> 
+<select id="selectRtnCnslProp"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT STNG_ID
+     , STNG_CD          /* 설정코드 */
+     , STNG_NM       /* 설정코드명 */
+     , STNG_VL   /* 설정값 */
+  FROM PLT_CHT_STNG
+ WHERE USE_YN = 'Y'
+   AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+</select>
+
+<select id="selectRtnYesterday" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+ SELECT
+  TO_CHAR(TO_DATE(#{strToday}, 'YYYYMMDD')-1, 'YYYYMMDD') AS YESTERDAY
+ 
+</select>
+
+<insert id="insertRtnHistoryOfWorkTime" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_WRK_TIME_HST
+          (
+           CUSTCO_ID
+         , ID
+         , MANAGE_DATE_FROM
+         , MANAGE_DATE_TO
+         , WORK_TIME_FROM
+         , WORK_TIME_TO
+         , USE_YN
+         , REG_ID
+         , REG_DTTM
+         , UPD_ID
+         , UPD_DTTM
+         , PROC_ID
+         , IT_PROCESSING
+           )
+     VALUES(
+           NULLIF(#{CUSTCO_ID},'')
+         , #{ID}
+         , #{MANAGE_DATE_FROM}
+         , #{MANAGE_DATE_TO}
+         , #{WORK_TIME_FROM}
+         , #{WORK_TIME_TO}
+         , #{USE_YN}
+         , #{REG_ID}
+         , NOW()
+         , #{UPD_ID}
+         , NOW()
+         , #{PROC_ID}
+         , NOW()
+           )
+</insert>
+
+<update id="updateRtnHistoryOfWorkTime" parameterType="java.util.HashMap">
+UPDATE PLT_CHT_WRK_TIME_HST
+   SET PROC_ID       = #{PROC_ID}
+     , IT_PROCESSING = NOW()
+     , USE_YN        = #{USE_YN}
+     , UPD_ID        = #{UPD_ID}
+     , UPD_DTTM      = NOW()
+<if test="MANAGE_DATE_FROM != null">, MANAGE_DATE_FROM = #{MANAGE_DATE_FROM}</if>
+<if test="MANAGE_DATE_TO != null">, MANAGE_DATE_TO = #{MANAGE_DATE_TO}</if>
+<if test="WORK_TIME_FROM != null">, WORK_TIME_FROM = #{WORK_TIME_FROM}</if>
+<if test="WORK_TIME_TO != null">, WORK_TIME_TO = #{WORK_TIME_TO}</if>
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND ID = #{ID}
+</update>
+
+<!-- 상담설정 정보 수정 --> 
+<update id="updateRtnCnslProp" parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_STNG
+	SET STNG_VL = #{STNG_VL}
+        , MDFR_ID = #{USER_ID}::INTEGER
+        , MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+    WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+    	AND STNG_CD = #{STNG_CD}
+</update>
+
+<!-- 상담사 일괄 채팅 허용수 업데이트 -->	
+<update id="updateAllMaxAgent" parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_USER_CHAT_SET
+	SET 
+		MAX_CHAT_AGENT = #{MAX_CHAT_AGENT}
+</update>
+
+<!-- 상담사 채팅 허용수 조회 -->
+<select id="selectUserInformation" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		MAX_CHAT_AGENT
+		, VIEW_BASESCRIPT_YN
+		, (SELECT COUNT(STNG_VL) FROM PLT_CHT_ENV 
+		    WHERE STNG_CD='CONT_CHATAGENT_YN'
+		      AND CUSTCO_ID = #{CUSTCO_ID}
+		      AND STNG_VL='N') AS CONT_CHATAGENT_YN
+	FROM PLT_CHT_USER_CHAT_SET
+	WHERE 
+		USER_ID = #{USER_ID}
+</select>
+
+<!-- 상담사 개인별 채팅 허용수 업데이트 -->	
+<update id="updateMaxAgentAndViewBaseScriptYnByUserId" parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_USER_CHAT_SET
+	SET 
+		MAX_CHAT_AGENT = #{MAX_CHAT_AGENT}
+		, VIEW_BASESCRIPT_YN = #{VIEW_BASESCRIPT_YN}
+	WHERE
+		USER_ID = #{USER_ID}
+</update>
+
+<!-- 기업계정 생성 시 상담 종료 메시지 생성 -->
+<insert id="insertInitSysMsgFin" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_SYS_MSG
+          (
+           CUSTCO_ID
+         , SYS_MSG_ID
+         , MSG_CL
+         , SNDRCV_CD
+         , MSG_TYPE
+         , MSG_CN
+         , MSG_DESC
+         , USE_YN
+         , REG_ID
+         , REG_DTTM
+         , UPD_ID
+         , UPD_DTTM
+         , PROC_ID
+         , IT_PROCESSING
+           )
+     VALUES(
+           NULLIF(#{CUSTCO_ID},'')
+         , '20180403040958193MSG34895'
+         , '00'
+         , 'SND'
+         , 'TX'
+         , '상담종료 메시지'
+         , '상담종료 메시지'
+         , 'Y'
+         , #{REG_ID}
+         , NOW()
+         , #{UPD_ID}
+         , NOW()
+         , #{PROC_ID}
+         , NOW()
+           )
+</insert>
+
+<!-- 기업계정 생성 시 응대지연 메시지 생성 -->
+<insert id="insertInitSysMsgLate" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_SYS_MSG
+          (
+           CUSTCO_ID
+         , SYS_MSG_ID
+         , MSG_CL
+         , SNDRCV_CD
+         , MSG_TYPE
+         , MSG_CN
+         , MSG_DESC
+         , USE_YN
+         , REG_ID
+         , REG_DTTM
+         , UPD_ID
+         , UPD_DTTM
+         , PROC_ID
+         , IT_PROCESSING
+           )
+     VALUES(
+           NULLIF(#{CUSTCO_ID},'')
+         , '14'
+         , '00'
+         , 'SND'
+         , 'TX'
+         , '응대지연 메시지'
+         , '응대지연 메시지'
+         , 'Y'
+         , #{REG_ID}
+         , NOW()
+         , #{UPD_ID}
+         , NOW()
+         , #{PROC_ID}
+         , NOW()
+           )
+</insert>
+
+<!-- 기업계정 생성 시 종료버튼 생성 -->
+<insert id="insertInitSysMsgOut" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_SYS_MSG
+          (
+           CUSTCO_ID
+         , SYS_MSG_ID
+         , MSG_CL
+         , SNDRCV_CD
+         , MSG_TYPE
+         , MSG_CN
+         , MSG_DESC
+         , LINKS_TYPE
+         , USE_YN
+         , REG_DEPT_CD
+         , REG_ID
+         , REG_DTTM
+         , UPD_DEPT_CD
+         , UPD_ID
+         , UPD_DTTM
+         , PROC_ID
+         , IT_PROCESSING
+           )
+     VALUES(
+           NULLIF(#{CUSTCO_ID},'')
+         , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')||'MSG41791'
+         , '00'
+         , 'SND'
+         , 'LI'
+         , '종료버튼'
+         , '종료버튼'
+         , 'BK'
+         , 'Y'
+         , '101010'
+         , #{REG_ID}
+         , NOW()
+         , 'x'
+         , #{UPD_ID}
+         , NOW()
+         , #{PROC_ID}
+         , NOW()
+           )
+</insert>
+
+<!-- 기업계정 생성 시 종료버튼 생성 -->
+<insert id="insertInitSysLnkOut" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_SYS_LNK
+          (
+           CUSTCO_ID
+         , SYSTEM_MSG_LINKS_ID  
+         , SYS_MSG_ID
+         , BTN_NM
+         , EXTRA
+         , SORT_ORD
+         , USE_YN
+         , REG_DEPT_CD
+         , REG_ID
+         , REG_DTTM
+         , UPD_DTTM
+         , PROC_ID
+         , IT_PROCESSING
+           )
+     VALUES(
+           NULLIF(#{CUSTCO_ID},'')
+         , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')||'LNK34718'
+         , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')||'MSG41791'
+         , '!종료'
+         , 'LINK01'
+         , '1'
+         , 'Y'
+         , 'system'
+         , #{REG_ID}
+         , NOW()
+         , NOW()
+         , #{PROC_ID}
+         , NOW()
+           )
+</insert>
+
+<!--  최상위 문의유형 생성 -->
+<insert id="insertInitInqTyp" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_QSTN_TYPE
+	(
+		QSTN_TYPE_ID
+		, QSTN_TYPE_NM
+		, QSTN_TYPE_EXPLN
+		, QSTN_TYPE_CD
+		, SNDR_KEY
+		, QSTN_TYPE_SE_CD
+		, USE_YN
+		, SORT_ORD
+		, CUSTCO_ID
+		, DEL_YN
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	)
+ 	VALUES
+ 	(
+		#{QSTN_TYPE_ID}
+		, #{DSPTCH_PRF_NM}
+		, #{DSPTCH_PRF_NM}
+		, #{QSTN_TYPE_CD}
+		, #{SNDR_KEY}
+		, '0'
+		, 'Y''
+		, (SELECT MAX(SORT_ORD)::INTEGER+1
+			FROM PLT_CHT_QSTN_TYPE
+			WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND QSTN_TYPE_SE_CD = '0'
+			)
+		, #{CUSTCO_ID}::INTEGER
+		, 'N'
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+</insert>
+
+<!--  문의유형 기본  생성 -->
+<insert id="insertInitInqTypMsg" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_SYS_MSG
+          (
+           CUSTCO_ID
+         , SYS_MSG_ID
+         , MSG_CL
+         , SNDRCV_CD
+         , MSG_TYPE
+         , MSG_CN
+         , MSG_DESC
+         , USE_YN
+         , REG_DEPT_CD
+         , REG_ID
+         , REG_DTTM
+         , UPD_ID
+         , UPD_DTTM
+         , PROC_ID
+         , IT_PROCESSING
+           )
+     VALUES(
+           NULLIF(#{CUSTCO_ID},'')
+         , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')||'MSG34899'
+         , '00'
+         , 'SND'
+         , 'TX'
+         , '상담을 시작하려면 서비스를 선택해주세요.'
+         , '문의유형 선택 메시지'
+         , 'Y'
+         , 'TOP'
+         , #{REG_ID}
+         , NOW()
+         , #{UPD_ID}
+         , NOW()
+         , #{PROC_ID}
+         , NOW()
+           )
+</insert>
+
+<!--  상담 종료 생성 -->
+<insert id="insertInitSysMsgExit" parameterType="java.util.HashMap">
+INSERT INTO PLT_CHT_SYS_MSG
+          (
+           CUSTCO_ID
+         , SYS_MSG_ID
+         , MSG_CL
+         , SNDRCV_CD
+         , MSG_TYPE
+         , MSG_CN
+         , MSG_DESC
+         , USE_YN
+         , REG_ID
+         , REG_DTTM
+         , UPD_ID
+         , UPD_DTTM
+         , PROC_ID
+         , IT_PROCESSING
+           )
+     VALUES(
+           NULLIF(#{CUSTCO_ID},'')
+         , '14'
+         , '00'
+         , 'RCV'
+         , 'TX'
+         , '고객 상담 종료'
+         , '고객 상담 종료'
+         , 'Y'
+         , #{REG_ID}
+         , NOW()
+         , #{UPD_ID}
+         , NOW()
+         , #{PROC_ID}
+         , NOW()
+           )
+</insert>
+
+<!-- 상담 허용수 체크 -->
+<select id="selectCutPmCnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT STNG_VL
+	FROM PLT_CHT_STNG
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND STNG_CD = 'CONT_CHATAGENT_CNT'
+</select>
+
+<!-- 상담 허용여부 체크 -->
+<select id="selectCutPmYn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT STNG_VL
+	FROM PLT_CHT_STNG
+	WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND STNG_CD = 'CONT_CHATAGENT_YN'
+</select>
+
+
+<!-- 상담허용수 일괄적용 --> 
+<update id="updateCutPm" parameterType= "java.util.HashMap">
+	UPDATE 		/* updateCutPm - 상담허용수 일괄적용 */
+		PLT_CHT_CUTT_PM_STNG
+	SET CHT_LMT_CNT = #{CHT_LMT_CNT}::INTEGER
+    WHERE CUSL_ID IN (SELECT USER_ID
+    					FROM PLT_USER_OGNZ
+    					WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER)
+</update>
+
+
+<!-- 상담허용수 개별적용 --> 
+<update id="updateChtLmtCnt" parameterType= "java.util.HashMap">
+	UPDATE 		/* updateChtLmtCnt - 상담허용수 개별적용 */
+		PLT_CHT_CUTT_PM_STNG
+	SET CHT_LMT_CNT = #{CHT_LMT_CNT}::INTEGER
+    WHERE CUSL_ID = #{CUSL_ID}::INTEGER
+</update>
+
+
+<!-- 상담원 on/off상태 체크 -->
+<select id="selectUserStat"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 		/* selectUserStat - 상담원 on/off상태 체크 */
+		COUNT(CUSL_ID) AS CNT
+	FROM PLT_CHT_RDY_ONOFF_HSTRY
+	WHERE CUSL_ID = #{CUSL_ID}::INTEGER
+</select>
+
+
+<!-- 상담원 채팅 상태 변경 --> 
+<update id="updateUserStat" parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_RDY_ONOFF_HSTRY		/* updateUserStat - 상담원 채팅 상태 변경 */
+	SET STTS_CD = #{USER_STAT}
+		, CUTT_BGNG_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, PRCS_HR = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+    WHERE CUSL_ID = #{CUSL_ID}::INTEGER
+</update>
+
+
+<!-- 상담원 채팅 상태 삽입 --> 
+<insert id="insertUserStat" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_RDY_ONOFF_HSTRY 		/* insertUserStat - 상담원 채팅 상태 삽입 */
+	(
+		CUSL_ID
+		, CUSTCO_ID
+		, STTS_CD
+		, CUTT_BGNG_DT
+		, PRCS_HR
+	) VALUES (
+		#{CUSL_ID}::INTEGER
+		, #{CUSTCO_ID}::INTEGER
+		, #{USER_STAT}
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+</insert>
+
+
+</mapper>    

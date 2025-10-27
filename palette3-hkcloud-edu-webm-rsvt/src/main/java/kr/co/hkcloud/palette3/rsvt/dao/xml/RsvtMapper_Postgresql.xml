@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.rsvt.dao.RsvtMapper">
+	<!-- 상담예약 리스트 조회 -->
+	<select id="getRsvtList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* getRsvtList - 상담예약 리스트 조회 */
+		SELECT (ROW_NUMBER() OVER()) AS ROWNUM
+			, PR.RSVT_ID
+			, PR.RSVT_DT
+			, (SELECT CHT_USER_KEY
+				FROM PLT_CHT_CUST
+				WHERE CHN_CLSF_CD = 'TTALK'
+					AND CUST_ID = PC.CUST_ID
+				LIMIT 1) AS CHT_USER_KEY
+			, PC.CUST_ID
+			, PC.CUST_NM
+			, PC.CUST_PHN_NO
+			, PR.DRWI_SE_NM
+			, PR.STLM_YN
+			, PR.BRNCH_NM
+			, PR.SW_RSVT_ID
+			, PR.SW_ANLS_ID
+			, PRA.RGTR_ID AS ALTMNT_ID
+			, PU1.USER_NM AS ALTMNT_NM
+			, PRA.REG_DT AS ALTMNT_DT
+			, PU2.USER_ID
+			, PU2.USER_NM
+			, PF.FILE_PATH||PF.STRG_FILE_NM AS USER_ICON
+			, (CASE WHEN PPCDE1.ATTR_VL = '' OR PPCDE1.ATTR_VL IS NULL THEN 'RSVT'
+					ELSE PPCDE1.ATTR_VL
+					END) AS RSVT_RS_CD
+			, (CASE WHEN PPCDE1.ATTR_VL = '' OR PPCDE1.ATTR_VL IS NULL THEN '예약'
+					ELSE PCC1.CD_NM
+					END) AS RSVT_RS_NM
+			, (CASE WHEN PR.RSVT_STTS_CD = '' OR PR.RSVT_STTS_CD IS NULL THEN 'RSVT'
+					ELSE PR.RSVT_STTS_CD
+					END) AS RSVT_STTS_CD
+			, (CASE WHEN PR.RSVT_STTS_CD = '' OR PR.RSVT_STTS_CD IS NULL THEN '예약'
+					ELSE PCC2.CD_NM
+					END) AS RSVT_STTS_NM
+			, PPC.CUTT_BGNG_DT
+			, PPC.CUTT_END_DT
+			, PPC.PHN_HR
+			, PPC.REC_FILE_NM
+			, PPCDE2.ATTR_VL AS CUTT_CN
+			, FLOOR(EXTRACT(EPOCH FROM NOW() - TO_TIMESTAMP(PR.RSVT_DT, 'YYYYMMDDHH24MISS')) / 60)::TEXT AS PASS_TIME
+		FROM PLT_RSVT PR
+		LEFT JOIN PLT_CUST PC
+			ON PC.CUST_ID = PR.CUST_ID
+		LEFT JOIN PLT_RSVT_ALTMNT PRA
+			ON PRA.RSVT_ID = PR.RSVT_ID
+		LEFT JOIN PLT_USER PU1
+			ON PRA.RGTR_ID = PU1.USER_ID
+		LEFT JOIN PLT_USER PU2
+			ON PRA.CUSL_ID = PU2.USER_ID
+		LEFT JOIN PLT_FILE PF
+			ON PF.FILE_GROUP_KEY = PU2.ICON
+		LEFT JOIN (SELECT RSVT_ID
+						, MAX(PHN_CUTT_ID) AS PHN_CUTT_ID
+					FROM PLT_RSVT_CUTT
+					GROUP BY RSVT_ID)PRC
+			ON PRC.RSVT_ID = PR.RSVT_ID
+		LEFT JOIN PLT_PHN_CUTT PPC
+			ON PRC.PHN_CUTT_ID = PPC.PHN_CUTT_ID
+		LEFT JOIN (select PPCDE.PHN_CUTT_ID
+						, PPCDE.ATTR_ID
+						, PPCDE.ATTR_VL
+					from PLT_PHN_CUTT_DTL_EXPSN PPCDE
+					LEFT JOIN PLT_EXPSN_ATTR PEA
+						ON PEA.ATTR_ID = PPCDE.ATTR_ID
+					where PEA.EXPSN_ATTR_COL_ID = 'RSVT_RS')PPCDE1
+			ON PPCDE1.PHN_CUTT_ID = PRC.PHN_CUTT_ID
+		LEFT JOIN PLT_COMM_CD PCC1
+			ON PCC1.CD_ID = PPCDE1.ATTR_VL
+			AND PCC1.GROUP_CD_ID = 'RSVT_RS'
+		LEFT JOIN PLT_COMM_CD PCC2
+			ON PCC2.CD_ID = PR.RSVT_STTS_CD
+			AND PCC2.GROUP_CD_ID = 'RSVT_RS'
+		LEFT JOIN PLT_PHN_CUTT_DTL_EXPSN PPCDE2
+			ON PPCDE2.PHN_CUTT_ID = PPC.PHN_CUTT_ID
+			AND PPCDE2.ATTR_ID = (SELECT ATTR_ID
+								FROM PLT_EXPSN_ATTR
+								WHERE EXPSN_ATTR_COL_ID = 'CUSL_CN'
+									AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+									AND BSC_PVSN_ATTR_YN = 'N'
+									AND DEL_YN = 'N'
+								  	AND SE = 'CONSEL'  
+								  	AND USE_YN = 'Y')
+		LEFT JOIN PLT_USER_OGNZ PUO
+			ON PUO.USER_ID = PRA.CUSL_ID
+			AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND PUO.USE_YN = 'Y'
+		WHERE PR.RSVT_DT BETWEEN #{SCH_ST_DT}||'000000' AND #{SCH_END_DT}||'235959'
+			<if test="RSVT_STTS != '' and RSVT_STTS != null and RSVT_STTS != undefined">
+ 				AND PR.RSVT_STTS_CD = #{RSVT_STTS}
+ 			</if>
+			<if test='SCH_KEY != null and SCH_KEY !=""'>
+				<if test='SCH_KEYWORD != null and SCH_KEYWORD !=""'>
+					<choose>
+						<when test='SCH_KEY == "CUST"'>
+						AND (PC.CUST_NM LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%') OR PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%'))
+						</when>
+						<when test='SCH_KEY == "CUST_NM"'>
+						AND PC.CUST_NM LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%')
+						</when>
+						<when test='SCH_KEY == "CUST_PHN_NO"'>
+						AND PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%')
+						</when>
+						<when test='SCH_KEY == "LGN_ID"'>
+						AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_ID = PRA.CUSL_ID AND LGN_ID LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%'))
+						</when>
+						<when test='SCH_KEY == "USER_NM"'>
+						AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_ID = PRA.CUSL_ID AND USER_NM LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%'))
+						</when>
+						<when test='SCH_KEY == "USER_ID"'>
+						AND PRA.CUSL_ID = #{SCH_KEYWORD}::INTEGER
+						</when>
+					</choose>
+				</if>
+			</if>
+			<if test="SCH_OGNZ != '' and SCH_OGNZ != null and SCH_OGNZ != undefined">
+ 				AND PUO.DEPT_ID IN (WITH RECURSIVE dept_tree AS (
+									    SELECT DEPT_ID
+									    FROM plt_ognz
+									    WHERE DEPT_ID = #{SCH_OGNZ}::INTEGER
+									    UNION ALL
+									    SELECT p.DEPT_ID
+									    FROM plt_ognz p
+									    INNER JOIN dept_tree dt ON p.UP_DEPT_ID = dt.DEPT_ID
+									)
+									SELECT DEPT_ID
+									FROM dept_tree)
+ 			</if>
+			<if test='PERSONAL != null and PERSONAL !=""'>
+				AND PRA.CUSL_ID = #{PERSONAL}::INTEGER
+			</if>
+		ORDER BY PR.RSVT_DT DESC
+	</select>
+ 	<insert id="insertQaRslt" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_RSLT (
+					 QA_PLAN_ID
+					,QA_CYCL_ID
+					,QA_MNGR_ID
+					,QA_TRGT_ID
+					,EVL_ARTCL_ID
+					,SCR
+					,REG_DT
+			   ) VALUES
+			   (
+					 #{QA_PLAN_ID}::INTEGER
+					,#{QA_CYCL_ID}::INTEGER
+					,#{QA_MNGR_ID}::INTEGER
+					,#{QA_TRGT_ID}::INTEGER
+					,#{EVL_ARTCL_ID}::INTEGER
+					,#{SCR}::INTEGER
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				)
+	</insert>
+ 	<update id="updateQaRslt" parameterType= "java.util.HashMap">
+		UPDATE PLT_QA_RSLT
+		   SET SCR = #{SCR}::INTEGER
+			  ,MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_CYCL_ID = #{QA_CYCL_ID}::INTEGER
+		   AND QA_MNGR_ID = #{QA_MNGR_ID}::INTEGER
+		   AND QA_TRGT_ID = #{QA_TRGT_ID}::INTEGER
+		   AND EVL_ARTCL_ID = #{EVL_ARTCL_ID}::INTEGER
+	</update>
+	
+	<!-- 상담예약내용 조회 -->
+	<select id="getRsvtCnList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* getRsvtCnList - 상담예약내용 조회 */
+		SELECT
+			PRCG.RSVT_CUTT_GUIDE_ID
+			, PU.USER_NM AS USER_NM
+			, PRCG.CN AS CN
+			, PRCG.MDFCN_DT AS MDFCN_DT
+		FROM PLT_RSVT_CUTT_GUIDE PRCG
+		LEFT JOIN PLT_USER PU
+			ON PU.USER_ID = PRCG.MDFR_ID
+		WHERE RSVT_ID = #{RSVT_ID}::INTEGER
+	</select>
+	
+	<!-- 신규 상담예약내용 작성 -->
+ 	<insert id="insertRsvtCn" parameterType= "java.util.HashMap">
+		/* insertRsvtCn - 신규 상담예약내용 작성 */
+		INSERT INTO PLT_RSVT_CUTT_GUIDE (
+			RSVT_CUTT_GUIDE_ID
+			, RSVT_ID
+			, CN
+			, REG_DT
+			, RGTR_ID
+			, MDFCN_DT
+			, MDFR_ID
+		) VALUES (
+			#{RSVT_CUTT_GUIDE_ID}::INTEGER
+			, #{RSVT_ID}::INTEGER
+			, #{CN}
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+		)
+	</insert>
+	
+	<!-- 상담예약내용 수정 -->
+ 	<update id="updateRsvtCn" parameterType= "java.util.HashMap">
+		 /* updateRsvtCn - 상담예약내용 수정 */
+		 UPDATE PLT_RSVT_CUTT_GUIDE
+		 SET CN = #{CN}
+			, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, MDFR_ID = #{USER_ID}::INTEGER
+		WHERE RSVT_CUTT_GUIDE_ID = #{RSVT_CUTT_GUIDE_ID}::INTEGER
+	</update>
+	
+	<!-- 상담예약 배정상담원 변경 -->
+ 	<update id="setCuslAltmnt" parameterType= "java.util.HashMap">
+		 /* setCuslAltmnt - 상담예약 배정상담원 변경 */
+		 UPDATE PLT_RSVT_ALTMNT
+		 SET CUSL_ID = #{CUSL_ID}::INTEGER
+			, REG_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, RGTR_ID = #{USER_ID}::INTEGER
+		WHERE RSVT_ID = #{RSVT_ID}::INTEGER
+	</update>
+	
+	<!-- 팔레트 RSVT_ID로 BOOKING_ID 조회 -->
+	<select id="selectBookingId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectBookingId - 팔레트 RSVT_ID로 BOOKING_ID 조회 */
+		SELECT
+			SW_RSVT_ID AS BOOKING_ID
+		FROM PLT_RSVT
+		WHERE RSVT_ID = #{RSVT_ID}::INTEGER
+	</select>
+	
+	<!-- 팔레트 RSVT_ID로 BOOKING_ID 조회 -->
+	<select id="selectBookStat" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectBookStat - 예약처리결과 코드 조회 */
+		SELECT
+			CD_VL
+		FROM PLT_COMM_CD
+		WHERE GROUP_CD_ID = 'RSVT_RS'
+			AND CD_ID = #{RSVT_VALUE}
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	</select>
+	
+	<!-- 고객사 상담사 id 조회 -->
+	<select id="selectCustcoCuslId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectCustcoCuslId - 고객사 상담사 id 조회 */
+		SELECT
+			CUSTCO_CUSL_ID
+		FROM PLT_USER
+		WHERE USER_ID = #{CUSL_ID}::INTEGER
+	</select>
+	
+	<!-- 배분변경이력조회 -->
+	<select id="getRsvtAltmntChgLog" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* getRsvtAltmntChgLog - 배분변경이력조회 */
+		SELECT
+			PRAH.BFR_CUSL_ID
+			, (SELECT USER_NM
+				FROM PLT_USER
+				WHERE USER_ID = PRAH.BFR_CUSL_ID) AS BFR_CUSL_NM
+			, PRAH.AFTR_CUSL_ID
+			, (SELECT USER_NM
+				FROM PLT_USER
+				WHERE USER_ID = PRAH.AFTR_CUSL_ID) AS AFTR_CUSL_NM
+			, PRAH.REG_DT
+			, PRAH.RGTR_ID
+			, (SELECT USER_NM
+				FROM PLT_USER
+				WHERE USER_ID = PRAH.RGTR_ID) AS RGTR_NM
+		FROM PLT_RSVT_ALTMNT_HSTRY PRAH
+		WHERE RSVT_ID = #{RSVT_ID}::INTEGER
+	</select>
+	
+	<!-- 예약변경이력insert -->
+	<insert id="setRsvtAltmntChgLog" parameterType= "java.util.HashMap">
+		/* setRsvtAltmntChgLog - 예약변경이력insert */
+		INSERT INTO PLT_RSVT_ALTMNT_HSTRY
+		(
+			RSVT_ID
+			, BFR_CUSL_ID
+			, AFTR_CUSL_ID
+			, REG_DT
+			, RGTR_ID
+		) VALUES (
+			#{RSVT_ID}::INTEGER
+			, (SELECT CUSL_ID
+				FROM PLT_RSVT_ALTMNT
+				WHERE RSVT_ID = #{RSVT_ID}::INTEGER)::INTEGER
+			, #{CUSL_ID}::INTEGER
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+		)
+	</insert>
+	
+	<!-- sw 상담원 리스트 -->
+	<select id="getRsvtCuslList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* getRsvtCuslList - sw 상담원 리스트 */
+		SELECT ROW_NUMBER() OVER() AS ROW_NUMBER 				/* 번호 */
+			 , PU.USER_ID										/* 사용자ID */
+			 , PU.LGN_ID										/* 로그인ID */
+			 , PU.USER_NM										/* 사용자이름 */
+			 , PU.USER_NNM										/* 사용자별칭(닉네임) */
+			 , PPIE.EXT_NO										/* 내선번호 */
+			 , PU.JBTTL_CD										/* 직책코드 */
+			 , (SELECT CD_NM
+			 	FROM PLT_COMM_CD
+			 	WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'JOB_POST'
+			 		AND CD_ID = PU.JBTTL_CD)	AS JBTTL		/* 직책 */
+			 , PUO.DEPT_ID										/* 부서코드 */
+			 , (SELECT DEPT_NM FROM PLT_OGNZ WHERE DEPT_ID = PUO.DEPT_ID) AS DEPT_NM			/* 부서이름 */
+			 , (WITH RECURSIVE DEPT_TREE 
+			 	AS(SELECT DEPT_ID,DEPT_NM,UP_DEPT_ID,DEPT_NM AS full_path
+			    	FROM PLT_OGNZ
+			    	WHERE DEPT_ID = PUO.DEPT_ID
+			    	UNION ALL
+			    	SELECT PO.DEPT_ID,PO.DEPT_NM,PO.UP_DEPT_ID, cast(DT.DEPT_NM || ' > ' || PO.DEPT_NM AS VARCHAR(100))
+			    	FROM DEPT_TREE DT
+			    	INNER JOIN PLT_OGNZ PO on PO.DEPT_ID = DT.UP_DEPT_ID
+				)SELECT FULL_PATH 
+					FROM DEPT_TREE 
+					WHERE UP_DEPT_ID IS NULL)	AS FULL_PATH	/* 부서 */
+			, PU.USER_STTS_CD									/* 사용자상태코드 */
+			, (SELECT CD_NM
+			 	FROM PLT_COMM_CD
+			 	WHERE CUSTCO_ID = PUO.CUSTCO_ID AND GROUP_CD_ID = 'USER_ST'
+			 		AND CD_ID = PU.USER_STTS_CD) AS USER_STTS	/* 사용자상태 */
+			, PU.USER_EXPLN
+			, (CASE WHEN EXISTS (SELECT 1 
+								FROM PLT_RSVT PR
+								LEFT JOIN PLT_RSVT_ALTMNT PRA
+									ON PRA.RSVT_ID = PR.RSVT_ID
+								WHERE PR.RSVT_DT = #{RSVT_DT}
+									AND PRA.CUSL_ID = PU.USER_ID) THEN 'N'
+					ELSE 'Y'
+					END) AS RSVT_YN
+		FROM PLT_USER PU
+		LEFT JOIN PLT_USER_OGNZ PUO
+			on PUO.USER_ID = PU.USER_ID
+			AND PUO.USE_YN = 'Y'
+			AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		LEFT JOIN PLT_PHN_IP_EXT PPIE
+			ON PU.USER_ID = PPIE.USER_ID
+		LEFT JOIN PLT_OGNZ PO
+			ON PO.DEPT_ID = PPIE.DEPT_ID
+		WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER 
+			<if test="SRCH_USER_ID != '' and SRCH_USER_ID != null">AND PU.LGN_ID LIKE '%'|| #{SRCH_USER_ID}|| '%'</if>
+			<if test="SRCH_USER_NM != '' and SRCH_USER_NM != null">AND PU.USER_NM LIKE '%'|| #{SRCH_USER_NM}|| '%'</if>
+			<if test="USER_STTS_CD != '' and USER_STTS_CD != null">AND PU.USER_STTS_CD = #{USER_STTS_CD}</if>
+		ORDER BY ROW_NUMBER
+	</select>
+	
+	<!-- 월간 상담일정 -->
+	<select id="monthSchedule" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* monthSchedule - 월간 상담일정 */
+		SELECT 
+			PR.RSVT_ID
+			, PR.RSVT_DT
+			, PR.RSVT_DT AS RSVT_ST
+			, PR.DRWI_SE_NM
+			, PR.STLM_YN
+			, TO_CHAR(TO_TIMESTAMP(PR.RSVT_DT, 'YYYYMMDDHH24MISS')+interval '10 minutes','YYYYMMDDHH24MISS') AS RSVT_END
+			, PRA.CUSL_ID
+			, PU.USER_NM
+			, PR.CUST_ID
+			, PC.CUST_NM
+			, PR.SW_RSVT_ID
+			, PR.SW_ANLS_ID
+			, PRA.REG_DT AS ALTMNT_DT
+			, PF.FILE_PATH||PF.STRG_FILE_NM AS USER_ICON
+			, (CASE WHEN PPCDE1.ATTR_VL = '' OR PPCDE1.ATTR_VL IS NULL THEN 'RSVT'
+					ELSE PPCDE1.ATTR_VL
+					END) AS RSVT_RS_CD
+			, (CASE WHEN PPCDE1.ATTR_VL = '' OR PPCDE1.ATTR_VL IS NULL THEN '예약'
+					ELSE PCC1.CD_NM
+					END) AS RSVT_RS_NM
+			, (CASE WHEN PR.RSVT_STTS_CD = '' OR PR.RSVT_STTS_CD IS NULL THEN 'RSVT'
+					ELSE PR.RSVT_STTS_CD
+					END) AS RSVT_STTS_CD
+			, (CASE WHEN PR.RSVT_STTS_CD = '' OR PR.RSVT_STTS_CD IS NULL THEN '예약'
+					ELSE PCC2.CD_NM
+					END) AS RSVT_STTS_NM
+			, PPC.CUTT_BGNG_DT
+			, PPC.CUTT_END_DT
+			, PPC.PHN_HR
+			, PPC.REC_FILE_NM
+			, PPCDE2.ATTR_VL AS CUTT_CN
+			, PUO1.DEPT_ID
+			, (WITH RECURSIVE dept_tree AS (
+				    SELECT DEPT_ID
+				    FROM plt_ognz
+				    WHERE DEPT_ID = PUO2.DEPT_ID::INTEGER
+				    UNION ALL
+				    SELECT p.DEPT_ID
+				    FROM plt_ognz p
+				    INNER JOIN dept_tree dt ON p.UP_DEPT_ID = dt.DEPT_ID
+				)
+				SELECT string_agg(DEPT_ID::TEXT, ',') AS DEPT_ID_ARR
+				FROM dept_tree) AS USER_DEPT_ID
+		FROM PLT_RSVT PR
+		LEFT JOIN PLT_RSVT_ALTMNT PRA
+			ON PRA.RSVT_ID = PR.RSVT_ID
+		LEFT JOIN PLT_CUST PC
+			ON PC.CUST_ID = PR.CUST_ID
+		LEFT JOIN PLT_USER PU
+			ON PU.USER_ID = PRA.CUSL_ID
+		LEFT JOIN PLT_FILE PF
+			ON PF.FILE_GROUP_KEY = PU.ICON
+		LEFT JOIN (SELECT RSVT_ID
+						, MAX(PHN_CUTT_ID) AS PHN_CUTT_ID
+					FROM PLT_RSVT_CUTT
+					GROUP BY RSVT_ID)PRC
+			ON PRC.RSVT_ID = PR.RSVT_ID
+		LEFT JOIN PLT_PHN_CUTT PPC
+			ON PRC.PHN_CUTT_ID = PPC.PHN_CUTT_ID
+		LEFT JOIN (SELECT PPCDE.PHN_CUTT_ID
+						, PPCDE.ATTR_ID
+						, PPCDE.ATTR_VL
+					FROM PLT_PHN_CUTT_DTL_EXPSN PPCDE
+					LEFT JOIN PLT_EXPSN_ATTR PEA
+						ON PEA.ATTR_ID = PPCDE.ATTR_ID
+					WHERE PEA.EXPSN_ATTR_COL_ID = 'RSVT_RS')PPCDE1
+			ON PPCDE1.PHN_CUTT_ID = PRC.PHN_CUTT_ID
+		LEFT JOIN PLT_COMM_CD PCC1
+			ON PCC1.CD_ID = PPCDE1.ATTR_VL
+			AND PCC1.GROUP_CD_ID = 'RSVT_RS'
+		LEFT JOIN PLT_COMM_CD PCC2
+			ON PCC2.CD_ID = PR.RSVT_STTS_CD
+			AND PCC2.GROUP_CD_ID = 'RSVT_RS'
+		LEFT JOIN PLT_PHN_CUTT_DTL_EXPSN PPCDE2
+			ON PPCDE2.PHN_CUTT_ID = PPC.PHN_CUTT_ID
+			AND PPCDE2.ATTR_ID = (SELECT ATTR_ID
+								FROM PLT_EXPSN_ATTR
+								WHERE EXPSN_ATTR_COL_ID = 'CUSL_CN'
+									AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+									AND BSC_PVSN_ATTR_YN = 'N'
+									AND DEL_YN = 'N'
+								  	AND SE = 'CONSEL'  
+								  	AND USE_YN = 'Y')
+		LEFT JOIN PLT_USER_OGNZ PUO1
+			ON PUO1.USER_ID = PRA.CUSL_ID
+			AND PUO1.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND PUO1.USE_YN = 'Y'
+		LEFT JOIN PLT_USER_OGNZ PUO2
+			ON PUO2.USER_ID = #{USER_ID}::INTEGER
+			AND PUO2.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND PUO2.USE_YN = 'Y'
+		WHERE TO_DATE(PR.RSVT_DT,'YYYYMMDDHH24MISS') > TO_DATE(#{RSVT_DT},'YYYYMMDDHH24MISS')
+			AND TO_DATE(TO_CHAR(TO_TIMESTAMP(#{RSVT_DT},'YYYYMMDDHH24MISS')+interval '1 month','YYYYMMDDHH24MISS'),'YYYYMMDDHH24MISS') > TO_DATE(PR.RSVT_DT,'YYYYMMDDHH24MISS')
+		ORDER BY PR.RSVT_DT
+	</select>
+	
+</mapper>

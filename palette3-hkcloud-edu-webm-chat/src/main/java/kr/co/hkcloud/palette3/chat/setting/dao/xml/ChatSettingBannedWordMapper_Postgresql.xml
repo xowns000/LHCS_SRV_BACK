@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.setting.dao.ChatSettingBannedWordMapper">
+
+    <!-- 금칙어 리스트 조회 -->
+<select id="getProhibiteWordList" resultType="java.util.HashMap">
+
+	SELECT ROW_TBL.*
+     FROM (
+		SELECT		/* getProhibiteWordList - 금칙어 리스트 조회 */
+			ROW_NUMBER() OVER(ORDER BY PCF.FBDWD DESC) AS ROW_NUMBER 
+			, PCF.FBDWD_ID
+			, PCF.FBDWD
+			, PCF.SSTTT
+			, PCF.USE_YN
+			, PCF.RGTR_ID
+			, (SELECT USER_NM
+				FROM PLT_USER
+				WHERE USER_ID = PCF.RGTR_ID) AS RGTR_NM
+			, PCF.REG_DT
+		FROM PLT_CHT_FBDWD PCF
+		WHERE PCF.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND PCF.FBDWD LIKE ('%' || #{FBDWD} || '%')
+			<if test="USE_YN !='' and USE_YN != null"> 
+				AND PCF.USE_YN = #{USE_YN}
+			</if>
+		ORDER BY PCF.FBDWD DESC
+	) ROW_TBL
+
+
+</select>
+
+<!-- 금칙어 상세 조회 -->
+<select id="getProhibiteWordDetail" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 
+		TPW.PROH_CODE AS MODIFY_PROH_CODE
+		, TPW.FBDWD AS MODIFY_FBDWD
+		, TPW.SSTTT AS MODIFY_SSTTT
+		, TPW.REGR_ID
+		, TPW.REGR_NAME
+		, TO_CHAR(TPW.REGR_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REGR_DTTM
+		, TPW.REGR_DEPT_CD
+		, TPW.AMDR_ID
+		, TB.USER_NM AS AMDR_NAME
+		, TO_CHAR(TPW.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM
+		, TPW.AMDR_DEPT_CD
+		, TPW.PROC_ID
+		, TO_CHAR(TPW.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+		, TPW.USE_YN
+    FROM PLT_CHT_PRH_WRD TPW
+	LEFT OUTER JOIN PLT_USER TB
+    ON TPW.AMDR_ID = TB.USER_ID
+    <!-- WHERE TPW.CUSTCO_ID = #{ASP_NEWCUST_KEY}  -->
+    WHERE TPW.CUSTCO_ID = 'ADMIN'
+      AND TPW.PROH_CODE = #{PROH_CODE}
+</select>
+
+<!-- 금칙어 존재 여부 판단하기 위함 -->
+<select id="getProhibiteWord" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		TPW.PROH_CODE
+		, TPW.FBDWD
+		, TPW.SSTTT
+		, TPW.REGR_ID
+		, TPW.REGR_NAME
+		, TO_CHAR(TPW.REGR_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REGR_DTTM
+		, TPW.REGR_DEPT_CD
+		, TPW.AMDR_ID
+		, TB.USER_NM AS AMDR_NAME
+		, TO_CHAR(TPW.UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM
+		, TPW.AMDR_DEPT_CD
+		, TPW.PROC_ID
+		, TO_CHAR(TPW.IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+		, TPW.USE_YN
+	FROM PLT_CHT_PRH_WRD TPW
+	LEFT OUTER JOIN PLT_USER TB
+	ON TPW.AMDR_ID = TB.USER_ID
+	<!-- WHERE TPW.CUSTCO_ID = #{ASP_NEWCUST_KEY} -->
+	WHERE TPW.CUSTCO_ID = 'ADMIN'
+	  AND FBDWD = #{NEW_FBDWD}
+</select>
+
+<!--  금칙어 신규 등록 -->
+<insert id="postProhibiteWord"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_FBDWD
+	( 
+		CUSTCO_ID
+		, FBDWD_ID
+		, FBDWD
+		, SSTTT
+		, USE_YN
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	) VALUES (
+		#{CUSTCO_ID}::INTEGER
+		, #{FBDWD_ID}::INTEGER
+		, #{FBDWD}
+		, #{SSTTT}
+		, #{USE_YN}
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	) 
+</insert>
+
+<!--  금칙어 수정 -->
+<update id="putProhibiteWord" parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_FBDWD
+	SET FBDWD = #{FBDWD}
+		, SSTTT = #{SSTTT}
+		, USE_YN = #{USE_YN}
+		, MDFR_ID = #{USER_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	 WHERE FBDWD_ID = #{FBDWD_ID}::INTEGER
+</update>
+
+<!--  사용중인 금칙어 리스트 조회 -->
+<select id="getProhibiteWordListByServiceable" resultType="java.util.HashMap">
+	SELECT FBDWD
+		, SSTTT
+	  FROM PLT_CHT_FBDWD
+     WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	   AND USE_YN = 'Y'
+</select>
+
+<!-- 금칙어 삭제 -->
+<delete id="deleteProhibiteWord" parameterType="java.util.HashMap">
+	DELETE FROM PLT_CHT_FBDWD
+	WHERE FBDWD_ID IN 
+		<foreach collection="arrFbdwdId" item="FBDWD_ID" open="(" separator="," close=")" >
+			#{FBDWD_ID}::INTEGER
+		</foreach>
+</delete>
+
+<!--  금칙어 중복 체크 -->
+<select id="fbdwdDuplCheck" resultType="java.util.HashMap">
+	SELECT COUNT(FBDWD_ID) AS CNT
+	  FROM PLT_CHT_FBDWD
+     WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	   AND FBDWD = #{FBDWD}
+</select>
+
+</mapper>    

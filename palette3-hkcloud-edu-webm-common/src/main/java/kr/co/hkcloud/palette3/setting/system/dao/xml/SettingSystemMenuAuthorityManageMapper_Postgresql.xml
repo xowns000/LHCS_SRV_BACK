@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemMenuAuthorityManageMapper">
+
+<!-- ######################################################################### -->
+<!-- 메뉴할당이 가능한 권한그룹인지 체크한다.-->
+<select id="selectRtnchkEnableAuth"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT CASE WHEN ETC_INFO02 = '01' THEN 'N' ELSE 'Y' END AS IS_ENABLE 
+  FROM PLT_AUTH 
+ WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID}
+</select>
+
+<!-- 미할당메뉴 리스트 -->
+<select id="selectRtnNoAlloc"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+  
+SELECT A.MENU_ID          AS MENU_ID
+     , CASE WHEN A.VIEW_TRGT = 'POP' THEN '(팝업)'|| A.MENU_NM ELSE A.MENU_NM END  		 AS MENU_NM
+     , TO_CHAR(A.SELECT_ATRT) || CASE WHEN A.SELECT_ATRT = 1 THEN '1' ELSE '0' END   AS SELECT_ATRT
+     , TO_CHAR(A.PROC_ATRT)   || CASE WHEN A.PROC_ATRT = 1 THEN '1' ELSE '0' END     AS PROC_ATRT
+     , TO_CHAR(A.DEL_ATRT)    || CASE WHEN A.DEL_ATRT = 1 THEN '1' ELSE '0' END      AS DEL_ATRT
+     , TO_CHAR(A.OUTPUT_XPLN) || CASE WHEN A.OUTPUT_XPLN = 1 THEN '1' ELSE '0' END   AS OUTPUT_XPLN
+     , TO_CHAR(A.EXCEL_ATRT)  || CASE WHEN A.EXCEL_ATRT = 1 THEN '1' ELSE '0' END    AS EXCEL_ATRT
+     , TO_CHAR(A.ADT_ATRT)    || CASE WHEN A.ADT_ATRT = 1 THEN '1' ELSE '0' END      AS ADT_ATRT
+     , (SELECT ATRT_GROUP_NM FROM PLT_AUTH WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID}) AS ATRT_GROUP_NM
+  FROM (
+  			SELECT S100.MENU_ID
+             , S100.MENU_NM
+             , S100.SORT_ORD 
+             , S100.VIEW_TRGT
+             , S100.SELECT_ATRT
+             , S100.PROC_ATRT
+             , S100.DEL_ATRT
+             , S100.OUTPUT_XPLN
+             , S100.EXCEL_ATRT
+             , S100.ADT_ATRT        
+			  FROM  (
+					    SELECT A.LOWRNK_MENU_ID
+						FROM PLT_MENU A
+							, (SELECT MENU_DIV_CD
+									 , LOWRNK_MENU_ID
+							   FROM PLT_MENU R
+								WHERE CASE WHEN #{MENU_GROUP}='*'  
+											THEN SPST_MENU_ID
+										ELSE LOWRNK_MENU_ID END = #{MENU_GROUP}
+													
+							   ) B
+						WHERE CAST(A.MENU_DIV_CD AS INTEGER) >= CAST(B.MENU_DIV_CD AS INTEGER)
+						  AND A.LOWRNK_MENU_ID LIKE B.LOWRNK_MENU_ID|| '%' 
+					) R  , 
+					PLT_MENU S100
+			 WHERE S100.LOWRNK_MENU_ID = R.LOWRNK_MENU_ID
+                      AND S100.PATH_NM IS NOT NULL
+			 AND S100.SPST_MENU_ID  != '*'
+  	) A
+  LEFT OUTER JOIN (SELECT MENU_ID
+                        , ATRT_GROUP_ID 
+                     FROM PLT_AUTH_PRG 
+                    WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID}) B
+    ON A.MENU_ID = B.MENU_ID     
+ WHERE B.MENU_ID IS NULL
+ ORDER BY A.VIEW_TRGT, A.SORT_ORD ASC
+   
+</select>
+
+<!-- 할당된 메뉴 리스트 -->
+<select id="selectRtnAlloc"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	
+	<![CDATA[	
+    WITH RECURSIVE MENU_TREE AS (
+		SELECT MENU_ID, UP_MENU_ID, MENU_NM, MENU_NM_ENG, VIEW_TRGT, MENU_SE_CD_LVL, USE_YN, DEL_YN,LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT
+		FROM PLT_MENU
+		WHERE UP_MENU_ID IS NULL
+		AND DEL_YN = 'N'
+		UNION ALL
+		SELECT B.MENU_ID, B.UP_MENU_ID, B.MENU_NM, B.MENU_NM_ENG, B.VIEW_TRGT, B.MENU_SE_CD_LVL, B.USE_YN, B.DEL_YN, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT
+		FROM PLT_MENU B
+		INNER JOIN MENU_TREE C ON C.MENU_ID::INTEGER = B.UP_MENU_ID::INTEGER
+		WHERE B.DEL_YN = 'N'
+	)
+	SELECT ROW_NUMBER() OVER(PARTITION BY AUTHRT_GROUP_ID ORDER BY MT.VIEW_TRGT,MT.SORT) AS ROWNUM 
+		, MT.MENU_ID
+		, MT.MENU_NM
+		, MT.MENU_NM_ENG
+		, MT.VIEW_TRGT
+		, MT.USE_YN
+		, MT.DEL_YN
+		, PAGP.AUTHRT_GROUP_ID
+	FROM MENU_TREE MT
+	LEFT JOIN PLT_AUTHRT_GROUP_PRGRM PAGP 
+		ON MT.MENU_ID = PAGP.MENU_ID
+	 ]]>
+		<if test='AUTHRT_GROUP_ID != "" and AUTHRT_GROUP_ID != null and AUTHRT_GROUP_ID != undefined'>
+			AND PAGP.AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}::INTEGER
+		</if>
+	WHERE 
+	MT.DEL_YN = 'N'
+	<if test='MENU_GROUP != "" and MENU_GROUP != null and MENU_GROUP != undefined'>
+		AND (MT.MENU_ID = #{MENU_GROUP}::INTEGER OR MT.UP_MENU_ID = #{MENU_GROUP}::INTEGER OR MT.UP_MENU_ID IN (SELECT PM.MENU_ID 
+																													FROM PLT_MENU PM
+																													WHERE PM.UP_MENU_ID = #{MENU_GROUP}::INTEGER))
+	</if>
+	<if test='VIEW_TRGT != "" and VIEW_TRGT != null and VIEW_TRGT != undefined'>
+		AND MT.VIEW_TRGT = #{VIEW_TRGT}
+	</if>
+	AND MT.USE_YN = 'Y'
+</select>
+
+<!-- 사용자별 할당 및 미할당된 권한그룹을 조회한다. -->
+<select id="selectRtnAuthGroupMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT A.ATRT_GROUP_ID
+     , A.ATRT_GROUP_NM
+     , A.GROUP_XPLN
+     , CASE WHEN A.MNGR_YN = 'Y' THEN '관리자'
+            ELSE '일반사용자' 
+        END               AS MNGR_YN
+     , A.ETC_INFO01
+     , A.ETC_INFO02
+     , A.ETC_INFO03
+     , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TWB006' AND CT.CD=A.ETC_INFO02 AND CT.CD_TYPE  = '1') AS ETC_INFO02_NM
+     , #{USER_ID}       AS USER_ID
+  FROM PLT_AUTH A
+  LEFT OUTER JOIN ( SELECT ATRT_GROUP_ID
+                      FROM PLT_USER_AUTH
+                     WHERE USER_ID = #{USER_ID}
+                  ) B
+               ON A.ATRT_GROUP_ID = B.ATRT_GROUP_ID
+ WHERE 1=1
+  <choose>
+    <when test="NULLABLE == 'IS NULL'">
+   AND B.ATRT_GROUP_ID IS NULL
+    </when>
+   <when test="NULLABLE == 'IS NOT NULL'">
+   AND B.ATRT_GROUP_ID IS NOT NULL
+   </when>
+  </choose>
+ ORDER BY A.ATRT_GROUP_NM ASC
+</select>
+
+<!-- 권한관리화면의 메뉴보기를 조회한다. -->
+<select id="selectRtnMenuAuthTree"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+ SELECT CAST( MENU_DIV_CD AS INTEGER)                                                     AS NODE_LVL
+      , A.LOWRNK_MENU_ID                                          AS C_NODE_NO
+      , A.SPST_MENU_ID                                            AS P_NODE_NO
+      , A.MENU_NM                                                 AS NODE_TITLE
+      , A.MENU_ID                                                 AS NODE_ID
+      , A.MENU_ID                                                 AS NODE_KEY
+      , CASE WHEN A.PATH_NM IS NULL THEN 'D' ELSE 'F' END         AS NODE_TYPE
+      , ''                                                        AS NODE_ETC
+      , CASE WHEN A.PATH_NM IS NOT NULL AND A.PGM_PARM IS NOT NULL
+            THEN A.PATH_NM || '?' || A.PGM_PARM
+            WHEN A.PATH_NM IS NOT NULL AND A.PGM_PARM IS NULL
+            THEN A.PATH_NM    
+            ELSE '' END                                           AS NODE_URL
+   FROM PLT_MENU A
+      , (
+      		SELECT MENU_ID
+           FROM (     
+					  SELECT A.LOWRNK_MENU_ID 
+                      FROM PLT_MENU A
+							,(SELECT MENU_DIV_CD
+									 , LOWRNK_MENU_ID
+							   FROM PLT_MENU R
+								WHERE MENU_ID IN (SELECT MENU_ID
+                                             FROM PLT_AUTH_PRG
+                                            WHERE ATRT_GROUP_ID = #{ATRT_GROUP_ID})
+													
+							   ) B
+						WHERE CAST(A.MENU_DIV_CD AS INTEGER) >= CAST(B.MENU_DIV_CD AS INTEGER)
+						  AND A.LOWRNK_MENU_ID LIKE B.LOWRNK_MENU_ID|| '%'  
+				) R  , 
+				PLT_MENU A
+				WHERE A.LOWRNK_MENU_ID = R.LOWRNK_MENU_ID
+				GROUP BY MENU_ID
+    ) BBB
+    , (     
+		SELECT A.LOWRNK_MENU_ID
+		 FROM PLT_MENU A
+				, (SELECT MENU_DIV_CD
+						 , LOWRNK_MENU_ID
+				   FROM PLT_MENU R
+					WHERE CASE WHEN #{MENU_GROUP}='*'  
+								THEN SPST_MENU_ID
+							ELSE LOWRNK_MENU_ID END = #{MENU_GROUP}
+				   ) B
+			WHERE CAST(A.MENU_DIV_CD AS INTEGER) >= CAST(B.MENU_DIV_CD AS INTEGER)
+			  AND A.LOWRNK_MENU_ID LIKE B.LOWRNK_MENU_ID|| '%' 
+		) R2      
+  WHERE A.USE_YN = 'Y'
+    AND A.MENU_ID = BBB.MENU_ID
+    AND A.LOWRNK_MENU_ID = R2.LOWRNK_MENU_ID
+  ORDER BY A.LOWRNK_MENU_ID , A.SORT_ORD
+]]>
+</select>
+
+<!-- 권한 등록 전 같은 그룹명이 있는지 체크한다. -->
+<select id="selectDupAuthGroup"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(ATRT_GROUP_NM)   AS AUTH_CNT
+     , ATRT_GROUP_NM          AS AUTHOR_GROUP_NM 
+  FROM PLT_AUTH
+ WHERE ATRT_GROUP_NM = #{ATRT_GROUP_NM}
+ GROUP BY ATRT_GROUP_NM
+</select>
+
+<!-- 메뉴별 권한그룹별프로그램 삭제 -->
+<delete id="deleteRtnAuthbyMenu"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_AUTHRT_GROUP_PRGRM
+	WHERE AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}::INTEGER
+		AND MENU_ID IN 
+			<foreach collection="arrUnStngMenu" item="MENU_ID" open="(" separator="," close=")" >
+				#{MENU_ID}::INTEGER
+			</foreach>
+</delete>
+
+<!-- 권한그룹을 가지고온다. -->
+<select id="selectRtnAuthGroup"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ATRT_GROUP_ID  AS CD
+     , ATRT_GROUP_NM  AS CD_NM
+     , CUSTCO_ID
+  FROM PLT_AUTH
+ ORDER BY ETC_INFO01 DESC  
+</select>
+
+<!-- 사용자 등록 권한그룹을 가지고온다. -->
+<select id="selectRtnAtrtGroupCd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT ATRT_GROUP_ID  AS CD
+     , ATRT_GROUP_NM  AS CD_NM
+  FROM PLT_AUTH
+<!-- WHERE 
+	#매니저 
+	(CASE WHEN  (SELECT ATRT_GROUP_ID FROM PLT_USER_AUTH WHERE USER_ID =#{ASP_USER_ID}) = '20190327140137132TWB3843'  AND ATRT_GROUP_ID IN ('20190327140137132TWB3843','20151106173043466TWB14896') THEN 1 END) = 1
+	OR
+    #관리자
+    (CASE WHEN  (SELECT ATRT_GROUP_ID FROM PLT_USER_AUTH WHERE USER_ID =#{ASP_USER_ID}) = '20190503054503024TWB168613'  AND ATRT_GROUP_ID IN ('20190503054503024TWB168613','20190327140137132TWB3843','20151106173043466TWB14896') THEN 1 END) = 1
+	OR
+    #시스템관리자
+    (CASE WHEN  (SELECT ATRT_GROUP_ID FROM PLT_USER_AUTH WHERE USER_ID =#{ASP_USER_ID}) = '20190125141939798TWB52868'   THEN 1 END) = 1
+ORDER BY ETC_INFO01 DESC  -->
+</select>
+
+<!-- 할당버튼 리스트 -->
+<select id="selectRtnAllocBtn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ROW_NUMBER() OVER(PARTITION BY PBA.AUTHRT_GROUP_ID ORDER BY PB.BTN_ID) AS ROWNUM
+		, PB.BTN_ID
+		, PB.MENU_ID
+		, PB.SCRN_BTN_ID
+		, PB.SCRN_BTN_NM
+		, PB.BTN_TYPE
+		, PBA.AUTHRT_GROUP_ID
+	FROM PLT_BTN PB
+	LEFT JOIN PLT_BTN_AUTHRT PBA 
+		ON PB.BTN_ID = PBA.BTN_ID 
+		AND PB.MENU_ID = PBA.MENU_ID
+		AND PBA.AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}::INTEGER
+	WHERE PB.MENU_ID = #{MENU_ID}::INTEGER
+</select>
+
+<!-- 미할당버튼 리스트 -->
+<select id="selectRtnNoAllocBtn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		  A.BTN_ID
+		, A.MENU_ID
+		, A.SCR_BTN_ID
+		, A.SCR_BTN_NM
+		, A.BTN_TYPE
+		-- , CC.SORT_ORD
+	FROM PLT_BTN A
+	-- INNER JOIN PLT_COMN_CD CC ON CC.GROUP_CD = 'TWB010' AND CC.CD = A.BTN_TYPE
+	LEFT JOIN PLT_BTN_AUTH AB ON A.BTN_ID = AB.BTN_ID AND AB.ATRT_GROUP_ID = #{ATRT_GROUP_ID}
+	WHERE 1=1
+	AND A.MENU_ID = #{MENU_ID}
+	AND AB.BTN_ID IS NULL
+	ORDER BY 1 -- CC.SORT_ORD, A.SCR_BTN_ID
+</select>
+
+<!-- PLT_AUTH_PRG(권한그룹별프로그램) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_AUTH_PRG"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_AUTHRT_GROUP_PRGRM (AUTHRT_GROUP_ID, MENU_ID, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT)
+    VALUES
+    <foreach collection="arrStngMenu" item="MENU_ID" separator=",">
+        (#{AUTHRT_GROUP_ID}::INTEGER, #{MENU_ID}::INTEGER, #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'), #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'))
+    </foreach>
+</insert>
+
+<!-- PLT_AUTH_PRG(권한그룹별프로그램) 테이블 수정 -->	
+<update id="UPDATE_PLT_AUTH_PRG"  parameterType="java.util.HashMap">					
+UPDATE PLT_AUTH_PRG
+   SET IT_PROCESSING   = NOW()
+     , PROC_ID         = #{PROC_ID}           -- 처리자
+<if test="SELECT_ATRT 	!='' and SELECT_ATRT 	!= null">     , SELECT_ATRT     = #{SELECT_ATRT}       -- 조회권한			</if>
+<if test="PROC_ATRT 	!='' and PROC_ATRT 		!= null">     , PROC_ATRT       = #{PROC_ATRT}         -- 처리권한			</if>
+<if test="DEL_ATRT 		!='' and DEL_ATRT 		!= null">     , DEL_ATRT        = #{DEL_ATRT}          -- 삭제권한			</if>
+<if test="OUTPUT_XPLN 	!='' and OUTPUT_XPLN 	!= null">     , OUTPUT_XPLN     = #{OUTPUT_XPLN}       -- 출력권한			</if>
+<if test="EXCEL_ATRT 	!='' and EXCEL_ATRT 	!= null">     , EXCEL_ATRT      = #{EXCEL_ATRT}        -- 엑셀권한			</if>
+<if test="ADT_ATRT 		!='' and ADT_ATRT 		!= null">     , ADT_ATRT        = #{ADT_ATRT}          -- 추가권한			</if>
+<if test="REGR_DEPT_CD 	!='' and REGR_DEPT_CD 	!= null">     , REGR_DEPT_CD    = #{REGR_DEPT_CD}      -- 등록자부서코드	</if>
+<if test="REGR_ID 		!='' and REGR_ID 		!= null">     , REGR_ID         = #{REGR_ID}           -- 등록자ID		</if>
+<if test="REG_DTTM 		!='' and REG_DTTM 		!= null">		
+	  <choose>
+	      <when test="REG_DTTM == 'NOW()'">
+			  , REG_DTTM = NOW()	/* 등록일시 */ 
+		  </when>
+		  <otherwise>
+		      , REG_DTTM = #{REG_DTTM} /* 등록일시 */
+		  </otherwise>
+	  </choose>
+</if>
+<if test="AMDR_DEPT_CD 	!='' and AMDR_DEPT_CD 	!= null">     , AMDR_DEPT_CD    = #{AMDR_DEPT_CD}      -- 수정자부서코드	</if>
+<if test="AMDR_ID 		!='' and AMDR_ID 		!= null">     , AMDR_ID         = #{AMDR_ID}           -- 수정자ID		</if>
+<if test="UPD_DTTM 		!='' and UPD_DTTM 		!= null">	
+ 	  <choose>
+	      <when test="UPD_DTTM == 'NOW()'">
+			  , UPD_DTTM = NOW()	/* 수정일시 */ 
+		  </when>
+		  <otherwise>
+		      , UPD_DTTM = #{UPD_DTTM} /* 수정일시 */
+		  </otherwise>
+	  </choose> 
+</if>
+ WHERE 1 = 1
+   AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID}
+   AND MENU_ID         = #{MENU_ID}
+</update>
+
+<!-- TWB_BAS05(권한그룹) 데이터 삭제 -->	
+<delete id="DELETE_PLT_AUTH"  parameterType="java.util.HashMap">
+DELETE FROM PLT_AUTH
+ WHERE 1 = 1
+   AND ATRT_GROUP_ID = #{ATRT_GROUP_ID}
+</delete>
+
+<!-- PLT_AUTH_PRG(권한그룹별프로그램) 데이터 삭제 -->
+<delete id="DELETE_PLT_AUTH_PRG"  parameterType="java.util.HashMap">				
+	DELETE FROM PLT_AUTHRT_GROUP_PRGRM
+	WHERE AUTHRT_GROUP_ID IN
+	<foreach collection="arrAuthrtId" item="AUTHRT_GROUP_ID" open="(" separator="," close=")" >
+		#{AUTHRT_GROUP_ID}::INTEGER
+	</foreach>
+</delete>
+
+<!-- TWB_BAS07(사용자권한) 데이터 삭제 -->
+<delete id="DELETE_PLT_USER_AUTH"  parameterType= "java.util.HashMap">			
+DELETE FROM PLT_USER_AUTH
+ WHERE 1 = 1
+   AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID}  
+   AND USER_ID         = #{USER_ID}        
+</delete>
+
+<!-- PLT_AUTH_PRG(권한그룹별프로그램) 테이블 데이터 조회 -->
+<select id="SELECT_PLT_AUTH_PRG"  parameterType="java.util.HashMap" resultType="java.util.HashMap">	
+SELECT ATRT_GROUP_ID                 -- 권한그룹ID
+     , MENU_ID                       -- 메뉴ID
+     , SELECT_ATRT                   -- 조회권한
+     , PROC_ATRT                     -- 처리권한
+     , DEL_ATRT                      -- 삭제권한
+     , OUTPUT_XPLN                   -- 출력권한
+     , EXCEL_ATRT                    -- 엑셀권한
+     , ADT_ATRT                      -- 추가권한
+     , REGR_DEPT_CD                  -- 등록자부서코드
+     , REGR_ID                       -- 등록자ID
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+     , AMDR_DEPT_CD                  -- 수정자부서코드
+     , AMDR_ID                       -- 수정자ID
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+     , PROC_ID                       -- 처리자
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+  FROM PLT_AUTH_PRG
+ WHERE 1 = 1
+<if test="ATRT_GROUP_ID !='' and ATRT_GROUP_ID 	!= null">   AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID}   </if>
+<if test="MENU_ID 		!='' and MENU_ID 		!= null">   AND MENU_ID         = #{MENU_ID}         </if>
+<if test="SELECT_ATRT 	!='' and SELECT_ATRT 	!= null">   AND SELECT_ATRT     = #{SELECT_ATRT}     </if>
+<if test="PROC_ATRT 	!='' and PROC_ATRT 		!= null">   AND PROC_ATRT       = #{PROC_ATRT}       </if>
+<if test="DEL_ATRT 		!='' and DEL_ATRT 		!= null">   AND DEL_ATRT        = #{DEL_ATRT}        </if>
+<if test="OUTPUT_XPLN 	!='' and OUTPUT_XPLN 	!= null">   AND OUTPUT_XPLN     = #{OUTPUT_XPLN}     </if>
+<if test="EXCEL_ATRT 	!='' and EXCEL_ATRT 	!= null">   AND EXCEL_ATRT      = #{EXCEL_ATRT}      </if>
+<if test="ADT_ATRT 		!='' and ADT_ATRT 		!= null">   AND ADT_ATRT        = #{ADT_ATRT}        </if>
+<if test="REGR_DEPT_CD 	!='' and REGR_DEPT_CD 	!= null">   AND REGR_DEPT_CD    = #{REGR_DEPT_CD}    </if>
+<if test="REGR_ID 		!='' and REGR_ID 		!= null">   AND REGR_ID         = #{REGR_ID}         </if>
+<if test="REG_DTTM 		!='' and REG_DTTM 		!= null">      
+	  <choose>
+	      <when test="REG_DTTM == 'NOW()'">
+			AND REG_DTTM = NOW()
+		  </when>
+		  <otherwise>
+		    AND REG_DTTM = #{REG_DTTM}
+		  </otherwise>
+	  </choose>
+</if>
+<if test="AMDR_DEPT_CD 	!='' and AMDR_DEPT_CD 	!= null">   AND AMDR_DEPT_CD    = #{AMDR_DEPT_CD}    </if>
+<if test="AMDR_ID 		!='' and AMDR_ID 		!= null">   AND AMDR_ID         = #{AMDR_ID}         </if>
+<if test="UPD_DTTM 		!='' and UPD_DTTM 		!= null">
+ 	  <choose>
+	      <when test="UPD_DTTM == 'NOW()'">
+			AND UPD_DTTM = NOW()
+		  </when>
+		  <otherwise>
+		    AND UPD_DTTM = #{UPD_DTTM}
+		  </otherwise>
+	  </choose> 
+</if>
+<if test="PROC_ID 		!='' and PROC_ID 		!= null">   AND PROC_ID         = #{PROC_ID}         </if>
+</select>
+
+<!-- PLT_AUTH_PRG(권한그룹별프로그램) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_AUTH_PRG"  parameterType="java.util.HashMap" resultType="java.util.HashMap">	
+
+    SELECT ROWNUM AS ROW_NUMBER
+         , ROW_TBL.*
+     FROM ( 
+			SELECT ATRT_GROUP_ID                 -- 권한그룹ID
+	               , MENU_ID                       -- 메뉴ID
+	               , SELECT_ATRT                   -- 조회권한
+	               , PROC_ATRT                     -- 처리권한
+	               , DEL_ATRT                      -- 삭제권한
+	               , OUTPUT_XPLN                   -- 출력권한
+	               , EXCEL_ATRT                    -- 엑셀권한
+	               , ADT_ATRT                      -- 추가권한
+	               , REGR_DEPT_CD                  -- 등록자부서코드
+	               , REGR_ID                       -- 등록자ID
+	               , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+	               , AMDR_DEPT_CD                  -- 수정자부서코드
+	               , AMDR_ID                       -- 수정자ID
+	               , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+	               , PROC_ID                       -- 처리자
+	               , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+	            FROM PLT_AUTH_PRG
+	           WHERE 1 = 1
+				<if test="ATRT_GROUP_ID !='' and ATRT_GROUP_ID 	!= null">   AND ATRT_GROUP_ID   = #{ATRT_GROUP_ID}   </if>
+				<if test="MENU_ID 		!='' and MENU_ID 		!= null">   AND MENU_ID         = #{MENU_ID}         </if>
+				<if test="SELECT_ATRT 	!='' and SELECT_ATRT 	!= null">   AND SELECT_ATRT     = #{SELECT_ATRT}     </if>
+				<if test="PROC_ATRT 	!='' and PROC_ATRT 		!= null">   AND PROC_ATRT       = #{PROC_ATRT}       </if>
+				<if test="DEL_ATRT 		!='' and DEL_ATRT 		!= null">   AND DEL_ATRT        = #{DEL_ATRT}        </if>
+				<if test="OUTPUT_XPLN 	!='' and OUTPUT_XPLN 	!= null">   AND OUTPUT_XPLN     = #{OUTPUT_XPLN}     </if>
+				<if test="EXCEL_ATRT 	!='' and EXCEL_ATRT 	!= null">   AND EXCEL_ATRT      = #{EXCEL_ATRT}      </if>
+				<if test="ADT_ATRT 		!='' and ADT_ATRT 		!= null">   AND ADT_ATRT        = #{ADT_ATRT}        </if>
+				<if test="REGR_DEPT_CD 	!='' and REGR_DEPT_CD 	!= null">   AND REGR_DEPT_CD    = #{REGR_DEPT_CD}    </if>
+				<if test="REGR_ID 		!='' and REGR_ID 		!= null">   AND REGR_ID         = #{REGR_ID}         </if>
+				<if test="REG_DTTM 		!='' and REG_DTTM 		!= null">    
+					  <choose>
+					      <when test="REG_DTTM == 'NOW()'">
+							AND REG_DTTM = NOW()
+						  </when>
+						  <otherwise>
+						    AND REG_DTTM = #{REG_DTTM}
+						  </otherwise>
+					  </choose>
+				</if>
+				<if test="AMDR_DEPT_CD 	!='' and AMDR_DEPT_CD 	!= null">   AND AMDR_DEPT_CD    = #{AMDR_DEPT_CD}    </if>
+				<if test="AMDR_ID 		!='' and AMDR_ID 		!= null">   AND AMDR_ID         = #{AMDR_ID}         </if>
+				<if test="UPD_DTTM 		!='' and UPD_DTTM 		!= null">   
+				 	  <choose>
+					      <when test="UPD_DTTM == 'NOW()'">
+							AND UPD_DTTM = NOW()
+						  </when>
+						  <otherwise>
+						    AND UPD_DTTM = #{UPD_DTTM}
+						  </otherwise>
+					  </choose> 
+				</if>
+				<if test="PROC_ID 		!='' and PROC_ID 		!= null">   AND PROC_ID         = #{PROC_ID}         </if>
+
+	 ) ROW_TBL
+</select>
+
+</mapper>

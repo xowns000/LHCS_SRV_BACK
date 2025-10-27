@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.chat.main.dao.NotificationTalkMapper">
+
+<!-- 알림톡 목록 리스트  -->
+<select id="getAlrimCatalog" resultType="java.util.HashMap">
+	SELECT CUSTCO_ID			/*기업코드*/
+		, CO_NM			/*기업명*/
+		, UUID				/*톡 uuid */
+		, DSPTCH_PRF_KEY		/*발신프로필키*/							
+		, TMPL_CD				/*템플릿 코드*/
+		, TMPL_TYP				/*템플릿 타입*/
+		, TMPL_STATUS			/*템플릿 상태*/
+		, TMPL_HEAD				/*헤더*/
+		, TMPL_NM				/*템플릿 명*/
+		, TMPL_CON				/*템플릿 내용*/
+		, REG_ID				/*등록 아이디*/
+		, REG_DATE				/*등록 날짜*/
+		, UPD_DTTM				/*수정 날짜*/
+		, USE_YN				/*알림톡 사용 여부*/
+		, CATEGORY				/*카테고리*/
+		, TMPL_EMPH 			/*강조유형*/
+		, TMPL_EXT				/*부가정보*/
+		, TMPL_IMG				/*이미지*/
+		, TMPL_IMG_URL			/*이미지링크*/
+		, TMPL_TIT				/*강조표기핵심정보*/
+		, TMPL_SUB				/*강보표기부가정보*/
+		, TMPL_HEAD				/*헤더*/
+		, TMPL_HILIT			/*아이템 하이라이트*/
+		, TMPL_ITEM				/*아이템리스트*/
+		, TMPL_SEC				/*보안여부*/
+		, BUTN					/*버튼정보*/
+		, QUIKREPL						/*바로 연결정보*/	
+	FROM PLT_ATALK_BIZ
+	WHERE CUSTCO_ID = #{CUSTCO_ID}	
+	 <if test="TMPL_CD 	!='' and TMPL_CD != null"> 
+	  AND TMPL_CD LIKE('%'||#{TMPL_CD}||'%')
+	</if>
+		 <if test="TMPL_CON 	!='' and TMPL_CON != null"> 
+	  AND TMPL_CON LIKE('%'||#{TMPL_CON}||'%')
+	</if>
+	
+</select>
+
+<!-- 알림톡 사용여부 체크  -->
+<select id="checkAlrim" resultType="java.util.HashMap">
+	SELECT CHAT_YN			/*채팅 가능 여부*/
+		, ALRIM_YN			/*알림톡 가능 여부*/
+		, SMS_YN				/*문자 가능 여부 */
+	FROM PLT_ASP_CUS
+	WHERE CUSTCO_ID = #{CUSTCO_ID}	
+
+	
+</select> 
+  
+
+<!-- 알림톡 템플릿등록 -->	
+<!-- INSERT시 NULL값 처리를 위해 jdbcType=VARCHAR 추가 -->
+<insert id="regiAlrimTmpl"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_ATALK_BIZ 
+   (
+    	CUSTCO_ID
+    	,CO_NM
+   		<if test="UUID !='' and UUID  != null">
+    		,UUID
+   		</if>
+   		<if test="DSPTCH_PRF_KEY !='' and DSPTCH_PRF_KEY  != null">
+    		,DSPTCH_PRF_KEY
+   		</if>
+   		<if test="TMPL_CD !='' and TMPL_CD  != null">
+    		,TMPL_CD
+   		</if>
+   		<if test="CATEGORY !='' and CATEGORY  != null">
+    		,CATEGORY
+   		</if>
+   		<if test="TMPL_NM !='' and TMPL_NM  != null">
+    		,TMPL_NM
+   		</if>
+   		<if test="TMPL_EMPH !='' and TMPL_EMPH  != null">
+    		,TMPL_EMPH
+   		</if>
+   		<if test="TMPL_TIT !='' and TMPL_TIT  != null">
+    		,TMPL_TIT
+   		</if>
+   		<if test="TMPL_SUB !='' and TMPL_SUB  != null">
+    		,TMPL_SUB
+   		</if>
+   		<if test="TMPL_IMG !='' and TMPL_IMG  != null">
+    		,TMPL_IMG
+   		</if>
+   		<if test="TMPL_IMG_URL !='' and TMPL_IMG_URL  != null">
+    		,TMPL_IMG_URL
+   		</if>
+   		<if test="TMPL_HEAD !='' and TMPL_HEAD  != null">
+    		,TMPL_HEAD
+   		</if>
+   		<if test="TMPL_HILIT !='' and TMPL_HILIT  != null">
+    		,TMPL_HILIT
+   		</if>
+   		<if test="TMPL_ITEM !='' and TMPL_ITEM  != null">
+    		,TMPL_ITEM
+   		</if>
+   		<if test="TMPL_TYP !='' and TMPL_TYP  != null">
+    		,TMPL_TYP
+   		</if>
+   		<if test="TMPL_STATUS !='' and TMPL_STATUS  != null">
+    		,TMPL_STATUS
+   		</if>
+   		<if test="TMPL_CON !='' and TMPL_CON  != null">
+    		,TMPL_CON
+   		</if>
+   		<if test="TMPL_EXT !='' and TMPL_EXT  != null">
+    		,TMPL_EXT
+   		</if>
+   		<if test="BUTN !='' and BUTN  != null">
+    		,BUTN
+   		</if>
+   		<if test="QUIKREPL !='' and QUIKREPL  != null">
+    		,QUIKREPL
+   		</if>
+   		<if test="USE_YN !='' and USE_YN  != null">
+    		,USE_YN
+   		</if>
+    	,REG_ID
+    	,REG_DATE
+    	,UPD_ID
+    	,UPD_DTTM
+    	<!-- 
+    	,TMPL_STATUS
+    	-->
+    	,TMPL_STAT
+    	,TMPL_SLEEP
+   		<if test="FILE_GROUP !='' and FILE_GROUP  != null">
+    		,FILE_GROUP
+    	</if>
+   		<if test="HLIT_IMG !='' and HLIT_IMG  != null">
+    		,HLIT_IMG
+   		</if>
+   		<if test="HLIT_IMG_URL !='' and HLIT_IMG_URL  != null">
+    		,HLIT_IMG_URL
+   		</if>
+   )
+  VALUES
+   (
+   		#{ASP_NEWCUST_KEY},
+   		(SELECT CO_NM
+   		FROM PLT_ASP_CUS
+   		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY})
+		<if test="UUID !='' and UUID  != null">
+   			,#{UUID}
+   		</if>
+   		<if test="DSPTCH_PRF_KEY !='' and DSPTCH_PRF_KEY  != null">
+   			,#{DSPTCH_PRF_KEY}
+   		</if>
+   		<if test="TMPL_CD !='' and TMPL_CD  != null">
+   			,#{TMPL_CD}
+   		</if>
+   		<if test="CATEGORY !='' and CATEGORY  != null">
+   			,#{CATEGORY}
+   		</if>
+   		<if test="TMPL_NM !='' and TMPL_NM  != null">
+   			,#{TMPL_NM}
+   		</if>
+   		<if test="TMPL_EMPH !='' and TMPL_EMPH  != null">
+   			,#{TMPL_EMPH}
+   		</if>
+   		<if test="TMPL_TIT !='' and TMPL_TIT  != null">
+   			,#{TMPL_TIT}
+   		</if>
+   		<if test="TMPL_SUB !='' and TMPL_SUB  != null">
+   			,#{TMPL_SUB}
+   		</if>
+   		<if test="TMPL_IMG !='' and TMPL_IMG  != null">
+   			,#{TMPL_IMG}
+   		</if>
+   		<if test="TMPL_IMG_URL !='' and TMPL_IMG_URL  != null">
+   			,#{TMPL_IMG_URL}
+   		</if>
+   		<if test="TMPL_HEAD !='' and TMPL_HEAD  != null">
+   			,#{TMPL_HEAD}
+   		</if>
+   		<if test="TMPL_HILIT !='' and TMPL_HILIT  != null">
+   			,#{TMPL_HILIT}
+   		</if>
+   		<if test="TMPL_ITEM !='' and TMPL_ITEM  != null">
+   			,#{TMPL_ITEM}
+   		</if>
+   		<if test="TMPL_TYP !='' and TMPL_TYP  != null">
+   			,#{TMPL_TYP}
+   		</if>
+   		<if test="TMPL_STATUS !='' and TMPL_STATUS  != null">
+    		,#{TMPL_STATUS}
+   		</if>
+   		<if test="TMPL_CON !='' and TMPL_CON  != null">
+   			,#{TMPL_CON}
+   		</if>
+   		<if test="TMPL_EXT !='' and TMPL_EXT  != null">
+   			,#{TMPL_EXT}
+   		</if>
+   		<if test="BUTN !='' and BUTN  != null">
+   			,#{BUTN}
+   		</if>
+   		<if test="QUIKREPL !='' and QUIKREPL  != null">
+   			,#{QUIKREPL}
+   		</if>
+   		<if test="USE_YN !='' and USE_YN  != null">
+   			,#{USE_YN}
+   		</if>
+   		,#{USER_ID}
+   		,NOW()
+   		,#{USER_ID}
+   		,NOW()
+   		<!-- 
+   		,'REG'
+   		 -->
+   		,'R'
+   		,'false'
+   		<if test="FILE_GROUP !='' and FILE_GROUP  != null">
+   			,#{FILE_GROUP}
+   		</if>
+   		<if test="HLIT_IMG !='' and HLIT_IMG  != null">
+    		,#{HLIT_IMG}
+   		</if>
+   		<if test="HLIT_IMG_URL !='' and HLIT_IMG_URL  != null">
+    		,#{HLIT_IMG_URL}
+   		</if>
+   )
+  </insert>
+  
+  <!-- 알림톡 템플릿 수정 -->
+<update id="modiAlrimTmpl"  parameterType="java.util.HashMap">
+	UPDATE PLT_ATALK_BIZ
+	SET <if test="CATEGORY !='' and CATEGORY  != null">
+   			CATEGORY = #{CATEGORY},
+   		</if>
+   		<if test="TMPL_NM !='' and TMPL_NM  != null">
+   			TMPL_NM = #{TMPL_NM},
+   		</if>
+   		<if test="TMPL_EMPH !='' and TMPL_EMPH  != null">
+   			TMPL_EMPH = #{TMPL_EMPH},
+   		</if>
+   		<if test="TMPL_TIT !='' and TMPL_TIT  != null">
+   			TMPL_TIT = #{TMPL_TIT},
+   		</if>
+   		<if test="TMPL_SUB !='' and TMPL_SUB  != null">
+   			TMPL_SUB = #{TMPL_SUB},
+   		</if>
+   		<if test="TMPL_IMG !='' and TMPL_IMG  != null">
+   			TMPL_IMG = #{TMPL_IMG},
+   		</if>
+   		<if test="TMPL_IMG_URL !='' and TMPL_IMG_URL  != null">
+   			TMPL_IMG_URL = #{TMPL_IMG_URL},
+   		</if>
+   		<if test="TMPL_HEAD !='' and TMPL_HEAD  != null">
+   			TMPL_HEAD = #{TMPL_HEAD},
+   		</if>
+   		<if test="TMPL_HILIT !='' and TMPL_HILIT  != null">
+   			TMPL_HILIT = #{TMPL_HILIT},
+   		</if>
+   		<if test="TMPL_ITEM !='' and TMPL_ITEM  != null">
+   			TMPL_ITEM = #{TMPL_ITEM},
+   		</if>
+   		<if test="TMPL_TYP !='' and TMPL_TYP  != null">
+   			TMPL_TYP = #{TMPL_TYP},
+   		</if>
+   		<if test="TMPL_CON !='' and TMPL_CON  != null">
+   			TMPL_CON = #{TMPL_CON},
+   		</if>
+   		<if test="TMPL_EXT !='' and TMPL_EXT  != null">
+   			TMPL_EXT = #{TMPL_EXT},
+   		</if>
+   		<if test="BUTN !='' and BUTN  != null">
+   			BUTN = #{BUTN},
+   		</if>
+   		<if test="QUIKREPL !='' and QUIKREPL  != null">
+   			QUIKREPL = #{QUIKREPL},
+   		</if>
+   		<if test="FILE_GROUP !='' and FILE_GROUP  != null">
+   			FILE_GROUP = #{FILE_GROUP},
+   		</if>
+   		<if test="HLIT_IMG !='' and HLIT_IMG  != null">
+    		HLIT_IMG = #{HLIT_IMG},
+   		</if>
+   		<if test="HLIT_IMG_URL !='' and HLIT_IMG_URL  != null">
+    		HLIT_IMG_URL = #{HLIT_IMG_URL},
+   		</if>
+   		UPD_ID = #{USER_ID},
+    	UPD_DTTM = NOW()
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND TMPL_CD = #{TMPL_CD}
+</update>
+
+  <!-- 알림톡 템플릿 조회  -->
+<select id="inqAlrimTmpl" resultType="java.util.HashMap">
+	SELECT AA.*,
+	    (SELECT CD_NM
+	    FROM PLT_COMN_CD
+	    WHERE GROUP_CD = 'ALM001'
+	    AND CD = AA.TMPL_STATUS) AS TMPL_STATUS_NM,
+	    (SELECT CD_NM
+	    FROM PLT_COMN_CD
+	    WHERE GROUP_CD = 'ALM005'
+	    AND CD = AA.TMPL_STAT) AS TMPL_STAT_NM
+	FROM (
+		SELECT ROWNUM,
+			PAB.CUSTCO_ID,
+	    	PAB.CO_NM,
+	    	PAB.UUID,
+	    	PAB.DSPTCH_PRF_KEY,
+	    	PAB.TMPL_CD,
+	    	PAB.CATEGORY,
+	    	PAB.TMPL_NM,
+	    	PAB.TMPL_EMPH,
+	    	PAB.TMPL_TIT,
+	    	PAB.TMPL_SUB,
+	    	PAB.TMPL_IMG,
+	    	PAB.TMPL_IMG_URL,
+	    	PAB.TMPL_HEAD,
+	    	PAB.TMPL_HILIT,
+	    	PAB.TMPL_ITEM,
+	    	PAB.TMPL_TYP,
+	    	(SELECT CD_NM
+	    		FROM PLT_COMN_CD
+	    		WHERE GROUP_CD = 'ALM003'
+	    		AND CD = PAB.TMPL_TYP) AS TMPL_TYP_NM,
+	    	PAB.TMPL_CON,
+	    	PAB.TMPL_EXT,
+	    	PAB.BUTN,
+	    	PAB.QUIKREPL,
+	    	PAB.USE_YN,
+	    	PAB.REG_ID,
+	    	PAB.REG_DATE,
+	    	PAB.UPD_ID,
+	    	PAB.UPD_DTTM,
+	    	PAB.TMPL_STAT,
+	    	PAB.TMPL_STATUS,
+	    	PAB.TMPL_SLEEP,
+	    	PAB.FILE_GROUP,
+	    	PAB.REJ_COMMENT,
+	    	PAB.HLIT_IMG_URL,
+	    	PAB.HLIT_IMG
+		FROM PLT_ATALK_BIZ PAB
+		WHERE PAB.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND PAB.UUID LIKE('%'||#{UUID}||'%')
+		AND PAB.DSPTCH_PRF_KEY LIKE('%'||#{DSPTCH_PRF_KEY}||'%')
+		<if test="TMPL_STAT != '' and TMPL_STAT != null and TMPL_STAT != undefined">
+			AND PAB.TMPL_STATUS = #{TMPL_STATUS}
+		</if>
+		AND PAB.TMPL_NM LIKE ('%'||#{TMPL_NM}||'%')
+		AND PAB.TMPL_CD LIKE ('%'||#{TMPL_CD}||'%')
+		) AA
+</select>
+
+<!-- 알림톡 템플릿 상태 업데이트 -->	
+	<update id="updateAlrimTmplStat"  parameterType="java.util.HashMap">
+		UPDATE PLT_ATALK_BIZ
+		   SET TMPL_STAT = #{TMPL_STAT}
+		   		,TMPL_STATUS= #{TMPL_STATUS}
+		   		,TMPL_SLEEP=#{TMPL_SLEEP}
+		   		,REJ_COMMENT=#{REJ_COMMENT}
+		   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		   	 AND TMPL_CD = #{TMPL_CD}
+	</update>
+	
+	<!-- 알림톡 템플릿 삭제 -->	
+	<delete id="delAlrimTmpl"  parameterType="java.util.HashMap">
+		DELETE FROM PLT_ATALK_BIZ
+		 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		 	AND UUID = #{UUID}
+  		 	AND DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+  		 	AND TMPL_CD = #{TMPL_CD}
+	</delete>
+	
+	<!-- 알림톡 다건발송 -->
+<insert id="alrimMultiSend"  parameterType= "java.util.HashMap">
+
+  </insert>
+  
+  <!-- 알림톡 템플릿 중복체크  -->
+<select id="cntAlrimTmpl" resultType="java.util.HashMap">
+	SELECT COUNT(*) AS CNT
+	FROM PLT_ATALK_BIZ
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	AND DSPTCH_PRF_KEY=#{DSPTCH_PRF_KEY}
+	AND TMPL_CD = #{TMPL_CD}
+</select>
+
+<!-- 알림톡 카카오 메인 이미지URL -->	
+	<update id="alrimMainImgUrl"  parameterType="java.util.HashMap">
+		UPDATE PLT_ATALK_BIZ
+		   SET TMPL_IMG = #{TMPL_IMG}
+		   		,TMPL_IMG_URL= #{TMPL_IMG_URL}
+		   		,FILE_GROUP=#{FILE_GROUP}
+		   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		   	 AND DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+		   	 AND TMPL_CD = #{TMPL_CD}
+	</update>
+	
+<!-- 알림톡 카카오 하이라이트 이미지URL -->	
+	<update id="alrimHlitImgUrl"  parameterType="java.util.HashMap">
+		UPDATE PLT_ATALK_BIZ
+		   SET HLIT_IMG = #{HLIT_IMG}
+		   		,HLIT_IMG_URL= #{HLIT_IMG_URL}
+		   		,FILE_GROUP=#{FILE_GROUP}
+		   		,TMPL_HILIT = #{TMPL_HILIT}
+		   WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		   	 AND DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+		   	 AND TMPL_CD = #{TMPL_CD}
+	</update>
+	
+	<!-- 알림톡 변수 체크 -->
+	<select id="getAlrimCnt" resultType="java.util.HashMap">
+	SELECT COUNT(*) AS CNT
+	FROM PLT_COMN_CD
+	WHERE GROUP_CD = 'ALM006'
+	AND ETC_INFO01=#{CUSTCO_ID}
+	AND ETC_INFO03=#{OPT}
+	OR GROUP_CD = 'ALM006'
+	AND ETC_INFO02=#{CUSTCO_ID}
+	AND ETC_INFO03=#{OPT}
+</select>
+	
+	
+	  <!-- 알림톡 변수체크  -->
+<select id="getAlrimMsg" resultType="java.util.HashMap">
+	SELECT *
+	FROM
+		(SELECT ROWNUM  AS NUM
+			,CD
+			,CD_NM
+		FROM PLT_COMN_CD
+		WHERE GROUP_CD = 'ALM006'
+		AND ETC_INFO01=#{CUSTCO_ID}
+		AND ETC_INFO03=#{OPT}
+		OR GROUP_CD = 'ALM006'
+		AND ETC_INFO02=#{CUSTCO_ID}
+		AND ETC_INFO03=#{OPT}
+		) A
+	WHERE
+		A.NUM = #{NUM}
+	
+</select>
+	
+	  <!-- 알림톡 템플릿조회  -->
+<select id="getAlrimTmpl" resultType="java.util.HashMap">
+	SELECT *
+	FROM PLT_ATALK_BIZ
+	WHERE CUSTCO_ID = #{CUSTCO_ID}
+		AND TMPL_CD = #{TMPL_CD}
+</select>
+	
+	  <!-- 외부 api 알림톡 발송 고객사 스키마 조회  -->
+	<select id="getSchemaId" resultType="java.util.HashMap">
+		SELECT 			/* getSchemaId - 외부 api 알림톡 발송 고객사 스키마 조회 */
+			PCC.SCHEMA_ID
+			, PCCDN.DSPTCH_NO
+		FROM CUSTCO.PLT_CERT_CUSTCO PCC
+		LEFT JOIN CUSTCO.PLT_CERT_CUSTCO_DSPTCH_NO PCCDN ON PCCDN.CERT_CUSTCO_ID = PCC.CERT_CUSTCO_ID
+		WHERE PCC.ASP_CUST_KEY = #{ASP_CUST_KEY}
+		ORDER BY CERT_CUSTCO_DSPTCH_NO_ID
+		LIMIT 1
+	</select>
+	
+	  <!-- 외부 api 템플릿 정보 조회  -->
+	<select id="getTmplInfo" resultType="java.util.HashMap">
+		SELECT 			/* getTmplInfo - 외부 api 템플릿 정보 조회 */
+			DSPTCH_PRF_KEY
+			, TMPL_CD
+			, TMPL_CN
+			, EPSZ_INDCT_MPIT_INFO
+			, CUSTCO_ID
+		FROM PLT_ATALK
+		WHERE TMPL_CD = #{TMPL_CD}
+			<if test="UUID != '' and UUID != null and UUID != undefined">
+				UUID = #{UUID}
+			</if>
+	</select>
+	
+	  <!-- 외부 api SMS템플릿 정보 조회  -->
+	<select id="getSmsTmplInfo" resultType="java.util.HashMap">
+		SELECT 			/* getSmsTmplInfo - 외부 api SMS템플릿 정보 조회 */
+			PST.SMS_TMPL_NM
+			, PST.SMS_TMPL_CN
+			, CONCAT(PF.FILE_PATH,PF.STRG_FILE_NM) AS IMG_URL
+		FROM PLT_SMS_TMPL PST
+		LEFT JOIN PLT_FILE PF ON PST.FILE_GROUP_KEY = PF.FILE_GROUP_KEY
+		WHERE PST.SMS_TMPL_TYPE_CD LIKE ('%'||#{SNDNG_SE_CD}||'%')
+			AND PST.SMS_TMPL_NM = #{TMPL_CD}
+	</select>
+	
+	  <!-- 외부 api SMS 발송 고객사 CUSTCO_ID 조회  -->
+	<select id="getCustcoId" resultType="java.util.HashMap">
+		SELECT 			/* getCustcoId - 외부 api SMS 발송 고객사 CUSTCO_ID 조회 */
+			CUSTCO_ID
+		FROM PLT_CUSTCO
+		WHERE ASP_CUST_KEY = #{ASP_CUST_KEY}
+	</select>
+	
+
+</mapper>
+

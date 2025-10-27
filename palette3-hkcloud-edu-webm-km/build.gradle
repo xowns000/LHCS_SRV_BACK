@@ -1,0 +1,19 @@
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+// palette-hkcloud-edu-km
+//
+////////////////////////////////////////////////////////////////////////////////////////////
+jar {
+    enabled = true
+}
+
+bootJar {
+    enabled = false
+}
+
+dependencies {
+	implementation project(":palette3-hkcloud-edu-webm-common")
+
+	//include  palette-web-km custom lib
+	compile fileTree(dir: 'libs-palette-webm-km', include: ['*.jar'])
+}

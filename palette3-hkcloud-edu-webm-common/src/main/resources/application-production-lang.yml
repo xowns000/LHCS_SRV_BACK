@@ -1,0 +1,942 @@
+###################################################
+#
+# 스프링-부트 (spring-boot) 속성
+# https://docs.spring.io/spring-boot/docs/2.3.3.RELEASE/reference/html/appendix-application-properties.html#common-application-properties
+# https://sepiros.tistory.com/38
+#
+# module마다 동일한 이름의 application-{profile}.properties를 선언하여 중복 호출을 할 수 없다.
+# 출처: https://luvstudy.tistory.com/60 [파란하늘의 지식창고]
+# -------------------------------------------------
+# local profile
+###################################################
+
+k8s.node.name: localhost
+k8s.pod.name: palette-api-0
+k8s.pod.ip: 127.0.0.1
+
+palette.root-dir: /orange/app/palette3
+palette.webapps-dir: /orange/app/palette3/webapps
+
+spring.profiles:
+  -production
+
+#spring.profiles.include: "logging,server,redis,datasources,jpa,management,devtools,batch,bbs,editor,excel,file,mail,alimtalk,proxy,palette"
+spring.profiles.include:
+  -common
+  -logging
+  -server
+  -redis
+  -datasources
+  -jpa
+  -bbs
+  -editor
+  -excel
+  -file
+  -alimtalk
+  -proxy
+  -palette
+
+---
+spring.config.activate:
+  on-profile: "common"
+
+jasypt.encryptor.bean: jasyptStringEncryptor
+
+# Token Base Enc Key_Arthur.Kim
+jwt.token.secret: ENC(RKXSW7GTALls5tdcjbBSoHpn3vsPBasmKjQfk1HXPLKJGOZ9NfE7ZL+LhW6zRg9jmQVJUiD6XQfao5+C2CjmB6wZSKoTZn+pWI774vDnt1p+4sHRNT1BhLH1iH/1F3Cj)
+jwt.token.shc256: palette:sha256enc
+jwt.token.info: palette:token:info
+jwt.token.refresh: palette:token:refresh
+jwt.token.reissue: palette:token:reissue
+jwt.token.logout: logout
+jwt.token.nm: ACCESS_TOKEN
+
+# GWM연동용으로 제공받은 AES-256 암복호화용 키
+api.gwm.encryptKey: ENC(sHjDZv8u2r+nvRjzTv+4SK1zS2Y1iP1qiLTiWuhs/w2tMa1DQXEpRkSFXXDKtMpXwPRJP3oQzfA5HKWeg8DTGXkvGX0ZCFWLBJzpU2XYYAc=)
+
+stomp.allow.origin: https://palette.hkpalette.com #도메인 발급받아 넣기
+
+sse.message.url: https://palette.hkpalette.com/sse-api/v1/send/message
+fcm.message.url: https://palette.hkpalette.com/fcm-api/v1
+
+#STT Interface test-mode false일 경우 ws-uri로 스트림전송한다. true인경우는 설정된 디렉토리에 파일로
+stt.server.ws-uri: ws://nlu-00.intelloia.com:38480/intelloid-STT-stream-web/websocket
+stt.server.test-mode: true
+stt.server.test-dir: /orange/app/palette3/repository/temp/websocket-stream
+
+access.control.allow.orign: hkpalette.com,hkipcc.co.kr,localhost:3003,localhost:3004,172.16.0.100:3003,192.168.101.180:3004
+
+#라온시큐어 OmniOneCX 통합인증 서비스
+cert.co.app.omnionecx.oacxUrl: https://ida.omnione.net
+cert.co.app.omnionecx.cpcode: CX1000000001
+cert.co.app.omnionecx.sitekey: OUKRYUU+pkAu+BJ+BMo5x6jCZoxkmt+3SVVJgjTAhETW0aurIaaBRJxDCuLE92VJDaVPXgisRo5uXCnwsioGUAxymkuUhgyxTHS4omgLZCwdcvrEPDS7Pa/fqZQz0JCJ7suM9XILCz+rqvfT7t11uWMCpSDff5eW2gUt0LDmRwU=
+
+#이커머스 연동관련 URL
+commerce.api.cafe24.auth_code_url: https://{mallid}.cafe24api.com/api/v2/oauth/authorize?response_type=code&client_id={cliend_id}&redirect_uri={redirect_uri}&scope=mall.read_community,mall.write_community,mall.read_order,mall.read_shipping,mall.read_product,mall.read_customer,mall.read_promotion&state={state}
+commerce.api.cafe24.auth_code_redirect_uri: https://micc.hkpalette.com/intgr-api/commerce/v2/oauth-code/cafe24
+commerce.api.cafe24.auth_url: https://{mallid}.cafe24api.com/api/v2/oauth/token
+
+commerce.api.naver.auth_url: https://api.commerce.naver.com/external/v1/oauth2/token
+
+spring:
+  app.palette.repository-root : /PALETTE3/hkcloud/project/deploy/production/repository
+  app.palette.log-root: /PALETTE3/hkcloud/project/deploy/production/logs
+  # ----------------------------------------
+  # SPRING-BOOT- ADMIN SERVER
+  # ----------------------------------------
+  #boot.admin.client.url: http://localhost:10000
+  # ----------------------------------------
+  # OUTPUT
+  # ----------------------------------------
+  # Configures the ANSI output.
+  output.ansi.enabled: detect
+  # ----------------------------------------
+  # HTTP (HttpProperties)
+  # ----------------------------------------
+  servlet.encoding:
+    # Whether to enable http encoding support.
+    enabled: true
+    # Charset of HTTP requests and responses. Added to the "Content-Type" header if not set explicitly.
+    charset: UTF-8
+    # Whether to force the encoding to the configured charset on HTTP requests and responses.
+    #force: UTF-8
+    # Whether to force the encoding to the configured charset on HTTP requests. Defaults to true when "force" has not been specified.
+    #force-request: UTF-8
+    # Whether to force the encoding to the configured charset on HTTP responses.
+    #force-response: UTF-8
+  # ----------------------------------------
+  # SPRING MVC (WebMvcProperties)
+  # ----------------------------------------
+  mvc:
+    # Whether to enable Spring's FormContentFilter.
+    formcontent.filter.enabled: true
+    # Whether to enable Spring's HiddenHttpMethodFilter.
+    hiddenmethod.filter.enabled: true
+  # ----------------------------------------
+  # SPRING SESSION (SessionProperties)
+  # ----------------------------------------
+  # Session store type.
+  session.store-type: redis
+  # ----------------------------------------
+  # THYMELEAF
+  # ----------------------------------------
+  #thymeleaf.cache: false
+  # ----------------------------------------
+  # JWT
+  # ----------------------------------------
+  #jwt.secret: ENC(Mh/q4oesaKBRt9nPWyJdp9EM9jNzezd//e9oY9pPEBXE1D3Irs10yzeW0nY1sAScD/uhIWyZ49ofL9PHm1oMow==)
+  jwt.secret: ENC(RKXSW7GTALls5tdcjbBSoHpn3vsPBasmKjQfk1HXPLKJGOZ9NfE7ZL+LhW6zRg9jmQVJUiD6XQfao5+C2CjmB6wZSKoTZn+pWI774vDnt1p+4sHRNT1BhLH1iH/1F3Cj)     #Arthur.Kim
+
+###################################################
+#
+# LOGGING 속성
+# ㄴ spring-boot에서는 Logback을 사용
+# -------------------------------------------------
+# include 'logging' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "logging"
+logging:
+  register-shutdown-hook: true
+  # ----------------------------------------
+  # FILE
+  # ----------------------------------------
+  file:
+    # Location of the log file. For instance, `/var/log`.
+    #path: D:/TELETALK/hkc/rnd/x64/logs/web/teletalk
+    # Log file name (for instance, `myapp.log`). Names can be an exact location or relative to the current directory.
+    name: /PALETTE3/hkcloud/project/deploy/production/logs/web/${spring.application.name}.log
+    # Maximum of archive log files to keep. Only supported with the default logback setup.
+    max-history: 7
+    # Maximum log file size. Only supported with the default logback setup.
+    max-size: 500MB
+  # ----------------------------------------
+  # LEVEL
+  # ----------------------------------------
+  level:
+    #root: "debug"
+    # ----------------------------------------
+    # org.springframework
+    # ----------------------------------------
+    org.springframework.boot: debug
+    org.springframework.boot.autoconfigure: error
+    org.springframework.security: trace
+    org.springframework.web.filter: debug
+    # ----------------------------------------
+    # kr.co.hkcloud.palette
+    # ----------------------------------------
+    kr.co.hkcloud.palette: trace
+    # ----------------------------------------
+    # jdbc
+    # ㄴ palette.datasources.oracle.driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+    # ㄴ production 에서는 사용하면 안됨
+    # ----------------------------------------
+    # Mybatis 개발용
+    # 1. jdbc.sqlonly : SQL문 만을 로그로 남기며, PreparedStatement일 경우 관련된 argument 값으로 대체된 SQL문이 보여진다.
+    # 2. jdbc.sqltiming : SQL문과 해당 SQL을 실행시키는데 수행된 시간 정보(milliseconds)를 포함한다.
+    # 3. jdbc.audit : ResultSet을 제외한 모든 JDBC 호출 정보를 로그로 남긴다. 많은 양의 로그가 생성되므로 특별히 JDBC 문제를 추적해야 할 필요가 있는 경우를 제외하고는 사용을 권장하지 않는다.
+    # 4. jdbc.resultset : ResultSet을 포함한 모든 JDBC 호출 정보를 로그로 남기므로 매우 방대한 양의 로그가 생성된다.
+    # 5. jdbc.resultsettable : SQL 결과 조회된 데이터의 table을 로그로 남긴다.
+    # ----------------------------------------
+    jdbc.sqlonly: debug
+    jdbc.sqltiming: off
+    jdbc.audit: off
+    jdbc.resultset: off
+    jdbc.resultsettable: off
+    # ----------------------------------------
+    # org.hibernate
+    # ----------------------------------------
+    org.hibernate.SQL: off
+    org.hibernate.type.descriptor.sql.BasicBinder: off
+    # ----------------------------------------
+    # com.zaxxer.hikari
+    # ----------------------------------------
+    com.zaxxer.hikari: off
+    # ----------------------------------------
+    # javax.sql.DataSource
+    # ----------------------------------------
+    javax.sql.DataSource: off
+
+
+###################################################
+#
+# EMBEDDED SERVER CONFIGURATION
+# -------------------------------------------------
+# include 'server' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "server"
+# ----------------------------------------
+# ServerProperties
+# ----------------------------------------
+http:
+  port: 80
+server:
+  #port: 3004
+  #http2:
+  #  enabled: true
+  #ssl:
+  #  enabled: true
+  #  key-store: /home/PALETTE3/hkcloud/project/deploy/production/ssl/keystore_hkpalette
+  #  key-store-password: cloud1101+-+
+  # Network address to which the server should bind.
+  #address: 10.240.4.150
+  # HTTP
+  #http:
+  # Server HTTP port.
+  #port: 8080
+  #interface: 0.0.0.0
+  #port: 8443
+  # SERVLET
+  servlet:
+    session:
+      # Whether to persist session data between restarts.
+      #persistent: false
+      # Session timeout. If a duration suffix is not specified, seconds will be used.
+      timeout: 30m
+      # Session tracking modes.
+      tracking-modes: cookie
+      cookie:
+        # Session cookie name.
+        name: "PALETTESESSIONID"
+        # Whether to use "HttpOnly" cookies for session cookies.
+        http-only: true
+        # Whether to always mark the session cookie as secure.
+        secure: false
+  # ERROR
+  error:
+    # Include the "exception" attribute.
+    include-exception: true
+    # When to include a "stacktrace" attribute.
+    #include-stacktrace: never
+    # Path of the error controller.
+    #path: /error/web/error
+    whitelabel:
+      # Whether to enable the default error page displayed in browsers in case of a server error.
+      enabled: true
+  compression:
+    # Whether response compression is enabled.
+    enabled: true
+    # Comma-separated list of MIME types that should be compressed.
+    #mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    mime-types:
+      - text/html
+      - text/xml
+      - text/plain
+      - text/css
+      - text/javascript
+      - application/javascript
+      - application/json
+      - application/xml
+    # Minimum "Content-Length" value that is required for compression to be performed.
+    min-response-size: 2KB
+  # ----------------------------------------
+  # UNDERTOW
+  # ----------------------------------------
+  undertow:
+    # Size of each buffer.
+    #buffer-size:
+    # Whether to allocate buffers outside the Java heap. The default is derived from the maximum amount of memory that is available to the JVM.
+    #direct-buffers:
+    # Whether servlet filters should be initialized on startup.
+    #eager-filter-init: true
+    # Number of I/O threads to create for the worker. The default is derived from the number of available processors.
+    io-threads: 20
+    # Maximum size of the HTTP post content. When the value is -1, the default, the size is unlimited.
+    #max-http-post-size: -1
+    # Number of worker threads. The default is 8 times the number of I/O threads.
+    worker-threads: 200
+    #Maximum number of query or path parameters that are allowed. This limit exists to prevent hash collision based DOS attacks.
+    max-parameters: 30000
+
+###################################################
+#
+# 레디스
+# -------------------------------------------------
+# include 'redis' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "redis"
+# ----------------------------------------
+# RedisSessionProperties
+# ----------------------------------------
+spring.session.redis:
+  # Cron expression for expired session cleanup job.
+  #cleanup-cron: "* */5 * * * *"
+  # Sessions flush mode. (default: on-save)
+  flush-mode: immediate
+  # Namespace for keys used to store sessions.
+  namespace: "palette:session"
+# ----------------------------------------
+# RedisProperties
+# ----------------------------------------
+spring.redis:
+  # Connection URL. Overrides host, port, and password. User is ignored. Example: redis://user:password@example.com:6379
+  #url:
+  # Redis server host.
+  host: localhost
+  # Login password of the redis server.
+  password:
+  # Redis server port.
+  port: 6379
+  # Whether to enable SSL support.
+  ssl: false
+    # Connection timeout.
+    #timeout:
+    # Database index used by the connection factory.
+    #database: 0
+    #cluster:
+    # Maximum number of redirects to follow when executing commands across the cluster.
+    #max-redirects:
+    # Comma-separated list of "host:port" pairs to bootstrap from.
+    #nodes:
+    #sentinel:
+    # Name of the Redis server.
+    #master:
+    # Comma-separated list of "host:port" pairs.
+  #nodes:
+  lettuce:
+    # Shutdown timeout.
+    #shutdown-timeout: 100ms
+    pool:
+      # Maximum number of connections that can be allocated by the pool at a given time. Use a negative value for no limit.
+      max-active: 10
+      # Maximum number of "idle" connections in the pool. Use a negative value to indicate an unlimited number of idle connections.
+      max-idle: 10
+      # Maximum amount of time a connection allocation should block before throwing an exception when the pool is exhausted. Use a negative value to block indefinitely.
+      #max-wait: -1ms
+      # Target for the minimum number of idle connections to maintain in the pool. This setting only has an effect if it is positive.
+      min-idle: 2
+
+
+###################################################
+#
+# 데이터소스(datasources) 속성
+# ㄴ명명 규칙: datasources.[시스템명].[master or slave].[각 속성]
+# -------------------------------------------------
+# include 'datasources' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "datasources"
+# ----------------------------------------
+# DatasourcesPaletteProperties
+# ----------------------------------------
+datasources:
+  datasource:
+    default-pool-name: "palette"
+    #default-dbms: ORACLE
+    palette:
+      db-vendor: "PostgreSQL"
+      master:
+        jndi-name: "PALETTE_MASTER_DS"
+        expected-type: javax.sql.Datasource
+
+        jdbc-url: jdbc:log4jdbc:postgresql://172.16.0.100:5432/palette3
+        username: palette3
+        password: Palette12#$
+
+        driver-class-name: "net.sf.log4jdbc.sql.jdbcapi.DriverSpy"
+        type: com.zaxxer.hikari.HikariDataSource
+        hikari:
+          maximum-pool-size: 10
+          minimum-idle: 10
+          connection-test-query: SELECT 1
+          connection-timeout: 30000
+      slave:
+        jndi-name: "PALETTE_SLAVE_DS"
+        expected-type: javax.sql.Datasource
+
+        jdbc-url: jdbc:log4jdbc:postgresql://172.16.0.100:5432/palette3
+        username: palette3
+        password: Palette12#$
+
+        driver-class-name: "net.sf.log4jdbc.sql.jdbcapi.DriverSpy"
+        type: com.zaxxer.hikari.HikariDataSource
+        hikari:
+          maximum-pool-size: 10
+          minimum-idle: 10
+          connection-test-query: SELECT 1
+          connection-timeout: 30000
+# ----------------------------------------
+# TransactionProperties
+# ----------------------------------------
+spring.transaction:
+  # Default transaction timeout. If a duration suffix is not specified, seconds will be used.
+  default-timeout: 60s
+  # Whether to roll back on commit failures.
+  #rollback-on-commit-failure:
+
+
+###################################################
+#
+# JPA
+# -------------------------------------------------
+# include 'jpa' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "jpa"
+# ----------------------------------------
+# JpaBaseConfiguration, HibernateJpaAutoConfiguration
+# ----------------------------------------
+spring.jpa:
+  database: postgresql
+  showSql: true
+  generate-ddl: false # Register OpenEntityManagerInViewInterceptor. Binds a JPA EntityManager to the thread for the entire processing of the request.
+  open-in-view: false
+  hibernate:
+    ddl-auto: none
+    naming:
+      physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  properties:
+    hibernate:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+      use_sql_comments: true
+      format_sql: true
+      show_sql: false
+      enable_lazy_load_no_trans: true
+
+
+###################################################
+#
+# ENDPOINTS WEB CONFIGURATION
+# -------------------------------------------------
+# include 'management' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "management"
+# ----------------------------------------
+# WebEndpointProperties
+# ----------------------------------------
+management.endpoints:
+  web:
+    # Base path for Web endpoints. Relative to server.servlet.context-path or management.server.servlet.context-path if management.server.port is configured.
+    base-path: /actuator
+    # Mapping between endpoint IDs and the path that should expose them.
+    #path-mapping:
+    exposure:
+      # Endpoint IDs that should be included or '*' for all.
+      include: health,info
+      # Endpoint IDs that should be excluded or '*' for all.
+      exclude: "*"
+
+
+###################################################
+#
+# Devtools
+# -------------------------------------------------
+# include 'devtools' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "devtools"
+# ----------------------------------------
+# DevToolsProperties
+# ----------------------------------------
+spring.devtools:
+  # Whether to enable a livereload.com-compatible server.
+  livereload:
+    enabled: true
+    # Server port.
+    port: 35728
+  # Whether to enable automatic restart.
+  restart:
+    enabled: false
+
+
+###################################################
+#
+# 팔레트(palette) 속성
+# -------------------------------------------------
+# include 'palette' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "palette"
+# ----------------------------------------
+# PaletteProperties
+# ----------------------------------------
+palette:
+  enabled: true
+  # 서비스 URL
+  service-url: http://121.67.187.119:3007 #외부ip넣기
+  #service-url: http://localhost:3004 #외부ip넣기
+  # 공개 URL (외부에서 접근이 필요한 경우 사용)
+  public-url: http://121.67.187.119:3007 #외부ip넣기
+  #public-url: http://localhost:3004 #외부ip넣기
+  # 라이선스
+  license: STANDARD
+  # 파트너 ID ( 파트너 간 중복 불가, 도메인명 사용할 것 )
+  # ㄴ hkcloud : 한국클라우드
+  partner-id: HKCDV
+  # 모드
+  mode: DEV
+  service-mode: REAL
+  # 실시간 공지사항 활성화 여부
+  main-notice-enabled: false
+  # ----------------------------------------
+  # ASP
+  # ----------------------------------------
+  asp:
+    # 사용여부
+    enabled: false
+    #ASP 서버 접속 URL
+    singnuo-email-activation-url: https://proxy.hkpalette.com:15001
+    #ASP 콜센터 전화번호
+    call-center-phone-num: 070-5001-2290
+    #ASP 회원가입 trial 기간
+    trial-duration: 6d
+  # ----------------------------------------
+  # 결제
+  # ----------------------------------------
+  pay:
+    # 사용여부
+    enabled: false
+  # ----------------------------------------
+  # 타임리프
+  # ----------------------------------------
+  thymleaf:
+    # 메인페이지 경로
+    main-path: palette/web/main
+  # ----------------------------------------
+  # CTI (티플렉스) - 통합이력용
+  # ----------------------------------------
+  cti-server: #cti관련 설정 물어보기
+    #cti 서버 url
+    url: http://121.67.187.236
+    #cti 서버 port
+    cti-port: 60001
+    #cti 2차비밀번호 (문자열을 그대로 받고 싶으면 '로 문자열을 감싼다)
+    cti-secret-pw: '!4bswkd..?'
+    #cti 아웃바운드 번호 (문자열을 그대로 받고 싶으면 '로 문자열을 감싼다)
+    cti-outbound-number: '07087202820'
+    #녹취 포트
+    recording-port: 60080
+    #녹취 경로 (처음 저장되었을때)
+    recording-path: /monitor-wav
+    #녹취 경로 (저장된지 하루가 지난 경로)
+    recording-backup-path: /monitor-wav-backup
+  # ----------------------------------------
+  # PaletteSecurityProperties
+  # ----------------------------------------
+  security:
+    #중복로그인여부체크 with SSE
+    duplicate-login: false
+    # duplicate-login: false인 경우 중복로그인허용 아이피
+    duplicate-login-allowip:
+    # 인증 성공 시 대상 URL
+    auth-success-target-url: ${palette.service-url}/palette/web/main
+    # 로그아웃 성공 시 대상 URL
+    logout-success-target-url: ${palette.service-url}/web/login
+    # BIZ_LOG 사용여부
+    bizlog.enabled: true
+    #비밀번호 정책
+    pwd-user-term:
+      enabled: false
+      fail-cnt: 1
+      first-login: false
+      reset: false
+      reset-keyword: ENC(ci/QRc+ejTQm+NTbD+KS4n6H8ujwxUUU07HU3MHMo3yPmdzyIJmXWd0wq+oXzct6K4O6HARzguY/x1fdOcVliA==)
+      enc-keyword: ENC(NCqpL48DVQtTD6Bae0vPI5kc6C/ktV0SC5SWyT7CAqtr8EiL6/FAyyBIE4bUqQbJaj5+Jota/KTcURUGGTgqFBSqKIck9vzCQFjKsA07+3s=)
+    # 채팅창 암호화키
+    dev-encrypt-key: ENC(VGdqWIinNyLWXKLlSc9PL0gxfsFzec3SiZcyhHA8IhBLL2doeeO4HM/7mXadhch71Ejqme/Fj/NW3crLCwwX+A==)
+    real-encrypt-key: ENC(NzPdf+oKz3+6XFaeTnlcR5V+MSeivJGysceLB8eQCx29fJK4kqLTKcRtuEGSCKLO/etDbLs1uU4BfW8P7iZElA==)
+    #VDI IP체크, 모두허용시 enabled: false로 처리, 아이피 구간은 ~로 표현함, 구간체크가 우선임
+    vdi-ip:
+      enabled: false
+      list:
+        - "192.168.0.1~192.168.100.254"
+        - "127.0.0.2"
+    #개인정보 암호화 설정
+    private:
+        key: ENC(9uy5OF31uepxMzVYab/vFdxoXJUR0l3Pwu4+atHKfyipb86j5CHGMyhPiCQ7jZKl)
+        alg: ENC(B6gA81d2icO3bIW1AXkrvvtKuIrRkbkYMNGo1H2cUo1F/mQZmfRrAys5Gw+M6UE7)
+  zip:
+    confmKey: U01TX0FVVEgyMDIzMTIwNzA5NTcwMzExNDMzODQ=
+    #https://business.juso.go.kr/addrlink/openApi/apiReqst.do 에서 신청한 API 승인키(운영용)
+
+
+###################################################
+#
+# 배치(batch) 속성
+# -------------------------------------------------
+# include 'batch' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "batch"
+# ----------------------------------------
+# BatchProperties
+# ----------------------------------------
+batch:
+  enabled: false
+  app-dir: /tomcat/webaspps/ROOT
+
+
+###################################################
+#
+# 게시판(bbs) 속성
+# -------------------------------------------------
+# include 'bbs' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "bbs"
+# ----------------------------------------
+# BbsProperties
+# ----------------------------------------
+bbs:
+  enabled: false
+
+
+###################################################
+#
+# 파일(file) 속성
+# -------------------------------------------------
+# include 'file' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "file"
+spring.servlet:
+  # ----------------------------------------
+  # MULTIPART (MultipartProperties)
+  # ----------------------------------------
+  multipart:
+    # Whether to enable support of multipart uploads.
+    enabled: true
+    # Threshold after which files are written to disk.
+    file-size-threshold: 100KB
+    # Intermediate location of uploaded files.
+    location: ${spring.app.palette.repository-root}/temp
+    # Max file size.
+    max-file-size: 5MB
+    # Max request size.
+    max-request-size: 20MB
+    # Whether to resolve the multipart request lazily at the time of file or parameter access.
+    #resolve-lazily: false
+# ----------------------------------------
+# FileProperties
+# ----------------------------------------
+file:
+  enabled: true
+  file-upload-lib: dropzone
+  repository:
+    # ----------------------------------------
+    # 루트 저장소
+    # ----------------------------------------
+    root-dir: ${spring.app.palette.repository-root}/web
+    # ----------------------------------------
+    # 팔레트 저장소
+    # target-type: FILE / DB (저장소 대상 타입)
+    # ----------------------------------------
+    palette:
+      files:
+        target-type: FILE
+        enabled: true
+        max-files: 10
+        max-filesize: 2MB
+        accepted-files:
+          - "pdf"
+          - "xlxs"
+        dir: ${file.repository.root-dir}/palette/file
+        temp-dir: ${file.repository.root-dir}/palette/file/temp
+
+    # ----------------------------------------
+    # 전화 저장소
+    # ----------------------------------------
+    phone:
+      files:
+        target-type: FILE
+        enabled: true
+        max-files: 10
+        max-filesize: 2MB
+        accepted-files:
+          - "pdf"
+        dir: ${file.repository.root-dir}/phone/file
+        temp-dir: ${file.repository.root-dir}/phone/file/temp
+
+    # ----------------------------------------
+    # 채팅 저장소
+    # ----------------------------------------
+    chat:
+      publics:
+        target-type: FILE
+        enabled: true
+        max-files: 10
+        max-filesize: 2MB
+        accepted-files:
+          - "pdf"
+        dir: ${file.repository.root-dir}/chat/public
+        temp-dir: ${file.repository.root-dir}/chat/public/temp
+      files:
+        target-type: FILE
+        enabled: true
+        max-files: 10
+        max-filesize: 2MB
+        accepted-files:
+          - "pdf"
+        dir: ${file.repository.root-dir}/chat/file
+        temp-dir: ${file.repository.root-dir}/chat/file/temp
+      images:
+        target-type: FILE
+        enabled: true
+        max-files: 10
+        max-filesize: 2MB
+        accepted-files:
+          - "png"
+          - "jpg"
+          - "gif"
+        dir: ${file.repository.root-dir}/chat/images
+        temp-dir: ${file.repository.root-dir}/chat/images/temp
+      videos:
+        target-type: FILE
+        enabled: false
+        max-files: 10
+        max-filesize: 2MB
+        accepted-files:
+          - "pdf"
+        dir: ${file.repository.root-dir}/chat/videos
+        temp-dir: ${file.repository.root-dir}/chat/videos/temp
+    # ----------------------------------------
+    # 지식 저장소
+    # ----------------------------------------
+    km:
+      files:
+        target-type: FILE
+        enabled: true
+        max-files: 10
+        max-filesize: 10MB
+        accepted-files:
+          - "pdf"
+          - "ppt"
+          - "pptx"
+          - "docx"
+          - "xlsx"
+          - "xls"
+          - "png"
+          - "jpg"
+          - "gif"
+        dir: ${file.repository.root-dir}/km/file
+        temp-dir: ${file.repository.root-dir}/km/file/temp
+    # ----------------------------------------
+    # bbs 저장소
+    # ----------------------------------------
+    bbs:
+      files:
+        target-type: FILE
+        enabled: true
+        max-files: 10
+        max-filesize: 2MB
+        accepted-files:
+          - "pdf"
+          - "jpg"
+          - "png"
+        dir: ${file.repository.root-dir}/bbs/file
+        temp-dir: ${file.repository.root-dir}/bbs/file/temp
+
+
+###################################################
+#
+# 에디터(editor) 속성
+# -------------------------------------------------
+# include 'editor' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "editor"
+# ----------------------------------------
+# EditorProperties
+# ----------------------------------------
+editor:
+  enabled: true
+  name: "ckeditor"
+  version: "4.7.2"
+  repository:
+    # ----------------------------------------
+    # 루트 저장소
+    # ----------------------------------------
+    root-dir: ${spring.app.palette.repository-root}/web/editor
+
+
+    # ----------------------------------------
+    # 에디터 이미지 저장소
+    # ----------------------------------------
+    km:
+      images:
+        target-type: FILE
+        enabled: true
+        max-files: 1
+        max-filesize: 2MB
+        accepted-files:
+          - "jpg"
+          - "png"
+          - "gif"
+        dir: ${editor.repository.root-dir}/km/images
+        temp-dir: ${editor.repository.root-dir}/km/images/temp
+    bbs:
+      images:
+        target-type: FILE
+        enabled: true
+        max-files: 1
+        max-filesize: 2MB
+        accepted-files:
+          - "jpg"
+          - "png"
+          - "gif"
+        dir: ${editor.repository.root-dir}/bbs/images
+        temp-dir: ${editor.repository.root-dir}/bbs/images/temp
+
+
+###################################################
+#
+# 엑셀(excel) 속성
+# -------------------------------------------------
+# include 'excel' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "excel"
+# ----------------------------------------
+# ExcelProperties
+# ----------------------------------------
+excel:
+  enabled: false
+  excel-upload-lib: dropzone
+  repository:
+    # ----------------------------------------
+    # 루트 저장소
+    # ----------------------------------------
+    root-dir: ${spring.app.palette.repository-root}/web/excel
+
+    # ----------------------------------------
+    # 전화 저장소
+    # ----------------------------------------
+    phone:
+      outbound:
+        target-type: FILE
+        enabled: true
+        max-files: 1
+        max-filesize: 2MB
+        accepted-files:
+          - "xls"
+          - "xlsx"
+        dir: ${excel.repository.root-dir}/phone/outbound
+        temp-dir: ${excel.repository.root-dir}/phone/outbound/temp
+
+
+###################################################
+#
+# 메일
+# -------------------------------------------------
+# include 'mail' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "mail"
+# ----------------------------------------
+# MailProperties
+# ----------------------------------------
+spring.mail:
+  host: mail.hkcloud.co.kr
+  username: no-reply@hkcloud.co.kr
+  password: 123456
+  properties:
+    mail:
+      #debug: true
+      port: 25
+      transport.protocol: imap
+      smtp:
+        auth: true
+        starttls.enable: false
+
+
+###################################################
+#
+# 알림톡
+# -------------------------------------------------
+# include 'alimtalk' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "alimtalk"
+# ----------------------------------------
+# AlimtalkProperties
+# ----------------------------------------
+alimtalk:
+  enabled: false
+  #카카오 알림톡 개발서버 미지원으로 운영서버 테스트 true일 경우 실발송 X, 과금 X
+  test-mode: true
+  senderkey: 69dac47ce37dbf7d03f8833072f0f91763af3b45
+  auth-code: XLOr9L7I7tLkPn7f37BDsQ==
+  #알림톡발송 실패시 sms전송 전환여부
+  tran-type: false
+  # 기본 URL
+  urls:
+    target-url: https://api.mtsco.co.kr/sndng/atk/sendMessage
+
+
+###################################################
+#
+# PROXY 속성
+# -------------------------------------------------
+# include 'proxy' profile
+###################################################
+---
+spring.config.activate:
+  on-profile: "proxy"
+# ----------------------------------------
+# ProxyProperties
+# ----------------------------------------
+proxy:
+  # PROXY 사용여부
+  enabled: false
+  # PROXY SETTING
+  domain: hkcloud.co.kr
+  port: 10010
+  schema: http

@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundRegistMapper">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="HOUSE_TEL_NO" column="HOUSE_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CO_TEL_NO" column="CO_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="MOBIL_NO" column="MOBIL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CARD_NO" column="CARD_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="ACT_NO" column="ACT_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+	<resultMap id="selectHashMapE" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="MOBIL_NO" column="MOBIL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CARD_NO" column="CARD_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="ACT_NO" column="ACT_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="RES_NO" column="RES_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+    <insert id="insertObndReg"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertObndReg 캠페인 등록  */
+		INSERT INTO PLT_PHN_CAMP
+					 (
+					 	CUSTCO_ID
+					   	,CAM_ID	
+						,CAM_NM	 
+						,CAM_TY	
+						,BUSI_TY	
+						,CAM_BEGIN_DATE	
+						,CAM_BEGIN_TIME	
+						,CAM_EOT_DATE	
+						,CAM_EOT_TIME	
+						,FISH_YN	
+						,REM		
+						,REG_DTIM	
+						,REG_MAN	
+						,CHNG_DTIM	
+						,CHNG_MAN	
+						,USE_YN	
+					 )
+					 VALUES
+			         (
+			         #{ASP_NEWCUST_KEY}
+			         ,#{CAM_ID}
+			         ,#{CAM_NM}
+			         ,#{CAM_TY}
+			         ,#{BUSI_TY}
+					 ,#{CAM_BEGIN_DATE}
+					 ,replace(#{CAM_BEGIN_TIME},':')
+					 ,#{CAM_EOT_DATE}
+					 ,replace(#{CAM_EOT_TIME},':')
+					 , 'N'
+					 ,#{REM}
+					 , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					 ,#{REG_MAN}
+					 , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					 ,#{REG_MAN}
+					 , 'Y'
+					 )
+		
+		]]>
+	</insert>
+    
+    <select id="selectObndRegKey"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+    	<![CDATA[
+			/*  selectObndRegKey 캠페인 key  */
+    		SELECT 
+    			(COALESCE(MAX(CAST(CAM_ID AS INTEGER)), 0) + 1 ) AS CAM_ID
+    		FROM PLT_PHN_CAMP
+    	]]>
+    </select>
+    
+    <insert id="insertObndCustReg"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertObndCustReg 아웃바운드 공제단말 고객 등록  */
+		INSERT INTO PLT_PHN_OBD_CUS
+					 (
+					   	CUSTCO_ID
+					   	,CUST_NO	 			/* 주민번호(일련번호) */ 
+						,CENT_TY	 
+						,IFLW_TY	 /* 등록구분(01: 고객추출, 02: 엑셀업로드  03:단건등록) */
+						,INGNO	/* 인가번호 */ 
+						,MOBIL_NO	
+						,HOUSE_TEL_NO	
+						,CO_TEL_NO	
+						,TEL_TY	/* 전화구분 */
+						,IN_DATE	
+						,CUST_NM	
+						,REM	
+						,CAM_ID
+						,CAM_TY
+						,UPDT_DATE	
+						,REG_DTIM	 
+						,REG_MAN	
+						,CHNG_DTIM	 
+						,CHNG_MAN	 	
+					 )
+			    VALUES
+			         (
+			         #{ASP_NEWCUST_KEY}
+			         ,#{CUST_NO}
+			         ,#{CENT_TY}
+			         ,#{IFLW_TY}
+			         ,#{INGNO}
+			         ,#{MOBIL_NO}
+			         ,#{HOUSE_TEL_NO}
+			         ,#{CO_TEL_NO}
+			         ,#{TEL_TY}
+			         ,#{IN_DATE}
+			         ,#{CUST_NM}
+			         ,#{REM}
+			         ,#{CAM_ID}
+			         ,#{CAM_TY}
+			         ,#{UPDT_DATE}
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			        )
+		
+		]]>
+	</insert>
+
+     <insert id="insertObndCustRegAdd"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertObndCustRegAdd 아웃바운드고객 추가정보등록 (공제) */
+		INSERT INTO PLT_PHN_OBD_CUS_ADD
+					 (
+					   	CAM_ID	
+						,CUST_NO	 
+						,CENT_TY	 
+						,SECU_NO	 
+						,JOB_DTL_NM
+						,SALE_START_DATE
+						,UPDT_DATE
+						,CAM_TY
+						,REG_DTIM	
+						,REG_MAN	
+						,CHNG_DTIM	
+						,CHNG_MAN	
+						,ETC1
+						,ETC2
+						,ETC3
+						,ETC4
+					 )
+			    VALUES
+			         (
+			         #{CAM_ID}
+			         ,#{CUST_NO}
+			         ,COALESCE(#{CENT_TY} , '')
+			         ,COALESCE(REPLACE(#{SECU_NO},'-',''), '')
+			         ,COALESCE(#{JOB_DTL_NM} , '')
+			         ,#{SALE_START_DATE}
+                     ,#{UPDT_DATE}
+                     ,#{CAM_TY}    
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			         ,#{ETC1}
+			         ,#{ETC2}
+			         ,#{ETC3}
+			         ,#{ETC4}
+			        )
+		
+		]]>
+	 </insert>
+	
+     <insert id="insertObndCamCustReg"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertObndCamCustReg 공제단말 캠페인 고객 등록  */
+		INSERT INTO PLT_PHN_CAMP_CUS
+					 (
+					 	CUSTCO_ID
+					   	,CAM_ID	
+						,CUST_NO		
+						,DSTR_YN	
+						,REG_DTIM	
+						,REG_MAN
+						,CHNG_DTIM	
+						,CHNG_MAN		
+					 )
+			    VALUES
+			         (
+			         #{ASP_NEWCUST_KEY}
+			         ,#{CAM_ID}
+			         ,#{CUST_NO}
+			         ,'N'
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			        )
+		]]>
+	 </insert>
+	 
+     <insert id="insertObndCamCustRegE"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertObndCamCustRegE 업무지원 캠페인 고객 등록  */
+		INSERT INTO PLT_PHN_CAMP_CUS
+					 (
+					   	CAM_ID	
+						,CUST_NO	
+						,CENT_TY	
+						,DSTR_YN	
+						,REG_DTIM	
+						,REG_MAN
+						,CHNG_DTIM	
+						,CHNG_MAN		
+					 )
+			    VALUES
+			         (
+			         #{CAM_ID}
+			         ,#{RES_NO}
+			         ,COALESCE(#{CENT_TY} , '')
+			         ,'N'
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			         ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			         ,#{REG_MAN}
+			        )
+		]]>
+	 </insert>
+    
+    <delete id="deleteObndReg"  parameterType="java.util.HashMap">
+		<![CDATA[
+		 /* deleteObndReg 캠페인 삭제 */
+		 DELETE FROM PLT_PHN_CAMP
+		 WHERE CAM_ID = #{CAM_ID}     
+		]]>
+	</delete>
+	
+	<select id="selectObndCustList"  parameterType= "java.util.HashMap" resultMap="selectHashMap" >
+    	<![CDATA[
+			/*  selectObndCustList 공제단말 아웃바운드 고객추출  현재사용X 인터페이스로 대체 */
+    		SELECT 
+    			CUST_NO	 
+				,CENT_TY	 
+				,CUST_TY	 
+				,IFLW_TY 	/* 01: 고객추출, 02: 엑셀업로드  03:단건등록*/ 
+				,INGNO	 
+				,MOBIL_NO	
+				,HOUSE_TEL_NO	
+				,CO_TEL_NO	
+				,TEL_TY	
+				,IN_DATE	
+				,UPDT_DATE	
+				,CUST_NM	
+				,REM	
+				,CAM_ID	
+				,REG_DTIM	
+				,REG_MAN	
+				,CHNG_DTIM	
+				,CHNG_MAN	
+    		FROM PLT_PHN_OBD_CUS
+    		WHERE IN_DATE = REPLACE(REPLACE(#{OBND_SRCH_DATE},'/'),'-')
+    		AND CAM_ID IS NULL
+    		/* AND CAM_TY */
+    		ORDER BY CUST_NM
+    	]]>
+    </select>
+
+	<select id="selectObndCheck"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+			/*  selectObndCheck 아웃바운드 명 중복 검색  */
+    		SELECT 
+    			CAM_ID	
+				,CENT_TY	
+				,CAM_NM	 
+				,CAM_TY	
+				,BUSI_TY	
+				,CAM_BEGIN_DATE	
+				,CAM_BEGIN_TIME	
+				,CAM_EOT_DATE	
+				,CAM_EOT_TIME	
+				,FISH_YN	
+				,FISH_DATE	
+				,FISH_TIME	
+				,REM	
+				,QUEST_ID	
+				,USE_YN	
+				,REG_DTIM	
+				,REG_MAN	
+				,CHNG_DTIM	
+				,CHNG_MAN	
+    		FROM PLT_PHN_CAMP
+    		WHERE CAM_NM = #{CAM_NM}
+    		AND CENT_TY = #{CENT_TY}
+    </select>
+
+	<select id="selectObndCustCheck"  parameterType= "java.util.HashMap" resultMap="selectHashMap" >
+			/*  selectObndCustCheck 공제단말 아웃바운드 고객중복검색  */
+    		SELECT 
+    			CUST_NO	 
+				,CENT_TY	 
+				,CAM_TY
+				,CUST_TY	 
+				,IFLW_TY 	/* 01: 고객추출, 02: 엑셀업로드  03:단건등록*/ 
+				,INGNO	 
+				,MOBIL_NO	
+				,HOUSE_TEL_NO	
+				,CO_TEL_NO	
+				,TEL_TY	
+				,IN_DATE	
+				,UPDT_DATE	
+				,CUST_NM	
+				,REM	
+				,CAM_ID	
+				,REG_DTIM	
+				,REG_MAN	
+				,CHNG_DTIM	
+				,CHNG_MAN	
+    		FROM PLT_PHN_OBD_CUS
+    		WHERE IN_DATE = REPLACE(REPLACE(#{OBND_SRCH_DATE},'/'),'-')
+    		AND CUST_NO IN (<foreach collection="CUST_ARR" item="item" separator=",">#{item}</foreach>)
+    		AND CAM_ID IS NULL
+    		ORDER BY CUST_NM
+    </select>
+
+    <update id="updateObndReg"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateObndReg 아웃바운드 공제단말 고객정보 수정   */
+		UPDATE PLT_PHN_OBD_CUS
+		  SET
+		     CAM_ID = #{CAM_ID} 							/*캠페인*/
+		 WHERE CUST_NO = #{CUST_NO}
+		 AND CAM_ID IS NULL
+		]]>
+	</update>
+	
+    <update id="updateObndCustRegAdd"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  updateObndCustRegAdd 아웃바운드 공제단말 고객부가정보 수정   */
+		UPDATE PLT_PHN_OBD_CUS_ADD
+		  SET
+		     CAM_ID = #{CAM_ID} 							/*캠페인*/
+		 WHERE CUST_NO = #{CUST_NO}
+		 AND CAM_ID IS NULL
+		]]>
+	</update>
+
+    <select id="selectObndSnglRegDubChk"  parameterType= "java.util.HashMap" resultMap="selectHashMap" >
+		<![CDATA[
+		/*  selectObndSnglRegDubChk 아웃바운드 고객 단건 등록 중복 체크   */
+		 SELECT COUNT(*) AS CNT
+		 FROM PLT_PHN_CAMP_CUS
+		 WHERE CAM_ID = #{CAM_ID}
+		 AND CUST_NO  = #{CUST_NO}
+		]]>
+	</select>
+
+</mapper>

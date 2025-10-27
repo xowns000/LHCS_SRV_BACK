@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<!-- <mapper namespace="com.hcteletalk.teletalk.core.busy.dao.TalkBusyMapper"> -->
+<mapper namespace="kr.co.hkcloud.palette3.core.chat.busy.dao.TalkBusyMapper">
+
+
+<!-- 상담불가(BUSY)를 위해 고객접수 건을 조회한다 -->
+<select id="selectTalkBusyUserReady0910"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT PCR.CUST_ID
+     , PCR.CUSTCO_ID
+     , PCR.SNDR_KEY
+     , PCR.CUSTCO_ID
+     , PCR.ALTMNT_STTS_CD
+     , PCR.DLVR_CUTT_HSTRY_ID
+     , PCR.CHN_TYPE_CD
+     , (SELECT CHT_USER_KEY
+     	FROM PLT_CHT_CUST
+     	WHERE CUST_ID = PCR.CUST_ID
+     		AND SNDR_KEY = PCR.SNDR_KEY) AS CHT_USER_KEY
+  FROM PLT_CHT_RDY PCR
+ WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   AND ALTMNT_STTS_CD IN ('QSTN_CHCING', 'ALTMNT_WAIT')
+   AND CHN_TYPE_CD NOT IN('EMAIL','BBS')
+]]>
+</select>
+
+<!-- 상담불가(BUSY)를 위해 해당 고객의 고객접수 건을 조회한다. -->
+<!-- TODO : 확인 필요 - TalkBusyServiceImpl 에서 쿼리 호출 시 SNDR_KEY를 넘기지 않는데 where 조건에 있음!!! -->
+<select id="selectTalkBusyUserReady0910ByTalkUserKey"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT CUST_ID
+     , SNDR_KEY
+     , ALTMNT_STTS_CD
+     , DLVR_CUTT_HSTRY_ID
+     , CHN_TYPE_CD
+  FROM PLT_CHT_RDY 
+ WHERE SNDR_KEY = #{SNDR_KEY}::INTEGER
+ 	AND CUST_ID = (SELECT CUST_ID
+ 					FROM PLT_CHT_CUST
+ 					WHERE CHT_USER_KEY = #{CHT_USER_KEY})::INTEGER
+ 	AND ALTMNT_STTS_CD IN ('QSTN_CHCING', 'ALTMNT_WAIT')
+ 	AND CHN_TYPE_CD NOT IN('EMAIL','BBS')
+]]>
+</select>
+
+<!-- 상담불가(BUSY) 대기중에서 상담중으로 데이터 이관 --> 
+<insert id="insertTalkBusyUserReadyToContact" parameterType= "java.util.HashMap">
+INSERT INTO PLT_CHT_CUTT
+     (
+        TALK_CONTACT_ID,
+        CUSTCO_ID,
+        CUST_ID,
+        SNDR_KEY,
+        CUSTOMER_ID,
+        TALK_START_DT,
+        TALK_END_DT,
+        TALK_SESSION_CD,
+        CHN_TYPE_CD,
+        CNSL_TYP_CD,
+        TALK_QST,
+        TALK_ANS,
+        TALK_TITLE,
+        OWN_CHECK_YN,
+        EXEC_RST_CD,
+        CST_TYP_CD,
+        TALK_STAT_CD,
+        USER_ID,
+        TALK_DIST_DT,
+        TALK_READ_DT,
+        TALK_CONTACT_DT,
+        TALK_ENT_CD,
+        REGR_DEPT_CD,
+        REGR_ID,
+        REG_DTTM,
+        AMDR_DEPT_CD,
+        AMDR_ID,
+        UPD_DTTM,
+        PROC_ID,
+        IT_PROCESSING,
+        TALK_INQRY_CD,
+        ORDER_NUMBER
+     )
+SELECT #{TALK_CONTACT_ID}
+     , TUR.CUSTCO_ID
+     , TUR.CUST_ID
+     , TUR.SNDR_KEY
+     , C.CUSTOMER_ID
+     , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+     , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+     , ''
+     , ''
+     , ''
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE USE_YN = 'Y' AND GROUP_CD = 'TALK001' AND CD = '80')
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN (SELECT CD_NM FROM PLT_COMN_CD WHERE USE_YN = 'Y' AND GROUP_CD = 'TALK001' AND CD = '81')
+       END
+     , ''
+     , TURD.CONTENT
+     , ''
+     , ''
+     , ''
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN '80'
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN '81'
+       END
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN 'SYSTEM'
+       END
+     , TUR.TALK_DIST_DT
+     , TUR.TALK_READ_DT
+     , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+     , ''
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN 'SYSTEM'
+       END
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN 'SYSTEM'
+       END
+     , SYSTIMESTAMP
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN 'SYSTEM'
+       END
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN 'SYSTEM'
+       END
+     , SYSTIMESTAMP
+     , CASE WHEN TUR.ALTMNT_STTS_CD = '09' THEN 'SYSTEM'
+            WHEN TUR.ALTMNT_STTS_CD = '10' THEN 'SYSTEM'
+       END
+     , SYSTIMESTAMP
+     , TALK_INQRY_CD
+     , TUR.ORDER_NUMBER
+  FROM PLT_CHT_RDY  TUR
+ LEFT OUTER JOIN      
+ ( 
+         SELECT * 
+           FROM ( 
+                  SELECT * 
+                    FROM PLT_CHT_RDY_DTL 
+                   WHERE CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+                     AND SNDR_KEY = #{SNDR_KEY}
+                     AND TYPE NOT IN ('reference','expired')
+                   ORDER BY IT_PROCESSING ASC
+                ) Z
+          WHERE ROWNUM = 1
+  ) TURD
+ 	ON TUR.CUST_ID = TURD.CUST_ID 
+ LEFT OUTER JOIN TWB_TALK_CUSTOMER C
+ 	ON TUR.CUST_ID = C.CUST_ID
+ WHERE TUR.CUSTCO_ID = #{CUSTCO_ID}
+   AND TUR.CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+   AND TUR.SNDR_KEY = #{SNDR_KEY}
+   AND TUR.ALTMNT_STTS_CD IN ('09', '10')
+</insert>
+
+<!-- 상담불가(BUSY)를 위해 고객접수 건을 조회한다 -->
+<select id="selectTalkBusyUserReadyByNoreponse"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT CUST_ID
+     , SNDR_KEY
+     , ALTMNT_STTS_CD
+     , DLVR_CUTT_HSTRY_ID
+  FROM PLT_CHT_RDY TUR
+ WHERE TUR.CUSTCO_ID = #{CUSTCO_ID}
+   AND TUR.CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+   AND TUR.SNDR_KEY = #{SNDR_KEY}
+   AND TUR.ALTMNT_STTS_CD IN ('QSTN_CHCING', 'ALTMNT_WAIT')
+]]>
+</select>
+
+<!-- 영업시간 체크  -->
+<select id="checkAvailableWorkTime"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+SELECT 
+    CASE WHEN TO_CHAR(NOW(), 'YYYYMMDDHH24MI')
+            BETWEEN TO_CHAR(NOW(), 'YYYYMMDD')||#{WORK_START_TIME}
+                AND CASE WHEN SUBSTRING(#{WORK_END_TIME},1,2) <= SUBSTRING(#{WORK_START_TIME},1,2)
+                         THEN TO_CHAR(NOW()::DATE + INTERVAL '1 DAY', 'YYYYMMDD')
+                         ELSE TO_CHAR(NOW(), 'YYYYMMDD')
+                    END ||
+                        SUBSTRING(#{WORK_END_TIME},1,2) ||
+                        SUBSTRING(#{WORK_END_TIME},3,2)
+        THEN 1
+        ELSE 0 END AS AVAILABLE_WORK_TIME
+
+]]>
+</select>
+
+<!-- 배치실행을 위한 채팅고객사 테넌트 체크  -->
+<select id="selectBatchTenantList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /* selectBatchTenantList - 배치실행을 위한 채팅고객사 테넌트 체크 */
+        PCC.SCHEMA_ID,
+        PCC.ASP_CUST_KEY,
+        PCC.CERT_CUSTCO_ID
+    FROM CUSTCO.PLT_CERT_CUSTCO_CHN PCCC
+             LEFT JOIN CUSTCO.PLT_CERT_CUSTCO PCC
+                       ON PCC.CERT_CUSTCO_ID = PCCC.CERT_CUSTCO_ID
+    WHERE PCC.SRVC_STTS_CD = 'ON'
+      AND PCC.BFR_SYS_YN = 'N'
+    GROUP BY PCC.SCHEMA_ID,PCC.ASP_CUST_KEY,PCC.CERT_CUSTCO_ID
+</select>
+
+</mapper>
+

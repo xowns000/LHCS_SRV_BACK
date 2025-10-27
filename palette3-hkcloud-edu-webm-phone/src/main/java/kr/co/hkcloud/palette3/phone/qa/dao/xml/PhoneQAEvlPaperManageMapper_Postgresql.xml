@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.qa.dao.PhoneQAEvlPaperManageMapper">
+
+<!-- QA평가지 조회 -->
+<select id="selectRtnEvSheet"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		 A.QA_ID
+		 , A.QA_YM
+		 , A.QA_TY_ID
+	     , A.QA_TY_L_CD
+	     , A.QA_TY_L
+	     , A.QA_TY_M_CD
+	     , A.QA_TY_M
+	     , A.QA_TY_S
+	     , A.QA_TY_S_P
+	  FROM PLT_PHN_QA_EVAL_SHT A
+     WHERE A.QA_YM = #{QA_YM}
+       AND A.QA_TY_ID = #{QA_TY_ID}
+	 ORDER BY A.QA_TY_L_CD, A.QA_TY_M_CD, A.QA_TY_S_P DESC
+</select>
+
+
+<!-- QA평가지 등록 -->
+<insert id="insertRtnQASHEET"  parameterType= "java.util.HashMap">
+<![CDATA[
+INSERT INTO PLT_PHN_QA_EVAL_SHT
+(
+ CUSTCO_ID
+, QA_ID
+, QA_YM
+, QA_TY_ID
+, QA_TY_L_CD
+, QA_TY_L
+, QA_TY_M_CD
+, QA_TY_M
+, QA_TY_S
+, QA_TY_S_P
+, REG_ID
+, REG_DTIM
+, CHNG_ID
+, CHNG_DTIM
+, CENT_TY
+)
+VALUES(
+ NULLIF('HKCTALKMNG','')
+, #{QA_ID}
+, #{QA_YM}
+, #{QA_TY_ID}
+, REPLACE(#{QA_TY_L_CD}, ',' , '/')
+, REPLACE(#{QA_TY_L}, ',' , '/')
+, REPLACE(#{QA_TY_M_CD}, ',' , '/')
+, REPLACE(#{QA_TY_M}, ',' , '/')
+, #{QA_TY_S}
+, #{QA_TY_S_P}
+, #{REG_ID}
+, TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')	
+, #{REG_ID}
+, TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')	
+, NULLIF('T','')
+)
+]]>
+</insert>
+
+<!-- QA평가지 복사 -->
+<insert id="insertRtnCopySheet"  parameterType= "java.util.HashMap">
+<![CDATA[
+INSERT INTO PLT_PHN_QA_EVAL_SHT
+       ( 
+	    CUSTCO_ID
+	  , QA_ID
+	  , QA_YM
+	  , QA_TY_ID
+	  , QA_TY_L_CD
+	  , QA_TY_L
+	  , QA_TY_M_CD
+	  , QA_TY_M
+	  , QA_TY_S
+	  , QA_TY_S_P
+	  , REG_ID
+	  , REG_DTIM
+	  , CHNG_ID
+	  , CHNG_DTIM
+	  , CENT_TY
+)
+ SELECT CUSTCO_ID
+	  , #{QA_ID} + ROWNUM
+	  , #{QA_YM}
+	  , #{QA_TY_ID}
+	  , QA_TY_L_CD
+	  , QA_TY_L
+	  , QA_TY_M_CD
+	  , QA_TY_M
+	  , QA_TY_S
+	  , QA_TY_S_P
+	  , #{REG_ID}
+	  , TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')	
+	  , #{REG_ID}
+	  , TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')	
+	  , NULLIF('T','')
+   FROM PLT_PHN_QA_EVAL_SHT
+  WHERE QA_YM = #{QA_YM_COPY}
+    AND QA_TY_ID = #{QA_TY_ID}
+]]>
+</insert>
+
+<!-- QA 평가지 삭제 -->
+<delete id="deleteRtnQASheet"  parameterType= "java.util.HashMap">
+   DELETE FROM PLT_PHN_QA_EVAL_SHT
+	WHERE QA_ID = #{QA_ID}
+</delete>
+
+<!-- QA 평가지 수정 -->
+<update id="updateRtnQASheet"  parameterType= "java.util.HashMap">
+   UPDATE PLT_PHN_QA_EVAL_SHT 
+	  SET CHNG_ID = #{REG_ID}
+	, CHNG_DTIM = TO_CHAR(SYSTIMESTAMP,'YYYYMMDDHH24MISS')
+		<if test="QA_TY_L_CD 	!= null"> , QA_TY_L_CD = REPLACE(#{QA_TY_L_CD}, ',' , '/') </if>
+		<if test="QA_TY_L 		!= null"> , QA_TY_L = REPLACE(#{QA_TY_L}, ',' , '/') </if>
+		<if test="QA_TY_M_CD 	!= null"> , QA_TY_M_CD = REPLACE(#{QA_TY_M_CD}, ',' , '/') </if>
+		<if test="QA_TY_M 		!= null"> , QA_TY_M = REPLACE(#{QA_TY_M}, ',' , '/') </if>
+		<if test="QA_TY_S 		!= null"> , QA_TY_S = #{QA_TY_S} </if>
+		<if test="QA_TY_S_P 	!= null"> , QA_TY_S_P = #{QA_TY_S_P} </if>
+	WHERE QA_ID = #{QA_ID}
+</update>
+
+<!-- QA 평가지 존재하는지 체크 -->
+<select id="selectChkQASeet"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT QA_ID AS QA_ID
+	  FROM PLT_PHN_QA_EVAL_SHT
+	 WHERE QA_YM = #{QA_YM}
+	   AND QA_TY_ID = #{QA_TY_ID}
+</select>
+
+</mapper>

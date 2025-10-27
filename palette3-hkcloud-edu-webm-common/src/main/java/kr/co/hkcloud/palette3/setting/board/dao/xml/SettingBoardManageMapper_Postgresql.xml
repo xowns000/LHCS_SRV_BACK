@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.board.dao.SettingBoardManageMapper">
+
+<!-- ######################################################################### -->
+<!-- 통합게시판 중복체크 조회 -->
+<select id="selectRtnDupBrdMaster"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">	
+SELECT COUNT(A.BRD_ID)      AS CNT      -- 게시판ID
+  FROM PLT_BLBD_MNG A
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND A.BRD_ID = #{BRD_ID}
+</select>
+	
+<!-- 게시판별 게시물 조회 -->
+<select id="selectRtnBrdDataCnt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(1) AS CNT 
+  FROM PLT_BLBD_MST 
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+  AND BRD_ID = #{BRD_ID}
+</select>
+
+<!-- 통합게시판 관리화면 조회 -->
+<select id="selectRtnBrdMaster"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT A.BRD_ID                                                AS BRD_ID       -- 게시판ID
+     , A.BRD_NAME                                              AS BRD_NAME     -- 게시판명
+     , A.BRD_RMK                                               AS BRD_RMK      -- 게시판설명
+     , A.NOTI_YN                                               AS NOTI_YN      -- 게시판 공지사항여부
+     , A.REPLE_YN                                              AS REPLE_YN     -- 게시판 답변여부
+     , A.RMK_YN                                                AS RMK_YN       -- 게시판 덧글여부
+     , A.FILE_YN                                               AS FILE_YN      -- 게시판 첨부파일여부
+     , A.RT_NOTI_YN											   AS RT_NOTI_YN   -- 게시판 실시간공지여부
+     , A.NEW_DAY                                               AS NEW_DAY      -- 게시판 신규표시일
+     , (SELECT COUNT(1) FROM PLT_BLBD_MST WHERE BRD_ID = A.BRD_ID AND CUSTCO_ID = #{ASP_NEWCUST_KEY})  AS BRD_CNT    -- 게시판 등록글 수
+     , A.USE_YN                                                AS USE_YN       -- 게시판 사용여부(코드)
+     , CASE WHEN A.USE_YN = 'Y' THEN '사용' ELSE '미사용' END  AS USE_YN_NAME  	   -- 게시판 사용여부(명칭)
+     , A.ETC01                                                 AS ETC01        -- 게시판 기타정보1
+     , A.ETC02                                                 AS ETC02        -- 게시판 기타정보2
+     , A.ETC03                                                 AS ETC03        -- 게시판 기타정보3
+     , A.ETC04                                                 AS ETC04        -- 게시판 기타정보4
+     , A.ETC05                                                 AS ETC05        -- 게시판 기타정보5
+     , A.BRD_TY												   AS BRD_TY	   -- 게시판 유형
+  FROM PLT_BLBD_MNG A
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+ <if test="BRD_NAME		!='' and BRD_NAME 			 != null">   AND A.BRD_NAME LIKE '%' || #{BRD_NAME} || '%' </if>
+ <if test="USE_YN		!='' and USE_YN 			 != null">   AND A.USE_YN        = #{USE_YN}        </if>
+ <if test="BRD_ID		!='' and BRD_ID 			 != null">   AND A.BRD_ID LIKE '%' || #{BRD_ID} || '%'</if>
+</select>
+	
+<!-- PLT_BLBD_MNG(통합게시판마스터) 테이블 데이터 등록 -->
+<insert id="INSERT_MEW_BRD_MASTER"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_BLBD_MNG
+       ( CUSTCO_ID
+       , BRD_ID                        -- 통합게시판ID
+       , BRD_NAME                      -- 통합게시판한글명
+       , BRD_RMK                       -- 통합게시판상세설명
+       , NOTI_YN                       -- 공지사항여부
+       , REPLE_YN                      -- 답변허용여부
+       , RMK_YN                        -- 덧글허용여부
+       , FILE_YN                       -- 파일첨부여부
+       , RT_NOTI_YN					   -- 실시간공지여부
+         <if test="NEW_DAY				!='' and NEW_DAY 			!= null"> , NEW_DAY </if>                      -- NEW표시일수
+       , USE_YN                        -- 사용여부
+         <if test="ETC01				!='' and ETC01 			!= null"> , ETC01   </if>                      -- 기타정보01(숫자)
+       	 <if test="ETC02				!='' and ETC02 			!= null"> , ETC02   </if>                      -- 기타정보02(숫자)
+       , ETC03                         -- 기타정보03
+       , ETC04                         -- 기타정보04
+       , ETC05                         -- 기타정보05
+       , PROC_ID                       -- 처리자
+       , IT_PROCESSING                 -- 전산처리일자
+       , BRD_TY						   -- 게시판유형
+       ) 
+VALUES ( NULLIF(#{ASP_NEWCUST_KEY},'') 
+       , #{BRD_ID}
+       , #{BRD_NAME}
+       , #{BRD_RMK}
+       , #{NOTI_YN}
+       , #{REPLE_YN}
+       , #{RMK_YN}
+       , #{FILE_YN}
+       , #{RT_NOTI_YN}
+       <if test="NEW_DAY				!='' and NEW_DAY 			!= null"> , #{NEW_DAY}</if> 
+       , #{USE_YN}
+       <if test="ETC01				!='' and ETC01 			!= null"> , #{ETC01} </if>
+       <if test="ETC02				!='' and ETC02 			!= null"> , #{ETC02} </if>
+       , #{ETC03}
+       , #{ETC04}
+       , #{ETC05}
+       , #{PROC_ID}
+       , NOW()
+       , #{BRD_TY}
+       )
+</insert>
+	
+<update id="UPDATE_MEW_BRD_MASTER"  parameterType= "java.util.HashMap">
+UPDATE PLT_BLBD_MNG
+   SET IT_PROCESSING   = NOW()
+   		, BRD_RMK			= #{BRD_RMK}   			/* 통합게시판상세설명 */
+   		, NEW_DAY			= #{NEW_DAY}   			/* NEW표시일수 */
+   		, ETC01			    = #{ETC01}   			/* 기타정보01(숫자) */
+   		, ETC02			    = #{ETC02}   			/* 기타정보02(숫자) */
+   		, ETC03			    = #{ETC03}   			/* 기타정보03 */
+   		, ETC04			    = #{ETC04}   			/* 기타정보04 */
+   		, ETC05			    = #{ETC05}   			/* 기타정보05 */
+    <if test="BRD_TY			!='' and BRD_TY 			!= null">     , BRD_TY			= #{BRD_TY}   		/* 통합게시판유형 */  	</if>
+  <if test="BRD_NAME			!='' and BRD_NAME 			!= null">     , BRD_NAME			= #{BRD_NAME}   		/* 통합게시판한글명 */  	</if>
+  <if test="NOTI_YN				!='' and NOTI_YN 			!= null">     , NOTI_YN			    = #{NOTI_YN}   			/* 공지사항여부 */  		</if>
+  <if test="REPLE_YN			!='' and REPLE_YN 			!= null">     , REPLE_YN			= #{REPLE_YN}   		/* 답변허용여부 */  		</if>
+  <if test="RMK_YN				!='' and RMK_YN 			!= null">     , RMK_YN			    = #{RMK_YN}   			/* 덧글허용여부 */  		</if>
+  <if test="FILE_YN				!='' and FILE_YN 			!= null">     , FILE_YN			    = #{FILE_YN}   			/* 파일첨부여부 */  		</if>
+  <if test="USE_YN				!='' and USE_YN 			!= null">     , USE_YN			    = #{USE_YN}   			/* 사용여부 */  		</if>
+  <if test="RT_NOTI_YN			!='' and RT_NOTI_YN 		!= null">     , RT_NOTI_YN			= #{RT_NOTI_YN}   		/* 실시간공지여부 */  	</if>
+  <if test="PROC_ID				!='' and PROC_ID 			!= null">     , PROC_ID			    = #{PROC_ID}   			/* 처리자 */  			</if>
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID          = #{BRD_ID}
+</update>		
+
+<!-- PLT_BLBD_MNG(통합게시판마스터) 데이터 삭제 -->
+<delete id="DELETE_MEW_BRD_MASTER"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BLBD_MNG
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND BRD_ID = #{BRD_ID}
+</delete>
+
+<!-- PLT_BLBD_MNG(통합게시판마스터) 실시간공지 사용여부 조회 -->
+<select id="selectRtNotiRtn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT RT_NOTI_YN, BRD_ID
+	  FROM PLT_BLBD_MNG
+	 WHERE 1 = 1 <!-- CUSTCO_ID = #{CUSTCO_ID}-->
+	   AND RT_NOTI_YN = 'Y'
+ 	   AND USE_YN = 'Y'
+</select>
+
+<!-- ######################################################################### -->
+<!-- PLT_BLBD_MNG(통합게시판관리) 테이블 데이터 등록 -->
+<insert id="INSERT_PLT_BLBD_MNG"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_BLBD_MNG
+       ( CUSTCO_ID
+       , UNITY_BLBD_ID                 -- 통합게시판ID
+       , UNITY_BLBD_NM                 -- 통합게시판명
+       , UNITY_BLBD_XPLN               -- 통합게시판설명
+       , BLBD_TYPE_CD                  -- 게시판타입코드
+       , BLBD_DIV_CD                   -- 게시판분류코드
+       , DIV_CD1                       -- 분류코드1
+       , DIV_CD2                       -- 분류코드2
+       , EMGCY_NOTI_YN                 -- 긴급공지여부
+       , ANS_YN                        -- 답글여부
+       , COMMENT_YN                    -- 꼬릿말여부
+       , RCMD_FUNC_YN                  -- 추천기능여부
+       , ATRT_CHK_YN                   -- 권한체크여부
+       , ATMT_YN                       -- 첨부여부
+       , AFI_RSTR_SIZE                 -- 파일제한사이즈
+       , NWR_DISP_DD_CNT               -- 신규표시일수
+       , NOTI_STRT_DD_CNT              -- 공지사항개시일수
+       , TMPLAT_ID                     -- 템플릿ID
+       , USE_YN                        -- 사용여부
+       , REGR_DEPT_CD                  -- 등록자부서코드
+       , REGR_ID                       -- 등록자ID
+       , REG_DTTM                      -- 등록일시
+       , PROC_ID                       -- 처리자
+       , IT_PROCESSING                 -- 전산처리일시
+) VALUES 
+       ( NULLIF(#{ASP_NEWCUST_KEY},'')
+       , #{UNITY_BLBD_ID}
+       , #{UNITY_BLBD_NM}
+       , #{UNITY_BLBD_XPLN}
+       , #{BLBD_TYPE_CD}
+       , #{BLBD_DIV_CD}
+       , #{DIV_CD1}
+       , #{DIV_CD2}
+       , #{EMGCY_NOTI_YN}
+       , #{ANS_YN}
+       , #{COMMENT_YN}
+       , #{RCMD_FUNC_YN}
+       , #{ATRT_CHK_YN}
+       , #{ATMT_YN}
+       , #{AFI_RSTR_SIZE}
+       , #{NWR_DISP_DD_CNT}
+       , #{NOTI_STRT_DD_CNT}
+       , #{TMPLAT_ID}
+       , #{USE_YN}
+       , #{REGR_DEPT_CD}
+       , #{REGR_ID}
+       , NOW()
+       , #{PROC_ID}
+       , NOW()
+       )
+</insert>
+	
+<!-- PLT_BLBD_MNG(통합게시판관리) 테이블 수정 -->	
+<update id="UPDATE_PLT_BLBD_MNG"  parameterType="java.util.HashMap">
+UPDATE PLT_BLBD_MNG
+   SET IT_PROCESSING   = NOW()
+  <if test="UNITY_BLBD_NM 		!= '' "> , UNITY_BLBD_NM    = #{UNITY_BLBD_NM}     /*통합게시판명*/	 	</if>
+  <if test="UNITY_BLBD_XPLN 	!= '' "> , UNITY_BLBD_XPLN  = #{UNITY_BLBD_XPLN}   /*통합게시판설명*/	 	</if>
+  <if test="BLBD_TYPE_CD 		!= '' "> , BLBD_TYPE_CD     = #{BLBD_TYPE_CD}      /*게시판타입코드*/	 	</if>
+     , BLBD_DIV_CD     = #{BLBD_DIV_CD}         /*게시판분류코드*/
+     , DIV_CD1         = #{DIV_CD1}             /*분류코드1*/
+     , DIV_CD2         = #{DIV_CD2}             /*분류코드2*/
+  <if test="EMGCY_NOTI_YN 		!= '' "> , EMGCY_NOTI_YN    = #{EMGCY_NOTI_YN}     /*긴급공지여부*/	 	</if>
+  <if test="ANS_YN 				!= '' "> , ANS_YN           = #{ANS_YN}            /*답글여부*/		 	</if>
+  <if test="COMMENT_YN 			!= '' "> , COMMENT_YN       = #{COMMENT_YN}        /*꼬릿말여부*/		 	</if>
+  <if test="RCMD_FUNC_YN 		!= '' "> , RCMD_FUNC_YN     = #{RCMD_FUNC_YN}      /*추천기능여부*/	 	</if>
+  <if test="ATRT_CHK_YN 		!= '' "> , ATRT_CHK_YN      = #{ATRT_CHK_YN}       /*권한체크여부*/	 	</if>
+  <if test="ATMT_YN 			!= '' "> , ATMT_YN          = #{ATMT_YN}           /*첨부여부*/		 	</if>
+  <if test="AFI_RSTR_SIZE 		!= '' "> , AFI_RSTR_SIZE    = #{AFI_RSTR_SIZE}     /*파일제한사이즈*/		</if>
+  <if test="NWR_DISP_DD_CNT 	!= '' "> , NWR_DISP_DD_CNT  = #{NWR_DISP_DD_CNT}   /*신규표시일수*/	 	</if>
+  <if test="NOTI_STRT_DD_CNT 	!= '' "> , NOTI_STRT_DD_CNT = #{NOTI_STRT_DD_CNT}  /*공지사항개시일수*/ 	</if>
+     , TMPLAT_ID       = #{TMPLAT_ID}           /*템플릿ID*/
+  <if test="USE_YN 				!= '' "> , USE_YN           = #{USE_YN}            /*사용여부*/			</if>
+  <if test="AMDR_DEPT_CD 		!= '' "> , AMDR_DEPT_CD     = #{AMDR_DEPT_CD}      /*수정자부서코드*/		</if>
+  <if test="AMDR_ID 			!= '' "> , AMDR_ID          = #{AMDR_ID}           /*수정자ID*/			</if>
+     , UPD_DTTM        = NOW()              /*수정일시*/
+  <if test="PROC_ID 			!= '' "> , PROC_ID          = #{PROC_ID}           /*처리자*/			</if>
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND UNITY_BLBD_ID   = #{UNITY_BLBD_ID}
+</update>
+
+<!-- PLT_BLBD_MNG(통합게시판관리) 데이터 삭제 -->	
+<delete id="DELETE_PLT_BLBD_MNG"  parameterType="java.util.HashMap">
+DELETE FROM PLT_BLBD_MNG
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+   AND UNITY_BLBD_ID   = #{UNITY_BLBD_ID}  
+</delete>
+
+<!-- PLT_BLBD_MNG(통합게시판관리) 테이블 데이터 조회 -->	
+<select id="SELECT_PLT_BLBD_MNG"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT UNITY_BLBD_ID                 -- 통합게시판ID
+     , UNITY_BLBD_NM                 -- 통합게시판명
+     , UNITY_BLBD_XPLN               -- 통합게시판설명
+     , BLBD_TYPE_CD                  -- 게시판타입코드
+     , BLBD_DIV_CD                   -- 게시판분류코드
+     , DIV_CD1                       -- 분류코드1
+     , DIV_CD2                       -- 분류코드2
+     , EMGCY_NOTI_YN                 -- 긴급공지여부
+     , ANS_YN                        -- 답글여부
+     , COMMENT_YN                    -- 꼬릿말여부
+     , RCMD_FUNC_YN                  -- 추천기능여부
+     , ATRT_CHK_YN                   -- 권한체크여부
+     , ATMT_YN                       -- 첨부여부
+     , AFI_RSTR_SIZE                 -- 파일제한사이즈
+     , NWR_DISP_DD_CNT               -- 신규표시일수
+     , NOTI_STRT_DD_CNT              -- 공지사항개시일수
+     , TMPLAT_ID                     -- 템플릿ID
+     , USE_YN                        -- 사용여부
+     , REGR_DEPT_CD                  -- 등록자부서코드
+     , REGR_ID                       -- 등록자ID
+     , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+     , AMDR_DEPT_CD                  -- 수정자부서코드
+     , AMDR_ID                       -- 수정자ID
+     , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+     , PROC_ID                       -- 처리자
+     , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+  FROM PLT_BLBD_MNG
+ WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+<if test="UNITY_BLBD_ID 	!='' and UNITY_BLBD_ID 		!= null"> AND UNITY_BLBD_ID    = #{UNITY_BLBD_ID}     </if>
+<if test="UNITY_BLBD_NM 	!='' and UNITY_BLBD_NM 		!= null"> AND UNITY_BLBD_NM    = #{UNITY_BLBD_NM}     </if>
+<if test="UNITY_BLBD_XPLN 	!='' and UNITY_BLBD_XPLN 	!= null"> AND UNITY_BLBD_XPLN  = #{UNITY_BLBD_XPLN}   </if>
+<if test="BLBD_TYPE_CD 		!='' and BLBD_TYPE_CD 		!= null"> AND BLBD_TYPE_CD     = #{BLBD_TYPE_CD}      </if>
+<if test="BLBD_DIV_CD 		!='' and BLBD_DIV_CD 		!= null"> AND BLBD_DIV_CD      = #{BLBD_DIV_CD}       </if>
+<if test="DIV_CD1 			!='' and DIV_CD1 			!= null"> AND DIV_CD1          = #{DIV_CD1}           </if>
+<if test="DIV_CD2 			!='' and DIV_CD2 			!= null"> AND DIV_CD2          = #{DIV_CD2}           </if>
+<if test="EMGCY_NOTI_YN 	!='' and EMGCY_NOTI_YN 		!= null"> AND EMGCY_NOTI_YN    = #{EMGCY_NOTI_YN}     </if>
+<if test="ANS_YN 			!='' and ANS_YN 			!= null"> AND ANS_YN           = #{ANS_YN}            </if>
+<if test="COMMENT_YN 		!='' and COMMENT_YN 		!= null"> AND COMMENT_YN       = #{COMMENT_YN}        </if>
+<if test="RCMD_FUNC_YN 		!='' and RCMD_FUNC_YN 		!= null"> AND RCMD_FUNC_YN     = #{RCMD_FUNC_YN}      </if>
+<if test="ATRT_CHK_YN 		!='' and ATRT_CHK_YN 		!= null"> AND ATRT_CHK_YN      = #{ATRT_CHK_YN}       </if>
+<if test="ATMT_YN 			!='' and ATMT_YN 			!= null"> AND ATMT_YN          = #{ATMT_YN}           </if>
+<if test="AFI_RSTR_SIZE 	!='' and AFI_RSTR_SIZE 		!= null"> AND AFI_RSTR_SIZE    = #{AFI_RSTR_SIZE}     </if>
+<if test="NWR_DISP_DD_CNT 	!='' and NWR_DISP_DD_CNT 	!= null"> AND NWR_DISP_DD_CNT  = #{NWR_DISP_DD_CNT}   </if>
+<if test="NOTI_STRT_DD_CNT 	!='' and NOTI_STRT_DD_CNT 	!= null"> AND NOTI_STRT_DD_CNT = #{NOTI_STRT_DD_CNT}  </if>
+<if test="TMPLAT_ID 		!='' and TMPLAT_ID 			!= null"> AND TMPLAT_ID        = #{TMPLAT_ID}         </if>
+<if test="USE_YN 			!='' and USE_YN 			!= null"> AND USE_YN           = #{USE_YN}            </if>
+<if test="REGR_DEPT_CD 		!='' and REGR_DEPT_CD 		!= null"> AND REGR_DEPT_CD     = #{REGR_DEPT_CD}      </if>
+<if test="REGR_ID 			!='' and REGR_ID 			!= null"> AND REGR_ID          = #{REGR_ID}           </if>
+<if test="REG_DTTM 			!='' and REG_DTTM 			!= null"> AND REG_DTTM         = #{REG_DTTM}          </if>
+<if test="AMDR_DEPT_CD 		!='' and AMDR_DEPT_CD 		!= null"> AND AMDR_DEPT_CD     = #{AMDR_DEPT_CD}      </if>
+<if test="AMDR_ID 			!='' and AMDR_ID 			!= null"> AND AMDR_ID          = #{AMDR_ID}           </if>
+<if test="UPD_DTTM 			!='' and UPD_DTTM 			!= null"> AND UPD_DTTM         = #{UPD_DTTM}          </if>
+<if test="PROC_ID 			!='' and PROC_ID 			!= null"> AND PROC_ID          = #{PROC_ID}           </if>
+</select>
+	
+<!-- PLT_BLBD_MNG(통합게시판관리) 테이블 데이터 페이징 조회 -->	
+<select id="SELECT_PAGE_PLT_BLBD_MNG"  parameterType="java.util.HashMap" resultType="java.util.HashMap">	
+
+SELECT ROW_TBL.*
+     FROM ( 
+			SELECT
+				ROW_NUMBER() OVER(ORDER BY REG_DTTM DESC) AS ROW_NUMBER
+			   , UNITY_BLBD_ID                 -- 통합게시판ID
+               , UNITY_BLBD_NM                 -- 통합게시판명
+               , UNITY_BLBD_XPLN               -- 통합게시판설명
+               , BLBD_TYPE_CD                  -- 게시판타입코드
+               , BLBD_DIV_CD                   -- 게시판분류코드
+               , EMGCY_NOTI_YN                 -- 긴급공지여부
+               , ANS_YN                        -- 답글여부
+               , COMMENT_YN                    -- 꼬릿말여부
+               , RCMD_FUNC_YN                  -- 추천기능여부
+               , ATRT_CHK_YN                   -- 권한체크여부
+               , ATMT_YN                       -- 첨부여부
+               , AFI_RSTR_SIZE                 -- 파일제한사이즈
+               , NWR_DISP_DD_CNT               -- 신규표시일수
+               , NOTI_STRT_DD_CNT              -- 공지사항개시일수
+               , TMPLAT_ID                     -- 템플릿ID
+               , USE_YN                        -- 사용여부
+               , REGR_DEPT_CD                  -- 등록자부서코드
+               , REGR_ID                       -- 등록자ID
+               , TO_CHAR(REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM -- 등록일시
+               , AMDR_DEPT_CD                  -- 수정자부서코드
+               , AMDR_ID                       -- 수정자ID
+               , TO_CHAR(UPD_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS UPD_DTTM -- 수정일시
+               , PROC_ID                       -- 처리자
+               , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING -- 전산처리일시
+            FROM PLT_BLBD_MNG
+           WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			<if test="UNITY_BLBD_ID 	!='' and UNITY_BLBD_ID 		!= null"> AND UNITY_BLBD_ID    = #{UNITY_BLBD_ID}     </if>
+			<if test="UNITY_BLBD_NM 	!='' and UNITY_BLBD_NM 		!= null"> AND UNITY_BLBD_NM    = #{UNITY_BLBD_NM}     </if>
+			<if test="UNITY_BLBD_XPLN 	!='' and UNITY_BLBD_XPLN 	!= null"> AND UNITY_BLBD_XPLN  = #{UNITY_BLBD_XPLN}   </if>
+			<if test="BLBD_TYPE_CD 		!='' and BLBD_TYPE_CD 		!= null"> AND BLBD_TYPE_CD     = #{BLBD_TYPE_CD}      </if>
+			<if test="BLBD_DIV_CD 		!='' and BLBD_DIV_CD 		!= null"> AND BLBD_DIV_CD      = #{BLBD_DIV_CD}       </if>
+			<if test="DIV_CD1 			!='' and DIV_CD1 			!= null"> AND DIV_CD1          = #{DIV_CD1}           </if>
+			<if test="DIV_CD2 			!='' and DIV_CD2 			!= null"> AND DIV_CD2          = #{DIV_CD2}           </if>
+			<if test="EMGCY_NOTI_YN 	!='' and EMGCY_NOTI_YN 		!= null"> AND EMGCY_NOTI_YN    = #{EMGCY_NOTI_YN}     </if>
+			<if test="ANS_YN 			!='' and ANS_YN 			!= null"> AND ANS_YN           = #{ANS_YN}            </if>
+			<if test="COMMENT_YN 		!='' and COMMENT_YN 		!= null"> AND COMMENT_YN       = #{COMMENT_YN}        </if>
+			<if test="RCMD_FUNC_YN 		!='' and RCMD_FUNC_YN 		!= null"> AND RCMD_FUNC_YN     = #{RCMD_FUNC_YN}      </if>
+			<if test="ATRT_CHK_YN 		!='' and ATRT_CHK_YN 		!= null"> AND ATRT_CHK_YN      = #{ATRT_CHK_YN}       </if>
+			<if test="ATMT_YN 			!='' and ATMT_YN 			!= null"> AND ATMT_YN          = #{ATMT_YN}           </if>
+			<if test="AFI_RSTR_SIZE 	!='' and AFI_RSTR_SIZE 		!= null"> AND AFI_RSTR_SIZE    = #{AFI_RSTR_SIZE}     </if>
+			<if test="NWR_DISP_DD_CNT 	!='' and NWR_DISP_DD_CNT 	!= null"> AND NWR_DISP_DD_CNT  = #{NWR_DISP_DD_CNT}   </if>
+			<if test="NOTI_STRT_DD_CNT 	!='' and NOTI_STRT_DD_CNT 	!= null"> AND NOTI_STRT_DD_CNT = #{NOTI_STRT_DD_CNT} </if>
+			<if test="TMPLAT_ID 		!='' and TMPLAT_ID 			!= null"> AND TMPLAT_ID        = #{TMPLAT_ID}         </if>
+			<if test="USE_YN 			!='' and USE_YN 			!= null"> AND USE_YN           = #{USE_YN}            </if>
+			<if test="REGR_DEPT_CD 		!='' and REGR_DEPT_CD 		!= null"> AND REGR_DEPT_CD     = #{REGR_DEPT_CD}      </if>
+			<if test="REGR_ID 			!='' and REGR_ID 			!= null"> AND REGR_ID          = #{REGR_ID}           </if>
+			<if test="REG_DTTM 			!='' and REG_DTTM 			!= null"> AND REG_DTTM         = #{REG_DTTM}          </if>
+			<if test="AMDR_DEPT_CD 		!='' and AMDR_DEPT_CD 		!= null"> AND AMDR_DEPT_CD     = #{AMDR_DEPT_CD}      </if>
+			<if test="AMDR_ID 			!='' and AMDR_ID 			!= null"> AND AMDR_ID          = #{AMDR_ID}           </if>
+			<if test="UPD_DTTM 			!='' and UPD_DTTM 			!= null"> AND UPD_DTTM         = #{UPD_DTTM}          </if>
+			<if test="PROC_ID 			!='' and PROC_ID 			!= null"> AND PROC_ID          = #{PROC_ID}           </if>
+			ORDER BY ORDER BY REG_DTTM DESC
+	) ROW_TBL
+	
+				
+</select>
+
+<!-- PLT_BLBD_MNG(통합게시판마스터) 테이블 데이터 등록 -->
+<insert id="INSERT_MEW_ASP_BRD"  parameterType= "java.util.HashMap">
+INSERT INTO PLT_BLBD_MNG
+       ( CUSTCO_ID
+       , BRD_ID                        -- 통합게시판ID
+       , BRD_NAME                      -- 통합게시판한글명
+       , BRD_RMK                       -- 통합게시판상세설명
+       , NOTI_YN                       -- 공지사항여부
+       , REPLE_YN                      -- 답변허용여부
+       , RMK_YN                        -- 덧글허용여부
+       , FILE_YN                       -- 파일첨부여부
+       , RT_NOTI_YN					   -- 실시간공지여부
+         <if test="NEW_DAY				!='' and NEW_DAY 			!= null"> , NEW_DAY </if>                      -- NEW표시일수
+       , USE_YN                        -- 사용여부
+         <if test="ETC01				!='' and ETC01 			!= null"> , ETC01   </if>                      -- 기타정보01(숫자)
+       	 <if test="ETC02				!='' and ETC02 			!= null"> , ETC02   </if>                      -- 기타정보02(숫자)
+       , ETC03                         -- 기타정보03
+       , ETC04                         -- 기타정보04
+       , ETC05                         -- 기타정보05
+       , PROC_ID                       -- 처리자
+       , IT_PROCESSING                 -- 전산처리일자
+       , BRD_TY						   -- 게시판유형
+       ) 
+VALUES ( NULLIF(#{CUSTCO_ID},'') 
+       , '4'
+       , '상담이미지관리'
+       , '상담이미지관리'
+       , 'N'
+       , 'N'
+       , 'N'
+       , 'Y'
+       , 'N'
+       <if test="NEW_DAY				!='' and NEW_DAY 			!= null"> , #{NEW_DAY}</if> 
+       , #{USE_YN}
+       <if test="ETC01				!='' and ETC01 			!= null"> , #{ETC01} </if>
+       <if test="ETC02				!='' and ETC02 			!= null"> , #{ETC02} </if>
+       , NULL
+       , NULL
+       , NULL
+       , #{PROC_ID}
+       , NOW()
+       , 'IMG'
+       )
+</insert>
+
+</mapper>

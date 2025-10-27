@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.chat.dao.StatisticsChatQAExecuteResultMapper">
+
+<!-- QA 대분류명 조회 -->
+<select id="selectRtnLNm"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+           QA_TY_L
+      FROM PLT_CHT_QA_EVAL_SHT
+     WHERE QA_YM = #{QA_YM_TO}
+       AND QA_TY_CD = #{QA_TY_CD}
+     GROUP BY QA_TY_L, QA_TY_L_CD
+     ORDER BY QA_TY_L_CD 
+</select>
+
+<!-- QA 중분류명 조회 -->
+<select id="selectRtnMNm"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+           QA_TY_M
+      FROM PLT_CHT_QA_EVAL_SHT
+     WHERE QA_YM = #{QA_YM_TO}
+       AND QA_TY_CD = #{QA_TY_CD}
+     GROUP BY QA_TY_M, QA_TY_M_CD
+     ORDER BY QA_TY_M_CD 
+</select>
+
+<!-- QA 대분류 헤더명 조회 -->
+<select id="selectRtnHeaderLNm"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+           QA_TY_L
+      FROM PLT_CHT_QA_EVAL_SHT
+     WHERE QA_YM = #{QA_YM_TO}
+       AND QA_TY_CD = #{QA_TY_CD}
+     GROUP BY QA_TY_L, QA_TY_L_CD
+	 ORDER BY QA_TY_L_CD
+</select>
+
+</mapper>

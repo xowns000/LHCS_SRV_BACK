@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemMenuButtonAuthorityMapper">
+<!-- <mapper namespace="com.hcteletalk.teletalk.mng.auth.authBTN.dao.AuthBTNMapper"> -->
+
+<!-- PLT_BTN_AUTH(버튼권한) 테이블 데이터 등록 -->
+<insert id="INSERT_AUTH_BTN"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_BTN_AUTHRT (AUTHRT_GROUP_ID, MENU_ID, BTN_ID, RGTR_ID, REG_DT)
+    VALUES
+    <foreach collection="arrStngBtn" item="BTN_ID" separator=",">
+        (#{AUTHRT_GROUP_ID}, #{MENU_ID}, #{BTN_ID}, #{USER_ID}, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS'))
+    </foreach>
+</insert>
+
+<!-- PLT_BTN_AUTH(버튼권한) 삭제 : 권한그룹으로 삭제 -->
+<delete id="DELETE_AUTH_BTN"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_BTN_AUTHRT
+	WHERE AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}
+		AND MENU_ID IN
+		<foreach collection="arrUnStngMenu" item="MENU_ID" open="(" separator="," close=")" >
+			#{MENU_ID}
+		</foreach>
+</delete>
+
+<delete id="DELETE_AUTH_BTN_exceptDataToRegister"  parameterType= "java.util.HashMap">
+   DELETE FROM PLT_BTN_AUTHRT
+    WHERE AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}
+    	AND MENU_ID = #{MENU_ID}
+      	AND BTN_ID IN
+		<foreach collection="arrUnStngBtn" item="BTN_ID" open="(" separator="," close=")" >
+			#{BTN_ID}
+		</foreach>
+</delete>
+
+<!-- PLT_BTN_AUTH(버튼권한) 삭제 : 메뉴ID로 삭제 -->
+<delete id="DELETE_AUTH_BTN_BYMENU"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_BTN_AUTH
+	WHERE MENU_ID = #{MENU_ID}
+</delete>
+
+<!-- PLT_BTN_AUTH(버튼권한) 삭제 : 버튼ID로 삭제 -->
+<delete id="DELETE_AUTH_BTN_BYBTN"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_BTN_AUTHRT
+	WHERE BTN_ID IN 
+	<foreach collection="arrBtnId" item="BTN_ID" open="(" separator="," close=")" >
+		#{BTN_ID}
+	</foreach>
+</delete>
+
+<!-- 메뉴의 버튼권한을 가지고온다. -->
+<select id="selectRtnMenuBtnRole" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT '1' AS DIV
+		 , COALESCE(LISTAGG(B.SCR_BTN_ID,',') WITHIN GROUP (ORDER BY B.SCR_BTN_ID), '') AS BTN_ROLE		/* 부여된 버튼권한 */
+	FROM PLT_BTN_AUTH A
+	, PLT_BTN B
+	WHERE A.BTN_ID = B.BTN_ID
+	AND A.ATRT_GROUP_ID IN (
+		SELECT SA.ATRT_GROUP_ID
+		FROM PLT_USER_AUTH SA
+		WHERE SA.USER_ID = #{USER_ID}
+	)
+	<!-- AND A.MENU_ID = #{MENU_ID} -->
+	
+	UNION ALL
+	
+	SELECT '2' AS DIV
+		 , ETC_INFO01 AS BTN_ROLE			/* 권한제외 버튼*/
+	FROM PLT_COMN_CD
+	WHERE GROUP_CD = #{GROUP_CD}
+	AND CD = '07'
+</select>
+
+</mapper>

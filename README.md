@@ -1,0 +1,9 @@
+-Dspring.application.name=palette-webm1 
+-Dserver.port=8443
+-Dspring.profiles.active=local,local-phone,local-chat,local-km,local-admin 
+-Djasypt.key=paletteHello 
+-Dpalette.chat.cipher=Y 
+-Dpalette.chat.key=MnR6bzI4bjdocGEw 
+-Dk8s.node.name=localhost 
+-Dk8s.pod.name=podname 
+-Dk8s.pod.ip=127.0.0.1

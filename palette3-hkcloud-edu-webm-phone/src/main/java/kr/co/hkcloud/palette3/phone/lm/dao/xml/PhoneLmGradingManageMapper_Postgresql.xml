@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.lm.dao.PhoneLmGradingManageMapper">
+	<!-- 시험 목록 조회 -->
+	<select id="selectRtnLmGrading" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.CUSTCO_ID AS ASP_NEWCUST_KEY
+			, (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_CUST_NM
+			, A.LM_ID
+			, A.LM_EVA_ID
+			, A.LM_ID_NM
+			, A.LM_TY
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT018' AND CD = A.LM_TY) AS LM_TY_NM
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI') AS LM_ST_DTTM
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS LM_ST_DATE
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'HH24:MI') AS LM_ST_TIME
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI') AS LM_EN_DTTM
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS LM_EN_DATE
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'HH24:MI') AS LM_EN_TIME
+			, A.LM_TG_SC
+			<![CDATA[
+			, CASE WHEN A.LM_PG_ST = '99'
+				THEN A.LM_PG_ST
+				WHEN NOW() BETWEEN TO_DATE(A.LM_ST_DTTM,'YYYYMMDDHH24MISS') AND TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '20'
+				WHEN NOW() > TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '99'
+				ELSE A.LM_PG_ST
+				END AS LM_PG_ST
+			]]>
+			<![CDATA[
+			, CASE WHEN A.LM_PG_ST = '99'
+				THEN '시험종료'
+				WHEN NOW() BETWEEN TO_DATE(A.LM_ST_DTTM,'YYYYMMDDHH24MISS') AND TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '시험중'
+				WHEN NOW() > TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '시험종료'
+				ELSE COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT023' AND CD = A.LM_PG_ST), '-')
+				END AS LM_PG_ST_NM
+			]]>
+			, COALESCE(A.LM_LIM_TIME, 0) AS LM_LIM_TIME
+			, A.LM_TG_CNT
+			, (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID) AS LM_DATA_COUNT
+			, (SELECT COUNT(1) FROM PLT_LM_EVA_RST WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_EVA_ID = A.LM_EVA_ID) AS LM_EVA_RST_COUNT
+			, COALESCE((
+		        	SELECT SUM(LM_QS_TY_SC)
+		        	FROM PLT_LM_EVA_RST B, PLT_LM_QS C
+		        	WHERE B.LM_QS_ID = C.LM_QS_ID
+		        	AND B.CUSTCO_ID = C.CUSTCO_ID
+		        	AND B.CUSTCO_ID = A.CUSTCO_ID
+		        	AND B.LM_EVA_ID = A.LM_EVA_ID
+		     ), 0) AS LM_EVA_SUM
+		     , (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID AND LM_DATA_ANS_YN = 'N') AS LM_NON_DONE_CNT
+		     , (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID AND LM_DATA_ANS_YN = 'Y') AS LM_DONE_CNT
+		     , (
+		     	SELECT SUM(LM_QS_TY_SC)
+			    FROM PLT_LM_EVA_RST BB, PLT_LM_QS CC
+			    WHERE BB.LM_QS_ID = CC.LM_QS_ID 
+			    AND BB.LM_EVA_ID = A.LM_EVA_ID
+				) AS LM_DATA_RST_SUM
+		FROM PLT_LM A
+		WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		<if test='ADMIN_YN != "Y"'>
+			AND EXIST(
+				SELECT COUNT(1)
+				FROM PLT_LM_US_RATER
+				WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				AND USER_ID = #{USER_ID}
+			)
+		</if>
+		<if test='LM_TY != null and LM_TY != ""'>
+			AND A.LM_TY = #{LM_TY}
+		</if>
+		<if test='LM_ID_NM != null and LM_ID_NM != ""'>
+			AND A.LM_ID_NM LIKE '%' || #{LM_ID_NM} || '%'
+		</if>
+		<if test="START_DATE	!= '' and START_DATE != null">   AND TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS') >= TO_DATE(REPLACE(#{START_DATE},'-','')||'000000', 'YYYYMMDDHH24MISS')  </if>
+		<if test="END_DATE 		!= '' and END_DATE != null">  <![CDATA[ AND TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS') <= TO_DATE(REPLACE(#{END_DATE},'-','') ||'235959', 'YYYYMMDDHH24MISS') ]]>   </if>
+		ORDER BY A.LM_ID DESC
+	</select>
+	
+	<!-- 제출된 시험지 목록 조회 -->
+	<select id="selectRtnLmGradingDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.LM_DATA_ID
+		  , MAX(A.LM_DATA_US_ID) AS LM_DATA_US_ID
+		  , MAX(A.LM_DATA_US_NM) AS LM_DATA_US_NM
+		  , COALESCE(SUM(DECODE(LM_QS_TY, 10, LM_DATA_RST_SUM, 0)), 0) AS SC_TY1
+		  , COALESCE(SUM(DECODE(LM_QS_TY, 20, LM_DATA_RST_SUM, 0)), 0) AS SC_TY2
+		  , COALESCE(SUM(DECODE(LM_QS_TY, 30, LM_DATA_RST_SUM, 0)), 0) AS SC_TY3
+		  , COALESCE(SUM(DECODE(LM_QS_TY, 40, LM_DATA_RST_SUM, 0)), 0) AS SC_TY4
+		  , COALESCE(SUM(LM_DATA_RST_SUM),0) AS SC_TOTAL
+		FROM PLT_LM_DATA A , (
+		  SELECT AA.LM_DATA_ID
+		    , AA.LM_QS_ID
+		    , AA.LM_DATA_RST_SUM
+		    , BB.LM_QS_TY
+		  FROM (
+		    SELECT LM_DATA_ID
+		      , LM_QS_ID
+		      , MAX(LM_DATA_RST_SUM) AS LM_DATA_RST_SUM
+		    FROM PLT_LM_DATA_RST
+		    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		    GROUP BY LM_DATA_ID, LM_QS_ID
+		  ) AA, PLT_LM_QS BB
+		  WHERE AA.LM_QS_ID = BB.LM_QS_ID
+		) CC
+		WHERE A.LM_DATA_ID = CC.LM_DATA_ID 
+		AND A.LM_DATA_ANS_YN = 'Y'
+		AND A.LM_ID = #{LM_ID}
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		GROUP BY A.LM_DATA_ID
+	</select>
+	
+	<!-- 서술형 포함여부 체크 -->
+	<select id="selectRtnLmLoCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(1) AS LO_COUNT
+		FROM PLT_LM A, PLT_LM_EVA_RST B, PLT_LM_QS C
+		WHERE A.LM_EVA_ID = B.LM_EVA_ID
+		AND B.LM_QS_ID = C.LM_QS_ID
+		AND A.LM_ID = #{LM_ID}
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND C.LM_QS_TY = '20'
+	</select>
+	
+	<!-- 자동 채점 (객관식,ox형) 서술형 제외 -->
+	<update id="updateRtnLmGrading" parameterType="java.util.HashMap">
+		UPDATE PLT_LM_DATA_RST A
+		SET LM_DATA_RST_SUM = (
+		  SELECT LM_QS_TY_SC
+		  FROM PLT_LM_QS
+		  WHERE LM_QS_ID = A.LM_QS_ID
+		)
+		WHERE EXISTS (
+		  SELECT LM_DATA_ID
+		  FROM PLT_LM_DATA
+		  WHERE LM_ID = #{LM_ID}
+		  AND LM_DATA_ID = A.LM_DATA_ID
+		)
+		<if test='LM_DATA_ID != null and LM_DATA_ID != ""'>
+			AND A.LM_DATA_ID = #{LM_DATA_ID}		
+		</if>
+		AND A.LM_DATA_RST_SUM IS NULL
+		AND (
+		  SELECT LISTAGG(LM_QS_VE_ID,',') WITHIN GROUP (ORDER BY LM_QS_VE_ID)
+		  FROM PLT_LM_QS_ANS
+		  WHERE LM_QS_ID = A.LM_QS_ID
+		  GROUP BY LM_QS_ID
+		  ) = (
+		  SELECT LISTAGG(LM_QS_VE_ID,',') WITHIN GROUP (ORDER BY LM_QS_VE_ID)
+		  FROM PLT_LM_DATA_RST
+		  WHERE LM_QS_ID = A.LM_QS_ID
+		  AND LM_DATA_ID = A.LM_DATA_ID
+		  GROUP BY LM_QS_ID
+		)
+	</update>
+	
+	<!-- 서술형 채점 -->
+	<update id="updateRtnLmGradingLo" parameterType="java.util.HashMap">
+		UPDATE PLT_LM_DATA_RST
+		SET LM_DATA_RST_SUM = #{LM_DATA_RST_SUM}
+		WHERE LM_QS_ID = #{LM_QS_ID}
+		AND LM_DATA_ID = #{LM_DATA_ID}
+	</update>
+	
+	<!-- 채점 완료 처리 -->
+	<update id="updateRtnLmGradingDone" parameterType="java.util.HashMap">
+		UPDATE PLT_LM_DATA
+		SET LM_GRADING_YN = 'Y'
+			, LM_US_RATER_ID = #{USER_ID}
+			, LM_US_RATER_NM = #{USER_NM}
+		WHERE LM_ID = #{LM_ID}
+		<if test='LM_DATA_ID != null and LM_DATA_ID != ""'>
+			AND LM_DATA_ID = #{LM_DATA_ID}
+		</if>
+	</update>
+	
+	<!-- 유저 답변 조회 -->
+	<select id="selectRtnLmUserAns" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.LM_ID
+			, A.LM_EVA_ID
+			, A.LM_DATA_ID
+			, A.LM_GRADING_YN
+			, TO_CHAR(TO_DATE(A.LM_DATA_ST_DTTM,'YYYYMMDDHH24MISS'),'HH24:MI') AS ST_TIME
+			, ROUND(((TO_DATE(A.LM_DATA_EN_DTTM,'YYYYMMDDHH24MISS') - TO_DATE(A.LM_DATA_ST_DTTM,'YYYYMMDDHH24MISS')) * 24 * 60 * 60),0) AS USE_TIME
+			, B.LM_QS_ID
+			, B.LM_EVA_RST_OD
+			, C.LM_QS_NM
+			, C.LM_QS_TY
+			, C.LM_QS_ANS_COMM
+			, C.LM_QS_TY_SC
+			, COALESCE((SELECT MAX(LM_DATA_RST_SUM) FROM PLT_LM_DATA_RST WHERE LM_DATA_ID = A.LM_DATA_ID AND LM_QS_ID = C.LM_QS_ID),0) AS LM_DATA_RST_SUM
+		FROM PLT_LM_DATA A
+		JOIN PLT_LM_EVA_RST B ON A.LM_EVA_ID = B.LM_EVA_ID
+		JOIN PLT_LM_QS C ON B.LM_QS_ID = C.LM_QS_ID
+		WHERE A.LM_DATA_ID = #{LM_DATA_ID}
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		ORDER BY CAST(B.LM_EVA_RST_OD AS INTEGER)
+	</select>
+	
+	<!-- 유저답변 상세 조회 -->
+	<select id="selectRtnLmUserAnsDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.LM_ID
+		  , A.LM_EVA_ID
+		  , A.LM_DATA_ID
+		  , B.LM_QS_ID
+		  , B.LM_EVA_RST_OD
+		  , C.LM_QS_TY
+		  , C.LM_QS_TY_SC
+		  , D.LM_QS_VE_ID
+		  , D.LM_QS_VE_RT
+		  , DECODE(E.LM_QS_VE_ID, NULL, 'N','Y') AS ANS_YN
+		  , F.LM_QS_VE_LO_ANS
+		  , DECODE(F.LM_QS_VE_ID, NULL, 'N','Y') AS USER_ANS_YN
+		  , ROW_NUMBER() OVER(PARTITION BY D.LM_QS_ID ORDER BY D.LM_QS_VE_ID) AS VE_NUMBER
+		FROM PLT_LM_DATA A
+		JOIN PLT_LM_EVA_RST B ON A.LM_EVA_ID = B.LM_EVA_ID
+		JOIN PLT_LM_QS C ON B.LM_QS_ID = C.LM_QS_ID
+		JOIN PLT_LM_VE D ON C.LM_QS_ID = D.LM_QS_ID
+		LEFT OUTER JOIN PLT_LM_QS_ANS E ON C.LM_QS_ID = E.LM_QS_ID AND D.LM_QS_VE_ID = E.LM_QS_VE_ID
+		LEFT OUTER JOIN PLT_LM_DATA_RST F ON F.LM_DATA_ID = A.LM_DATA_ID AND F.LM_QS_ID = C.LM_QS_ID AND F.LM_QS_VE_ID = D.LM_QS_VE_ID
+		WHERE A.LM_DATA_ID = #{LM_DATA_ID}
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		ORDER BY CAST(LM_EVA_RST_OD AS INTEGER), D.LM_QS_VE_ID
+	</select>
+	
+	<select id="selectRtnAdminYn" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT CASE WHEN COUNT(1) > 0 THEN 'Y' ELSE 'N' END AS ADMIN_YN
+		FROM PLT_USER_AUTH
+		WHERE USER_ID = #{USER_ID}
+		AND ATRT_GROUP_ID IN (
+			'20190125141939798TWB52868'
+			,'20210531110819073TWB424557'
+		) 
+	</select>
+</mapper>

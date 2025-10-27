@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.holiday.dao.SettingHolidayManageMapper">
+
+<!-- ######################################################################### -->
+<!-- 휴일관리 데이터 페이징 조회 -->
+<select id="selectRtnPageHoliday"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT ROW_TBL.*
+     FROM ( 
+	         SELECT 
+	         	 ROW_NUMBER() OVER(ORDER BY PCH.HLDY_YMD) AS ROW_NUMBER
+	         	  , PCH.HLDY_ID						/* 휴일ID */
+	              , PCH.HLDY_NM						/* 휴일명 */
+	              , PCH.HLDY_SE_CD					/* 휴일구분 */
+	              , (SELECT CD_NM
+	              		FROM PLT_COMM_CD
+	              		WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = 'HODY_DV'
+	              			AND CD_ID = PCH.HLDY_SE_CD)	AS HLDY_SE_CD_NM	/* 휴일구분명 */
+	              , PCH.HLDY_YMD					/* 휴일 */
+	              , PCH.HLDY_EXPLN					/* 휴일설명 */
+	              , PCH.RGTR_ID						/* 등록자 */
+	              , (SELECT USER_NM
+	              		FROM PLT_USER
+	              		WHERE USER_ID = PCH.RGTR_ID)	AS RGTR_NM	/* 등록자명 */
+	              , PCH.REG_DT						/* 등록일자 */
+	           FROM PLT_CHT_HLDY PCH
+	          WHERE PCH.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	          	AND PCH.HLDY_YMD LIKE (#{HLDY_YEAR}||'%')
+	          	<if test="HLDY_SE_CD != null and HLDY_SE_CD != ''">
+	          	AND PCH.HLDY_SE_CD = #{HLDY_SE_CD}
+	          	</if>
+              ORDER BY HLDY_YMD
+ 	) ROW_TBL
+</select>
+
+<!-- 휴일관리 데이터 중복 체크 -->
+<select id="selectRtnHolidayDupChk"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(HLDY_ID)	AS CNT
+  FROM PLT_CHT_HLDY
+ WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   AND HLDY_YMD = #{HLDY_YMD}
+</select>
+
+<!-- 회원정보 신규등록 -->
+<insert id="insertRtnHoliday" parameterType= "java.util.HashMap">
+
+	INSERT INTO PLT_CHT_HLDY ( 
+		CUSTCO_ID
+		, HLDY_ID
+		, HLDY_NM
+		, HLDY_SE_CD
+		, HLDY_YMD
+		, HLDY_EXPLN
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	) VALUES (
+		#{CUSTCO_ID}::INTEGER
+		, #{HLDY_ID}::INTEGER
+		, #{HLDY_NM}
+		, #{HLDY_SE_CD}
+		, #{HLDY_YMD}
+		, #{HLDY_EXPLN}
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+
+</insert>
+
+<!-- 휴일정보 수정 -->
+<update id="updateRtnHoliday" parameterType="java.util.HashMap">
+
+	UPDATE PLT_CHT_HLDY
+	SET HLDY_YMD = #{HLDY_YMD}
+		, HLDY_NM = #{HLDY_NM}
+		, HLDY_SE_CD = #{HLDY_SE_CD}
+		, HLDY_EXPLN = #{HLDY_EXPLN}
+	WHERE HLDY_ID = #{HLDY_ID}::INTEGER
+
+</update>
+
+<!-- 회원정보 삭제 -->
+<delete id="deleteRtnHoliday" parameterType="java.util.HashMap">
+
+DELETE FROM PLT_CHT_HLDY
+ WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+   AND HLDY_ID IN 
+	<foreach collection="arrHldyId" item="HLDY_ID" open="(" separator="," close=")" >
+        #{HLDY_ID}::INTEGER
+    </foreach>
+
+</delete>
+
+
+<!-- 휴일정보 추가 -->
+<update id="upsertRtnHoliday" parameterType="java.util.HashMap">
+	WITH UPSERT AS(
+	    UPDATE PLT_CHT_HLDY SET
+			HLDY_NM = #{HLDY_NM}
+			, HLDY_SE_CD = #{HLDY_SE_CD}
+			, HLDY_EXPLN = #{HLDY_EXPLN}
+	    WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	    	AND HLDY_YMD = #{HLDY_YMD}
+	    RETURNING *
+	)
+	INSERT INTO PLT_CHT_HLDY ( 
+		CUSTCO_ID
+		, HLDY_ID
+		, HLDY_NM
+		, HLDY_SE_CD
+		, HLDY_YMD
+		, HLDY_EXPLN
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	)
+	SELECT #{CUSTCO_ID}::INTEGER
+		, #{HLDY_ID}::INTEGER
+		, #{HLDY_NM}
+		, #{HLDY_SE_CD}
+		, #{HLDY_YMD}
+		, #{HLDY_EXPLN}
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE NOT EXISTS(SELECT  * FROM UPSERT)
+</update>
+
+</mapper>

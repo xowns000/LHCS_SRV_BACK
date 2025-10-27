@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.layoutMng.tab.list.dao.LayoutMngTabListGroupMapper">
+  <select id="selectListGroup" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT  PLLGD.LIST_GROUP_DTL_ID
+         , PLL.TAB_ID
+         , PLLG.LIST_GROUP_ID
+         , PLLG.LIST_ID
+         , PLLGD.RSPNS_ARTCL_ID
+         , PLLGD.LABEL_NM
+         , PLLGD.EPSZ_YN
+         , PLLGD.COLOR_CD
+         , PLLGD.SORT_ORD
+         , PLLG.SORT_ORD AS GROUP_SORT_ORD
+         , PLM.LKAG_ID
+         , PLM.LKAG_NM
+         , PLLGD.RSPNS_EPSZ_YN
+         , PLLGD.RSPNS_COLOR_CD
+         , PLRA.COL_NM
+         , PLRA.DATA_TYPE_CD
+         , PLRA2.RSPNS_ARTCL_ID AS UP_RSPNS_ARTCL_ID
+         , PLRA2.COL_NM AS UP_RSPNS_ARTCL_COL_NM
+         , PLRA2.DATA_TYPE_CD AS UP_RSPNS_DATA_CD
+    FROM PLT_LAYOUT_LIST_GROUP PLLG
+    JOIN PLT_LAYOUT_LIST PLL ON PLL.LIST_ID = PLLG.LIST_ID
+           LEFT JOIN PLT_LAYOUT_LIST_GROUP_DTL PLLGD ON PLLG.LIST_GROUP_ID = PLLGD.LIST_GROUP_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLLGD.RSPNS_ARTCL_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA2 ON PLRA2.RSPNS_ARTCL_ID = PLRA.UP_ARTCL_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLRA.LKAG_ID
+    WHERE PLLG.LIST_ID IN
+    <foreach collection="arrListId" item="ListId" open="(" separator="," close=")" >
+      #{ListId}::INTEGER
+    </foreach>
+    ORDER BY PLLG.SORT_ORD,PLLGD.SORT_ORD
+  </select>
+  <insert id="insertListGroup" parameterType="java.util.HashMap">
+    INSERT INTO PLT_LAYOUT_LIST_GROUP
+    (
+      LIST_GROUP_ID
+    , LIST_ID
+    , SORT_ORD
+    , RGTR_ID
+    , REG_DT
+    )
+    VALUES(
+            #{LIST_GROUP_ID}::INTEGER
+          ,#{LIST_ID}::INTEGER
+          ,#{GROUP_SORT_ORD}::INTEGER
+          ,#{USER_ID}::INTEGER
+          , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+          );
+  </insert>
+  <update id="updateListGroup" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT_LIST_GROUP
+    SET REG_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+      , RGTR_ID = #{USER_ID}::INTEGER
+    <if test="GROUP_SORT_ORD != '' and GROUP_SORT_ORD != NULL">
+      , SORT_ORD = #{GROUP_SORT_ORD}:: INTEGER
+    </if>
+    WHERE LIST_GROUP_ID = #{LIST_GROUP_ID}:: INTEGER;
+  </update>
+  <delete id="deleteListGroup" parameterType="java.util.HashMap">
+    DELETE FROM PLT_LAYOUT_LIST_GROUP
+    WHERE LIST_GROUP_ID=#{LIST_GROUP_ID}::INTEGER;
+  </delete>
+  <delete id="deleteListGroupDtl" parameterType="java.util.HashMap">
+    DELETE FROM PLT_LAYOUT_LIST_GROUP_DTL
+    WHERE LIST_GROUP_ID=#{LIST_GROUP_ID}::INTEGER;
+  </delete>
+  <insert id="insertListGroupDtl" parameterType="java.util.HashMap">
+    INSERT INTO PLT_LAYOUT_LIST_GROUP_DTL
+    (
+      LIST_GROUP_DTL_ID
+    , LIST_GROUP_ID
+    , RSPNS_ARTCL_ID
+    , LABEL_NM
+    , EPSZ_YN
+    , COLOR_CD
+    , RSPNS_EPSZ_YN
+    , RSPNS_COLOR_CD
+    , SORT_ORD
+    , RGTR_ID
+    , REG_DT
+    )
+    VALUES(
+          #{LIST_GROUP_DTL_ID}::INTEGER
+          , #{LIST_GROUP_ID}::INTEGER
+          , #{RSPNS_ARTCL_ID}::INTEGER
+          , #{LABEL_NM}
+          , #{EPSZ_YN}
+          , #{COLOR_CD}
+          , #{RSPNS_EPSZ_YN}
+          , #{RSPNS_COLOR_CD}
+          , #{SORT_ORD}::INTEGER
+          , #{USER_ID}::INTEGER
+          , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+          );
+  </insert>
+</mapper>

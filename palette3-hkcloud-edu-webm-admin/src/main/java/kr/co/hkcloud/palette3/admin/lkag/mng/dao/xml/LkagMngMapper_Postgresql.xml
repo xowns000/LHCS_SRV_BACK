@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.lkag.mng.dao.LkagMngMapper">
+    <select id="selectList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /* 연동마스터목록 selectList - kr.co.hkcloud.palette3.admin.lkag.mng.dao.LkagMngMapper */
+            ROW_NUMBER() OVER(ORDER BY
+            <choose>
+                <when test="SRCH_ORDER_BY != null and SRCH_ORDER_BY !=''"> ${SRCH_ORDER_BY}  </when>
+                <otherwise>A.LKAG_ID DESC</otherwise>
+            </choose> ) AS ROW_NUMBER
+            , A.LKAG_ID
+            , A.LKAG_MST_ID
+            , D.MST_NM
+            , D.LKAG_BEAN_ID
+            , A.LKAG_NM
+            , A.LKAG_SE_CD
+            , LSC.CD_NM as LKAG_SE_CD_NM    /* 연동방법 */
+            , A.RQST_SE_CD
+            , RSC.CD_NM as RQST_SE_CD_NM    /* 연동 프로토콜 */
+            , RSC.CD_VL as RQST_SE_CD_VL    /* 연동 프로토콜 */
+            , A.RQST_DATA_CD
+            , RQDC.CD_NM as RQST_DATA_CD_NM
+            , RQDC.CD_VL as RQST_DATA_CD_VL
+            , A.RSPNS_DATA_CD
+            , RDC.CD_NM as RSPNS_DATA_CD_NM /* 응답자료 */
+            , RDC.CD_VL as RSPNS_DATA_CD_VL /* 응답자료 */
+            , A.LKAG_URI
+            , A.PARAM_DLVR_TYPE_CD
+            , PDTC.CD_NM as PARAM_DLVR_TYPE_CD_NM   /* 요청자료 */
+            , A.PARAM_ENCPT_MTHD_CD
+            , PEMC.CD_NM as PARAM_ENCPT_MTHD_CD_NM
+            , PEMC.CD_VL as PARAM_ENCPT_MTHD_CD_VL
+            , A.PARAM_ENCPT_KEY
+            , A.RSPNS_DECPT_MTHD_CD
+            , RDMC.CD_NM as RSPNS_DECPT_MTHD_CD_NM
+            , RDMC.CD_VL as RSPNS_DECPT_MTHD_CD_VL
+            , A.RSPNS_DECPT_KEY
+            , A.EXPLN
+            , A.USE_YN
+            , A.REG_DT
+            , (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = A.RGTR_ID) AS RGTR_NM
+            , A.MDFCN_DT
+            , (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = A.MDFR_ID) AS MDFR_NM
+        FROM CUSTCO.PLT_LKAG_MNG A
+        INNER JOIN CUSTCO.PLT_LKAG_MST D ON D.LKAG_MST_ID = A.LKAG_MST_ID
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD LSC ON LSC.CUSTCO_ID = 1 AND LSC.CD_ID = A.LKAG_SE_CD AND LSC.GROUP_CD_ID = 'LKAG_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RSC ON RSC.CUSTCO_ID = 1 AND RSC.CD_ID = A.RQST_SE_CD AND RSC.GROUP_CD_ID = 'LKAG_RQST_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RQDC ON RQDC.CUSTCO_ID = 1 AND RQDC.CD_ID = A.RQST_DATA_CD AND RQDC.GROUP_CD_ID = 'LKAG_RSPNS_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDC ON RDC.CUSTCO_ID = 1 AND RDC.CD_ID = A.RSPNS_DATA_CD AND RDC.GROUP_CD_ID = 'LKAG_RSPNS_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PDTC ON PDTC.CUSTCO_ID = 1 AND PDTC.CD_ID = A.PARAM_DLVR_TYPE_CD AND PDTC.GROUP_CD_ID = 'LKAG_PARAM_SEND_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PEMC ON PEMC.CUSTCO_ID = 1 AND PEMC.CD_ID = A.PARAM_ENCPT_MTHD_CD AND PEMC.GROUP_CD_ID = 'LKAG_EN_CERT_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDMC ON RDMC.CUSTCO_ID = 1 AND RDMC.CD_ID = A.RSPNS_DECPT_MTHD_CD AND RDMC.GROUP_CD_ID = 'LKAG_DE_CERT_TP'
+        WHERE A.DEL_YN ='N'
+        <if test='SRCH_USE_YN != null and SRCH_USE_YN !=""'>
+            AND A.USE_YN =  #{SRCH_USE_YN}
+        </if>
+        <if test='SRCH_LKAG_MST_ID != null and SRCH_LKAG_MST_ID !=""'>
+            AND D.LKAG_MST_ID =  #{SRCH_LKAG_MST_ID}::INTEGER
+        </if>
+        <if test='SRCH_KEYWORD != null and SRCH_KEYWORD !=""'>
+            AND A.LKAG_NM LIKE CONCAT(CONCAT('%',#{SRCH_KEYWORD}),'%')
+        </if>
+    </select>
+
+    <update id="insert" parameterType="java.util.HashMap">
+        INSERT  /* 연동관리 인터페이스 등록 insert - kr.co.hkcloud.palette3.admin.lkag.mng.dao.LkagMngMapper */
+          INTO CUSTCO.PLT_LKAG_MNG ( LKAG_ID, LKAG_MST_ID, LKAG_NM, LKAG_SE_CD, RQST_SE_CD, RSPNS_DATA_CD, LKAG_URI, PARAM_DLVR_TYPE_CD, PARAM_ENCPT_MTHD_CD
+                                   , PARAM_ENCPT_KEY, RSPNS_DECPT_MTHD_CD, RSPNS_DECPT_KEY, USE_YN, DEL_YN, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT
+                                   , EXPLN, RQST_DATA_CD)
+        VALUES ( #{LKAG_ID}::INTEGER, #{LKAG_MST_ID}::INTEGER, #{LKAG_NM}, #{LKAG_SE_CD}, #{RQST_SE_CD}, #{RSPNS_DATA_CD}, #{LKAG_URI}, #{PARAM_DLVR_TYPE_CD}, #{PARAM_ENCPT_MTHD_CD}
+               , #{PARAM_ENCPT_KEY}, #{RSPNS_DECPT_MTHD_CD}, #{RSPNS_DECPT_KEY}, #{USE_YN}, 'N', #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'), #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+               , #{EXPLN}, #{RQST_DATA_CD})
+    </update>
+
+    <update id="update" parameterType="java.util.HashMap">
+        UPDATE CUSTCO.PLT_LKAG_MNG /* 연동관리 인터페이스 수정 update - kr.co.hkcloud.palette3.admin.lkag.mng.dao.LkagMngMapper */
+        SET LKAG_NM = #{LKAG_NM},/*연동_명*/
+            LKAG_SE_CD = #{LKAG_SE_CD},/*연동_구분_코드 => LKAG_TP*/
+            RQST_SE_CD = #{RQST_SE_CD},/*의뢰_구분_코드 => LKAG_RQST_TP*/
+            RSPNS_DATA_CD = #{RSPNS_DATA_CD},/*응답_자료_코드 => LKAG_RSPNS_TP*/
+            LKAG_URI = #{LKAG_URI},/*연동_URI*/
+            PARAM_DLVR_TYPE_CD = #{PARAM_DLVR_TYPE_CD},/*파라미터_전달_유형_코드 => LKAG_PARAM_SEND_TP*/
+            PARAM_ENCPT_MTHD_CD = #{PARAM_ENCPT_MTHD_CD},/*파라미터_암호화_방법_코드 => LKAG_EN_CERT_TP*/
+            PARAM_ENCPT_KEY = #{PARAM_ENCPT_KEY},/*파라미터_암호화_키*/
+            RSPNS_DECPT_MTHD_CD = #{RSPNS_DECPT_MTHD_CD},/*응답_복호화_방법_코드 => LKAG_DE_CERT_TP*/
+            RSPNS_DECPT_KEY = #{RSPNS_DECPT_KEY},/*응답_복호화_키*/
+            USE_YN = #{USE_YN},
+            MDFR_ID = #{USER_ID}::INTEGER,
+            MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS'),
+            EXPLN = #{EXPLN},
+            RQST_DATA_CD = #{RQST_DATA_CD},
+            LKAG_MST_ID = #{LKAG_MST_ID}::INTEGER
+        WHERE 1=1
+          AND LKAG_ID = #{LKAG_ID}::INTEGER
+    </update>
+
+    <update id="delete" parameterType="java.util.HashMap">
+        UPDATE CUSTCO.PLT_LKAG_MNG /* 연동관리 인터페이스목록 삭제 delete - kr.co.hkcloud.palette3.admin.lkag.mng.dao.LkagMngMapper */
+           SET DEL_YN = 'Y'
+        WHERE 1=1
+          AND LKAG_ID IN
+        <foreach collection="ITEM_LIST" item="item" open="(" separator="," close=")" >
+            #{item.LKAG_ID}::INTEGER
+        </foreach>
+    </update>
+    <select id="dpcnChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 1  FROM CUSTCO.PLT_LKAG_MNG
+         WHERE 1=1
+           AND LKAG_NM = #{LKAG_NM}
+           AND LKAG_MST_ID = #{LKAG_MST_ID}::INTEGER
+    </select>
+</mapper>

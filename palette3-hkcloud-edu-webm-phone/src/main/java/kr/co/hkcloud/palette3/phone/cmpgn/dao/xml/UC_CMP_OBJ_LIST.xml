@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="hccc.tables.UC_CMP_OBJ_LIST">
+<!-- UC_CMP_OBJ_LIST(캠페인할당) 테이블 데이터 등록 -->
+<insert id="INSERT_UC_CMP_OBJ_LIST"  parameterType= "java.util.HashMap">
+  		INSERT INTO UC_CMP_OBJ_LIST 
+  		(
+  			 CAMP_SEQ
+  			,LIST_SEQ
+  			,DATA_SEQ
+  			,CUST_NO
+  			,CUST_TC
+  			,CUST_NM
+  			,JBCL_CD
+  			,LAST_INTG_PRJ_NO
+			,LAST_DEAL_LINE_DIV
+			,PRJ_NO
+			,HO_NO
+  			,CUST_TNO
+  			,CALL_TNO
+  			,MOBL_TNO
+  			,ETC1_TNO
+  			,HPCL_TEL_DIV
+  			,RECV_RJT_YN
+  			,BL_YN
+  			,MEMO
+  			,SPF_ITEM
+  			,REG_DT
+  			,REG_USER_ID
+  			,CHG_DT
+  			,CHG_USER_ID
+			,ACPT_NO
+  		)
+  		VALUES
+  		(
+  			 #{CAMP_SEQ}
+  			,#{LIST_SEQ}
+  			,#{DATA_SEQ}
+  			,#{CUST_NO}
+  			,#{CUST_TC}
+  			,#{CUST_NM}
+  			,#{JBCL_CD}
+  			,#{LAST_INTG_PRJ_NO}
+			,#{LAST_DEAL_LINE_DIV}
+			,#{PRJ_NO}
+			,#{HO_NO}
+  			,#{CUST_TNO}
+  			,#{CALL_TNO}
+  			,#{MOBL_TNO}
+  			,#{ETC1_TNO}
+  			,#{HPCL_TEL_DIV}
+  			,#{RECV_RJT_YN}
+  			,#{BL_YN}
+  			,#{MEMO}
+  			,#{SPF_ITEM}
+  			,UF_SYSDATE('CURRENT', 'YYYYMMDDHH24MISS', 0)
+  			,#{REG_USER_ID}
+  			,UF_SYSDATE('CURRENT', 'YYYYMMDDHH24MISS', 0)
+  			,#{CHG_USER_ID}
+			,#{ACPT_NO}
+  		)
+</insert>	
+<!-- 캠페인할당 실행  -->
+<update id="UPDATE_UC_CMP_OBJ_LIST_1"  parameterType= "java.util.HashMap" >
+    <![CDATA[
+	 UPDATE UC_CMP_OBJ_LIST
+       SET 		AGNT_ALLC_DT = UF_SYSDATE('CURRENT', 'YYYYMMDDHH24MISS', 0) 
+		   				, ALLC_AGNT_ID = #{ALLC_AGNT_ID}
+	  	 WHERE  CAMP_SEQ = #{CAMP_SEQ}
+	     AND    DATA_SEQ = #{DATA_SEQ}
+	     AND    (ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '')
+	     AND  	LIST_SEQ IN(
+					   SELECT A.LIST_SEQ 
+					   FROM (
+			 					SELECT LIST_SEQ , ROWNUMBER() OVER (ORDER BY LIST_SEQ) AS ROWNUM 
+			   					FROM UC_CMP_OBJ_LIST 
+									WHERE CAMP_SEQ = #{CAMP_SEQ}
+										AND    DATA_SEQ = #{DATA_SEQ}
+										AND    (ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '')
+					 		) A 
+					  WHERE A.ROWNUM <= COALESCE(#{APPLY_CNT}, 0)
+					  )
+    ]]>					  
+</update>
+
+<!-- 캠페인할당 실행 프로젝트별  -->
+<update id="UPDATE_UC_CMP_OBJ_LIST_2"  parameterType= "java.util.HashMap" >
+    <![CDATA[
+	 UPDATE UC_CMP_OBJ_LIST
+       SET 		AGNT_ALLC_DT = UF_SYSDATE('CURRENT', 'YYYYMMDDHH24MISS', 0) 
+		   				, ALLC_AGNT_ID = #{ALLC_AGNT_ID}
+	  	 WHERE  CAMP_SEQ = #{CAMP_SEQ}
+	     AND    DATA_SEQ = #{DATA_SEQ}
+	     AND    (ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '')
+	     AND  	LAST_INTG_PRJ_NO IN(
+					   SELECT A.LAST_INTG_PRJ_NO 
+					   FROM (
+			 					SELECT LAST_INTG_PRJ_NO , ROWNUMBER() OVER (ORDER BY LAST_INTG_PRJ_NO) AS ROWNUM 
+			   					FROM UC_CMP_OBJ_LIST 
+									WHERE CAMP_SEQ = #{CAMP_SEQ}
+										AND    DATA_SEQ = #{DATA_SEQ}
+										AND    (ALLC_AGNT_ID IS NULL OR ALLC_AGNT_ID = '')
+								GROUP BY LAST_INTG_PRJ_NO
+					 		) A 
+					  WHERE A.ROWNUM <= COALESCE(#{APPLY_CNT}, 0)
+					  )
+    ]]>					  
+</update>
+
+<!-- 캠페인할당 회수  -->
+<update id="UPDATE_UC_CMP_OBJ_LIST_3"  parameterType= "java.util.HashMap" >
+ 	 UPDATE UC_CMP_OBJ_LIST
+       SET 		AGNT_ALLC_DT = NULL
+		   		, ALLC_AGNT_ID = NULL
+	  	 WHERE  CAMP_SEQ = #{CAMP_SEQ}
+	     AND    DATA_SEQ = #{DATA_SEQ}
+	     AND    ALLC_AGNT_ID  = #{ALLC_AGNT_ID}
+	     AND    LAST_CALL_STAT_CD IS NULL
+</update>
+
+<!--  UC_CMP_대상_리스트  조회   -->
+<delete id="DELETE_UC_CMP_OBJ_LIST"  parameterType= "java.util.HashMap" >
+DELETE FROM UC_CMP_OBJ_LIST
+WHERE CAMP_SEQ = #{CAMP_SEQ}
+AND   DATA_SEQ = #{DATA_SEQ}
+</delete>
+
+</mapper>
+

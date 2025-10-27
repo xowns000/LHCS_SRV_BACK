@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<!-- <mapper namespace="com.hcteletalk.teletalk.core.busy.dao.TalkBusyMapper"> -->
+<mapper namespace="kr.co.hkcloud.palette3.core.cron.dao.CronChatEmailMapper">
+	
+	
+	<select id="selectCustcoChannelEmailSettingList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*	고객사_채널_이메일_설정 목록 조회 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatEmailMapper.selectCustcoChannelEmailSetting)	*/
+			CCES.SNDR_KEY,
+			CCES.SRVR,
+			CCES.PORT,
+			CCES.ACNT,
+			CUSTCO.GEN_DECRYPT(CCES.PSWD, #{PP_KEY_PP}, #{PP_ALG_PP}) AS PSWD,
+			CCES.PROTOCOL_CD,
+			CCES.SNDR_EML,
+			CCES.SNDR_NM,
+			CCES.CLCT_RPTT,
+			CCES.RGTR_ID,
+			CCES.REG_DT,
+			CCES.MDFR_ID,
+			CCES.MDFCN_DT,
+			CC.CUSTCO_ID ,
+			CC.CHN_CLSF_CD,
+			CC.SRVC_MAINT_YN,
+			CC.DSPTCH_PRF_NM,
+			CASE WHEN PCH.HLDY_YMD IS NULL THEN 'N' ELSE 'Y' END HLDY_YN
+		FROM PLT_CUSTCO_CHN_EML_STNG CCES
+		INNER JOIN PLT_CUSTCO_CHN CC ON CC.SNDR_KEY = CCES.SNDR_KEY
+		LEFT OUTER JOIN PLT_CHT_HLDY PCH ON PCH.CUSTCO_ID = CC.CUSTCO_ID AND PCH.HLDY_YMD = TO_CHAR(NOW(), 'YYYYMMDD')
+		<where>
+			<if test="SNDR_KEY != null and SNDR_KEY != ''">
+				AND CCES.SNDR_KEY = #{SNDR_KEY}::BIGINT
+			</if>
+		</where>
+	</select>
+	
+	
+	<select id="selectMaxRcptnDt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*	채팅_상담_이메일 - 마지막 수신 일시 조회 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatEmailMapper.selectMaxRcptnDt)	*/
+			COALESCE(MAX(RCPTN_DT), TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')) AS MAX_RCPTN_DT
+		FROM PLT_CHT_CUTT_EML
+		WHERE SNDR_KEY = #{SNDR_KEY}::BIGINT
+	</select>
+	
+	
+	<select id="selectDupEmailCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*	이메일 중복 저장 건수 조회 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatEmailMapper.selectDupEmailCount)	*/
+			COUNT(1) DUP_CNT
+		FROM PLT_CHT_CUTT_EML
+		WHERE 
+		SNDR_KEY=#{SNDR_KEY}::BIGINT
+		AND MSG_ID = #{MSG_ID}
+	</select>
+	
+	
+	
+	
+	<insert id="insertChatCuttEmail" parameterType="java.util.HashMap">
+		INSERT /*	채팅_상담_이메일 저장 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatEmailMapper.insertChatCuttEmail)	*/
+		INTO PLT_CHT_CUTT_EML (
+			CHT_CUTT_EML_ID,
+			SNDR_KEY,
+			SRVR,
+			MSG_ID,
+			RCPTN_DT,
+			SNDR_EML,
+			RCVR_EML,
+			RFRNC_EML,
+			HID_RFRNC_EML,
+			TTL,
+			CN,
+			FILE_GROUP_KEY,
+			REG_DT
+		)
+		VALUES (
+			#{CHT_CUTT_EML_ID}::BIGINT,
+			#{SNDR_KEY}::BIGINT,
+			#{SRVR},
+			#{MSG_ID},
+			#{RCPTN_DT},
+			#{SNDR_EML},
+			#{RCVR_EML},
+			#{RFRNC_EML},
+			#{HID_RFRNC_EML},
+			#{TTL},
+			#{CN},
+			#{FILE_GROUP_KEY},
+			TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	
+	<update id="updateChtCuttId" parameterType="java.util.HashMap">
+	 	UPDATE	/*	채팅_상담_ID 업데이트 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatEmailMapper.updateChtCuttId)	*/
+	 		PLT_CHT_CUTT_EML
+	 	SET
+	 		CHT_CUTT_ID = #{CHT_CUTT_ID}::BIGINT
+	 	WHERE CHT_CUTT_EML_ID = #{CHT_CUTT_EML_ID}::BIGINT
+	</update>
+
+    <select id="selectNotMatchChtCuttId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+               CC.CUSTCO_ID
+             , CC.CHN_CLSF_CD
+             , CCE.SNDR_KEY
+             , CCE.CHT_CUTT_EML_ID
+             , CCE.SNDR_EML
+             , CCE.RCVR_EML
+             , CCE.CN
+             , CCE.TTL
+        FROM PLT_CHT_CUTT_EML CCE
+       INNER JOIN PLT_CUSTCO_CHN CC ON CC.SNDR_KEY = CCE.SNDR_KEY
+       WHERE CCE.CHT_CUTT_ID IS NULL
+    </select>
+</mapper>

@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.lm.dao.PhoneLmExecutManageMapper">
+	
+	
+	
+	<select id="selectRtnLmExecut" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.CUSTCO_ID AS ASP_NEWCUST_KEY
+			, (SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = A.CUSTCO_ID) AS ASP_CUST_NM
+			, A.LM_ID
+			, A.LM_EVA_ID
+			, A.LM_ID_NM
+			, A.LM_TY
+			, B.LM_DATA_ID
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT018' AND CD = A.LM_TY) AS LM_TY_NM
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI') AS LM_ST_DTTM
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS LM_ST_DATE
+			, TO_CHAR(TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS'), 'HH24:MI') AS LM_ST_TIME
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI') AS LM_EN_DTTM
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS LM_EN_DATE
+			, TO_CHAR(TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS'), 'HH24:MI') AS LM_EN_TIME
+			, A.LM_TG_SC
+			<![CDATA[
+			, CASE WHEN A.LM_PG_ST = '99'
+				THEN A.LM_PG_ST
+				WHEN NOW() BETWEEN TO_DATE(A.LM_ST_DTTM,'YYYYMMDDHH24MISS') AND TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '20'
+				WHEN NOW() > TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '99'
+				ELSE A.LM_PG_ST
+				END AS LM_PG_ST
+			]]>
+			<![CDATA[
+			, CASE WHEN A.LM_PG_ST = '99'
+				THEN '시험종료'
+				WHEN NOW() BETWEEN TO_DATE(A.LM_ST_DTTM,'YYYYMMDDHH24MISS') AND TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '시험중'
+				WHEN NOW() > TO_DATE(A.LM_EN_DTTM,'YYYYMMDDHH24MISS')
+				THEN '시험종료'
+				ELSE COALESCE((SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT023' AND CD = A.LM_PG_ST), '-')
+				END AS LM_PG_ST_NM
+			]]>
+			, COALESCE(A.LM_LIM_TIME, 0) AS LM_LIM_TIME
+			, A.LM_TG_CNT
+			, (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID) AS LM_DATA_COUNT
+			, (SELECT COUNT(1) FROM PLT_LM_EVA_RST WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_EVA_ID = A.LM_EVA_ID) AS LM_EVA_RST_COUNT
+			, COALESCE((
+		        	SELECT SUM(LM_QS_TY_SC)
+		        	FROM PLT_LM_EVA_RST B, PLT_LM_QS C
+		        	WHERE B.LM_QS_ID = C.LM_QS_ID
+		        	AND B.CUSTCO_ID = C.CUSTCO_ID
+		        	AND B.CUSTCO_ID = A.CUSTCO_ID
+		        	AND B.LM_EVA_ID = A.LM_EVA_ID
+		     ), 0) AS LM_EVA_SUM
+		     , (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID AND LM_DATA_ANS_YN = 'N') AS LM_NON_DONE_CNT
+		     , (SELECT COUNT(1) FROM PLT_LM_DATA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_ID = A.LM_ID AND LM_DATA_ANS_YN = 'Y') AS LM_DONE_CNT
+		     , B.LM_DATA_ANS_YN
+		     , B.LM_DATA_US_NM
+		     , (
+		     	SELECT SUM(SC)
+				FROM (
+				  SELECT MAX(LM_DATA_RST_SUM) AS SC
+				  FROM PLT_LM_DATA_RST
+				  WHERE LM_DATA_ID = B.LM_DATA_ID
+				  AND CUSTCO_ID = B.CUSTCO_ID
+				  GROUP BY LM_QS_ID
+				)
+		     ) AS LM_DATA_RST_SUM
+		     , B.LM_GRADING_YN
+		FROM PLT_LM A
+		JOIN PLT_LM_DATA B ON A.LM_ID = B.LM_ID AND A.CUSTCO_ID = B.CUSTCO_ID
+		WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND B.LM_DATA_US_ID = #{USER_ID}
+		<if test='LM_TY != null and LM_TY != ""'>
+			AND A.LM_TY = #{LM_TY}
+		</if>
+		<if test='LM_ID_NM != null and LM_ID_NM != ""'>
+			AND A.LM_ID_NM LIKE '%' || #{LM_ID_NM} || '%'
+		</if>
+		<if test="START_DATE	!= '' and START_DATE != null">   AND TO_DATE(A.LM_EN_DTTM, 'YYYYMMDDHH24MISS') >= TO_DATE(REPLACE(#{START_DATE},'-','')||'000000', 'YYYYMMDDHH24MISS')  </if>
+		<if test="END_DATE 		!= '' and END_DATE != null">  <![CDATA[ AND TO_DATE(A.LM_ST_DTTM, 'YYYYMMDDHH24MISS') <= TO_DATE(REPLACE(#{END_DATE},'-','') ||'235959', 'YYYYMMDDHH24MISS') ]]>   </if>
+		ORDER BY A.LM_ID DESC
+	</select>
+	
+	<select id="selectRtnLmEvaRstDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT SUM(DECODE(B.LM_QS_TY, 10, 1,0)) AS COUNT_TY1
+			, SUM(DECODE(B.LM_QS_TY, 10, B.LM_QS_TY_SC,0)) AS SC_TY1
+			, SUM(DECODE(B.LM_QS_TY, 20, 1,0)) AS COUNT_TY2
+			, SUM(DECODE(B.LM_QS_TY, 20, B.LM_QS_TY_SC,0)) AS SC_TY2
+			, SUM(DECODE(B.LM_QS_TY, 30, 1,0)) AS COUNT_TY3
+			, SUM(DECODE(B.LM_QS_TY, 30, B.LM_QS_TY_SC,0)) AS SC_TY3
+			, SUM(DECODE(B.LM_QS_TY, 40, 1,0)) AS COUNT_TY4
+			, SUM(DECODE(B.LM_QS_TY, 40, B.LM_QS_TY_SC,0)) AS SC_TY4
+			, COUNT(1) AS COUNT_TOT
+			, SUM(B.LM_QS_TY_SC) AS SC_TOT
+		FROM PLT_LM_EVA_RST A
+		JOIN PLT_LM_QS B ON A.LM_QS_ID = B.LM_QS_ID
+		WHERE A.LM_EVA_ID = #{LM_EVA_ID}
+		GROUP BY A.LM_EVA_ID
+	</select>
+	
+	<select id="selectRtnLmDataRstDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.LM_ID_NM
+			, A.LM_TY
+			, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT018' AND CD = A.LM_TY) AS LM_TY_NM 
+			, B.LM_DATA_US_NM
+		FROM PLT_LM A
+		JOIN PLT_LM_DATA B ON A.LM_ID = B.LM_ID AND A.CUSTCO_ID = B.CUSTCO_ID
+		WHERE A.LM_ID = #{LM_ID}
+		AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND B.LM_DATA_US_ID = #{USER_ID}
+	</select>
+	
+	<select id="checkLmTime" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.LM_ID
+			, A.LM_EVA_ID
+			, A.LM_DATA_ID
+			, A.LM_DATA_ANS_YN
+		FROM PLT_LM_DATA A
+		JOIN PLT_LM B ON A.LM_ID = B.LM_ID AND A.CUSTCO_ID = B.CUSTCO_ID AND A.LM_EVA_ID = B.LM_EVA_ID
+		WHERE A.LM_DATA_US_ID = #{USER_ID}
+		AND A.LM_DATA_ID = #{LM_DATA_ID}
+		AND NOW() BETWEEN TO_DATE(B.LM_ST_DTTM,'YYYYMMDDHH24MISS') AND TO_DATE(B.LM_EN_DTTM, 'YYYYMMDDHH24MISS')
+	</select>
+	
+	<select id="selectRtnLmQs" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT AA.*
+	      , CASE WHEN AA.LM_EVA_RM_YN = 'Y'
+	      THEN ROW_NUMBER() OVER(ORDER BY DBMS_RANDOM.RANDOM)
+	      ELSE ROW_NUMBER() OVER(ORDER BY AA.LM_EVA_RST_OD)
+	      END AS SORT_ORD
+		FROM (
+			SELECT A.LM_QS_ID
+				, A.LM_QS_NM
+				, A.LM_QS_TY
+				, A.LM_QS_TY_SC
+				, B.LM_EVA_RST_OD
+				, (SELECT LM_EVA_RM_YN FROM PLT_LM_EVA WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_EVA_ID = B.LM_EVA_ID) AS LM_EVA_RM_YN
+			FROM PLT_LM_QS A
+			JOIN PLT_LM_EVA_RST B ON A.CUSTCO_ID = B.CUSTCO_ID AND A.LM_QS_ID = B.LM_QS_ID
+			WHERE B.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			AND B.LM_EVA_ID = #{LM_EVA_ID}
+		) AA
+		ORDER BY SORT_ORD
+	</select>
+	
+	<select id="selectRtnLmVe" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.LM_QS_ID
+			, A.LM_QS_VE_ID
+			, A.LM_QS_VE_RT
+			, A.LM_QS_VE_OD
+			, ROW_NUMBER() OVER(PARTITION BY A.LM_QS_ID ORDER BY A.LM_QS_VE_ID) AS QS_NUMBER
+		FROM PLT_LM_VE A
+		WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND A.LM_QS_ID IN
+		<foreach collection="qsIdList" open="(" close=")" separator="," item="item">
+			#{item}
+		</foreach>
+		ORDER BY A.LM_QS_ID, A.LM_QS_VE_ID
+	</select>
+	
+	<insert id="insertRtnLmDataRst" parameterType="java.util.HashMap">
+		INSERT INTO PLT_LM_DATA_RST(
+			CUSTCO_ID
+			, LM_DATA_RST_ID
+			, LM_DATA_ID
+			, LM_QS_ID
+			, LM_QS_VE_ID
+			, LM_QS_VE_LO_ANS
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+		) VALUES (
+			#{ASP_NEWCUST_KEY}
+			, #{LM_DATA_RST_ID}
+			, #{LM_DATA_ID}
+			, #{LM_QS_ID}
+			, #{LM_QS_VE_ID}
+			, #{LM_QS_VE_LO_ANS}
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, #{USER_ID}
+			, TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, #{USER_ID}
+		)
+	</insert>
+	
+	<update id="updateRtnLmDataAns" parameterType="java.util.HashMap">
+		UPDATE PLT_LM_DATA
+		SET LM_DATA_ANS_YN = 'Y'
+			, CHNG_ID = #{USER_ID}
+			, CHNG_DTTM = TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, LM_DATA_EN_DTTM = TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+		WHERE LM_DATA_ID = #{LM_DATA_ID}
+		AND CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+	</update>
+	
+	<update id="updateRtnLmExecutStart" parameterType="java.util.HashMap">
+		UPDATE PLT_LM_DATA
+		SET LM_DATA_ST_DTTM = TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+			, CHNG_ID = #{USER_ID}
+			, CHNG_DTTM = TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+		WHERE LM_DATA_ID = #{LM_DATA_ID}
+		AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</update>
+	
+	<update id="updateRtnLmStart" parameterType="java.util.HashMap">
+		UPDATE PLT_LM
+		SET LM_PG_ST = '20'
+		WHERE LM_PG_ST = '10'
+		AND LM_ID = #{LM_ID}
+		AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</update>
+</mapper>

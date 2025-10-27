@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.campaign.dao.PhoneCampaignCustMngMapper">
+
+	<!-- 캠페인 계획리스트 -->
+	<select id="selectComboCpiCustMng" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	 /* selectComboCpiCustMng 캠페인 계획리스트 */
+				 A.CPI_ID 		AS VALUE
+				,A.CPI_NM 		AS TEXT
+		FROM 	PLT_OBD_CPI A
+		WHERE 	A.CUSTCO_ID 	= #{CUSTCO_ID}::INTEGER
+		AND 	A.USE_YN		= 'Y'
+		<if test="CPI_YR != null and CPI_YR != ''">
+			<![CDATA[
+			AND 	A.CPI_BGNG_DT >= #{CPI_YR} || '0000000000'
+			AND 	A.CPI_END_DT <= (#{CPI_YR}::INTEGER +1)::TEXT || '0000000000'
+			]]>
+		</if>
+		<if test="PRGRS_STTS_CD != null and PRGRS_STTS_CD != ''">
+			AND 	A.PRGRS_STTS_CD = #{PRGRS_STTS_CD}
+		</if>
+		<if test="PLAN_SE_CD != null and PLAN_SE_CD != ''">
+			AND 	A.PLAN_SE_CD = #{PLAN_SE_CD}
+		</if>
+		<if test="CPI_NM != null and CPI_NM != ''">
+			AND 	A.CPI_NM = #{CPI_NM}
+		</if>
+		<if test="CUSL_ID != null and CUSL_ID != ''">
+			AND 	EXISTS (SELECT 1 FROM PLT_OBD_CPI_CUSL POCC INNER JOIN PLT_OBD_CPI POC ON POC.CPI_ID = POCC.CPI_ID AND POC.PRGRS_STTS_CD = 'ONGONG' WHERE POCC.CPI_ID = A.CPI_ID AND POCC.CUSL_ID = #{CUSL_ID}::INT)
+		</if>
+		ORDER BY A.CPI_END_DT DESC, A.CPI_ID
+	</select>
+
+	<!--  캠페인 TOP리스트 -->
+	<select id="selectTopCpiCustMng" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	 /* selectTopCpiCustMng 캠페인 TOP리스트 */
+				 A.CPI_NM
+				,SUBSTR(A.CPI_BGNG_DT, 1, 4) || '-' || SUBSTR(A.CPI_BGNG_DT, 5, 2) || '-' || SUBSTR(A.CPI_BGNG_DT, 7, 2) AS CPI_BGNG_DT
+				,SUBSTR(A.CPI_END_DT, 1, 4) || '-' || SUBSTR(A.CPI_END_DT, 5, 2) || '-' || SUBSTR(A.CPI_END_DT, 7, 2) AS CPI_END_DT
+				,A.PLAN_CYCL
+				,B.CD_NM AS PRGRS_STTS_NM
+				,A.PRGRS_STTS_CD
+				,TO_DATE(A.REG_DT,'YYYYMMDDHH24MISS')::TEXT AS REG_DT
+				,C.USER_NM AS RGTR_ID
+		FROM PLT_OBD_CPI A
+		LEFT OUTER JOIN PLT_COMM_CD B
+			ON A.PRGRS_STTS_CD = B.CD_ID AND B.GROUP_CD_ID = 'CMPN_ST' AND B.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		LEFT OUTER JOIN PLT_USER C
+		ON A.RGTR_ID = C.USER_ID
+		WHERE 	A.CPI_ID = #{CPI_ID}::INTEGER
+	</select>
+
+	<!--  캠페인관리항목 -->
+	<select id="selectAttrCustMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* selectAttrCustMng 캠페인관리항목 */
+				X.*
+		FROM 	(
+				SELECT 	  PEA.ATTR_ID
+						, PEA.BSC_PVSN_ATTR_YN
+						, PEA.SE
+						, PEA.EXPSN_ATTR_NM
+						, PEA.EXPSN_ATTR_COL_ID
+						, PEA.DATA_TYPE_CD
+						, PEA.DATA_LEN
+						, PEA.GROUP_CD_ID
+						, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = '*' AND CD_ID = PEA.GROUP_CD_ID) AS GROUP_CD_NM
+						, PEA.SYS_BSC_YN
+						, PEA.ESNTL_YN
+						, PEA.MDFCN_PSBLTY_YN
+						, PEA.USE_YN
+						, PEA.SCRN_EXPSR_YN
+						, PEA.EXPSN_ATTR_EXPLN
+						, PEA.SORT_ORD
+						, PEA.CUSTCO_ID
+						, PEA.CPI_ID
+				FROM PLT_EXPSN_ATTR PEA
+				WHERE 1 = 1
+				AND PEA.BSC_PVSN_ATTR_YN = #{BSC_PVSN_ATTR_YN}
+				AND PEA.DEL_YN = 'N'
+				AND PEA.CPI_ID IS NULL
+				<if test="CUSTCO_ID !=null and CUSTCO_ID != ''"> AND PEA.CUSTCO_ID = #{CUSTCO_ID}::INTEGER </if>
+				<if test="SE !=null and SE != ''"> AND PEA.SE = #{SE} </if>
+				UNION ALL
+				SELECT 	  PEA.ATTR_ID
+						, PEA.BSC_PVSN_ATTR_YN
+						, PEA.SE
+						, PEA.EXPSN_ATTR_NM
+						, PEA.EXPSN_ATTR_COL_ID
+						, PEA.DATA_TYPE_CD
+						, PEA.DATA_LEN
+						, PEA.GROUP_CD_ID
+						, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND GROUP_CD_ID = '*' AND CD_ID = PEA.GROUP_CD_ID) AS GROUP_CD_NM
+						, PEA.SYS_BSC_YN
+						, PEA.ESNTL_YN
+						, PEA.MDFCN_PSBLTY_YN
+						, PEA.USE_YN
+						, PEA.SCRN_EXPSR_YN
+						, PEA.EXPSN_ATTR_EXPLN
+						, PEA.SORT_ORD
+						, PEA.CUSTCO_ID
+						, PEA.CPI_ID
+				FROM PLT_EXPSN_ATTR PEA
+				WHERE 1 = 1
+				AND PEA.BSC_PVSN_ATTR_YN = #{BSC_PVSN_ATTR_YN}
+				AND PEA.DEL_YN = 'N'
+				AND PEA.CPI_ID = #{CPI_ID}::INTEGER
+				<if test="CUSTCO_ID !=null and CUSTCO_ID != ''"> AND PEA.CUSTCO_ID = #{CUSTCO_ID}::INTEGER </if>
+				<if test="SE !=null and SE != ''"> AND PEA.SE = #{SE} </if>
+		) X
+		ORDER BY X.SORT_ORD
+	</select>
+
+	<!--  항목 순서 재정의 -->
+	<update id="reOrderAttrCustMng"  parameterType="java.util.HashMap">
+		UPDATE 	/* reOrderAttrCustMng 항목 순서 재정의 */
+				PLT_EXPSN_ATTR PEA
+		SET 	SORT_ORD = B.RNUM
+		FROM (
+			SELECT
+				ROW_NUMBER() OVER() RNUM
+				, ATTR_ID
+			FROM (
+			<foreach collection="arrAttrId" item="ATTR_ID" index="index" open="(" separator=" UNION ALL " close=")"  >
+				SELECT #{ATTR_ID}::INTEGER AS ATTR_ID
+			</foreach>
+			) BB
+		) B
+		WHERE PEA.ATTR_ID = B.ATTR_ID
+	</update>
+
+	<!--  항목 저장 -->
+	<insert id="insertAttrCustMng"  parameterType= "java.util.HashMap">
+		INSERT INTO PLT_EXPSN_ATTR ( ATTR_ID
+					/* insertAttrCustMng 항목 저장 */
+			<if test="LNKG_ATTR_ID != NULL and LNKG_ATTR_ID != ''">, LNKG_ATTR_ID</if>
+			, SE
+			, EXPSN_ATTR_NM
+			, EXPSN_ATTR_COL_ID
+			, DATA_TYPE_CD
+			<if test="DATA_LEN != NULL and DATA_LEN != ''">, DATA_LEN</if>
+			<if test="GROUP_CD_ID != NULL and GROUP_CD_ID != ''">, GROUP_CD_ID</if>
+			<if test="SIC_ID != NULL and SIC_ID != ''">, SIC_ID</if>
+			<if test="BSC_PVSN_ATTR_YN != NULL and BSC_PVSN_ATTR_YN != ''">, BSC_PVSN_ATTR_YN</if>
+			<if test="SYS_BSC_YN != NULL and SYS_BSC_YN != ''">, SYS_BSC_YN</if>
+			, ESNTL_YN
+			, MDFCN_PSBLTY_YN
+			, USE_YN
+			, SCRN_EXPSR_YN
+			, EXPSN_ATTR_EXPLN
+			, DEL_YN
+			, SORT_ORD
+			, RGTR_ID
+			, REG_DT
+			<if test="CUSTCO_ID != NULL and CUSTCO_ID != ''"> , CUSTCO_ID</if>
+			<if test="CPI_ID != NULL and CPI_ID != ''"> , CPI_ID</if>
+		)
+		VALUES ( #{ATTR_ID}
+			<if test="LNKG_ATTR_ID != NULL and LNKG_ATTR_ID != ''">, #{LNKG_ATTR_ID}::INTEGER</if>
+			, #{SE}
+			, #{EXPSN_ATTR_NM}
+			, #{EXPSN_ATTR_COL_ID}
+			, #{DATA_TYPE_CD}
+			<if test="DATA_LEN != NULL and DATA_LEN != ''">, #{DATA_LEN}::INTEGER</if>
+			<if test="GROUP_CD_ID != NULL and GROUP_CD_ID != ''">, #{GROUP_CD_ID}</if>
+			<if test="SIC_ID != NULL and SIC_ID != ''">, #{SIC_ID}</if>
+			<if test="BSC_PVSN_ATTR_YN != NULL and BSC_PVSN_ATTR_YN != ''">, #{BSC_PVSN_ATTR_YN}</if>
+			<if test="SYS_BSC_YN != NULL and SYS_BSC_YN != ''">, #{SYS_BSC_YN}</if>
+			, #{ESNTL_YN}
+			, #{MDFCN_PSBLTY_YN}
+			, #{USE_YN}
+			, #{SCRN_EXPSR_YN}
+			, #{EXPSN_ATTR_EXPLN}
+			, 'N'
+			, (SELECT COALESCE(MAX(SORT_ORD), 0)+1 FROM PLT_EXPSN_ATTR WHERE DEL_YN = 'N' AND SE = #{SE} <if test="CUSTCO_ID != NULL and CUSTCO_ID != ''">AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER</if>)
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test="CUSTCO_ID != NULL and CUSTCO_ID != ''"> , #{CUSTCO_ID}::INTEGER</if>
+			<if test="CPI_ID != NULL and CPI_ID != ''"> , #{CPI_ID}::INTEGER</if>
+		)
+	</insert>
+
+	<!--  항목 수정 -->
+	<update id="updateAttrCustMng"  parameterType= "java.util.HashMap">
+		UPDATE PLT_EXPSN_ATTR
+				/* updateAttrCustMng 항목 수정 */
+		SET 	MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				, MDFR_ID = #{USER_ID}::INTEGER
+			<if test="SE !=null and SE != ''"> , SE = #{SE}</if>
+			<if test="EXPSN_ATTR_NM !=null and EXPSN_ATTR_NM != ''"> , EXPSN_ATTR_NM = #{EXPSN_ATTR_NM}</if>
+			<if test="EXPSN_ATTR_COL_ID !=null and EXPSN_ATTR_COL_ID != ''"> , EXPSN_ATTR_COL_ID = #{EXPSN_ATTR_COL_ID}</if>
+			<if test="DATA_TYPE_CD !=null and DATA_TYPE_CD != ''"> , DATA_TYPE_CD = #{DATA_TYPE_CD}</if>
+			<if test="DATA_LEN !=null and DATA_LEN != ''"> , DATA_LEN = #{DATA_LEN}::INTEGER</if>
+			<if test="GROUP_CD_ID !=null and GROUP_CD_ID != ''"> , GROUP_CD_ID = #{GROUP_CD_ID}</if>
+			<if test="SIC_ID !=null and SIC_ID != ''"> , SIC_ID = #{SIC_ID}</if>
+			<if test="ESNTL_YN !=null and ESNTL_YN != ''"> , ESNTL_YN = #{ESNTL_YN}</if>
+			<if test="MDFCN_PSBLTY_YN !=null and MDFCN_PSBLTY_YN != ''"> , MDFCN_PSBLTY_YN = #{MDFCN_PSBLTY_YN}</if>
+			<if test="USE_YN !=null and USE_YN != ''"> , USE_YN = #{USE_YN}</if>
+			<if test="SCRN_EXPSR_YN !=null and SCRN_EXPSR_YN != ''"> , SCRN_EXPSR_YN = #{SCRN_EXPSR_YN}</if>
+			<if test="EXPSN_ATTR_EXPLN !=null and EXPSN_ATTR_EXPLN != ''"> , EXPSN_ATTR_EXPLN = #{EXPSN_ATTR_EXPLN}</if>
+		WHERE ATTR_ID = #{ATTR_ID}::INTEGER
+	</update>
+
+	<!--  항목 삭제 -->
+	<update id="deleteAttrCustMng"  parameterType="java.util.HashMap">
+		UPDATE 	/* deleteAttrCustMng 항목 삭제 */
+				PLT_EXPSN_ATTR
+		SET 	MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, MDFR_ID = #{USER_ID}::INTEGER
+			, DEL_YN = 'Y'
+		WHERE ATTR_ID IN
+		<foreach collection="arrAttrId" item="ATTR_ID" open="(" separator="," close=")" >
+			#{ATTR_ID}::INTEGER
+		</foreach>
+	</update>
+
+	<!--  고객 항목 조회 -->
+	<select id="custExpsnInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* custExpsnInfo 고객 항목 조회 */
+				PEA.EXPSN_ATTR_COL_ID
+				, PEA.EXPSN_ATTR_NM
+				, PEA.SORT_ORD
+		FROM PLT_EXPSN_ATTR PEA
+		WHERE PEA.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PEA.SE = #{SE}
+		AND PEA.CPI_ID = #{CPI_ID}::INTEGER
+		AND PEA.DEL_YN = 'N'
+		AND PEA.BSC_PVSN_ATTR_YN = 'N'
+		AND PEA.SCRN_EXPSR_YN = 'Y'
+		ORDER BY PEA.SORT_ORD
+	</select>
+
+	<!-- 대상자조회 -->
+	<select id="selectCustCustMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+		SELECT 	/* selectCustCustMng 대상자조회 */
+				ROW_NUMBER() OVER(ORDER BY POCC.CUST_ID) AS ROW_NUMBER
+				, POCC.CUST_ID
+				, PC.CUST_NM
+				, PC.CUST_PHN_NO
+		<if test="arrAttrColId != null and arrAttrColId != ''">
+			, <foreach collection="arrAttrColId" item="EXPSN_ATTR_COL_ID" open="" separator="," close="" >
+				${EXPSN_ATTR_COL_ID}::TEXT
+			</foreach>
+		</if>
+		FROM PLT_OBD_CPI_CUST POCC
+		INNER JOIN PLT_CUST PC
+			ON POCC.CUST_ID = PC.CUST_ID
+		<if test="arrAttrColId != null and arrAttrColId != ''">
+		LEFT OUTER JOIN (
+			SELECT * FROM DYNAMIC_CROSSTAB(#{CUSTCO_ID}::INTEGER, 'CAMP', #{CPI_ID}::INTEGER) AS TBL(CUST_ID INTEGER,
+			<foreach collection="arrAttrColId" item="EXPSN_ATTR_COL_ID" open="" separator="," close="" >
+				${EXPSN_ATTR_COL_ID} TEXT
+			</foreach>
+			)
+		) ATTR ON ATTR.CUST_ID = POCC.CUST_ID
+		</if>
+		WHERE POCC.CPI_ID = #{CPI_ID}::INTEGER
+
+	</select>
+
+	<!--  대상자 속성 삭제 -->
+	<delete id="deleteCustDtlCustMng"  parameterType="java.util.HashMap">
+		DELETE /* deleteCustDtlCustMng 대상자 속성 삭제 */
+		FROM PLT_OBD_CPI_CUST_DTL
+		WHERE CPI_ID = #{CPI_ID}::INTEGER
+	</delete>
+
+	<!--  대상자 삭제 -->
+	<delete id="deleteCustCustMng"  parameterType="java.util.HashMap">
+		DELETE /* deleteCustCustMng 대상자 삭제 */
+		FROM PLT_OBD_CPI_CUST
+		WHERE CPI_ID = #{CPI_ID}::INTEGER
+	</delete>
+
+	<!--  대상자id 조회 -->
+	<select id="selectCustMtCustMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* selectCustMtCustMng 대상자id 조회 */
+				CUST_ID, CPI_ID
+		FROM 	PLT_OBD_CPI_CUST
+		WHERE CPI_ID = #{CPI_ID}::INTEGER
+	</select>
+
+	<!--  고객마스터 속성 삭제 -->
+	<delete id="deleteCustAttrCustMng"  parameterType="java.util.HashMap">
+		DELETE /* deleteCustAttrCustMng 고객마스터 속성 삭제 */
+		FROM PLT_CUST_DTL_EXPSN A
+		WHERE A.CUST_ID IN (
+		<foreach collection="CUST_LIST" item="ITEM" close="" separator=",">
+			#{ITEM.CUST_ID}::INTEGER
+		</foreach>
+		)
+	</delete>
+
+	<!--  고객 통합 이력 삭제 -->
+	<delete id="deleteCustItgrtHstry"  parameterType="java.util.HashMap">
+		DELETE /* deleteCustItgrtHstry 고객마스터 통합 이력 삭제 */
+		FROM PLT_CUST_ITGRT_HSTRY A
+		WHERE A.CUST_ID IN (
+		<foreach collection="CUST_LIST" item="ITEM" close="" separator=",">
+			#{ITEM.CUST_ID}::INTEGER
+		</foreach>
+		)
+	</delete>
+
+	<!--  고객 전화번호 통합 삭제 -->
+	<delete id="deleteCustTelnoHstry"  parameterType="java.util.HashMap">
+		DELETE /* deleteCustTelnoHstry 고객마스터 전화번호 통합 삭제 */
+		FROM PLT_CUST_TELNO_ITGRT A
+		WHERE A.CUST_ID IN (
+		<foreach collection="CUST_LIST" item="ITEM" close="" separator=",">
+			#{ITEM.CUST_ID}::INTEGER
+		</foreach>
+		)
+	</delete>
+
+	<!--  고객마스터 삭제 -->
+	<delete id="deleteCustMtCustMng"  parameterType="java.util.HashMap">
+		DELETE /* deleteCustMtCustMng 고객마스터 삭제 */
+		FROM PLT_CUST A
+		WHERE A.CUST_ID IN (
+		<foreach collection="CUST_LIST" item="ITEM" close="" separator=",">
+			#{ITEM.CUST_ID}::INTEGER
+		</foreach>
+		)
+<!--		속성값체크는 안한다. -->
+<!--		AND NOT EXISTS (-->
+<!--			SELECT 'X'-->
+<!--			FROM PLT_CUST_DTL_EXPSN X-->
+<!--			WHERE X.CUST_ID = A.CUST_ID-->
+<!--		)-->
+	</delete>
+
+	<!--  대상자 저장 -->
+	<insert id="insertCustCustMng"  parameterType="java.util.HashMap">
+		INSERT INTO PLT_OBD_CPI_CUST(
+				/* insertCustCustMng 대상자 저장 */
+				 CUST_ID
+				,REG_DT
+				,RGTR_ID
+				,CPI_ID
+		) VALUES (
+				 #{CUST_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,#{CPI_ID}::INTEGER
+		)
+	</insert>
+
+	<!--  대상자 속성 저장 -->
+	<insert id="insertCustDtlCustMng"  parameterType="java.util.HashMap">
+		INSERT INTO PLT_OBD_CPI_CUST_DTL(
+				/* insertCustDtlCustMng 대상자 속성 저장 */
+				 ATTR_ID
+				,CUST_ID
+				,ATTR_VL
+				,CPI_ID
+		) VALUES (
+				 #{ATTR_ID}::INTEGER
+				,#{CUST_ID}::INTEGER
+				,#{ATTR_VL}
+				,#{CPI_ID}::INTEGER
+		)
+	</insert>
+
+	<!--  속성 id, 속성 필수여부 조회 -->
+	<select id="chkEsntlCustMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/* chkEsntlCustMng 속성 id, 속성 필수여부 조회 */
+				X.ATTR_ID, X.ESNTL_YN
+		FROM (
+			SELECT ATTR_ID, COALESCE(CPI_ID,0) AS CPI_ID, SYS_BSC_YN, ESNTL_YN
+			FROM PLT_EXPSN_ATTR
+			WHERE SE = 'CAMP'
+			AND USE_YN = 'Y'
+			AND DEL_YN = 'N'
+			AND BSC_PVSN_ATTR_YN = 'N'
+			AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			AND EXPSN_ATTR_COL_ID = #{EXPSN_ATTR_COL_ID}
+		) X
+		WHERE X.CPI_ID = (CASE WHEN X.SYS_BSC_YN = 'Y' THEN 0 ELSE #{CPI_ID}::INTEGER END)
+	</select>
+
+	<!--  고객마스터 데이터 유무 체크 -->
+	<select id="chkCustMtCustMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/* chkCustMtCustMng 고객마스터 데이터 유무 체크 */
+				CUST_ID
+		FROM 	PLT_CUST
+		WHERE 	CUST_PHN_NO = #{CUST_PHN_NO}
+	</select>
+
+	<!--  고객 전화번호 유무 체크 -->
+	<select id="chkCustTelno"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/* chkCustTelno 고객 전화번호 유무 체크 */
+				CUST_TELNO_ID
+		FROM 	PLT_CUST_TELNO
+		WHERE 	CUST_PHN_NO = #{CUST_PHN_NO}
+	</select>
+
+	<!--  배분여부 체크 -->
+	<select id="chkAltmntCustMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 	/* chkAltmntCustMng 배분여부 체크 */
+				CUST_ID
+		FROM 	PLT_OBD_CPI_CUST_ALTMNT
+		WHERE CPI_ID = #{CPI_ID}::INTEGER
+	</select>
+
+	<!--  통화이력이있다면 리턴, 롤백 -->
+	<select id="chkCuttCustMng"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/* chkCuttCustMng 통화이력이있다면 리턴, 롤백 */
+				CUST_ID
+		FROM 	PLT_PHN_CUTT
+		WHERE 	CPI_ID = #{CPI_ID}::INTEGER
+		AND 	CUST_ID IN (
+		<foreach collection="CUST_LIST" item="ITEM" close="" separator=",">
+			#{ITEM.CUST_ID}::INTEGER
+		</foreach>
+		)
+	</select>
+
+	<!--  고객마스터 저장 -->
+	<insert id="insertCustMtCustMng"  parameterType="java.util.HashMap">
+		INSERT INTO PLT_CUST(
+				/* insertCustMtCustMng 고객마스터 저장 */
+				 CUST_ID
+				,CUST_NM
+				,CUST_PHN_NO
+				,CUSTCO_ID
+				,RGTR_ID
+				,REG_DT
+				,MDFR_ID
+				,MDFCN_DT
+				,CUST_STTS_CD
+				,DEL_YN
+		) VALUES (
+				 #{CUST_ID}::INTEGER
+				,#{CUST_NM}
+				,#{CUST_PHN_NO}
+				,#{CUSTCO_ID}::INTEGER
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,#{USER_ID}::INTEGER
+				,TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+				,'NOML'
+				,'N'
+		)
+	</insert>
+</mapper>

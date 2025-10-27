@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.v3.auth.dao.V3AuthMapper">
+	
+	<select id="selectTenantByLgnId" parameterType="kr.co.hkcloud.palette3.v3.auth.api.dto.V3AuthLoginRequestDto" resultType="java.util.HashMap">
+		SELECT /*	selectTenantByLgnId 로그인 사용자 스키마 조회	*/
+			SCHEMA_ID
+			, PCC.CERT_CUSTCO_ID
+		FROM CUSTCO.PLT_CERT_CUSTCO PCC 
+			JOIN CUSTCO.PLT_CERT_CUSTCO_USER PCCU ON PCC.CERT_CUSTCO_ID = PCCU.CERT_CUSTCO_ID
+			JOIN CUSTCO.PLT_CERT_USER PCU ON PCCU.CERT_USER_ID = PCU.CERT_USER_ID AND PCU.LGN_ID = #{id}
+		WHERE PCC.SRVC_STTS_CD = 'ON'
+		ORDER BY SORT_ORD
+		LIMIT 1 OFFSET 0
+	</select>
+
+	<update id="updateUserToken" parameterType="kr.co.hkcloud.palette3.v3.auth.api.dto.V3UserAppUpdateTokenRequestDto">
+		UPDATE PLT_USER SET /*	updateUserToken 사용자 앱 알림 토큰 수정	*/
+			TOKEN = #{token}
+			, TOKEN_REG_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE USER_ID = #{userId}
+	</update>
+
+</mapper>

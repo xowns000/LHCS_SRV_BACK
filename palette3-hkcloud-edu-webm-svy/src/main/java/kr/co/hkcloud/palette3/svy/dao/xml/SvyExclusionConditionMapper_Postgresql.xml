@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.svy.dao.SvyExclusionConditionMapper">
+	<select id="selectConditionList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectConditionList - 설문조사 제외 조건 목록 조회 */
+		SELECT
+			 ROW_NUMBER() OVER (ORDER BY SRVY_EXL_COND_ID) AS ROW_NUMBER
+			, PSEC.SRVY_EXL_COND_ID
+			, PSEC.CUSTCO_ID
+			, PSEC.DEPT_ID
+			, PO.DEPT_NM
+			, PSEC.EXL_COND_SE_CD
+			, PCC2.CD_NM
+			, PSEC.EXL_COND_CD
+			, PCC1.CD_NM
+			, PSEC.EXL_COND_CN
+			, PSEC.DEL_YN
+			, PSEC.USE_YN
+			, PSEC.REG_DT
+			, TO_CHAR(TO_TIMESTAMP(PSEC.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS REG_DT_F
+			, PSEC.RGTR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PSEC.RGTR_ID) AS RGTR_NM
+			, PSEC.MDFCN_DT
+			, TO_CHAR(TO_TIMESTAMP(PSEC.MDFCN_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS MDFCN_DT_F
+			, PSEC.MDFR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PSEC.MDFR_ID) AS MDFR_NM
+		FROM PLT_SRVY_EXL_COND PSEC
+		LEFT JOIN PLT_OGNZ PO ON PO.DEPT_ID = PSEC.DEPT_ID
+		LEFT JOIN PLT_COMM_CD PCC1 ON PCC1.CD_ID = PSEC.EXL_COND_CD AND PCC1.GROUP_CD_ID = 'EXL_COND'
+		LEFT JOIN PLT_COMM_CD PCC2 ON PCC2.CD_ID = PSEC.EXL_COND_SE_CD AND PCC2.GROUP_CD_ID = 'EXL_COND_TY'
+		WHERE 1=1
+			<if test='DEPT_ID!="" and DEPT_ID!=null and DEPT_ID!=undefined'>
+				AND PSEC.DEPT_ID = #{DEPT_ID}
+			</if>
+			<if test='EXL_COND_SE_CD!="" and EXL_COND_SE_CD!=null and EXL_COND_SE_CD!=undefined'>
+				AND PSEC.EXL_COND_SE_CD = #{EXL_COND_SE_CD}
+			</if>
+			<if test='EXL_COND_CD!="" and EXL_COND_CD!=null and EXL_COND_CD!=undefined'>
+				AND PSEC.EXL_COND_CD = #{EXL_COND_CD}
+			</if>
+			<if test='EXL_COND_CN!="" and EXL_COND_CN!=null and EXL_COND_CN!=undefined'>
+				AND PSEC.EXL_COND_CN = #{EXL_COND_CN}
+			</if>
+			<if test='USE_YN!="" and USE_YN!=null and USE_YN!=undefined'>
+				AND PSEC.USE_YN = #{USE_YN}
+			</if>
+			<if test='DEL_YN!="" and DEL_YN!=null and DEL_YN!=undefined'>
+				AND PSEC.DEL_YN = #{DEL_YN}
+			</if>
+	</select>
+	
+	<!-- 설문조사 제외 조건 등록 -->
+	<insert id="insertCondition" parameterType="java.util.HashMap">
+		/* insertCondition - 설문조사 제외 조건 등록 */
+		INSERT INTO PLT_SRVY_EXL_COND
+		(
+			SRVY_EXL_COND_ID
+			, CUSTCO_ID
+			, DEPT_ID
+			, EXL_COND_SE_CD
+			, EXL_COND_CD
+			, EXL_COND_CN
+			, REG_DT
+			, RGTR_ID
+			, MDFCN_DT
+			, MDFR_ID
+		) VALUES (
+			#{SRVY_EXL_COND_ID}::INTEGER
+			, #{CUSTCO_ID}::INTEGER
+			, #{DEPT_ID}::INTEGER
+			, #{EXL_COND_SE_CD}
+			, #{EXL_COND_CD}
+			, #{EXL_COND_CN}
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+		);
+	</insert>
+	
+	<!-- 설문조사 제외 대상 수정 -->
+	<update id="updateCondition" parameterType="java.util.HashMap">
+		/* updateCondition - 설문조사 제외 대상 수정 */
+		UPDATE PLT_SRVY_EXL_COND
+		SET EXL_COND_SE_CD = #{EXL_COND_SE_CD}
+			, EXL_COND_CD = #{EXL_COND_CD}
+			, EXL_COND_CN = #{EXL_COND_CN}
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, MDFR_ID = #{USER_ID}::INTEGER
+		WHERE SRVY_EXL_COND_ID = #{SRVY_EXL_COND_ID}::INTEGER
+	</update>
+	
+	<update id="deleteCondition" parameterType="java.util.HashMap">
+		UPDATE 	/* 설문조사 제외 대상 삭제 */
+			PLT_SRVY_EXL_COND 
+		SET DEL_YN = 'Y'
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, MDFR_ID = #{USER_ID}::INTEGER
+		WHERE SRVY_EXL_COND_ID = #{SRVY_EXL_COND_ID}::INTEGER
+	</update>
+	
+</mapper>

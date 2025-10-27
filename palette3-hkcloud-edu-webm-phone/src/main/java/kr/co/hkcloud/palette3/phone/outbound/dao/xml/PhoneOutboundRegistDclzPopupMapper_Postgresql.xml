@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.phone.dashboard.dao.PhoneOutboundRegistDclzPopupMapper">	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="HOUSE_TEL_NO" column="HOUSE_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CO_TEL_NO" column="CO_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="MOBIL_NO" column="MOBIL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CARD_NO" column="CARD_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="ACT_NO" column="ACT_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+	<!--  상담원근태 조회 -->
+<!-- 	<select id="selectObndDilceList" parameterType= "java.util.HashMap" resultType="java.util.HashMap"> -->
+<!-- 		<![CDATA[ -->
+<!-- 		/* selectObndDilceList 상담원근태 조회  */ -->
+<!--    		 SELECT -->
+<!--             ROWNUM -->
+<!--             ,AGENT_ID -->
+<!--             ,AGENT_NM -->
+<!--             ,CASE WHEN ANNL_YN = 'Y' THEN '11' -->
+<!--                 ELSE '10' -->
+<!--               END AS ANNL_YN -->
+<!--             ,CASE WHEN HALFD_YN = 'Y' THEN '11' -->
+<!--                 ELSE '10' -->
+<!--               END AS HALFD_YN -->
+<!--             ,ANNL_YN AS ANNL_YN_NM -->
+<!--             ,HALFD_YN AS HALFD_YN_NM   -->
+<!--             ,CSLT_ID -->
+<!--             ,DEPT_CD -->
+<!--             ,DEPT_NM -->
+<!--             ,TM_KIND_NM -->
+<!--             ,AGENT_JIKCHK_NM -->
+<!--             ,AGENT_JIKGUP_NM -->
+<!--             ,AGENT_DAYNIGHT_GUBUN -->
+<!--             ,TEL_NO -->
+<!--             ,ENTER_YMD -->
+<!--             ,RETIRE_YMD -->
+<!--           FROM  -->
+<!--           ( -->
+<!-- 	   		 SELECT ROWNUM -->
+<!-- 	   		       ,A.AGENT_ID													/*상담사ID*/ -->
+<!-- 	               ,A.AGENT_NM -->
+<!-- 	               ,(SELECT D.ANNL_YN FROM PLT_PHN_OBD_DCLZ D WHERE A.AGENT_ID = D.CSLT_ID and D.BASE_DATE = #{BASE_DATE}  ) AS ANNL_YN -->
+<!-- 	               ,(SELECT D.HALFD_YN FROM PLT_PHN_OBD_DCLZ D WHERE A.AGENT_ID = D.CSLT_ID and D.BASE_DATE = #{BASE_DATE}  ) AS HALFD_YN -->
+<!-- 	               ,(SELECT D.CSLT_ID FROM PLT_PHN_OBD_DCLZ D WHERE A.AGENT_ID = D.CSLT_ID and D.BASE_DATE = #{BASE_DATE}  ) AS CSLT_ID -->
+<!-- 	               ,A.DEPT_CD                                                   -->
+<!-- 	               ,(SELECT B.DEPT_NM -->
+<!-- 	                   FROM ARGO.V_CM_DEPT_CD B  -->
+<!-- 	                WHERE A.DEPT_CD = B.DEPT_CD -->
+<!-- 	                  AND A.TENANT_ID =  B.TENANT_ID) AS DEPT_NM				/*부서명*/ -->
+<!-- 	               ,(SELECT B.CODE_NM -->
+<!-- 	                   FROM ARGO.V_CM_CODE B  -->
+<!-- 	                WHERE A.TM_KIND = B.CODE -->
+<!-- 	                  AND A.TENANT_ID =  B.TENANT_ID -->
+<!-- 	                  AND B.SORT_CD = 'NOTI_GUBUN') AS TM_KIND_NM				/*업무그룹명*/ -->
+<!-- 	               ,(SELECT B.CODE_NM -->
+<!-- 	                   FROM ARGO.V_CM_CODE B  -->
+<!-- 	                WHERE A.AGENT_JIKCHK = B.CODE -->
+<!-- 	                  AND A.TENANT_ID =  B.TENANT_ID -->
+<!-- 	                  AND B.SORT_CD = 'AGENT_JIKCHK') AS AGENT_JIKCHK_NM   		/*직책명*/ -->
+<!-- 	               ,(SELECT B.CODE_NM -->
+<!-- 	                   FROM ARGO.V_CM_CODE B  -->
+<!-- 	                  WHERE A.AGENT_JIKGUP = B.CODE -->
+<!-- 	                    AND A.TENANT_ID =  B.TENANT_ID -->
+<!-- 	                    AND B.SORT_CD = 'AGENT_JIKGUP') AS AGENT_JIKGUP_NM  	/*직급명*/       -->
+<!-- 	               ,A.DAYNIGHT_GUBUN AS AGENT_DAYNIGHT_GUBUN					/* 주야구분 */ -->
+<!-- 	               ,A.TEL_NO													/*전화번호*/ -->
+<!-- 	               ,A.ENTER_YMD		/*입사일자*/ -->
+<!-- 	               ,A.RETIRE_YMD	/*퇴사일자*/ -->
+<!-- 	           FROM VW_USER_MASTER A  -->
+<!-- 		      WHERE 1 = 1 -->
+<!-- 	     ]]> -->
+<!-- 			<if test="DEPT_CD2 != '' and DEPT_CD2 != null">  -->
+<!-- 					AND A.DEPT_CD = #{DEPT_CD2}  -->
+<!-- 			</if> -->
+			
+<!-- 		)	 -->
+<!-- 			ORDER BY AGENT_ID ASC -->
+<!-- 	</select> -->
+	
+		<!--  상담원근태 조회 -->
+	<select id="selectObndDilceList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+		/* selectObndDilceList 상담원근태 조회  */
+   		 SELECT
+            ROWNUM
+            ,AGENT_ID
+            ,AGENT_NM
+            ,DEPT_CD
+            ,DEPT_NM
+            ,CASE WHEN ANNL_YN = 'Y' THEN '11' ELSE '10' END AS ANNL_YN 
+             ,CASE WHEN HALFD_YN = 'Y' THEN '11' ELSE '10' END AS HALFD_YN 
+             ,ANNL_YN AS ANNL_YN_NM 
+             ,HALFD_YN AS HALFD_YN_NM  
+            ,TEL_NO
+            ,ENTER_YMD
+            ,RETIRE_YMD
+          FROM 
+          (
+	   		 SELECT ROWNUM
+	   		       ,A.USER_ID AS AGENT_ID 												/*상담사ID*/
+	               ,A.USER_NM AS AGENT_NM 	
+	               ,(SELECT D.ANNL_YN FROM PLT_PHN_OBD_DCLZ D WHERE A.USER_ID = D.CSLT_ID and D.BASE_DATE = #{BASE_DATE}) AS ANNL_YN
+	               ,(SELECT D.HALFD_YN FROM PLT_PHN_OBD_DCLZ D WHERE A.USER_ID = D.CSLT_ID and D.BASE_DATE = #{BASE_DATE}) AS HALFD_YN 
+	               ,(SELECT D.CSLT_ID FROM PLT_PHN_OBD_DCLZ D WHERE A.USER_ID = D.CSLT_ID and D.BASE_DATE = #{BASE_DATE}) AS CSLT_ID
+	               ,A.DEPT_CD                            
+	               ,(
+	               		SELECT B.ATTR_DIV_NM
+						FROM  PLT_USER_BLNG B, PLT_USER_ATTR C
+						WHERE C.USER_ID = A.USER_ID
+						AND C.CUSTCO_ID = B.CUSTCO_ID
+						AND C.USER_ATTR_B = B.ATTR_DIV_CD
+						AND B.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+						
+	               )  AS DEPT_NM		/*사용자그룹 (부서데이터)*/
+	               ,A.HP_NO	AS TEL_NO 												/*전화번호*/
+	               ,A.ENTCO_DT	AS ENTER_YMD 		/*입사일자*/
+	               ,A.RETR_DT	AS RETIRE_YMD 	/*퇴사일자*/
+	           FROM PLT_USER A 
+		      WHERE 1 = 1
+		      		AND CUSTCO_ID LIKE '%'||#{ASP_NEWCUST_KEY}||'%'
+	     			<if test="USER_ATTR_A !=''">AND A.USER_ATTR_A = #{USER_ATTR_A}</if>
+					<if test="USER_ATTR_B !=''">AND A.USER_ATTR_B = #{USER_ATTR_B}</if>
+					<if test="USER_ATTR_C !=''">AND A.USER_ATTR_C = #{USER_ATTR_C}</if>
+					<if test="USER_ATTR_D !=''">AND A.USER_ATTR_D = #{USER_ATTR_D}</if>
+		)	
+			ORDER BY AGENT_ID ASC
+	</select>
+	
+		<update id="mergeObndDilce"  parameterType= "java.util.HashMap">
+		<![CDATA[
+		/*  insertObndDilce 상담원근태 등록  */
+		MERGE INTO PLT_PHN_OBD_DCLZ S
+		USING DUAL
+		ON (
+			S.CSLT_ID = #{AGENT_ID}
+			AND S.BASE_DATE = REPLACE(REPLACE(#{BASE_DATE},'-'),'/')
+		)
+		WHEN MATCHED THEN
+			UPDATE SET 
+			 ANNL_YN = #{ANNL_YN}	
+			,HALFD_YN = #{HALFD_YN}	
+			,CHNG_DTIM = TO_CHAR(NOW(),'YYYY-MM-DD')	
+			,CHNG_MAN = #{CHNG_MAN}	
+			
+		WHEN NOT MATCHED THEN
+			INSERT 
+				 (
+				   	BASE_DATE
+				    ,CSLT_ID 
+				    ,ANNL_YN 
+				    ,HALFD_YN 
+				    ,REG_DTIM 
+				    ,REG_MAN 
+				    ,CHNG_DTIM 
+				    ,CHNG_MAN	
+				 )
+		    VALUES
+		         (
+		          	REPLACE(REPLACE(#{BASE_DATE},'-'),'/')
+				    ,#{AGENT_ID}
+				    ,#{ANNL_YN}
+				    ,#{HALFD_YN}
+				    ,TO_CHAR(NOW(),'YYYY-MM-DD')
+				    ,#{REG_MAN}
+				    ,TO_CHAR(NOW(),'YYYY-MM-DD')
+				    ,#{REG_MAN}
+				 )
+		]]>
+	</update>
+<!-- 	<update id="mergeObndDilce"  parameterType= "java.util.HashMap"> -->
+<!-- 		<![CDATA[ -->
+<!-- 		/*  insertObndDilce 상담원근태 등록  */ -->
+<!-- 		MERGE INTO PLT_PHN_OBD_DCLZ S -->
+<!-- 		USING DUAL -->
+<!-- 		ON ( -->
+<!-- 			S.CSLT_ID = #{AGENT_ID} -->
+<!-- 			AND S.BASE_DATE = REPLACE(REPLACE(#{BASE_DATE},'-'),'/') -->
+<!-- 		) -->
+<!-- 		WHEN MATCHED THEN -->
+<!-- 			UPDATE SET  -->
+<!-- 			 ANNL_YN = #{ANNL_YN}	 -->
+<!-- 			,HALFD_YN = #{HALFD_YN}	 -->
+<!-- 			,CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	 -->
+<!-- 			,CHNG_MAN = #{CHNG_MAN}	 -->
+			
+<!-- 		WHEN NOT MATCHED THEN -->
+<!-- 			INSERT  -->
+<!-- 				 ( -->
+<!-- 				   	BASE_DATE -->
+<!-- 				    ,CSLT_ID  -->
+<!-- 				    ,ANNL_YN  -->
+<!-- 				    ,HALFD_YN  -->
+<!-- 				    ,REG_DTIM  -->
+<!-- 				    ,REG_MAN  -->
+<!-- 				    ,CHNG_DTIM  -->
+<!-- 				    ,CHNG_MAN	 -->
+<!-- 				 ) -->
+<!-- 		    VALUES -->
+<!-- 		         ( -->
+<!-- 		          	REPLACE(REPLACE(#{BASE_DATE},'-'),'/') -->
+<!-- 				    ,#{AGENT_ID} -->
+<!-- 				    ,#{ANNL_YN} -->
+<!-- 				    ,#{HALFD_YN} -->
+<!-- 				    ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS') -->
+<!-- 				    ,#{REG_MAN} -->
+<!-- 				    ,TO_CHAR(NOW(),'YYYYMMDDHH24MISS') -->
+<!-- 				    ,#{REG_MAN} -->
+<!-- 				 ) -->
+<!-- 		]]> -->
+<!-- 	</update> -->
+	
+	
+	
+</mapper>

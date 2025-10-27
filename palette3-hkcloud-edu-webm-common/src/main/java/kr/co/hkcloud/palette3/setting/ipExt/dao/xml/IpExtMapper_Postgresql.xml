@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper">
+
+	<select id="ipExtList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*IP 내선번호 관리 목록 (kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper.ipExtList)*/
+			ROW_NUMBER() OVER() AS ROW_NUMBER
+			, PU.USER_ID
+			, PU.LGN_ID
+			, PU.USER_NM
+			, PU.CNTN_IP
+			, PU.USER_STTS_CD
+			, PCC.CD_NM AS USER_STTS_NM
+			, PUO.CUSTCO_ID
+			, PUO.DEPT_ID
+			, PHIE.PHN_IP_EXT_ID
+			, PHIE.IP
+			, PHIE.EXT_NO
+			, PHIE.PDS_EXT_NO
+			, PHIE.RMRK
+			, PHIE.REG_DT
+			, PHIE.RGTR_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PHIE.RGTR_ID) AS RGTR_NM
+		FROM PLT_USER PU
+		LEFT OUTER JOIN PLT_USER_OGNZ PUO ON PUO.USER_ID = PU.USER_ID AND PUO.USE_YN = 'Y' AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		LEFT OUTER JOIN PLT_PHN_IP_EXT PHIE ON PHIE.USER_ID = PUO.USER_ID AND PHIE.CUSTCO_ID = PUO.CUSTCO_ID AND PHIE.DEPT_ID = PUO.DEPT_ID
+		LEFT OUTER JOIN PLT_COMM_CD PCC ON PCC.CUSTCO_ID = #{CUSTCO_ID}::INT AND PCC.CD_ID = PU.USER_STTS_CD AND PCC.GROUP_CD_ID = 'USER_ST'
+		WHERE PU.USER_STTS_CD = 'WORK' --사용자 상태가 재직인 상담사만 조회
+		<if test="AUTHRT_GROUP_ID !=null and AUTHRT_GROUP_ID != ''">
+		AND EXISTS (SELECT 1 FROM PLT_USER_AUTHRT WHERE USER_ID = PU.USER_ID AND AUTHRT_GROUP_ID = #{AUTHRT_GROUP_ID}::INT) --권한 조회
+		</if>
+		<if test="CUSTCO_ID !=null and CUSTCO_ID != ''">AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER</if>
+		<if test="IP !=null and IP != ''"> AND PHIE.IP LIKE '%' || #{IP} || '%' </if>
+		<if test="EXT_NO !=null and EXT_NO != ''"> AND PHIE.EXT_NO LIKE '%' || #{EXT_NO} || '%' </if>
+		<if test="PDS_EXT_NO !=null and PDS_EXT_NO != ''"> AND PHIE.PDS_EXT_NO LIKE '%' || #{PDS_EXT_NO} || '%' </if>
+		<if test="SCH_KEYWORD !=null and SCH_KEYWORD != ''">
+			<if test="SCH_TARGET !=null and SCH_TARGET != ''">
+				<choose>
+					<when test='SCH_TARGET == "LGN_ID"'>
+					AND PU.LGN_ID LIKE '%' || #{SCH_KEYWORD} || '%'
+					</when>
+					<when test='SCH_TARGET == "USER_NM"'>
+					AND PU.USER_NM LIKE '%' || #{SCH_KEYWORD} || '%'
+					</when>
+					<otherwise>
+					AND (PU.LGN_ID LIKE '%' || #{SCH_KEYWORD} || '%' OR PU.USER_NM LIKE '%' || #{SCH_KEYWORD} || '%')
+					</otherwise>
+				</choose>
+			</if>
+		</if>
+		<choose>
+			<when test='USER_ID == 1'></when>
+			<when test='USER_ID == 3'>AND PU.USER_ID > 2 AND PU.USER_ID NOT IN (4)</when>
+			<when test='USER_ID > 4'>AND PU.USER_ID NOT IN (0, 1, 2, 3, 4)</when>
+		</choose>	
+	</select>
+
+	<select id="extNoDuplCheck"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*내선번호 중복 체크 (kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper.extNoDuplCheck)*/
+		(SELECT COUNT(PHN_IP_EXT_ID) FROM PLT_PHN_IP_EXT PPIE WHERE PPIE.CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND EXT_NO = #{EXT_NO} AND USER_ID != #{CUSL_ID}::INTEGER) AS EXT_NO_CNT
+		, (SELECT COUNT(PHN_IP_EXT_ID) FROM PLT_PHN_IP_EXT PPIE WHERE PPIE.CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND PDS_EXT_NO = #{PDS_EXT_NO} AND USER_ID != #{CUSL_ID}::INTEGER) AS PDS_EXT_NO_CNT
+	</select>
+		
+	<insert id="INSERT_IP_EXT"  parameterType= "java.util.HashMap">
+	INSERT /*IP 내선번호 관리 등록 (kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper.INSERT_IP_EXT)*/
+	INTO PLT_PHN_IP_EXT ( PHN_IP_EXT_ID
+	       	, CUSTCO_ID
+	       	, DEPT_ID
+	       	, USER_ID
+	       	, IP
+	       	, EXT_NO
+	       	<if test="PDS_EXT_NO != NULL and PDS_EXT_NO != ''">, PDS_EXT_NO</if>
+	       	, RMRK
+	       	, RGTR_ID
+	       	, REG_DT
+	       ) 
+	VALUES ( #{PHN_IP_EXT_ID}
+	       , #{CUSTCO_ID}::INTEGER
+	       , #{DEPT_ID}::INTEGER
+	       , #{CUSL_ID}::INTEGER
+	       , #{IP}
+	       , #{EXT_NO}::INTEGER
+		   <if test="PDS_EXT_NO != NULL and PDS_EXT_NO != ''">, #{PDS_EXT_NO}::INTEGER</if>
+	       , #{RMRK}
+	       , #{USER_ID}::INTEGER
+	       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	       )
+	</insert>
+		
+	<update id="UPDATE_IP_EXT"  parameterType= "java.util.HashMap">
+		UPDATE PLT_PHN_IP_EXT /*IP 내선번호 관리 수정 (kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper.UPDATE_IP_EXT)*/
+		   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		   		, MDFR_ID = #{USER_ID}::INTEGER
+				, IP = #{IP}
+				, EXT_NO = #{EXT_NO}::INTEGER
+				<if test="PDS_EXT_NO !=null and PDS_EXT_NO != ''"> , PDS_EXT_NO = #{PDS_EXT_NO}::INTEGER</if>
+				, RMRK = #{RMRK}
+		WHERE PHN_IP_EXT_ID = #{PHN_IP_EXT_ID}::INTEGER
+	</update>		
+	
+	<delete id="DELETE_IP_EXT"  parameterType="java.util.HashMap">
+		DELETE FROM PLT_PHN_IP_EXT /*IP 내선번호 관리 삭제 (kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper.DELETE_IP_EXT)*/
+		WHERE PHN_IP_EXT_ID IN 
+		<foreach collection="arrPhnIpExtId" item="PHN_IP_EXT_ID" open="(" separator="," close=")" >
+			#{PHN_IP_EXT_ID}::INTEGER
+		</foreach>
+	</delete>
+	
+	<delete id="DELETE_IP_EXP_USER" parameterType="java.util.HashMap">
+		/* 사용자 상태 변경 시 IP 내선번호 삭제 (kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper.DELETE_IP_EXT_USER) 2023.06.19 NJY */
+		DELETE FROM PLT_PHN_IP_EXT /* DELETE_IP_EXP_USER - 내선번호 정보 삭제 */
+		WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND USER_ID = #{REG_USER_ID}::INTEGER
+	</delete>
+	
+	<select id="extNotEmptyCuslList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*내선번호가 있는 사용자 목록 (kr.co.hkcloud.palette3.setting.ipExt.dao.IpExtMapper.extNotEmptyCuslList)*/
+			PPIE.USER_ID AS CUSL_ID
+			, PPIE.EXT_NO
+			, (SELECT CO_NM FROM PLT_CUSTCO WHERE CUSTCO_ID = PPIE.CUSTCO_ID) AS CO_NM
+			, PU.USER_NM
+			, PU.LGN_ID
+			, PU.ICON
+			, (SELECT array_to_string(array_agg( FILE_PATH || '/' || STRG_FILE_NM ), '') FROM PLT_FILE WHERE FILE_GROUP_KEY = PU.ICON) as ICON_IMG_URI
+			, PUA.AUTHRT_GROUP_ID
+			, (SELECT AUTHRT_GROUP_NM FROM PLT_AUTHRT WHERE AUTHRT_GROUP_ID = PUA.AUTHRT_GROUP_ID) AS AUTHRT_GROUP_NM
+		FROM PLT_PHN_IP_EXT PPIE
+		INNER JOIN PLT_USER PU ON PU.USER_ID = PPIE.USER_ID AND PU.USER_STTS_CD = 'WORK'--사용자 상태가 재직인 상담사만 조회
+		INNER JOIN PLT_USER_AUTHRT PUA ON PUA.USER_ID = PU.USER_ID
+		WHERE PPIE.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<if test='SCH_KEY != null and SCH_KEY != ""'>
+			<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+				<choose>
+					<when test='SCH_KEY == "EXT_NO"'>AND PPIE.EXT_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+					<when test='SCH_KEY == "CUSL_NM"'>AND PU.USER_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+					<when test='SCH_KEY == "CUSL_ID"'>AND PU.LGN_ID LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+				</choose>
+			</if>
+		</if>
+		<if test='STTS_EXPSR_MTHD_CD != null and STTS_EXPSR_MTHD_CD != ""'>
+			AND (PU.STTS_EXPSR_MTHD_CD IS NULL OR PU.STTS_EXPSR_MTHD_CD = '' OR PU.STTS_EXPSR_MTHD_CD = #{STTS_EXPSR_MTHD_CD})
+		</if>
+	</select>
+</mapper>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.statistics.phone.dao.StatisticsPhoneCallbackMapper">
+
+	<!--
+	<resultMap id="resDcrMap" type="java.util.HashMap" >
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+		<result property="INGNO" column="INGNO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+		<result property="CLBK_TEL_NO" column="CLBK_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="SEND_MAN_NO" column="SEND_MAN_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+	</resultMap>
+	-->
+
+	<select id="selectClbkSttcList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectClbkSttcList */
+		
+			SELECT
+				      T1.CLBK_NO   																					 /* 콜백번호 */
+				     , T1.IN_DATE                                         												 /* 접수일자 */
+				     , T1.IN_TIME                                       												 /* 접수시간  */
+				     , SUBSTR(T2.CHNG_DTIM, 0, 8) AS UPDATE_DATE  														 /* 처리일  */
+				     , SUBSTR(T2.CHNG_DTIM, 9, 6) AS UPDATE_TIME   														 /* 처리시간  */			     
+				     , T1.CUST_NO																						/* 주민번호 */				    
+				     , T1.INGNO       																					/* 인가번호  */                    
+                     -- , SUBSTR( T1.CUST_NO, 0, 6 ) AS  CUST_NO 														/* 주민번호 암호화 DECRYPT 필요성 */                   
+                     -- , SUBSTR( T1.INGNO, 0, 10 )  AS   INGNO 														/* 인가번호 암호화 DECRYPT 필요성  */
+				     , T1.CLBK_TEL_NO                                         											 /* 연락처   */
+				     , T2.EOT_TY                                        	 											      /* 처리구분  */				     
+				     , ( SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'OU003' AND CD = T2.EOT_TY )  AS  EOT_TY_NM  /* 처리구분명 */
+				     , T2.TRY_CNT                                        												 /* 시도횟수  */
+				     , ( SELECT USER_NM FROM PLT_USER WHERE  USER_ID = T2.DSTR_CSLT_ID) AS   AGENT_NM     		 /*  상담원  */
+				     , T1.DSTR_YN
+				     , T1.DSTR_DATE
+				     , T1.DSTR_TIME
+				     , T2.DSTR_CSLT_ID
+				     , T1.SEND_MAN_NO
+				     , T1.CUST_NM
+				  FROM PLT_PHN_CLBK     T1
+				      LEFT OUTER JOIN PLT_PHN_CLBK_DST T2  ON T1.CLBK_NO      =    T2.CLBK_NO						
+	                    WHERE  T1.IN_DATE    BETWEEN #{DATE_FROM} AND #{DATE_TO}	
+	                    AND T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}		
+						<if test="EOT_TY != null and EOT_TY != ''">
+		                   AND T2.EOT_TY           =       #{EOT_TY}
+		                </if>		                
+		                ORDER BY   T1.IN_DATE, T1.IN_TIME   DESC		                
+	</select>
+		
+</mapper>

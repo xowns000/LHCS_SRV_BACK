@@ -1,0 +1,518 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.lm.dao.PhoneLmManageMapper">
+
+	<select id="selectRtnLmEva" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT R.*
+			, ROWNUM AS NUM
+		FROM (
+			SELECT LM_EVA_ID
+				, LM_EVA_TY
+				, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT018' AND CD = A.LM_EVA_TY) AS LM_EVA_TY_NM
+				, LM_EVA_NM
+				, LM_EVA_RM_YN
+				, LM_EVA_SC
+				, COALESCE((
+		        	SELECT SUM(LM_QS_TY_SC)
+		        	FROM PLT_LM_EVA_RST B, PLT_LM_QS C
+		        	WHERE B.LM_QS_ID = C.LM_QS_ID
+		        	AND B.CUSTCO_ID = C.CUSTCO_ID
+		        	AND B.CUSTCO_ID = A.CUSTCO_ID
+		        	AND B.LM_EVA_ID = A.LM_EVA_ID
+		        ), 0) AS LM_EVA_SUM
+				, LM_EVA_COMM
+				, (SELECT COUNT(1) FROM PLT_LM_EVA_RST WHERE LM_EVA_ID = A.LM_EVA_ID) AS LM_RST_COUNT
+				, (SELECT COUNT(1) FROM PLT_LM WHERE LM_EVA_ID = A.LM_EVA_ID) AS USE_COUNT
+			FROM PLT_LM_EVA A
+			WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			<if test='LM_EVA_TY != null and LM_EVA_TY != ""'>
+				AND A.LM_EVA_TY = #{LM_EVA_TY}
+			</if>
+			<if test='LM_EVA_NM != null and LM_EVA_NM != ""'>
+				AND A.LM_EVA_NM LIKE '%' || #{LM_EVA_NM} || '%'
+			</if>
+			<choose>
+				<when test='LM_EVA_YN == "Y"'>
+					AND EXISTS (
+						SELECT LM_EVA_ID
+						FROM PLT_LM
+						WHERE LM_EVA_ID = A.LM_EVA_ID
+					)
+				</when>
+				<when test='LM_EVA_YN == "N"'>
+					AND NOT EXISTS (
+						SELECT LM_EVA_ID
+						FROM PLT_LM
+						WHERE LM_EVA_ID = A.LM_EVA_ID
+					)
+				</when>
+			</choose>
+			<if test='LM_EVA_ID != null and LM_EVA_ID != ""'>
+				AND A.LM_EVA_ID = #{LM_EVA_ID}
+			</if>
+			ORDER BY LM_EVA_ID DESC, LM_EVA_TY, LM_EVA_NM
+		) R
+	</select>
+	
+	<!-- LM평가 평가표 등록-->
+	<insert id="insertRtnLmEva" parameterType="java.util.HashMap">
+	    INSERT INTO PLT_LM_EVA(
+	        CUSTCO_ID
+	        , LM_EVA_ID
+	        , LM_EVA_TY
+	        , LM_EVA_NM
+	        , LM_EVA_RM_YN
+	        , LM_EVA_COMM
+	        , REG_DTTM
+	        , REG_ID
+	        , CHNG_DTTM
+	        , CHNG_ID
+	    ) VALUES (
+	        #{ASP_NEWCUST_KEY}
+	        , #{LM_EVA_ID}
+	        , #{LM_EVA_TY}
+	        , #{LM_EVA_NM}
+	        , #{LM_EVA_RM_YN}
+	        , #{LM_EVA_COMM}
+	        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	    )
+	</insert>
+	<!-- LM평가 평가표 복사-->
+	<insert id="insertRtnCopyLmEva" parameterType="java.util.HashMap">
+	    INSERT INTO PLT_LM_EVA(
+	        CUSTCO_ID
+	        , LM_EVA_ID
+	        , LM_EVA_TY
+	        , LM_EVA_NM
+	        , LM_EVA_RM_YN
+	        , LM_EVA_COMM
+	        , REG_DTTM
+	        , REG_ID
+	        , CHNG_DTTM
+	        , CHNG_ID
+	    ) 
+	    SELECT 
+	        CUSTCO_ID
+	        , #{NEW_LM_EVA_ID}
+	        , LM_EVA_TY
+	        , LM_EVA_NM || '_복사'
+	        , LM_EVA_RM_YN
+	        , LM_EVA_COMM
+	        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	    FROM PLT_LM_EVA
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_EVA_ID = #{LM_EVA_ID}
+	</insert>
+	<!-- LM평가 평가표 수정-->
+	<update id="updateRtnLmEva" parameterType="java.util.HashMap">
+	    UPDATE PLT_LM_EVA
+	    SET LM_EVA_TY = #{LM_EVA_TY}
+	        , LM_EVA_NM = #{LM_EVA_NM}
+	        , LM_EVA_RM_YN = #{LM_EVA_RM_YN}
+	        , LM_EVA_COMM = #{LM_EVA_COMM}
+	        , CHNG_DTTM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , CHNG_ID = #{REG_ID}
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_EVA_ID = #{LM_EVA_ID}
+	</update>
+	
+	<!-- LM평가 평가표 삭제 -->
+	<delete id="deleteRtnLmEva" parameterType="java.util.HashMap">
+	    DELETE 
+	    FROM PLT_LM_EVA
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_EVA_ID = #{LM_EVA_ID}
+	</delete>
+	
+	<!-- LM평가 평가문항 조회-->
+	<select id="selectRtnLmQs" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	    SELECT AA.*
+	    FROM(
+		    SELECT
+		        A.LM_QS_ID
+		        , A.LM_QS_NM
+		        , A.LM_QS_TY
+		        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT019' AND CD = A.LM_QS_TY) AS LM_QS_TY_NM
+		        , A.LM_QS_DIC
+		        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT020' AND CD = A.LM_QS_DIC) AS LM_QS_DIC_NM
+		        , A.LM_QS_TY_SC
+		        , A.LM_QS_ANS_COMM
+		        <!-- , COALESCE(A.LM_QS_WT_CNT, 0) AS LM_QS_WT_CNT -->
+		        , (SELECT COUNT(1) FROM PLT_LM AA, PLT_LM_EVA_RST BB WHERE AA.LM_EVA_ID = BB.LM_EVA_ID AND BB.LM_QS_ID = A.LM_QS_ID) AS LM_QS_WT_CNT
+		        , COALESCE(TO_CHAR(TO_DATE((SELECT MAX(AA.LM_ST_DTTM) FROM PLT_LM AA, PLT_LM_EVA_RST BB WHERE AA.LM_EVA_ID = BB.LM_EVA_ID AND BB.LM_QS_ID = A.LM_QS_ID),'YYYYMMDDHH24MISS'),'YYYY-MM-DD'),'-') AS LM_QS_WT_DTTM
+				<!-- , COALESCE(TO_CHAR(TO_DATE(A.LM_QS_WT_DTTM,'YYYYMMDDHH24MISS'),'YYYY-MM-DD'),'-') AS LM_QS_WT_DTTM -->
+		        , (SELECT COUNT(1) FROM PLT_LM_EVA_RST WHERE CUSTCO_ID = A.CUSTCO_ID AND LM_QS_ID = A.LM_QS_ID) AS USE_COUNT
+		        , (SELECT COUNT(1) FROM PLT_LM_VE WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND LM_QS_ID = A.LM_QS_ID) AS LM_VE_COUNT
+		    FROM PLT_LM_QS A
+		    WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		    <if test='LM_QS_TY != null and LM_QS_TY != ""'>
+		        AND A.LM_QS_TY = #{LM_QS_TY}
+		    </if>
+		    <if test='LM_QS_ID != null and LM_QS_ID != ""'>
+		        AND A.LM_QS_ID = #{LM_QS_ID}
+		    </if>
+		    <if test='LM_QS_NM != null and LM_QS_NM != ""'>
+		    	AND A.LM_QS_NM LIKE '%' || #{LM_QS_NM} || '%'
+		    </if>
+		    <if test='LM_QS_DIC != null and LM_QS_DIC != ""'>
+		    	AND A.LM_QS_DIC = #{LM_QS_DIC}
+		    </if>
+		    ORDER BY A.LM_QS_ID DESC, A.LM_QS_TY, A.LM_QS_DIC
+	    ) AA
+	    WHERE 1=1
+	    <choose>
+	    	<when test='LM_QS_YN == "Y"'>
+	    		<![CDATA[
+	    			AND AA.USE_COUNT > 0
+	    		]]>
+	    	</when>
+	    	<when test='LM_QS_YN == "N"'>
+	    		AND AA.USE_COUNT = 0
+	    	</when>
+	    </choose>
+	</select>
+	
+	<!-- LM평가 평가문항 등록-->
+	<insert id="insertRtnLmQs" parameterType="java.util.HashMap">
+	    MERGE INTO PLT_Lm_QS
+	        USING DUAL
+	        ON (
+	            CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	            AND LM_QS_ID = #{LM_QS_ID}
+	        )
+	        WHEN MATCHED THEN
+	            UPDATE SET
+	            LM_QS_NM = #{LM_QS_NM}
+	            , LM_QS_TY = #{LM_QS_TY}
+	            , LM_QS_TY_SC = #{LM_QS_TY_SC}
+	            , LM_QS_DIC = #{LM_QS_DIC}
+	            , LM_QS_ANS_COMM = #{LM_QS_ANS_COMM}
+	            , CHNG_DTTM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	            , CHNG_ID = #{REG_ID}
+	        WHEN NOT MATCHED THEN 
+	            INSERT (
+	                CUSTCO_ID
+					, LM_QS_ID
+					, LM_QS_NM
+					, LM_QS_TY
+					, LM_QS_DIC
+					, LM_QS_TY_SC
+					, LM_QS_ANS_COMM
+					, REG_DTTM
+					, REG_ID
+					, CHNG_DTTM
+					, CHNG_ID
+	            ) VALUES (
+	                #{ASP_NEWCUST_KEY}
+	                , #{LM_QS_ID}   
+					, #{LM_QS_NM}  
+					, #{LM_QS_TY}   
+					, #{LM_QS_DIC}  
+					, #{LM_QS_TY_SC}
+					, #{LM_QS_ANS_COMM}	                
+	                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	                , #{REG_ID}
+	                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	                , #{REG_ID}
+	            )
+	</insert>
+	
+	<!-- LM평가 평가문항 복사 -->
+	<insert id="insertRtnCopyLmQs" parameterType="java.util.HashMap">
+	    INSERT INTO PLT_LM_QS(
+	        CUSTCO_ID
+			, LM_QS_ID
+			, LM_QS_NM
+			, LM_QS_TY
+			, LM_QS_DIC
+			, LM_QS_TY_SC
+			, LM_QS_ANS_COMM
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+	    ) SELECT 
+	        CUSTCO_ID
+	        , #{NEW_LM_QS_ID}
+	        , LM_QS_NM || '_복사'
+	        , LM_QS_TY
+	        , LM_QS_DIC
+	        , LM_QS_TY_SC
+	        , LM_QS_ANS_COMM
+	        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	    FROM PLT_LM_QS
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_QS_ID = #{LM_QS_ID}
+	</insert>
+	
+	<!-- LM평가 평가문항 삭제-->
+	<delete id="deleteRtnLmQs" parameterType="java.util.HashMap">
+	    DELETE
+	    FROM PLT_LM_QS
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_QS_ID = #{LM_QS_ID}
+	</delete>
+	
+	<!-- LM평가 평가문항 보기 조회-->
+	<select id="selectRtnLmVe" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	    SELECT 
+	        A.LM_QS_ID
+			, A.LM_QS_VE_ID
+			, A.LM_QS_VE_RT
+			, A.LM_QS_VE_OD
+			, DECODE(B.LM_QS_VE_ID, NULL, 'N', 'Y') AS LM_ANS_YN
+	    FROM PLT_LM_VE A
+	    LEFT OUTER JOIN PLT_LM_QS_ANS B ON A.CUSTCO_ID = B.CUSTCO_ID AND A.LM_QS_ID = B.LM_QS_ID AND A.LM_QS_VE_ID = B.LM_QS_VE_ID
+	    WHERE A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND A.LM_QS_ID = #{LM_QS_ID}
+	    ORDER BY A.LM_QS_VE_ID
+	</select>
+	
+	<!-- LM평가 평가문항 보기 등록-->
+	<insert id="insertRtnLmVe" parameterType="java.util.HashMap">
+	    MERGE INTO PLT_LM_VE
+			USING DUAL
+			ON (
+				LM_QS_ID = #{LM_QS_ID}
+				AND LM_QS_VE_ID = #{LM_QS_VE_ID}
+	            AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			)
+			WHEN MATCHED THEN
+	            UPDATE SET
+	            LM_QS_VE_RT = #{LM_QS_VE_RT}
+	            , CHNG_DTTM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	            , CHNG_ID = #{REG_ID}
+	        WHEN NOT MATCHED THEN
+	            INSERT (
+	                CUSTCO_ID
+	                , LM_QS_ID
+	                , LM_QS_VE_ID
+	                , LM_QS_VE_RT
+	                , LM_QS_VE_OD
+	                , REG_DTTM
+	                , REG_ID
+	                , CHNG_DTTM
+	                , CHNG_ID
+	            ) VALUES (
+	                #{ASP_NEWCUST_KEY}
+	                , #{LM_QS_ID}
+	                , #{LM_QS_VE_ID}
+	                , #{LM_QS_VE_RT}
+	                , #{LM_QS_VE_OD}
+	                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	                , #{REG_ID}
+	                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	                , #{REG_ID}
+	            )
+	</insert>
+	
+	<!-- LM평가 평가문항 보기 복사-->
+	<insert id="insertRtnCopyLmVe" parameterType="java.util.HashMap">
+	    INSERT INTO PLT_LM_VE(
+	       CUSTCO_ID
+	        , LM_QS_ID
+	        , LM_QS_VE_ID
+	        , LM_QS_VE_RT
+	        , LM_QS_VE_OD
+	        , REG_DTTM
+	        , REG_ID
+	        , CHNG_DTTM
+	        , CHNG_ID 
+	    ) 
+	    SELECT
+	         CUSTCO_ID
+	        , #{NEW_LM_QS_ID}
+	        , #{NEW_LM_QS_VE_ID}
+	        , LM_QS_VE_RT
+	        , LM_QS_VE_OD
+	        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	    FROM PLT_LM_VE
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_QS_ID = #{LM_QS_ID}
+	    AND LM_QS_VE_ID = #{LM_QS_VE_ID}
+	</insert>
+	
+	<!-- LM평가 평가문항 보기 삭제-->
+	<delete id="deleteRtnLmVe" parameterType="java.util.HashMap">
+	    DELETE 
+	    FROM PLT_LM_VE
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_QS_ID = #{LM_QS_ID}
+	    <if test='LM_QS_VE_ID != null and LM_QS_VE_ID != ""'>
+	        AND LM_QS_VE_ID = #{LM_QS_VE_ID}
+	    </if>
+	</delete>
+	
+	<!-- LM평가 문항 정답 저장 -->
+	<insert id="insertRtnLmQsAns" parameterType="java.util.HashMap">
+		MERGE INTO PLT_LM_QS_ANS
+		USING DUAL 
+		ON(
+			CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			AND LM_QS_ID = #{LM_QS_ID}
+			AND LM_QS_VE_ID = #{LM_QS_VE_ID}
+		)
+		WHEN NOT MATCHED THEN
+		INSERT (
+			CUSTCO_ID
+			, LM_QS_ID
+			, LM_QS_VE_ID
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+		) VALUES (
+			#{ASP_NEWCUST_KEY}
+			, #{LM_QS_ID}
+			, #{LM_QS_VE_ID}
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+		)
+	</insert>
+	
+	<!-- LM평가 문항 정답 삭제 -->
+	<delete id="deleteRtnLmQsAns" parameterType="java.util.HashMap">
+		DELETE
+		FROM PLT_LM_QS_ANS
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND LM_QS_ID = #{LM_QS_ID}
+		<if test='LM_QS_VE_ID != null and LM_QS_VE_ID != ""'>
+			AND LM_QS_VE_ID = #{LM_QS_VE_ID}
+		</if>
+	</delete>
+	
+	<!-- LM평가 시험상세 조회 -->
+	<select id="selectRtnLmEvaRst" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		
+			SELECT RST.LM_QS_ID
+				, QS.LM_QS_TY
+				, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT019' AND CD = QS.LM_QS_TY) AS LM_QS_TY_NM
+				, QS.LM_QS_NM
+				, QS.LM_QS_DIC
+				, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT020' AND CD = QS.LM_QS_DIC) AS LM_QS_DIC_NM
+				, QS.LM_QS_TY_SC
+				
+				, RST.LM_EVA_RST_OD
+			FROM PLT_LM_EVA_RST RST, PLT_LM_EVA EVA, PLT_LM_QS QS
+			WHERE RST.LM_EVA_ID = EVA.LM_EVA_ID
+			AND RST.LM_QS_ID = QS.LM_QS_ID
+			AND RST.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+			AND RST.LM_EVA_ID = #{LM_EVA_ID}
+			ORDER BY CAST(RST.LM_EVA_RST_OD AS INTEGER)
+		
+	</select>
+	
+	<!-- LM평가 시험지상세 등록 -->
+	<insert id="insertRtnLmEvaRst" parameterType="java.util.HashMap">
+		INSERT INTO PLT_LM_EVA_RST(
+			CUSTCO_ID
+			, LM_EVA_ID
+			, LM_QS_ID
+			, LM_EVA_RST_OD
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+		) VALUES (
+			#{ASP_NEWCUST_KEY}
+			, #{LM_EVA_ID}
+			, #{LM_QS_ID}
+			, #{LM_EVA_RST_OD}
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID} 
+		)
+	</insert>
+	
+	<!-- LM평가 시험지상세 복사 -->
+	<insert id="insertRtnCopyLmEvaRst" parameterType="java.util.HashMap">
+		INSERT INTO PLT_LM_EVA_RST (
+			CUSTCO_ID
+			, LM_EVA_ID
+			, LM_QS_ID
+			, LM_EVA_RST_OD
+			, REG_DTTM
+			, REG_ID
+			, CHNG_DTTM
+			, CHNG_ID
+		)
+		SELECT
+			CUSTCO_ID
+			, #{NEW_LM_EVA_ID}
+			, LM_QS_ID
+			, LM_EVA_RST_OD
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	        , #{REG_ID}
+	    FROM PLT_LM_EVA_RST
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    AND LM_EVA_ID = #{LM_EVA_ID}
+	</insert>
+	
+	<!-- LM평가 시험지상세 삭제 -->
+	<delete id="deleteRtnLmEvaRst" parameterType="java.util.HashMap">
+		DELETE
+		FROM PLT_LM_EVA_RST
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND LM_EVA_ID = #{LM_EVA_ID}
+	</delete>
+	
+	<select id="selectRtnLmPreView" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	
+			SELECT
+				QS.LM_QS_TY
+				, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT019' AND CD = QS.LM_QS_TY) AS LM_QS_TY_NM
+				, QS.LM_QS_DIC
+				, (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT020' AND CD = QS.LM_QS_DIC) AS LM_QS_DIC_NM
+				, QS.LM_QS_NM
+				, QS.LM_QS_TY_SC
+				, EVA.LM_EVA_RM_YN
+				, VE.LM_QS_VE_RT
+				, VE.LM_QS_VE_OD
+				, QS.LM_QS_ID
+			FROM PLT_LM_EVA_RST RST
+			JOIN PLT_LM_QS QS ON RST.LM_QS_ID = QS.LM_QS_ID
+			JOIN PLT_LM_VE VE ON QS.LM_QS_ID = VE.LM_QS_ID
+			JOIN PLT_LM_EVA EVA ON RST.LM_EVA_ID = EVA.LM_EVA_ID
+			LEFT OUTER JOIN PLT_LM_QS_ANS ANS ON VE.LM_QS_ID = ANS.LM_QS_ID AND VE.LM_QS_VE_ID = ANS.LM_QS_VE_ID 
+			WHERE RST.LM_EVA_ID = #{LM_EVA_ID}		
+		 	ORDER BY CAST(RST.LM_EVA_RST_OD AS INTEGER), VE.LM_QS_VE_ID
+	</select>
+	
+	<!-- QA미리보기 문항 보기 조회 -->
+	<select id="selectRtnLmVePreView" parameterType="java.util.HashMap" resultType="java.util.HashMap"> 
+		SELECT
+	        QS.LM_QS_ID 
+	        , QS.LM_QS_NM
+	        , QS.LM_QS_TY
+	        , QS.LM_QS_TY_SC
+	        , VE.LM_QS_VE_RT
+	        , VE.LM_QS_VE_OD
+	        , (SELECT LM_EVA_RM_YN FROM PLT_LM_EVA WHERE LM_EVA_ID = #{LM_EVA_ID}) AS LM_EVA_RM_YN
+	    FROM PLT_LM_QS QS, PLT_LM_VE VE
+	    WHERE QS.LM_QS_ID = VE.LM_QS_ID
+	    AND QS.LM_QS_ID IN
+	    <foreach collection="lmQsIdList" open="(" close=")" separator="," item="item">
+	    	#{item}
+	    </foreach>
+	</select>
+	
+
+</mapper>

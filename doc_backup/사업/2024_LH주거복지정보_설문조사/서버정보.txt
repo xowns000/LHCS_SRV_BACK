@@ -1,0 +1,159 @@
+https://survey.lhcs.or.kr/
+hkc#lhcs
+hkc#lhcs2!@
+
+!!!산출물\LH2024_IMP_02(운영자매뉴얼_V1.0)_20240513.hwp 참조!!!
+
+외부IP : 1.237.4.126
+내부IP: 202.106.3.126
+subnetmask : 255.255.0.0
+gateway : 1.237.4.1
+dns : 8.8.8.8
+
+
+root 계정
+root/mos123!@#
+
+서비스 배포 계정
+kpp/mos123!@#
+
+
+#OS
+Red Hat Enterprise Linux release 8.7 (Ootpa)
+
+
+#java-1.8.0-openjdk 설치
+ - yum install java-1.8.0-openjdk
+ - /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.402.b06-2.el8.x86_64
+
+
+#nodejs
+ - sudo yum install -y nodejs
+
+
+
+#redis-4.0.14
+port : 61372
+conf : /etc/redis/6379.conf
+data dir : /var/lib/redis/6379
+restart : /etc/init.d/redis_6379 restart
+
+
+
+#PostgreSQL 13.10(PostgreSQL 13 - RHEL 8.4 이후 사용 가능, PostgreSQL 15 - RHEL 8.8 이후 사용 가능)
+yum module install postgresql:13/server
+yum install postgresql-contrib
+username: postgres
+password: hkc_admin1!
+
+
+database: palette3
+username: hkc_admin
+password: hkc_admin1!
+
+
+
+#nginx/1.25.2
+ - 경로 : /etc/nginx
+ - 설정파일 : /etc/nginx/nginx.conf
+ - systemctl restart nginx
+ - systemctl stop&start&restart nginx
+ 
+#SELinux 관련 nginx 에러 처리
+ - nginx가 읽을 수 있게 폴더에 권한 주기.(stat() "/orange/app/palette3/frontend/dist/favicon.ico" failed (13: Permission denied))
+	 ls -lZd ./dist
+	 chcon -R -t httpd_sys_content_t /orange/app/palette3/frontend
+	 chcon -R -t httpd_sys_content_t /orange/app/palette3/backend/repository
+ - nginx connect() failed (13 permission denied)
+ 	setsebool httpd_can_network_connect on -P
+
+
+
+#소스 경로
+/orange/app/palette3/backend/
+/orange/app/palette3/frontend/
+
+#repository
+/orange/app/palette3/repository/
+
+
+도메인, IP 나온 후
+application-production-lhcs.yml
+	-	access.control.allow.orign: hkpalette.com,hkipcc.co.kr,localhost:3003,localhost:3004,172.16.0.100:3003,192.168.101.180:3004
+.env.production-lhcs - 도메인 수정
+/etc/nginx/nginx.conf - 도메인 수정
+
+
+
+
+##구동
+ - backend(kpp 로그인)
+ 	- cd /orange/app/palette3/backend/bin
+ 	- sh ./palette-hkc-edu-webm.bash restart
+ - frontend(kpp 로그인)
+ 	- cd /orange/app/palette3/frontend
+ 	- (신규)./palette_run.sh
+ 	- (기존)npm run build-production-lhcs
+ - nginx(root 로그인)
+ 	- systemctl restart nginx
+ 	
+ 	- log 위치 : /var/log/nginx
+ 	
+ 
+
+##백업정책
+
+[root@lhcs-svy ~]# crontab -l
+#pg_backup
+0 4 * * * /var/lib/pgsql/backups/pgbackup.sh >> /var/lib/pgsql/backups/log/pg_backup.log 2>&1
+
+
+백업 폴더 위치 : /var/lib/pgsql/backups
+
+
+
+
+
+
+- 설문조사 사이트
+	1. 출발지 IP : any
+	2. 목적지 IP : 1.237.4.126
+	3. 서비스 Port : 443
+	4. 허용 / 차단 : 허용
+	5. 방향성 : 외부 > 내부
+
+- KPP 사무실에서 원격 접속(ssh, db, redis)
+	1. 출발지 IP : 121.67.187.114
+	2. 목적지 IP : 1.237.4.126
+	3. 서비스 Port : 22, 5432, 61372
+	4. 허용 / 차단 : 허용
+	5. 방향성 : 외부 > 내부
+
+- MTS(알림톡)
+	1. 출발지 IP : 1.237.4.126
+	2. 목적지 IP : 210.116.117.25
+	3. 서비스 Port : 443
+	4. 허용 / 차단 : 허용
+	5. 방향성 : 내부 > 외부
+
+- MTS(문자)
+	1. 출발지 IP : 1.237.4.126
+	2. 목적지 IP : 211.237.5.68
+	3. 서비스 Port : 443
+	4. 허용 / 차단 : 허용
+	5. 방향성 : 내부 > 외부
+
+- SMTP - LH주거복지정보
+	1. 출발지 IP : 1.237.4.126
+	2. 목적지 IP : LH주거복지정보 SMTP IP
+	3. 서비스 Port : LH주거복지정보 SMTP PORT
+	4. 허용 / 차단 : 허용
+	5. 방향성 : 내부 > 외부
+
+- SMTP - KPP(KPP 테스트용)
+	1. 출발지 IP : 1.237.4.126
+	2. 목적지 IP(domain) : mail.hkcloud.co.kr
+	3. 서비스 Port : 25
+	4. 허용 / 차단 : 허용
+	5. 방향성 : 내부 > 외부
+	

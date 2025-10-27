@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.qa.dao.QAMngrManageMapper">
+
+    <sql id="org-list-sql">
+		WITH RECURSIVE CTE AS (
+			SELECT DEPT_ID, CUSTCO_ID, DEPT_NM, UP_DEPT_ID, CAST(DEPT_NM AS VARCHAR) as FULL_PATH
+			  FROM PLT_OGNZ AS TOP
+			 WHERE UP_DEPT_ID IS NULL AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			UNION ALL
+			SELECT CHILD.DEPT_ID, CHILD.CUSTCO_ID, CHILD.DEPT_NM, CHILD.UP_DEPT_ID, CAST(CTE.FULL_PATH || '/' || CHILD.DEPT_NM AS VARCHAR)
+			  FROM PLT_OGNZ AS CHILD INNER JOIN CTE AS CTE ON (CHILD.UP_DEPT_ID = CTE.DEPT_ID)
+		)
+		SELECT *
+		  FROM CTE
+    </sql>
+
+    
+    <!-- 관리자 지정 - 사용자 목록 -->
+    <select id="selectUserList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectUserList - 관리자 지정 - 사용자 목록 */
+		SELECT 
+			(ROW_NUMBER() OVER(ORDER BY U.USER_ID ASC)) AS ROW_NUMBER
+			,U.LGN_ID
+			,U.USER_NM
+			,O.FULL_PATH
+			,A.AUTHRT_GROUP_ID
+			,A.AUTHRT_GROUP_NM
+			,U.USER_ID
+			,UO.DEPT_ID
+			,CONCAT(U.USER_ID,'_',UO.DEPT_ID) AS LIST_KEY
+			,UO.CUSTCO_ID
+			,O.UP_DEPT_ID
+		  FROM PLT_USER AS U
+		  	  ,PLT_USER_OGNZ AS UO
+		  	  ,PLT_AUTHRT AS A
+		  	  ,PLT_USER_AUTHRT AS UA
+		  	  ,(<include refid="org-list-sql"/>) AS O
+		 WHERE U.USER_ID = UO.USER_ID
+		   AND UO.DEPT_ID = O.DEPT_ID
+		   AND U.USER_ID = UA.USER_ID
+		   AND UA.AUTHRT_GROUP_ID = A.AUTHRT_GROUP_ID
+		   <if test="SEARCH_WORD != null and SEARCH_WORD != ''">
+		   AND ( U.LGN_ID LIKE CONCAT('%', #{SEARCH_WORD}, '%') OR U.USER_NM LIKE CONCAT('%', #{SEARCH_WORD}, '%') )	
+		   </if>	   
+    </select>
+    
+    <insert id="insertQaMngr" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_QA_MNGR (
+					QA_PLAN_ID
+					,QA_MNGR_ID
+					,REG_DT
+					,RGTR_ID
+		) VALUES 
+		
+		<foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+		(
+					#{QA_PLAN_ID}::INTEGER
+					,#{ITEM.QA_MNGR_ID}::INTEGER
+					,TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+					,#{USER_ID}::INTEGER
+		)
+		</foreach>
+		
+	</insert>
+	<delete id="deleteQaMngr" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_MNGR
+		 WHERE QA_PLAN_ID =  #{QA_PLAN_ID}::INTEGER
+		   AND QA_MNGR_ID IN (
+		<foreach collection="MNGR_LIST" item="ITEM" close="" separator=",">
+			#{ITEM.QA_MNGR_ID}::INTEGER
+		</foreach>
+		 )
+	</delete>    
+    <!-- 관리자 지정 - 관리자 목록 -->
+    <select id="selectMngrList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    
+		<if test="ROW_CNT != null and ROW_CNT gt 0 and PAGES_CNT != null and PAGES_CNT gt 0">
+
+		</if>
+		/* selectMngrList - 관리자 지정 - 관리자 목록 */
+    	SELECT 
+			(ROW_NUMBER() OVER(ORDER BY U.USER_ID ASC)) AS ROW_NUMBER
+			,U.LGN_ID
+			,U.USER_NM
+			,O.FULL_PATH
+			,A.AUTHRT_GROUP_ID
+			,A.AUTHRT_GROUP_NM
+			,U.USER_ID AS MNGR_ID
+			,UO.DEPT_ID
+			,CONCAT(U.USER_ID,'_',UO.DEPT_ID) AS LIST_KEY
+			<!-- 
+			,UO.CUSTCO_ID
+			-->
+			,O.UP_DEPT_ID
+ 		   <if test="WITH_ALTMNT != null and WITH_ALTMNT = 'Y'">
+			,(SELECT COUNT(*) FROM PLT_QA_TRGT_ALTMNT WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER AND QA_MNGR_ID = U.USER_ID) AS ALTMNT_CNT
+			,(SELECT COUNT(DISTINCT QA_TRGT_ID) FROM PLT_QA_RSLT_OPNN WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER AND QA_MNGR_ID = U.USER_ID) AS COMPELTE_CNT
+			,COALESCE((SELECT TO_CHAR(MAX(TO_TIMESTAMP(REG_DT, 'YYYYMMDDHH24MISS')), 'YYYY-MM-DD')
+						 FROM PLT_QA_TRGT_ALTMNT 
+						WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER AND QA_MNGR_ID = U.USER_ID)
+					  , '') AS ALTMNT_DT
+ 		   </if>
+		  FROM PLT_USER_AUTHRT AS UA
+			   LEFT JOIN PLT_AUTHRT AS A ON UA.AUTHRT_GROUP_ID = A.AUTHRT_GROUP_ID
+			   LEFT JOIN PLT_USER AS U ON U.USER_ID = UA.USER_ID
+			   LEFT JOIN PLT_QA_MNGR AS M ON M.QA_MNGR_ID = U.USER_ID
+			   LEFT JOIN PLT_USER_OGNZ AS UO ON UO.USER_ID = U.USER_ID AND UO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND UO.USE_YN = 'Y'
+			   LEFT JOIN PLT_QA_PLAN AS P ON P.QA_PLAN_ID = M.QA_PLAN_ID AND P.CUSTCO_ID = UO.CUSTCO_ID
+		       LEFT JOIN (<include refid="org-list-sql"/>) AS O ON UO.DEPT_ID = O.DEPT_ID
+		 WHERE P.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		<if test="ROW_CNT != null and ROW_CNT gt 0 and PAGES_CNT != null and PAGES_CNT gt 0">
+
+		</if>
+    </select>
+    <select id="selectMngrListWithMngrId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			QA_MNGR_ID
+		  FROM PLT_QA_MNGR AS M 
+		 WHERE QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		   AND QA_MNGR_ID IN 
+		   		(
+			   		<foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+					#{ITEM.QA_MNGR_ID}::INTEGER
+					</foreach>
+				)
+    </select>
+    
+	<insert id="insertCyclStts" parameterType="java.util.HashMap">
+		INSERT INTO PLT_QA_CYCL_STTS 
+			(QA_CYCL_ID, QA_PLAN_ID, QA_MNGR_ID, EVL_CMPTN_YN, REG_DT)
+			(SELECT CYCL.QA_CYCL_ID, CYCL.QA_PLAN_ID, MNGR.QA_MNGR_ID, 'N', TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			   FROM PLT_QA_CYCL AS CYCL
+			   LEFT JOIN PLT_QA_MNGR AS MNGR ON MNGR.QA_PLAN_ID = CYCL.QA_PLAN_ID
+			  WHERE CYCL.QA_PLAN_ID = #{QA_PLAN_ID}::INTEGER
+		  		AND MNGR.QA_MNGR_ID IN 
+		   		(
+			   		<foreach collection="LIST_ID" item="ITEM" close="" separator=",">
+					#{ITEM.QA_MNGR_ID}::INTEGER
+					</foreach>
+				)
+			)
+		ON CONFLICT (QA_CYCL_ID, QA_PLAN_ID, QA_MNGR_ID)
+		DO NOTHING
+	</insert>
+	<delete id="deleteCyclStts" parameterType="java.util.HashMap">
+		DELETE FROM PLT_QA_CYCL_STTS
+		 WHERE QA_PLAN_ID =  #{QA_PLAN_ID}::INTEGER
+		   AND QA_MNGR_ID IN (
+		<foreach collection="MNGR_LIST" item="ITEM" close="" separator=",">
+			#{ITEM.QA_MNGR_ID}::INTEGER
+		</foreach>
+		 )
+	</delete>    
+</mapper>

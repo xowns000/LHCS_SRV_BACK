@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.layoutMng.tab.dao.LayoutMngTabMapper">
+<select id="selectTabList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+  SELECT
+    PLT.TAB_ID
+    , PLT.TAB_NM
+    , PLT.EXPSR_YN
+    , PLT.RSPNS_ARTCL_ID
+    , PLT.SORT_ORD
+    , PLM.LKAG_ID
+    , PLM.LKAG_NM
+    , LKAG_RSPNS_TREE.FULL_PATH
+  FROM
+    PLT_LAYOUT_TAB PLT
+      LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLT.RSPNS_ARTCL_ID
+      LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLRA.LKAG_ID
+      LEFT JOIN(
+      WITH RECURSIVE LKAG_RSPNS_TREE (
+              RSPNS_ARTCL_ID , LKAG_ID , COL_NM , DATA_TYPE_CD , LVL , SORT , FULL_PATH , USE_YN , LKAG_GROUP_CD_ID
+        ) AS (
+        SELECT
+          PARA.RSPNS_ARTCL_ID
+             , PARA.LKAG_ID
+             , PARA.COL_NM
+             , PARA.DATA_TYPE_CD
+             , 1 AS LVL
+             , LPAD(CAST(PARA.SORT_ORD AS VARCHAR), 5, '0') AS SORT
+             , CAST(PARA.COL_NM AS VARCHAR(300)) AS FULL_PATH
+             , PARA.USE_YN
+             , PARA.LKAG_GROUP_CD_ID
+        FROM
+          CUSTCO.PLT_LKAG_RSPNS_ARTCL PARA
+            INNER JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PARA.LKAG_ID
+        WHERE
+          PARA.UP_ARTCL_ID IS NULL
+          AND PARA.USE_YN = 'Y'
+          AND PARA.DEL_YN = 'N'
+          AND PARA.LKAG_ID = PLM.LKAG_ID
+        UNION ALL
+        SELECT
+          PARA.RSPNS_ARTCL_ID
+             , PARA.LKAG_ID
+             , PARA.COL_NM
+             , PARA.DATA_TYPE_CD
+             , LVL + 1
+             , LRT.SORT || ' > ' || LPAD(CAST(PARA.SORT_ORD AS VARCHAR), 5, '0') AS SORT
+             , CAST(LRT.FULL_PATH || ' > ' || PARA.COL_NM AS VARCHAR(300)) AS FULL_PATH
+             , PARA.USE_YN
+             , PARA.LKAG_GROUP_CD_ID
+        FROM
+          CUSTCO.PLT_LKAG_RSPNS_ARTCL PARA
+            INNER JOIN LKAG_RSPNS_TREE LRT ON
+            PARA.UP_ARTCL_ID = LRT.RSPNS_ARTCL_ID
+            INNER JOIN CUSTCO.PLT_LKAG_MNG PLM ON
+            PLM.LKAG_ID = PARA.LKAG_ID
+        WHERE
+          PARA.UP_ARTCL_ID IS NOT NULL
+          AND PARA.USE_YN = 'Y'
+          AND PARA.DEL_YN = 'N'
+          AND PARA.LKAG_ID = PLM.LKAG_ID
+      )
+      SELECT RSPNS_ARTCL_ID , LKAG_ID , COL_NM , DATA_TYPE_CD , LVL , SORT , FULL_PATH , USE_YN , LKAG_GROUP_CD_ID
+      FROM LKAG_RSPNS_TREE ORDER BY SORT
+    ) LKAG_RSPNS_TREE ON LKAG_RSPNS_TREE.RSPNS_ARTCL_ID = PLT.RSPNS_ARTCL_ID
+  WHERE PLT.LAYOUT_ID = #{LAYOUT_ID}::INTEGER
+  ORDER BY PLT.SORT_ORD
+</select>
+  <insert id="insertTab" parameterType="java.util.HashMap">
+    INSERT
+    INTO PLT_LAYOUT_TAB(TAB_ID,
+                        LAYOUT_ID,
+                        <if test="RSPNS_ARTCL_ID != '' and RSPNS_ARTCL_ID != null">
+                        RSPNS_ARTCL_ID,
+                        </if>
+                        TAB_NM,
+                        EXPSR_YN,
+                        SORT_ORD,
+                        RGTR_ID,
+                        REG_DT)
+    VALUES (#{TAB_ID}::INTEGER,
+            #{LAYOUT_ID}::INTEGER,
+            <if test="RSPNS_ARTCL_ID != '' and RSPNS_ARTCL_ID != null">
+            #{RSPNS_ARTCL_ID}::INTEGER,
+            </if>
+            #{TAB_NM},
+            #{EXPSR_YN},
+            #{SORT_ORD}::INTEGER,
+            #{USER_ID}::INTEGER,
+            TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'));
+  </insert>
+  <update id="updateTab" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT_TAB
+    SET RGTR_ID = #{USER_ID}::INTEGER
+    <choose>
+      <when test="RSPNS_ARTCL_ID != '' and RSPNS_ARTCL_ID != null">
+        ,RSPNS_ARTCL_ID = #{RSPNS_ARTCL_ID}::INTEGER
+      </when>
+      <otherwise>
+        ,RSPNS_ARTCL_ID = NULL
+      </otherwise>
+    </choose>
+    <if test="SORT_ORD != '' and SORT_ORD != null">
+      ,SORT_ORD = #{SORT_ORD}::INTEGER
+    </if>
+    <if test="EXPSR_YN != '' and EXPSR_YN != null">
+      ,EXPSR_YN = #{EXPSR_YN}
+    </if>
+    <if test="TAB_NM != '' and TAB_NM != null">
+      ,TAB_NM = #{TAB_NM}
+    </if>
+    WHERE TAB_ID = #{TAB_ID}::INTEGER
+  </update>
+ <delete id="deleteTab" parameterType="java.util.HashMap">
+   DELETE FROM PLT_LAYOUT_TAB
+   WHERE TAB_ID = #{TAB_ID}::INTEGER
+ </delete>
+  <delete id="deleteListInSrch" parameterType="java.util.HashMap">
+    DELETE
+    FROM PLT_LAYOUT_LIST
+    WHERE LIST_ID IN (
+      SELECT LIST_ID
+      FROM PLT_LAYOUT_LIST PLL
+      WHERE TAB_ID = #{TAB_ID}::INTEGER
+      )
+  </delete>
+  <select id="selectListCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT COUNT(PLL.LIST_ID) FROM PLT_LAYOUT_LIST PLL
+    WHERE PLL.TAB_ID = #{TAB_ID}::INTEGER
+    AND NOT EXISTS (
+    SELECT 1
+    FROM PLT_LAYOUT_LIST_SRCH PLLS
+    WHERE PLLS.LIST_ID = PLL.LIST_ID
+    );
+  </select>
+  <select id="dpcnChkTab" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT 1  FROM PLT_LAYOUT_TAB
+    WHERE 1=1
+      AND TAB_NM = #{TAB_NM}
+      AND LAYOUT_ID = #{LAYOUT_ID}::INTEGER
+  </select>
+</mapper>

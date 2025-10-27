@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.login.dao.LoginMapper">
+<!-- <mapper namespace="com.hcteletalk.teletalk.login.dao.LoginMapper"> -->
+
+	<!--  로그인/로그아웃 성공 시 로그기록 -->
+	<insert id="insertLog" parameterType="kr.co.hkcloud.palette3.login.domain.LoginLogDTO">
+		INSERT INTO PLT_USER_LOG (
+			 USER_LOG_ID         /* 로그ID         */
+		   , USER_ID        /* 사용자ID       */
+		   , TASK_SE_CD        /* 업무구분       */
+		   , CNTN_IP       /* 접속아이피     */
+		   , ETC_INFO_01     /* 기타정보01     */
+		   , RGTR_ID        /* 작성자ID       */
+		   , REG_DT       /* 작성일시       */
+		)
+		VALUES
+		(
+			 CAST(#{userLogId} AS INTEGER)
+		   , #{userId}
+		   , #{taskSeCd}
+		   , #{cntnIp}
+		   , #{etcInfo01}
+		   , #{userId}
+		   , TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	<!-- 
+	로그인 성공 시 기본정보 업데이트,CUSTCO_IDFMF 사용하면 안됨.
+	 -->
+	<update id="updateLoginSuccessInfo" parameterType="kr.co.hkcloud.palette3.login.domain.LoginLogDTO">
+	UPDATE PLT_USER 
+	   SET CNTN_IP      = #{cntnIp}                              /* 접속아이피 */
+	     , PRST_LGN_YN = #{prstLgnYn}                          /* 현재로그인여부 */
+	     , PSWD_FAIL_CNT = CAST(#{pswdFailCnt} AS INTEGER)        /* 비밀번호실패횟수 */
+	 WHERE USER_ID = #{userId} 
+	</update>
+	
+	<select id="selectLoginUserCustcoOgzInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			PU.USER_ID
+			, PU.LGN_ID
+			, PC.ASP_CUST_KEY
+			, PUO.CUSTCO_ID
+			, PUO.DEPT_ID
+			, COALESCE(PU.DPCN_LGN_PM_YN, 'N') AS DPCN_LGN_PM_YN	/* 중복 로그인 허용 여부 */
+			, PC.USER_LGN_SMS_CERT_YN   /* 2차 인증 사용 여부 */
+		FROM PLT_USER PU
+		LEFT OUTER JOIN PLT_USER_OGNZ PUO ON PUO.USER_ID = PU.USER_ID AND PUO.USE_YN = 'Y'
+		LEFT OUTER JOIN PLT_CUSTCO PC ON PC.CUSTCO_ID = PUO.CUSTCO_ID
+		WHERE PU.USER_ID = #{USER_ID}
+		ORDER BY PUO.SORT_ORD
+	</select>	
+	<!-- 
+	로그인 성공 시 정보 생성 (순서가 있으므로 주의 필요함), CUSTCO_IDFMF 사용하면 안됨
+	 -->
+	<select id="selectLoginSuccessLoginInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		PU.USER_ID
+		, PU.LGN_ID
+		, PU.USER_NM
+		, PU.USER_NNM
+		, PU.TOP_MSG
+		, PU.CNTN_IP
+		, PU.ICON
+		, (SELECT COALESCE(LISTAGG(PUA.AUTHRT_GROUP_ID,',') WITHIN GROUP (ORDER BY PUA.USER_ID), '6') /*권한그룹이 존재하지 않을 경우 기본 권한 그룹으로 설정(상담사)*/
+			FROM PLT_USER_AUTHRT PUA 
+			WHERE USER_ID = PU.USER_ID
+			GROUP BY PUA.USER_ID
+		) AS AUTHOR_GROUP_ID_LIST
+		, (SELECT COALESCE(LISTAGG(PA.AUTHRT_GROUP_NM,',') WITHIN GROUP (ORDER BY PUA.USER_ID), '사용자') /*권한그룹이 존재하지 않을 경우 기본 권한 그룹으로 설정*/
+			FROM PLT_AUTHRT PA 
+			LEFT OUTER JOIN PLT_USER_AUTHRT PUA ON PA.AUTHRT_GROUP_ID = PUA.AUTHRT_GROUP_ID
+			WHERE PUA.USER_ID = PU.USER_ID
+			GROUP BY PUA.USER_ID
+		) AS AUTHOR_GROUP_NM_LIST
+<!--		, (SELECT PPIE.EXT_NO-->
+<!--			FROM PLT_PHN_IP_EXT PPIE-->
+<!--			WHERE PPIE.USER_ID = PU.USER_ID-->
+<!--		) AS INLNE_NO-->
+		, OGNZ.DEPT_ID
+		, OGNZ.ASP_CUST_KEY
+		, OGNZ.CUSTCO_ID
+		, OGNZ.CO_NM
+		, OGNZ.DEPT_ID
+		, OGNZ.DEPT_NM
+		, OGNZ.DEPT_ID_FULL_PATH
+		, OGNZ.DEPT_NM_FULL_PATH
+		, CASE WHEN (select task_se_cd from (SELECT TASK_SE_CD FROM PLT_USER_PSWD_LOG WHERE USER_ID = PU.USER_ID ORDER BY REG_DT DESC) WHERE ROWNUM = 1 ) = 'RESET' OR  (SELECT COUNT(USER_ID) FROM PLT_USER_PSWD_LOG WHERE USER_ID = PU.USER_ID AND TASK_SE_CD = 'CHANGE') = 0 THEN 'N' ELSE 'Y' END AS PWD_CHANGE_YN
+		, (SELECT COALESCE(USER_LGN_SMS_CERT_YN, 'N') FROM PLT_CUSTCO WHERE CUSTCO_ID = #{CUSTCO_ID}) AS USER_LGN_SMS_CERT_YN --사용자 로그인 2차 인증 사용 여부
+		, (SELECT COALESCE(SMS_CERT_EXPRY_HR, '1') FROM PLT_CUSTCO WHERE CUSTCO_ID = #{CUSTCO_ID}) AS SMS_CERT_EXPRY_HR --인증 만료 시간(분)
+		, (TRUNC(SYSDATE) - TRUNC(TO_DATE(PU.PSWD_MDFCN_DT, 'YYYYMMDDHH24MISS')))  AS ELAPSED_DATE -- 사용자 비밀번호 변경 경과일
+	FROM PLT_USER PU
+	LEFT OUTER JOIN PLT_USER_OGNZ PUO ON PUO.USER_ID = PU.USER_ID AND PUO.USE_YN = 'Y' AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+	LEFT OUTER JOIN (
+		<![CDATA[
+		WITH OGNZ_TREE AS (
+            SELECT 
+                CUSTCO_ID, 
+                UP_DEPT_ID, 
+                DEPT_ID, 
+                DEPT_NM, 
+                SCRN_INDCT_YN, 
+                SORT_ORD, 
+                TO_CHAR(SORT_ORD) AS ORD, 
+                TO_CHAR(DEPT_ID) AS DEPT_ID_FULL_PATH, 
+                TO_CHAR(DEPT_NM) AS DEPT_NM_FULL_PATH,
+                LEVEL AS LVL,
+                LTRIM(SYS_CONNECT_BY_PATH(SORT_ORD, ' < '), ' < ') AS CONNECT_BY_ORD,
+                LTRIM(SYS_CONNECT_BY_PATH(DEPT_ID, ' < '), ' < ') AS CONNECT_BY_DEPT_ID_FULL_PATH,
+                LTRIM(SYS_CONNECT_BY_PATH(DEPT_NM, ' < '), ' < ') AS CONNECT_BY_DEPT_NM_FULL_PATH
+            FROM 
+                PLT_OGNZ
+            WHERE 
+                CUSTCO_ID = #{CUSTCO_ID}
+                AND USE_YN = 'Y'
+            START WITH 
+                UP_DEPT_ID IS NULL
+            CONNECT BY 
+                PRIOR DEPT_ID = UP_DEPT_ID
+                AND PRIOR CUSTCO_ID = #{CUSTCO_ID}
+                AND PRIOR USE_YN = USE_YN
+        )
+        SELECT
+            PC.ASP_CUST_KEY,
+            PC.CUSTCO_ID,
+            PC.CO_NM,
+            OT.DEPT_ID,
+            OT.DEPT_NM,
+            OT.SORT_ORD,
+            OT.CONNECT_BY_ORD AS ORD,
+            OT.SCRN_INDCT_YN,
+            OT.CONNECT_BY_DEPT_ID_FULL_PATH AS DEPT_ID_FULL_PATH,
+            OT.CONNECT_BY_DEPT_NM_FULL_PATH AS DEPT_NM_FULL_PATH
+        FROM 
+            (SELECT * FROM OGNZ_TREE ORDER BY CONNECT_BY_ORD) OT
+        INNER JOIN 
+            PLT_CUSTCO PC ON PC.CUSTCO_ID = OT.CUSTCO_ID
+		]]>
+	) OGNZ ON OGNZ.DEPT_ID = PUO.DEPT_ID
+	WHERE PU.USER_ID = #{USER_ID}
+	AND PUO.CUSTCO_ID = #{CUSTCO_ID}
+	</select>
+	<!-- 
+	로그인 성공 시 세션정보 생성 (순서가 있으므로 주의 필요함), CUSTCO_IDFMF 사용하면 안됨
+	 -->
+	<select id="selectLoginSuccessSessionInfo" parameterType="kr.co.hkcloud.palette3.login.domain.LoginLogDTO" resultType="java.util.LinkedHashMap">
+	SELECT RE.USER_ID   , RE.USER_NM  , CNNCT_IP     , LAST_LOGIN_DT       , AUTHOR_GROUP_ID_LIST
+	     , DEPT_CD      , DEPT_NM     , AUTH01_ORG_CD, AUTH02_ORG_CD       , AUTH03_ORG_CD
+	     , AUTH04_ORG_CD, DEPT_NM_FULL, DEPT_CD_FULL , SPEC_CNSL_NM
+	     , (SELECT MNGR_YN
+	          FROM PLT_AUTH
+	         WHERE ATRT_GROUP_ID = RE.AUTHOR_GROUP_ID_LIST)  AS MNGR_YN         /*(14)관리자여부 */
+	     , USER_NICK, USER_ATTR_A, USER_ATTR_B, USER_ATTR_C, USER_ATTR_D
+	     , CUSTCO_ID
+	     , AUTHOR_GROUP_NM_LIST                                                 /*(21)권한그룹명리스트 */
+	  FROM (SELECT A.USER_ID                                                    /*(0)사용자ID*/ 
+	             , A.USER_NM                                                    /*(1)사용자명*/
+	             , A.CNNCT_IP                                                   /*(2)접속IP*/
+	             , A.ETC_INFO01                AS LAST_LOGIN_DT                 /*(3)최근로그인일자*/
+	             , (SELECT COALESCE(ARRAY_TO_STRING(ARRAY_AGG(ATRT_GROUP_ID),','), '20151106173043466TWB14896') /*권한그룹이 존재하지 않을 경우 기본 권한 그룹으로 설정*/
+	          		  FROM PLT_USER_AUTH
+	                 WHERE USER_ID = A.USER_ID
+	                 GROUP BY USER_ID
+	               )  AS AUTHOR_GROUP_ID_LIST           /*(4)권한그룹키리스트*/
+	             , (SELECT COALESCE(ARRAY_TO_STRING(ARRAY_AGG(ATRT_GROUP_NM),','), '사용자') /*권한그룹이 존재하지 않을 경우 기본 권한 그룹으로 설정*/
+	          		  FROM PLT_AUTH AA
+	          		  LEFT OUTER JOIN PLT_USER_AUTH B
+	          		    ON AA.ATRT_GROUP_ID = B.ATRT_GROUP_ID
+	                 WHERE B.USER_ID = A.USER_ID
+	                 GROUP BY B.USER_ID
+	               )  AS AUTHOR_GROUP_NM_LIST           /*(4)권한그룹명리스트*/
+	     	     /*20190510 ojw: 조직 개편으로 인해 안쓰이는 컬럼이지만 REGR_ID 등 문제를 방지하기 위해 dummy 값 설정*/
+	             , 'x'                         AS DEPT_CD                       /*(5)조직코드*/
+	             , 'x'                         AS DEPT_NM                       /*(6)조직코드명*/
+	             , ''                          AS AUTH01_ORG_CD                 /*(7)본부코드(필요시사용)*/
+	             , ''                          AS AUTH02_ORG_CD                 /*(8)지역본부코드(필요시사용)*/
+	             , ''                          AS AUTH03_ORG_CD                 /*(9)센터코드(필요시사용)*/
+	             , ''                          AS AUTH04_ORG_CD                 /*(10)협력업체코드(필요시사용)*/
+	             , 'x' AS DEPT_NM_FULL                                          /*(11)부서전체경로명*/
+	             , 'x' AS DEPT_CD_FULL                                          /*(12)부서전체경로코드*/
+	             , (SELECT CD_NM FROM PLT_COMN_CD
+                     WHERE A.SPEC_CNSL_CD = CD
+                       AND GROUP_CD = 'TALK015'
+                       AND CD != '****') AS SPEC_CNSL_NM                       	/*(13)전문상담명*/
+                 , A.USER_NICK                                                  /*(15)사용자닉네임*/
+	             <!-- 20190509 ojw added for new user dept -->
+	             , A.USER_ATTR_A                                                /*(16)사용자소속A*/
+	             , A.USER_ATTR_B                                                /*(17)사용자소속B*/
+	             , A.USER_ATTR_C                                                /*(18)사용자소속C*/
+	             , A.USER_ATTR_D                                                /*(19)사용자소속D*/
+	             , A.CUSTCO_ID                                               /*(20)ASP고객사키*/
+		      FROM PLT_USER A
+		     WHERE A.USER_ID = #{userId}
+		   ) RE
+	</select>
+	<select id="selectUserinfoByLgnid" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			PU.MBL_PHN_NO
+				 , PU.USER_ID
+				 , PC.CUSTCO_ID
+				 , PCDN.DSPTCH_NO
+		FROM
+			PLT_USER PU
+				INNER JOIN PLT_USER_OGNZ PUO ON PU.USER_ID = PUO.USER_ID AND PUO.USE_YN = 'Y'
+				INNER JOIN PLT_CUSTCO PC ON PUO.CUSTCO_ID = PC.CUSTCO_ID
+				LEFT OUTER JOIN PLT_CUSTCO_DSPTCH_NO PCDN ON PC.CUSTCO_ID = PCDN.CUSTCO_ID
+		WHERE
+			PU.USE_YN = 'Y'
+			AND PU.USER_CERT_YN = 'Y'
+			AND PU.LGN_ID =#{LGN_ID}
+	</select>
+	<insert id="insertCertNo" parameterType="java.util.HashMap">
+		INSERT INTO PLT_USER_CERT_SMS_HSTRY
+		    (
+					CERT_SMS_HSTRY_ID        /* 인증_SMS_이력_ID */
+				, USER_ID  						     /* 사용자 ID */
+				, MTS_SNDNG_HSTRY_ID       /* MTS_발송_이력 */
+				, CERT_NO_CRT_DT        	 /* 인증번호_생성일시 */
+				, CERT_NO_EXPRY_DT         /* 인증번호_만료일시 */
+				, CNTN_IP        					 /* 접속 IP */
+				, CERT_NO        					 /* 인증번호 */
+				, CERT_YN		        			 /* 만료여부 */
+				)
+		VALUES
+			(
+					#{CERT_SMS_HSTRY_ID}
+				, #{USER_ID}
+				, #{MTS_SNDNG_HSTRY_ID}
+				, TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+				, (SELECT
+						 TO_CHAR(
+							 SYSDATE + CAST(COALESCE(SMS_CERT_EXPRY_HR, 3) || 'MINUTE' AS INTERVAL), 'YYYYMMDDHH24MISS')
+						FROM (SELECT COALESCE(SMS_CERT_EXPRY_HR, 3) AS SMS_CERT_EXPRY_HR FROM PLT_CUSTCO WHERE CUSTCO_ID = #{CUSTCO_ID})
+									CERT)
+				, #{CNTN_IP}
+				, #{CERT_NO}
+				, 'N'
+			)
+	</insert>
+	<update id="updateSuccessCert" parameterType="java.util.HashMap">
+		UPDATE PLT_USER_CERT_SMS_HSTRY
+		SET CERT_YN = 'Y'
+		WHERE CERT_NO = #{CERT_CODE}
+			AND USER_ID = #{USER_ID}
+	</update>
+
+	<select id="verificateCertNo" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		SELECT
+			CERT_NO_CRT_DT,
+			CERT_NO_EXPRY_DT,
+			CERT_NO,
+			MTS_SNDNG_HSTRY_ID,
+			USER_ID,
+			TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS NOW
+		FROM
+			PLT_USER_CERT_SMS_HSTRY PUCSH
+		WHERE
+			USER_ID = #{USER_ID}
+		ORDER BY
+			CERT_NO_CRT_DT DESC
+			OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
+	</select>
+</mapper>

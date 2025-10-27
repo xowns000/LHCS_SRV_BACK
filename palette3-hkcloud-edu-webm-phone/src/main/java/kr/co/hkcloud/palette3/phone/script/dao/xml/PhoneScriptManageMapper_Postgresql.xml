@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.script.dao.PhoneScriptManageMapper">
+
+<!-- 스크립트 Key -->
+<select id="selectScriptKey"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ( #{UPPER_SCRIPT_ID} ||  LPAD(COALESCE(MAX(CAST(SUBSTR(SCRIPT_ID, -4) AS INTEGER)), 0) + 1, 4, '0') ) AS MAX_SCRIPT_ID
+	  FROM PLT_PHN_SCRT
+	 WHERE UPPER_SCRIPT_ID = #{UPPER_SCRIPT_ID}
+	<if test="UPPER_SCRIPT_ID == '' or UPPER_SCRIPT_ID == null"> 
+	  	<![CDATA[	OR UPPER_SCRIPT_ID IS NULL	   ]]>
+	</if>
+	AND LVL_NO = #{LVL_NO}
+</select>	
+
+<!-- 스크립트 신규등록 -->
+<insert id="insertRtnScriptMng" parameterType= "java.util.HashMap">
+
+	INSERT INTO PLT_PHN_SCRT ( 
+		SCRIPT_ID
+		, CUSTCO_ID
+		, UPPER_SCRIPT_ID
+		, LVL_NO
+		, SCRIPT_TIT
+		, SCRIPT_RMK_NO
+		, SCRIPT_RMK
+		, FILE_GROUP_KEY
+		, FST_USER_ID
+		, FST_SCRIPT_DT
+		, LAST_USER_ID
+		, LAST_SCRIPT_DT
+		, ACCESS_IP
+		, SELECT_NO
+		, ORD_SEQ
+		, USE_YN
+		, PROC_ID
+		, IT_PROCESSING
+		, SCRIPT_AUTH_TYPE
+		, INQRY_TYP_CD
+		, INQRY_TYP_CD_2
+		, CNSL_TYP_CD
+		, BEGIN_DATE
+		, EOT_DATE
+		, USE_TY
+	) VALUES ( 
+	 	  #{SCRIPT_ID}
+		, #{ASP_NEWCUST_KEY}
+		, #{UPPER_SCRIPT_ID}
+		, #{LVL_NO}
+		, #{SCRIPT_TIT}
+		, ''
+		, #{SCRIPT_RMK}
+		, #{FILE_GROUP_KEY}
+		, #{USER_ID}
+		, NOW()
+		, #{USER_ID}
+		, NOW()
+		, ''
+		, 0
+		, #{ORD_SEQ}
+		, #{USE_YN}
+		, #{USER_ID}
+		, NOW()
+		, #{SCRIPT_AUTH_TYPE}
+		, #{INQRY_TYP_CD}
+		, #{INQRY_TYP_CD_2}
+		, #{CNSL_TYP_CD}
+		, REPLACE(#{BEGIN_DATE},'-','')
+		, REPLACE(#{EOT_DATE},'-','')
+		, #{USE_TY}
+	)
+
+</insert>
+
+<!-- 스크립트 수정 -->
+<update id="updateRtnScriptMng" parameterType="java.util.HashMap">
+	UPDATE PLT_PHN_SCRT
+	   SET LAST_USER_ID = #{USER_ID}
+     	 , LAST_SCRIPT_DT = NOW()
+     	 , BEGIN_DATE = REPLACE(#{BEGIN_DATE},'-','')
+		 , EOT_DATE = REPLACE(#{EOT_DATE},'-','')
+	<if test="SCRIPT_TIT !='' and SCRIPT_TIT  != null">  
+		 , SCRIPT_TIT = #{SCRIPT_TIT}             
+	</if>
+	<if test="SCRIPT_RMK !='' and SCRIPT_RMK  != null">  
+		 , SCRIPT_RMK = #{SCRIPT_RMK}                 
+	</if>
+	<if test="ORD_SEQ !='' and ORD_SEQ != null">  
+		 , ORD_SEQ = #{ORD_SEQ}                 
+	</if>
+	<if test="USE_YN !='' and USE_YN != null">  
+		 , USE_YN = #{USE_YN}                 
+	</if>
+	<if test="FILE_GROUP_KEY !='' and FILE_GROUP_KEY != null">  
+		 , FILE_GROUP_KEY = #{FILE_GROUP_KEY}                 
+	</if>
+	<if test="USE_TY !='' and USE_TY != null">  
+		 , USE_TY = #{USE_TY}                 
+	</if> 
+	WHERE SCRIPT_ID = #{SCRIPT_ID}
+</update>
+
+<!-- 스크립트 변경이력 승인 -->
+<update id="updateScrtChng" parameterType="java.util.HashMap">
+	UPDATE PLT_PHN_SCRT_CHG_HST
+	   SET CHNG_REQ = #{CHNG_REQ}   
+	WHERE CHNG_HIST_NO = #{CHNG_HIST_NO}
+</update>
+	
+<!-- 스크립트 삭제 -->
+<!-- <update id="deleteRtnScriptMng" parameterType="java.util.HashMap">
+	UPDATE PLT_PHN_SCRT
+    SET USE_YN = 'N'
+    WHERE SCRIPT_ID IN 
+    (
+        SELECT
+            A.SCRIPT_ID
+        FROM PLT_PHN_SCRT A
+        WHERE A.SCRIPT_ID = #{SCRIPT_ID}
+        UNION ALL
+        SELECT SCRIPT_ID
+        FROM 
+        (
+            SELECT A.SCRIPT_ID 
+            FROM PLT_PHN_SCRT A 
+            START WITH A.UPPER_SCRIPT_ID = #{SCRIPT_ID} 
+            CONNECT BY PRIOR A.SCRIPT_ID = A.UPPER_SCRIPT_ID
+            ORDER SIBLINGS BY A.ORD_SEQ ASC
+        )
+    )
+</update> -->
+<update id="deleteRtnScriptMng" parameterType="java.util.HashMap">
+	DELETE FROM PLT_PHN_SCRT
+    WHERE SCRIPT_ID IN 
+    (
+        SELECT
+            A.SCRIPT_ID
+        FROM PLT_PHN_SCRT A
+        WHERE A.SCRIPT_ID = #{SCRIPT_ID}
+        UNION ALL
+        SELECT SCRIPT_ID
+        FROM 
+        (
+            SELECT A.SCRIPT_ID 
+            FROM PLT_PHN_SCRT A 
+            START WITH A.UPPER_SCRIPT_ID = #{SCRIPT_ID} 
+            CONNECT BY PRIOR A.SCRIPT_ID = A.UPPER_SCRIPT_ID
+            ORDER SIBLINGS BY A.ORD_SEQ ASC
+        )
+    )
+</update>
+
+<!-- 스크립트 첨부파일 수정 -->
+<update id="updateRtnScriptFileGroupKey" parameterType="java.util.HashMap">
+	UPDATE PLT_FILE SET 
+		FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+	WHERE 
+		FILE_GROUP_KEY = #{OLD_FILE_GROUP_KEY}
+</update>
+
+	<!-- TB_FILE(공통첨부파일정보) 테이블 데이터 조회 - 키 -->
+<select id="SELECT_ATTACH_FILE_CNT"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT COUNT(FILE_GROUP_KEY)  ATTACH_CNT              -- 파일그룹키
+  FROM PLT_FILE
+ WHERE 1 = 1
+   AND FILE_GROUP_KEY = #{FILE_GROUP_KEY}
+</select>
+
+</mapper>

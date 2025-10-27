@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<!-- <mapper namespace="com.hcteletalk.teletalk.core.busy.dao.TalkBusyMapper"> -->
+<mapper namespace="kr.co.hkcloud.palette3.core.cron.dao.CronChatBoardMapper">
+    <select id="selectCustcoChannelBbsSettingList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /*	고객사_채널_BBS_설정 목록 조회 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatBoardMapper.selectCustcoChannelBbsSettingList)	*/
+              CCBS.SNDR_KEY	/* 발송자_키 */
+            , CCBS.INQ_API_ID	/* 조회_API_ID => LKAG_ID 대응 */
+            , CCBS.REG_API_ID	/* 등록_API_ID => LKAG_ID 대응 */
+            , CCBS.RPRS_REG_ID	/* 대표_등록_ID */
+            , CCBS.CLCT_RPTT	/* 수집_주기 */
+            , CCBS.LKAG_MST_ID	/* 연동_마스터_ID */
+            , CCBS.BBS_INQRY_TYPE_CD	/* 게시판_문의_유형_코드 */
+            , CC.CUSTCO_ID 	/* 고객사_ID */
+            , CC.CHN_CLSF_CD	/* 채널_분류_코드 */
+            , CC.SRVC_MAINT_YN	/* 서비스_유지_여부 */
+            , CC.DSPTCH_PRF_NM	/* 발신_프로필_명 */
+            , PCC.CERT_CUSTCO_ID 	/* 인증_고객사_ID */
+            , LMST.LKAG_BEAN_ID	/* 연동_BEAN_ID */
+            , LMST.LKAG_BEAN_ID AS BEAN_ID	/* 연동_BEAN_ID */
+            , LMNG.LKAG_NM	/*연동_ID*/
+            , LMNG.LKAG_ID	/*연동_명*/
+            , LMNG.LKAG_URI 	/*연동_URI*/
+            , LPAS.COL_NM AS FROM_DATE_COL_NM
+            , LPAS.DATA_TYPE_FMT_CD AS FROM_DATE_FMT_CD
+            , LPAE.COL_NM AS TO_DATE_COL_NM
+            , LPAE.DATA_TYPE_FMT_CD AS TO_DATE_FMT_CD
+        FROM PLT_CUSTCO_CHN_BBS_STNG CCBS
+        INNER JOIN PLT_CUSTCO_CHN CC ON CC.SNDR_KEY = CCBS.SNDR_KEY
+        INNER JOIN PLT_CUSTCO C ON C.CUSTCO_ID = CC.CUSTCO_ID
+        INNER JOIN CUSTCO.PLT_CERT_CUSTCO PCC ON PCC.CUSTCO_ID = C.CUSTCO_ID AND PCC.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INT
+        INNER JOIN CUSTCO.PLT_LKAG_MST LMST ON LMST.LKAG_MST_ID = CCBS.LKAG_MST_ID
+        INNER JOIN CUSTCO.PLT_LKAG_MNG LMNG ON LMNG.LKAG_MST_ID = CCBS.LKAG_MST_ID AND LMNG.LKAG_ID = CCBS.INQ_API_ID
+        LEFT OUTER JOIN CUSTCO.PLT_LKAG_PARAM_ARTCL LPAS ON LPAS.LKAG_ID = LMNG.LKAG_ID AND LPAS.DATA_TYPE_CD = 'LPIT_DATETIME_S'
+        LEFT OUTER JOIN CUSTCO.PLT_LKAG_PARAM_ARTCL LPAE ON LPAE.LKAG_ID = LMNG.LKAG_ID AND LPAE.DATA_TYPE_CD = 'LPIT_DATETIME_E'
+        <where>
+            <if test="SNDR_KEY != null and SNDR_KEY != ''">
+                AND CCBS.SNDR_KEY = #{SNDR_KEY}::BIGINT
+            </if>
+        </where>
+    </select>
+
+    <select id="selectChatCuttBbsInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        SNDR_KEY
+            , CHT_CUTT_BBS_ID
+            , INQRY_NO
+            , INQRY_TYPE
+            , ORDR_YN
+            , ORDR_NO
+            , ORDR_DT
+            , GDS_NO
+            , GDS_NM
+            , INQRY_TTL
+            , INQRY_CN
+            , ULD_IMG_URL
+            , WRTR_ID
+            , WRTR_NM
+            , WRT_DT
+            , REG_DT
+            , MDFCN_DT
+            , ETC_1
+            , ETC_2
+            , ETC_3
+            , CHT_CUTT_ID
+        FROM PLT_CHT_CUTT_BBS
+        <where>
+            <if test="SNDR_KEY != null and SNDR_KEY != ''">AND SNDR_KEY = #{SNDR_KEY}::BIGINT</if>
+            <if test="INQRY_NO != null and INQRY_NO != ''">AND INQRY_NO = #{INQRY_NO}</if>
+            <if test="CHT_CUTT_BBS_ID != null and CHT_CUTT_BBS_ID != ''">AND CHT_CUTT_BBS_ID = #{CHT_CUTT_BBS_ID}::BIGINT</if>
+            <if test="CHT_CUTT_ID != null and CHT_CUTT_ID != ''">AND CHT_CUTT_ID = #{CHT_CUTT_ID}::BIGINT</if>
+        </where>
+    </select>
+    <insert id="insertChatCuttBbs" parameterType="java.util.HashMap">
+        INSERT /*	전자상거래_문의_게시판 저장 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatBoardMapper.insertChatCuttBbs)	*/
+        INTO PLT_CHT_CUTT_BBS (
+                SNDR_KEY
+              , CHT_CUTT_BBS_ID
+              , INQRY_NO
+              , INQRY_TYPE
+              , ORDR_YN
+              , ORDR_NO
+              , ORDR_DT
+              , GDS_NO
+              , GDS_NM
+              , INQRY_TTL
+              , INQRY_CN
+              , ULD_IMG_URL
+              , WRTR_ID
+              , WRTR_NM
+              , WRT_DT
+              , REG_DT
+              , ETC_1
+              , ETC_2
+              , ETC_3
+        )
+        VALUES (
+                 #{SNDR_KEY}::BIGINT
+               , #{CHT_CUTT_BBS_ID}::BIGINT
+               , #{INQRY_NO}
+               , #{INQRY_TYPE}
+               , #{ORDR_YN}
+               , #{ORDR_NO}
+               , #{ORDR_DT}
+               , #{GDS_NO}
+               , #{GDS_NM}
+               , #{INQRY_TTL}
+               , #{INQRY_CN}
+               , #{ULD_IMG_URL}
+               , #{WRTR_ID}
+               , #{WRTR_NM}
+               , #{WRT_DT}
+               , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+               , #{ETC_1}
+               , #{ETC_2}
+               , #{ETC_3}
+               )
+    </insert>
+    <update id="updateChatCuttBbs" parameterType="java.util.HashMap" >
+        UPDATE PLT_CHT_CUTT_BBS /* 채팅_문의_게시판 업데이트. */
+        SET
+        <if test="INQRY_TYPE != null and INQRY_TYPE != ''">INQRY_TYPE = #{INQRY_TYPE},</if>
+        <if test="ORDR_YN != null and ORDR_YN != ''">ORDR_YN = #{ORDR_YN},</if>
+        <if test="ORDR_NO != null and ORDR_NO != ''">ORDR_NO = #{ORDR_NO},</if>
+        <if test="GDS_NO != null and GDS_NO != ''">GDS_NO = #{GDS_NO},</if>
+        <if test="GDS_NM != null and GDS_NM != ''">GDS_NM = #{GDS_NM},</if>
+        <if test="INQRY_TTL != null and INQRY_TTL != ''">INQRY_TTL = #{INQRY_TTL},</if>
+        <if test="INQRY_CN != null and INQRY_CN != ''">INQRY_CN = #{INQRY_CN},</if>
+        <if test="ULD_IMG_URL != null and ULD_IMG_URL != ''">ULD_IMG_URL = #{ULD_IMG_URL},</if>
+        <if test="WRTR_ID != null and WRTR_ID != ''">WRTR_ID = #{WRTR_ID},</if>
+        <if test="WRTR_NM != null and WRTR_NM != ''">WRTR_NM = #{WRTR_NM},</if>
+        <if test="ETC_1 != null and ETC_1 != ''">ETC_1 = #{ETC_1},</if>
+        <if test="ETC_2 != null and ETC_2 != ''">ETC_2 = #{ETC_2},</if>
+        <if test="ETC_3 != null and ETC_3 != ''">ETC_3 = #{ETC_3},</if>
+        <if test="CHT_CUTT_ID != null and CHT_CUTT_ID != ''">CHT_CUTT_ID = #{CHT_CUTT_ID}::BIGINT,</if>
+        MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        <where>
+            <if test="SNDR_KEY != null and SNDR_KEY != ''">AND SNDR_KEY = #{SNDR_KEY}::BIGINT</if>
+            <if test="CHT_CUTT_BBS_ID != null and CHT_CUTT_BBS_ID != ''">AND CHT_CUTT_BBS_ID = #{CHT_CUTT_BBS_ID}::BIGINT</if>
+            <if test="INQRY_NO != null and INQRY_NO != ''">AND INQRY_NO = #{INQRY_NO}</if>
+        </where>
+    </update>
+
+    <insert id="insertChatCuttBbsHstry" parameterType="java.util.HashMap">
+        INSERT  /*  채팅_상담_게시판_이력... 제목과 내용 _##_구분  (kr.co.hkcloud.palette3.core.cron.dao.CronChatBoardMapper.insertChatCuttBbsHstry) */
+        INTO PLT_CHT_CUTT_BBS_HSTRY(CHT_CUTT_BBS_ID, INQRY_CN, MDFCN_DT)
+        VALUES (#{CHT_CUTT_BBS_ID}::BIGINT, CONCAT(#{INQRY_TTL}, '_##_' , #{INQRY_CN}), TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'))
+    </insert>
+
+
+
+    <update id="updateChtCuttId" parameterType="java.util.HashMap">
+        UPDATE  /*  채팅_상담_ID 업데이트 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatBoardMapper.updateChtCuttId)	*/
+            PLT_CHT_CUTT_BBS
+        SET
+            CHT_CUTT_ID = #{CHT_CUTT_ID}::BIGINT
+        WHERE CHT_CUTT_BBS_ID = #{CHT_CUTT_BBS_ID}::BIGINT
+    </update>
+
+    <update id="updateChtCuttDtlDsptchMsg" parameterType="java.util.HashMap">
+        UPDATE  /*  채팅_상담_상세 메시지 업데이트 - (kr.co.hkcloud.palette3.core.cron.dao.CronChatBoardMapper.updateChtCuttDtlDsptchMsg)	*/
+            PLT_CHT_CUTT_DTL
+        SET
+            RCPTN_DSPTCH_MSG = #{DSPTCH_MSG}
+            , CHG_RCPTN_DSPTCH_MSG = #{DSPTCH_MSG}
+        WHERE CHT_CUTT_ID IN ( SELECT CHT_CUTT_ID FROM PLT_CHT_CUTT_BBS WHERE CHT_CUTT_BBS_ID = #{CHT_CUTT_BBS_ID}::BIGINT  )
+    </update>
+
+
+
+    <select id="selectNotMatchChtCuttId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            CC.CUSTCO_ID
+          , CC.CHN_CLSF_CD
+          , CCB.SNDR_KEY
+          , CCB.CHT_CUTT_BBS_ID
+          , CCB.INQRY_NO
+          , CCB.INQRY_CN
+        FROM PLT_CHT_CUTT_BBS CCB
+       INNER JOIN PLT_CUSTCO_CHN CC ON CC.SNDR_KEY = CCB.SNDR_KEY
+       WHERE CCB.CHT_CUTT_ID IS NULL
+    </select>
+
+
+
+</mapper>

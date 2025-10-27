@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.common.voc.dao.PrvcMapper">
+	
+	<select id="prvcInqHistList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*개인정보 조회 이력 목록 (kr.co.hkcloud.palette3.common.voc.dao.PrvcMapper.prvcInqHistList)*/
+			ROW_NUMBER() OVER(ORDER BY PPIL.REG_DT DESC) AS ROW_NUMBER
+			, PPIL.PRVC_INQ_LOG_ID
+			, PPIL.CUSTCO_ID
+			, PPIL.TASK_SE_CD
+			, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PPIL.CUSTCO_ID AND CD_ID = PPIL.TASK_SE_CD AND GROUP_CD_ID = 'PRVC_INQ_TASK_TP') AS TASK_SE_NM
+			, PPIL.TRGT_CUST_ID
+			, (SELECT CUST_NM FROM PLT_CUST WHERE CUST_ID = PPIL.TRGT_CUST_ID) AS TRGT_CUST_NM
+			, PPIL.TRGT_USER_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PPIL.TRGT_USER_ID) AS TRGT_USER_NM
+			, PPIL.INQ_INFO_SE
+			, PPIL.CNTN_MENU_CD
+			, PPIL.CNTN_MENU_PATH
+			, PPIL.CN
+			, PPIL.CNTN_IP
+			, PPIL.RGTR_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PPIL.RGTR_ID) AS RGTR_NM
+			, PPIL.REG_DT
+		FROM PLT_PRVC_INQ_LOG PPIL
+		WHERE PPIL.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<if test='(SCH_ST_DTS != null and SCH_ST_DTS !="") or (SCH_END_DTS != null and SCH_END_DTS !="")'>
+			<choose>
+				<when test='SCH_ST_DTS != "" and SCH_END_DTS ==""'>
+				AND PPIL.REG_DT >= #{SCH_ST_DTS}||'000000'
+				</when>
+				<when test='SCH_ST_DTS == "" and SCH_END_DTS !=""'>
+				AND PPIL.REG_DT<![CDATA[<=]]>#{SCH_END_DTS}||'235959'
+				</when>
+				<when test='SCH_ST_DTS != "" and SCH_END_DTS !=""'>
+				AND PPIL.REG_DT BETWEEN #{SCH_ST_DTS}||'000000' AND #{SCH_END_DTS}||'235959'
+				</when>
+			</choose>
+		</if>
+		<if test='SCH_INQ_TRGT_CD != null and SCH_INQ_TRGT_CD !=""'>
+			<choose>
+				<when test='SCH_INQ_TRGT_CD == "CUST"'>AND PPIL.TASK_SE_CD LIKE 'CUST_%'</when>
+				<otherwise>AND PPIL.TASK_SE_CD LIKE 'USER_%'</otherwise>
+			</choose>
+		</if>
+		<if test='SCH_INQ_TASK_CD != null and SCH_INQ_TASK_CD !=""'>
+		AND PPIL.TASK_SE_CD = #{SCH_INQ_TASK_CD}
+		</if>
+		<if test='SCH_TRGT_CUST_NM != null and SCH_TRGT_CUST_NM !=""'>
+		AND EXISTS (SELECT 1 FROM PLT_CUST WHERE CUST_ID = PPIL.TRGT_CUST_ID AND CUST_NM LIKE CONCAT(CONCAT('%',#{SCH_TRGT_CUST_NM}),'%'))
+		</if>
+		<if test='SCH_KEY != null and SCH_KEY !=""'>
+			<if test='SCH_KEYWORD != null and SCH_KEYWORD !=""'>
+				<choose>
+					<when test='SCH_KEY == "NM"'>
+					AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_ID = PPIL.RGTR_ID AND USER_NM LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%'))
+					</when>
+					<when test='SCH_KEY == "IP"'>
+					AND PPIL.CNTN_IP LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%')
+					</when>
+					<when test='SCH_KEY == "PATH"'>
+					AND PPIL.CNTN_MENU_PATH LIKE CONCAT(CONCAT('%',#{SCH_KEYWORD}),'%')
+					</when>
+				</choose>
+			</if>
+		</if>
+	</select>
+
+	<insert id="INSERT_PRVC_INQ_LOG"  parameterType= "java.util.HashMap">
+		INSERT INTO PLT_PRVC_INQ_LOG /*개인정보 조회 이력 저장 처리 (kr.co.hkcloud.palette3.common.voc.dao.PrvcMapper.INSERT_PRVC_INQ_LOG)*/
+		( CUSTCO_ID
+		, TASK_SE_CD
+		, TRGT_CUST_ID
+		, TRGT_USER_ID
+		, INQ_INFO_SE
+		, CNTN_MENU_CD
+		, CNTN_MENU_PATH
+		, CNTN_IP
+		, CN
+		, RGTR_ID
+		, REG_DT)
+		VALUES
+		(   #{CUSTCO_ID}::INTEGER
+		<choose><when test="TASK_SE_CD != null">, #{TASK_SE_CD}</when><otherwise>, NULL</otherwise></choose>
+		<choose><when test="TRGT_CUST_ID != null">, #{TRGT_CUST_ID}::INTEGER</when><otherwise>, NULL</otherwise></choose>
+		<choose><when test="TRGT_USER_ID != null">, #{TRGT_USER_ID}::INTEGER</when><otherwise>, NULL</otherwise></choose>
+		<choose><when test="INQ_INFO_SE != null">, #{INQ_INFO_SE}</when><otherwise>, NULL</otherwise></choose>
+		<choose><when test="CNTN_MENU_CD != null">, #{CNTN_MENU_CD}</when><otherwise>, NULL</otherwise></choose>
+		<choose><when test="CNTN_MENU_PATH != null">, #{CNTN_MENU_PATH}</when><otherwise>, NULL</otherwise></choose>
+		<choose><when test="CNTN_IP != null">, #{CNTN_IP}</when><otherwise>, NULL</otherwise></choose>
+		<choose><when test="CN != null">, #{CN}</when><otherwise>, NULL</otherwise></choose>
+		, #{RGTR_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		)
+	</insert>
+</mapper>

@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.cu.cuics.infra.ics.cti.dao.TopMapper">
+
+	<!-- 상담그룹정보 조회 (내선번호 세팅 해야함)-->
+	<select id="selectGropRtn" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+   		 SELECT 
+			DEPT_NM,
+			DEPT_CD
+		 FROM ARGO.V_CM_DEPT_CD
+		 <if test="DEPT_CD != '' and DEPT_CD != null"> 
+			 WHERE PARENT_DEPT_CD = #{DEPT_CD}
+		</if>
+	</select>
+	
+	<!-- 상담그룹정보 조회 (내선번호 세팅 해야함)-->
+	<select id="SelectGropRtnQueue" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+   		 SELECT 
+			CD,
+			CD_NM
+		FROM TB_COMON_CODE
+		WHERE GROUP_CD = 'TWB520'
+		<if test="DEPT_CD != '' and DEPT_CD != null"> 
+		AND ETC_INFO01 = #{DEPT_CD}
+		</if>
+	</select>
+	
+	<!-- 상담콤보정보 조회 -->
+	<select id="selectComboRtn" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+   		 SELECT 
+			DEPT_NM AS CD_NM,
+			DEPT_CD AS CD
+		 FROM ARGO.V_CM_DEPT_CD
+		 WHERE PARENT_DEPT_CD = #{DEPT_CD}
+	</select>			
+	
+	<!-- 상담사 정보 조회 -->
+	<select id="selectAgentRtn"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT 
+			A.AGENT_ID
+			,A.AGENT_NM
+			,B.INLNE_NO AS AGENT_DN
+			,C.DEPT_NM AS AGENT_GROUP
+		 FROM VW_USER_MASTER A
+		 LEFT JOIN TB_IP_INLNE B
+		 ON A.AGENT_ID = B.USER_ID
+		 LEFT JOIN ARGO.V_CM_DEPT_CD C
+         ON C.DEPT_CD = A.DEPT_CD 
+		 WHERE A.DEPT_CD = #{DEPT_CD}
+		 ORDER BY AGENT_NM ASC
+	</select>	
+	
+	<!-- 상담사 조회 -->
+	<select id="selectRtn" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 
+			A.AGENT_ID
+			,A.AGENT_NM
+			,B.INLNE_NO AS AGENT_DN
+			,C.DEPT_NM AS AGENT_GROUP
+		 FROM VW_USER_MASTER A
+		 LEFT JOIN TB_IP_INLNE B
+		 ON A.AGENT_ID = B.USER_ID	
+		 LEFT JOIN ARGO.V_CM_DEPT_CD C
+         ON C.DEPT_CD = A.DEPT_CD 
+	     WHERE 1=1
+	     <if test="AGENT_NM != '' and AGENT_NM != null">
+	     	AND A.AGENT_NM LIKE '%' || #{AGENT_NM} || '%'
+	     </if>
+	     <if test="DEPT_CD != '' and DEPT_CD != null"> 
+	      	AND A.DEPT_CD IN(SELECT DEPT_CD from ARGO.V_CM_DEPT_CD
+          	WHERE PARENT_DEPT_CD = #{DEPT_CD}
+          	OR DEPT_CD = #{DEPT_CD})
+          </if>
+          <if test="INLNE_NO != '' and INLNE_NO != null">
+          	AND B.INLNE_NO LIKE '%' ||  #{INLNE_NO} || '%' 
+          </if>  
+	     ORDER BY AGENT_NM ASC	
+     </select>
+		
+	<!-- 업무지원 ARS 조회-->
+	<select id="selectArsRtn" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT CD,CD_NM 
+		 FROM TB_COMON_CODE
+		 WHERE GROUP_CD ='CRS028'
+     </select>	
+		
+		
+	<!-- 업무 지원 콜백 조회-->
+	<select id="selectBusiClbk" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(*) AS NUM 
+		FROM  TB_RESV_SCHE
+		WHERE RESV_TY_CODE = 'CB'
+			AND PROC_STAT_CODE IN ('NOPROC', 'PROCING')
+			AND CJOB_CSLT_ID = #{CJOB_CSLT_ID}
+     </select>    
+     
+     <!-- 업무 지원 예약콜 조회-->
+	<select id="selectBusiResv" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(*) AS NUM
+		FROM  TB_RESV_SCHE
+		WHERE RESV_TY_CODE = 'RECL'
+			AND PROC_STAT_CODE IN ('NOPROC', 'PROCING')
+			AND CJOB_CSLT_ID = #{CJOB_CSLT_ID}
+     </select>
+     
+     <!-- 업무 지원 예약콜 시간 조회-->
+	<select id="selectBusiResvtime" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+		RESV_DATE 
+		,RESV_TIME
+		FROM  TB_RESV_SCHE
+		WHERE RESV_TY_CODE = 'RECL'
+			AND PROC_STAT_CODE IN ('NOPROC', 'PROCING')
+            AND CJOB_CSLT_ID = #{CJOB_CSLT_ID}
+            /*AND RESV_DATE = TO_CHAR(NOW(),'YYYYMMDD')*/
+            ORDER BY RESV_TIME DESC
+     </select>
+     
+     <!-- 업무 지원 콜백 시간 조회-->
+	<select id="selectBusiClbktime" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+		RESV_DATE 
+		,RESV_TIME
+		FROM  TB_RESV_SCHE
+		WHERE RESV_TY_CODE = 'CB'
+			AND PROC_STAT_CODE IN ('NOPROC', 'PROCING')
+            AND CJOB_CSLT_ID = #{CJOB_CSLT_ID}
+            /*AND RESV_DATE = TO_CHAR(NOW(),'YYYYMMDD')*/
+            ORDER BY RESV_TIME DESC
+     </select>
+     
+     
+     
+     <!-- 공제 지원 콜백 조회 -->
+	<select id="selectDeduClbk" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT (*) AS NUM
+		 FROM TB_CLBK A
+         	INNER JOIN TB_CLBK_DSTR B
+         	ON A.CLBK_NO = B.CLBK_NO
+         		WHERE DSTR_CSLT_ID = #{DSTR_CSLT_ID}
+         		AND EOT_TY IN('00002', '00004') /* 00002:미시도, 00004:처리중 */
+     </select>
+     
+     <!-- 공제 지원 예약콜 조회 -->
+	<select id="selectDeduResv" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT COUNT(*) AS NUM
+		 FROM TB_CNSL_RESV A
+    		INNER JOIN TB_CNSL_DE B
+         	ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+    			AND B.CSLT_ID = #{CSLT_ID}
+    			AND A.FISH_YN = 'N'
+     </select>	
+		
+	<!-- 공제 지원 예약콜 조회 -->
+	<select id="selectDeduResvtime" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT RESV_TIME 
+		 FROM TB_CNSL_RESV A
+    		INNER JOIN TB_CNSL_DE B
+         	ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+    			AND B.CSLT_ID = #{CSLT_ID}
+    			/*AND A.RESV_DATE = TO_CHAR(NOW(),'YYYYMMDD')*/
+    			AND A.FISH_YN = 'N'
+     </select>	
+
+<select id="selectCommonCode" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		 SELECT
+		 	 CD					/*상세코드*/
+		 	,CD_NM				/*상세코드명*/
+		 	,ETC_INFO01			/*기타코드1*/
+		 	,ETC_INFO02 		/*기타코드2*/
+		 FROM TB_COMON_CODE
+		 WHERE GROUP_CD = #{GROUP_CD}
+         AND CD != '****'
+     </select>		
+		
+</mapper>

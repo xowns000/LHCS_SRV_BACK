@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.core.chat.msg.dao.SendTestMapper">
+
+<select id="selectMessage" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	/* selectMessage - 발송 시스템 메시지 조회 */
+	SELECT REGEXP_REPLACE(MSG_CN, '[\n\r]+', '\n', 'g' ) AS MSG_CN
+	  FROM PLT_CHT_CUSTCO_SYS_MSG
+	 WHERE CUSTCO_ID=#{CUSTCO_ID}::INTEGER
+	   AND SYS_MSG_ID = #{SYS_MSG_ID}::INTEGER
+</select>
+
+</mapper>

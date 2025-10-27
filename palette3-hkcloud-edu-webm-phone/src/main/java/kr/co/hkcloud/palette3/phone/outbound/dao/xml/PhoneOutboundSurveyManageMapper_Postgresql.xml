@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundSurveyManageMapper">
+
+<!-- 데이터 ResultMap -->	
+<resultMap id="selectHashMap" type="java.util.HashMap" >
+	<!-- 부분 암복호화  -->
+	<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+</resultMap>
+
+<!-- 설문지 조회 -->
+<select id="selectRtnServayList"  parameterType= "java.util.HashMap" resultMap="selectHashMap">
+	SELECT
+	    A.QUEST_ID  AS S_ID
+		, A.QUEST_NM  AS S_NM
+		, A.CENT_TY
+		, (SELECT CD_NM FROM PLT_COMN_CD where GROUP_CD='TWB500' AND CD = A.CENT_TY) AS CENT_TY_NM /* 센터구분명 */
+		, REM  AS REM
+		, QUEST_CNTN   AS S_TEXT
+		, TO_CHAR(TO_DATE(A.CHNG_DTIM, 'YYYYMMDDHH24MISS') , 'YYYY-MM-DD') AS INPUT_DATE
+		, A.CHNG_MAN  AS INPUT_EMP
+		, BAS01.USER_NM AS INPUT_EMP_NM
+		, (SELECT COUNT(1) FROM PLT_PHN_SURV_QST WHERE QUEST_ID = A.QUEST_ID) AS FLD_Q_CNT
+		, (SELECT COUNT(1) FROM (SELECT QUEST_ID, CUST_NO  FROM PLT_PHN_SURV_RST GROUP BY QUEST_ID, CUST_NO ) WHERE QUEST_ID = A.QUEST_ID) AS FLD_CUST_CNT
+	FROM
+	    PLT_PHN_SURV A
+		LEFT OUTER JOIN PLT_USER BAS01
+			ON A.CHNG_MAN  = BAS01.USER_ID
+	WHERE
+	    TO_DATE(A.CHNG_DTIM, 'YYYYMMDDHH24MISS') <![CDATA[ >= ]]> TO_DATE(CONCAT(#{SEARCH_DT_FROM} , '000000'), 'YYYYMMDDHH24MISS') 
+	    AND TO_DATE(A.CHNG_DTIM, 'YYYYMMDDHH24MISS') <![CDATA[ <= ]]> TO_DATE(CONCAT(#{SEARCH_DT_TO} , '235959'), 'YYYYMMDDHH24MISS')
+	<if test="CENT_TY !='' and CENT_TY !=null">
+		AND A.CENT_TY = #{CENT_TY} 
+	</if>
+	<if test="SEARCH_FLD_NM !='' and SEARCH_FLD_NM !=null">
+		AND A.QUEST_NM LIKE '%' || #{SEARCH_FLD_NM} || '%' 
+	</if>
+	ORDER BY A.REG_DTIM DESC
+</select>
+
+<!-- 설문지문항 조회 -->
+<select id="selectRtnServayQList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 
+		 Q_NO
+		,QUEST_ID AS FLD_SID
+		,Q_CNTN AS Q_DESC
+		,ANS_FORM AS ANS_TYPE
+		, CASE
+			WHEN ANS_FORM = '01' THEN '객관식'
+			WHEN ANS_FORM = '02' THEN '주관식'
+			ELSE ''
+		END AS ANS_TYPE_NM
+	FROM
+		PLT_PHN_SURV_QST
+	WHERE
+		QUEST_ID  = #{FLD_SID}
+	ORDER BY CAST(Q_NO AS INTEGER)
+</select>
+
+<!-- 설문지답안 조회 -->
+<select id="selectRtnServayAnsList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+		ANS_NO
+		, QUEST_ID AS FLD_SID
+		, Q_NO
+		, ANS_CNTN AS ANS_DESC
+		, NEXT_Q_NO
+	FROM
+		PLT_PHN_SURV_ANS
+	WHERE
+		QUEST_ID = #{FLD_SID}
+		AND Q_NO = #{Q_NO}
+	ORDER BY
+		CAST(ANS_NO AS INTEGER)		
+</select>		
+	
+<!-- 설문지문항 문항번호 생성 -->
+<select id="selectRtnServayQNo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	/* selectRtnServayQNo 설문지문항 문항번호 생성 */
+	SELECT (COALESCE(MAX(CAST(Q_NO AS INTEGER)), 0) + 1) AS Q_NO 
+	FROM PLT_PHN_SURV_QST 
+	WHERE QUEST_ID = #{FLD_SID}
+</select>
+
+<!-- 설문지 번호 생성 -->
+<select id="selectRtnServayNo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	/* selectRtnServayNo 설문지 번호 생성 */
+	SELECT (COALESCE(MAX(CAST(QUEST_ID AS INTEGER)), 0) + 1) AS QUEST_ID 
+	FROM PLT_PHN_SURV 
+</select>
+
+<select id="selectQuestListPop"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectQuestListPop */
+		
+
+<!-- 		SELECT  -->
+<!-- 				DT_TB.*, PG_TB.*  -->
+		
+<!-- 			FROM ( -->
+		
+		/* DT_TB */
+		SELECT
+				TQ.QUEST_ID  
+				, TQ.QUEST_NM  
+		        , TQ.CENT_TY 
+				, TQ.QUEST_CNTN   
+				, SUBSTR( TQ.CHNG_DTIM , 0, 8) AS CHNG_DTIM
+				, TQ.CHNG_MAN  AS AGENT_ID
+				, COALESCE( ( SELECT USER_NM FROM PLT_USER U WHERE U.USER_ID = TQ.CHNG_MAN ), TQ.CHNG_MAN ) AS USER_NM
+				, (SELECT COUNT(*) FROM PLT_PHN_SURV_QST Q WHERE Q.QUEST_ID = TQ.QUEST_ID) AS QUEST_CNT
+			FROM PLT_PHN_SURV TQ
+				
+<!--  		    WHERE  SUBSTR( TQ.CHNG_DTIM, 0, 8 ) BETWEEN #{DATE_FROM}  AND  #{DATE_TO} -->
+
+<!-- 			<if test="CENT_TY !=null and CENT_TY !=''"> -->
+<!-- 				AND TQ.CENT_TY = #{CENT_TY}  -->
+<!-- 			</if> -->
+<!-- 			<if test="QUEST_NM !=null and QUEST_NM !=''"> -->
+<!-- 				AND TQ.QUEST_NM LIKE '%' || #{QUEST_NM} || '%'  -->
+<!-- 			</if> -->
+
+			ORDER BY TQ.CHNG_DTIM DESC
+			
+<!-- 			/* 페이징관련 처리  */ -->
+<!--    			) DT_TB,  -->
+     		
+<!--      		/* PG_TB */ -->
+<!--     		(  SELECT  COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */ -->
+<!--                     FROM  PLT_PHN_SURV  -->
+<!--                      WHERE SUBSTR( CHNG_DTIM, 0, 8 ) BETWEEN #{DATE_FROM}  AND  #{DATE_TO}  -->
+<!--                      ) PG_TB -->
+
+
+	</select>
+		
+
+<!-- 설문지 신규 -->
+<insert id="insertRtnServay" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_PHN_SURV ( 
+		QUEST_ID
+		, CENT_TY 
+		, QUEST_NM 
+		, QUEST_CNTN
+		, REM
+		, USE_YN
+		, REG_MAN
+		, REG_DTIM
+		, CHNG_MAN 
+		, CHNG_DTIM 
+	) VALUES ( 
+		#{FLD_SID}
+		, #{CENT_DTL_TY}
+		, #{FLD_S_NM}
+		, #{MLN_S_TEXT}
+		, #{REM}
+		, #{USE_YN}
+		, #{USER_ID}
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+
+</insert>
+
+<!-- 설문지 수정 -->
+<update id="updateRtnServay" parameterType= "java.util.HashMap">
+	UPDATE PLT_PHN_SURV SET 
+		QUEST_NM = #{FLD_S_NM}
+     	, QUEST_CNTN = #{MLN_S_TEXT}
+     	, CENT_TY = #{CENT_DTL_TY}
+		, CHNG_MAN = #{USER_ID}
+		, CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE 
+		QUEST_ID = #{FLD_SID}
+</update>
+
+<!-- 설문지 삭제 -->
+<delete id="deleteRtnServay" parameterType= "java.util.HashMap">
+	DELETE FROM PLT_PHN_SURV 
+	WHERE QUEST_ID = #{FLD_SID}
+</delete>
+
+<!-- 설문 항목 삭제 -->
+<delete id="deleteRtnServayData01" parameterType= "java.util.HashMap">
+	DELETE FROM PLT_PHN_SURV_QST 
+	WHERE QUEST_ID = #{FLD_SID}
+	<if test="Q_NO !='' and Q_NO !=null">
+		AND Q_NO = #{Q_NO}
+	</if>
+</delete>
+
+<!-- 설문지 다음항목 삭제 -->
+<delete id="deleteRtnServayData02" parameterType= "java.util.HashMap">
+	DELETE FROM PLT_PHN_SURV_ANS 
+	WHERE QUEST_ID = #{FLD_SID}
+	<if test="Q_NO !='' and Q_NO !=null">
+		AND Q_NO = #{Q_NO}
+	</if>
+	<if test="ANS_NO !='' and ANS_NO !=null">
+		AND ANS_NO = #{ANS_NO}
+	</if>
+</delete>
+
+<!-- 설문답안 삭제 -->
+<delete id="deleteRtnServayResult" parameterType= "java.util.HashMap">
+	DELETE FROM PLT_PHN_SURV_RST 
+	WHERE QUEST_ID = #{FLD_SID}
+	<if test="Q_NO !='' and Q_NO !=null">
+		AND Q_NO = #{Q_NO}
+	</if>
+</delete>
+	
+<!-- 설문지항목 신규 -->
+<insert id="insertRtnServayData01" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_PHN_SURV_QST (
+		Q_NO
+		, QUEST_ID
+		, Q_CNTN
+		, ANS_FORM
+		, REG_MAN 
+		, REG_DTIM
+		, CHNG_MAN  
+		, CHNG_DTIM
+	) VALUES (
+		#{Q_NO}
+		, #{FLD_SID}
+		, #{Q_DESC}
+		, #{ANS_TYPE}
+		, #{USER_ID}
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+</insert>
+
+<!-- 설문지답안 신규 -->
+<insert id="insertRtnServayData02" parameterType= "java.util.HashMap">
+
+	INSERT INTO PLT_PHN_SURV_ANS (
+		ANS_NO
+		, QUEST_ID
+		, Q_NO
+		, ANS_CNTN
+		, NEXT_Q_NO
+		, REG_MAN
+		, REG_DTIM
+		, CHNG_MAN 
+		, CHNG_DTIM
+	) VALUES (
+		(SELECT (COALESCE(MAX(CAST(ANS_NO AS INTEGER)), 0) + 1) AS ANS_NO FROM PLT_PHN_SURV_ANS WHERE QUEST_ID = #{FLD_SID} AND Q_NO = #{Q_NO} )
+		, #{FLD_SID}
+		, #{Q_NO}
+		, #{ANS_DESC}
+		, #{NEXT_Q_NO}
+		, #{USER_ID}
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+
+</insert>	
+
+<!-- 설문지항목 수정 -->
+<update id="updateRtnServayData01" parameterType= "java.util.HashMap">
+
+	UPDATE PLT_PHN_SURV_QST SET
+		Q_CNTN = #{Q_DESC}
+		, ANS_FORM = #{ANS_TYPE}
+		, CHNG_MAN = #{USER_ID}
+		, CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE
+		QUEST_ID = #{FLD_SID}
+		AND Q_NO = #{Q_NO}
+		
+</update>
+
+<!-- 설문지답안 수정 -->
+<update id="updateRtnServayData02" parameterType= "java.util.HashMap">
+	UPDATE PLT_PHN_SURV_ANS SET
+		ANS_CNTN = #{ANS_DESC}
+		, NEXT_Q_NO = #{NEXT_Q_NO}
+		, CHNG_MAN = #{USER_ID}
+		, CHNG_DTIM = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE
+		QUEST_ID = #{FLD_SID}
+		AND Q_NO = #{Q_NO}
+		AND ANS_NO = #{ANS_NO}
+</update>
+
+</mapper>

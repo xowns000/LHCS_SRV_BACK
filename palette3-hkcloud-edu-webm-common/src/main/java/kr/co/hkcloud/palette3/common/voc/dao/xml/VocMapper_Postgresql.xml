@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.common.voc.dao.VocMapper">
+
+	<select id="vocList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*VOC 목록 (kr.co.hkcloud.palette3.common.voc.dao.VocMapper.vocList)*/
+			ROW_NUMBER() OVER(ORDER BY PVR.REG_DT DESC) AS ROW_NUMBER
+			, PVR.VOC_RCPT_ID
+			, PVR.CUSTCO_ID
+			, PVR.CUST_ID
+			, PVR.VOC_TYPE_CD
+			, VOC_TP.CD_NM AS VOC_TYPE_NM
+			, PVR.VOC_TYPE_DTL_CD
+			, PVR.CHN_TYPE_CD
+			, CHNL.CD_NM AS CHN_TYPE_NM
+			, PVR.CHN_TYPE_DTL_CD
+			, CHNL_CL.CD_NM AS CHN_TYPE_DTL_NM
+			, PVR.IPTT_CD
+			, IMPT.CD_NM AS IPTT_NM
+			, PVR.CUST_TYPE_CD
+			, VOC_CUST_TP.CD_NM AS CUST_TYPE_NM
+			, PVR.NM_YN_CD
+			, ANY_WT.CD_NM AS NM_YN_NM
+			, PVR.CUST_TDCY_CD
+			, CUST_PS.CD_NM AS CUST_TDCY_NM
+			, PVR.CUST_NM
+			, PVR.TELNO
+			, PVR.VOC_TTL
+			, PVR.VOC_CN
+			, PVR.RSLT_PVSN_CD
+			, NOTR_WT.CD_NM AS RSLT_PVSN_NM
+			, PVR.RSLT_PVSN_MTHD_CD
+			, NOTR_TL.CD_NM AS RSLT_PVSN_MTHD_NM
+			, PVR.RSVT_CL_YN
+			, PVR.RSVT_CL_DT
+			, PVR.RSVT_CL_TELNO
+			, PVR.REG_DT
+			, PVR.RGTR_ID
+			, PVR.MDFCN_DT
+			, PVR.MDFR_ID
+		FROM PLT_VOC_RCPT PVR
+		LEFT OUTER JOIN PLT_COMM_CD VOC_TP ON VOC_TP.CUSTCO_ID = PVR.CUSTCO_ID AND VOC_TP.CD_ID = PVR.VOC_TYPE_CD AND VOC_TP.GROUP_CD_ID = 'VOC_TP'
+		LEFT OUTER JOIN PLT_COMM_CD CHNL ON CHNL.CUSTCO_ID = PVR.CUSTCO_ID AND CHNL.CD_ID = PVR.CHN_TYPE_CD AND CHNL.GROUP_CD_ID = 'CHNL'
+		LEFT OUTER JOIN PLT_COMM_CD CHNL_CL ON CHNL_CL.CUSTCO_ID = PVR.CUSTCO_ID AND CHNL_CL.CD_ID = PVR.CHN_TYPE_DTL_CD AND CHNL_CL.GROUP_CD_ID = 'CHNL_CL'
+		LEFT OUTER JOIN PLT_COMM_CD IMPT ON IMPT.CUSTCO_ID = PVR.CUSTCO_ID AND IMPT.CD_ID = PVR.IPTT_CD AND IMPT.GROUP_CD_ID = 'IMPT'
+		LEFT OUTER JOIN PLT_COMM_CD VOC_CUST_TP ON VOC_CUST_TP.CUSTCO_ID = PVR.CUSTCO_ID AND VOC_CUST_TP.CD_ID = PVR.CUST_TYPE_CD AND VOC_CUST_TP.GROUP_CD_ID = 'VOC_CUST_TP'
+		LEFT OUTER JOIN PLT_COMM_CD ANY_WT ON ANY_WT.CUSTCO_ID = PVR.CUSTCO_ID AND ANY_WT.CD_ID = PVR.NM_YN_CD AND ANY_WT.GROUP_CD_ID = 'ANY_WT'
+		LEFT OUTER JOIN PLT_COMM_CD CUST_PS ON CUST_PS.CUSTCO_ID = PVR.CUSTCO_ID AND CUST_PS.CD_ID = PVR.CUST_TDCY_CD AND CUST_PS.GROUP_CD_ID = 'CUST_PS'
+		LEFT OUTER JOIN PLT_COMM_CD NOTR_WT ON NOTR_WT.CUSTCO_ID = PVR.CUSTCO_ID AND NOTR_WT.CD_ID = PVR.RSLT_PVSN_CD AND NOTR_WT.GROUP_CD_ID = 'NOTR_WT'
+		LEFT OUTER JOIN PLT_COMM_CD NOTR_TL ON NOTR_TL.CUSTCO_ID = PVR.CUSTCO_ID AND NOTR_TL.CD_ID = PVR.RSLT_PVSN_MTHD_CD AND NOTR_TL.GROUP_CD_ID = 'NOTR_TL'
+		WHERE PVR.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		<if test='ST_DT != null and ST_DT != ""'>
+			AND SUBSTRING(PVR.REG_DT, 1, 8) >= #{ST_DT}
+		</if>
+		<if test='END_DT != null and END_DT != ""'>
+			AND SUBSTRING(PVR.REG_DT, 1, 8) <![CDATA[<=]]> #{END_DT}
+		</if>
+		<if test='VOC_TYPE_CD != null and VOC_TYPE_CD != ""'>
+			AND PVR.VOC_TYPE_CD = #{VOC_TYPE_CD}
+		</if>
+		<if test='CUST_TYPE_CD != null and CUST_TYPE_CD != ""'>
+			AND PVR.CUST_TYPE_CD = #{CUST_TYPE_CD}
+		</if>
+		<if test='RSLT_PVSN_CD != null and RSLT_PVSN_CD != ""'>
+			AND PVR.RSLT_PVSN_CD = #{RSLT_PVSN_CD}
+		</if>
+		<if test='SCH_KEY != null and SCH_KEY != ""'>
+			<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+				<choose>
+					<when test='SCH_KEY == "CUST_NM"'>AND PVR.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')</when>
+					<when test='SCH_KEY == "CUSL_NM"'>AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%') AND USER_ID = PVR.RGTR_ID)</when>
+				</choose>
+			</if>
+		</if>
+	</select>
+
+	<insert id="INSERT_VOC"  parameterType= "java.util.HashMap">
+	INSERT /*VOC 등록 (kr.co.hkcloud.palette3.common.voc.dao.VocMapper.INSERT_VOC)*/
+	INTO PLT_VOC_RCPT ( VOC_RCPT_ID
+			, CUSTCO_ID
+			, CUST_ID
+			, VOC_TYPE_CD
+			<if test="VOC_TYPE_DTL_CD !=null and VOC_TYPE_DTL_CD != ''">, VOC_TYPE_DTL_CD</if>
+			, CHN_TYPE_CD
+			<if test="CHN_TYPE_DTL_CD !=null and CHN_TYPE_DTL_CD != ''">, CHN_TYPE_DTL_CD</if>
+			, IPTT_CD
+			, CUST_TYPE_CD
+			<if test="NM_YN_CD !=null and NM_YN_CD != ''">, NM_YN_CD</if>
+			<if test="CUST_TDCY_CD !=null and CUST_TDCY_CD != ''">, CUST_TDCY_CD</if>
+			, CUST_NM
+			, TELNO
+			, VOC_TTL
+			, VOC_CN
+			<if test="RSLT_PVSN_CD !=null and RSLT_PVSN_CD != ''">, RSLT_PVSN_CD</if>
+			<if test="RSLT_PVSN_MTHD_CD !=null and RSLT_PVSN_MTHD_CD != ''">, RSLT_PVSN_MTHD_CD</if>
+			, RSVT_CL_YN
+			, RSVT_CL_DT
+			<if test="RSVT_CL_TELNO !=null and RSVT_CL_TELNO != ''">, RSVT_CL_TELNO</if>
+			, REG_DT
+			, RGTR_ID
+			, MDFCN_DT
+			, MDFR_ID
+	       ) 
+	VALUES ( #{VOC_RCPT_ID}
+	       , #{CUSTCO_ID}::INTEGER
+	       , #{CUST_ID}::INTEGER
+	       , #{VOC_TYPE_CD}
+	       <if test="VOC_TYPE_DTL_CD !=null and VOC_TYPE_DTL_CD != ''">, #{VOC_TYPE_DTL_CD}</if>
+	       , #{CHN_TYPE_CD}
+	       <if test="CHN_TYPE_DTL_CD !=null and CHN_TYPE_DTL_CD != ''">, #{CHN_TYPE_DTL_CD}</if>
+	       , #{IPTT_CD}
+	       , #{CUST_TYPE_CD}
+	       <if test="NM_YN_CD !=null and NM_YN_CD != ''">, #{NM_YN_CD}</if>
+	       <if test="CUST_TDCY_CD !=null and CUST_TDCY_CD != ''">, #{CUST_TDCY_CD}</if>
+	       , #{CUST_NM}
+	       , #{TELNO}
+	       , #{VOC_TTL}
+	       , #{VOC_CN}
+	       <if test="RSLT_PVSN_CD !=null and RSLT_PVSN_CD != ''">, #{RSLT_PVSN_CD}</if>
+	       <if test="RSLT_PVSN_MTHD_CD !=null and RSLT_PVSN_MTHD_CD != ''">, #{RSLT_PVSN_MTHD_CD}</if>
+	       , #{RSVT_CL_YN}
+	       , #{RSVT_CL_DT}
+	       <if test="RSVT_CL_TELNO !=null and RSVT_CL_TELNO != ''">, #{RSVT_CL_TELNO}</if>
+	       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	       , #{USER_ID}::INTEGER
+	       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+	       , #{USER_ID}::INTEGER
+	       )
+	</insert>
+		
+	<update id="UPDATE_VOC"  parameterType= "java.util.HashMap">
+		UPDATE PLT_VOC_RCPT /*VOC 수정 (kr.co.hkcloud.palette3.common.voc.dao.VocMapper.UPDATE_VOC)*/
+		   SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		   		, MDFR_ID = #{USER_ID}::INTEGER
+				, IP = #{IP}
+				, EXT_NO = #{EXT_NO}::INTEGER
+				<if test="PDS_EXT_NO !=null and PDS_EXT_NO != ''"> , PDS_EXT_NO = #{PDS_EXT_NO}::INTEGER</if>
+				, RMRK = #{RMRK}
+		WHERE VOC_RCPT_ID = #{VOC_RCPT_ID}::INTEGER
+	</update>		
+</mapper>

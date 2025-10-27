@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.lkag.custco.dao.LkagCustcoMapper">
+    <select id="selectList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /* 고객사별 연동목록 selectList - kr.co.hkcloud.palette3.admin.lkag.custco.dao.LkagCustcoMapper */
+        ROW_NUMBER() OVER( ORDER BY
+        <choose>
+            <when test="SRCH_ORDER_BY != null and SRCH_ORDER_BY !=''">${SRCH_ORDER_BY}</when>
+            <otherwise>CCL.CERT_CUSTCO_LKAG_ID DESC</otherwise>
+        </choose>
+        ) AS ROW_NUMBER
+        , CCL.CERT_CUSTCO_LKAG_ID
+        , CCL.CERT_CUSTCO_ID
+        , CCL.LKAG_ID
+        , CCL.ACS_ACNT_KEY
+        , CCL.ACS_SECTY_KEY
+        , CCL.ACS_ACNT_ID
+        , CCL.ETC_01
+        , CCL.ETC_02
+        , CCL.ETC_03
+        , CCL.ETC_04
+        , CCL.ETC_05
+        , CC.CUSTCO_ID
+        , CC.CUSTCO_NM
+        , CC.SCHEMA_ID
+        , LMNG.LKAG_MST_ID
+        , LMST.MST_NM
+        , LMST.LKAG_BEAN_ID
+        , LMNG.LKAG_NM
+        , LMNG.LKAG_SE_CD
+        , LSC.CD_NM as LKAG_SE_CD_NM /* 연동방법 */
+        , LMNG.RQST_SE_CD
+        , RSC.CD_NM as RQST_SE_CD_NM /* 연동 프로토콜 */
+        , RSC.CD_VL as RQST_SE_CD_VL /* 연동 프로토콜 */
+        , LMNG.RQST_DATA_CD
+        , RQDC.CD_NM as RQST_DATA_CD_NM
+        , RQDC.CD_VL as RQST_DATA_CD_VL
+        , LMNG.RSPNS_DATA_CD
+        , RDC.CD_NM as RSPNS_DATA_CD_NM /* 응답자료 */
+        , RDC.CD_VL as RSPNS_DATA_CD_VL /* 응답자료 */
+        , LMNG.LKAG_URI
+        , LMNG.PARAM_DLVR_TYPE_CD
+        , PDTC.CD_NM as PARAM_DLVR_TYPE_CD_NM /* 요청자료 */
+        , LMNG.PARAM_ENCPT_MTHD_CD
+        , PEMC.CD_NM as PARAM_ENCPT_MTHD_CD_NM
+        , PEMC.CD_VL as PARAM_ENCPT_MTHD_CD_VL
+        , LMNG.PARAM_ENCPT_KEY
+        , LMNG.RSPNS_DECPT_MTHD_CD
+        , RDMC.CD_NM as RSPNS_DECPT_MTHD_CD_NM
+        , RDMC.CD_VL as RSPNS_DECPT_MTHD_CD_VL
+        , LMNG.RSPNS_DECPT_KEY
+        , LMNG.EXPLN
+        , LMNG.USE_YN
+        , CUSTCO.GET_USE_LKAG_LAYOUT(CC.SCHEMA_ID, CCL.LKAG_ID ) AS USE_LAYOUT_CNT
+        , CUSTCO.GET_USE_LKAG_LAYOUT_NAMES(CC.SCHEMA_ID, CCL.LKAG_ID ) AS USE_LAYOUT_NAMES
+        , CUSTCO.GET_USE_LKAG_BATCH(CC.SCHEMA_ID, CCL.LKAG_ID ) AS USE_BATCH_CNT
+        , CUSTCO.GET_USE_LKAG_BATCH_NAMES(CC.SCHEMA_ID, CCL.LKAG_ID ) AS USE_BATCH_NAMES
+        FROM CUSTCO.PLT_CERT_CUSTCO_LKAG CCL
+        INNER JOIN CUSTCO.PLT_CERT_CUSTCO CC ON CC.CERT_CUSTCO_ID = CCL.CERT_CUSTCO_ID
+        INNER JOIN CUSTCO.PLT_LKAG_MNG LMNG ON LMNG.LKAG_ID = CCL.LKAG_ID
+        INNER JOIN CUSTCO.PLT_LKAG_MST LMST ON LMST.LKAG_MST_ID = LMNG.LKAG_MST_ID
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD LSC ON LSC.CUSTCO_ID = 1 AND LSC.CD_ID = LMNG.LKAG_SE_CD AND LSC.GROUP_CD_ID = 'LKAG_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RSC ON RSC.CUSTCO_ID = 1 AND RSC.CD_ID = LMNG.RQST_SE_CD AND RSC.GROUP_CD_ID = 'LKAG_RQST_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RQDC ON RQDC.CUSTCO_ID = 1 AND RQDC.CD_ID = LMNG.RQST_DATA_CD AND RQDC.GROUP_CD_ID = 'LKAG_RSPNS_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDC ON RDC.CUSTCO_ID = 1 AND RDC.CD_ID = LMNG.RSPNS_DATA_CD AND RDC.GROUP_CD_ID = 'LKAG_RSPNS_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PDTC ON PDTC.CUSTCO_ID = 1 AND PDTC.CD_ID = LMNG.PARAM_DLVR_TYPE_CD AND PDTC.GROUP_CD_ID = 'LKAG_PARAM_SEND_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PEMC ON PEMC.CUSTCO_ID = 1 AND PEMC.CD_ID = LMNG.PARAM_ENCPT_MTHD_CD AND PEMC.GROUP_CD_ID = 'LKAG_EN_CERT_TP'
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDMC ON RDMC.CUSTCO_ID = 1 AND RDMC.CD_ID = LMNG.RSPNS_DECPT_MTHD_CD AND RDMC.GROUP_CD_ID ='LKAG_DE_CERT_TP'
+        WHERE 1=1
+        <if test='SRCH_CERT_CUSTCO_LKAG_ID != null and SRCH_CERT_CUSTCO_LKAG_ID !=""'>
+            AND CCL.CERT_CUSTCO_LKAG_ID = #{SRCH_CERT_CUSTCO_LKAG_ID}::INTEGER
+        </if>
+        <if test='SRCH_CERT_CUSTCO_ID != null and SRCH_CERT_CUSTCO_ID !=""'>
+            AND CC.CERT_CUSTCO_ID = #{SRCH_CERT_CUSTCO_ID}::INTEGER
+        </if>
+        <if test='SRCH_LKAG_ID != null and SRCH_LKAG_ID !=""'>
+            AND CCL.LKAG_ID = #{SRCH_LKAG_ID}::INTEGER
+        </if>
+        <if test='SRCH_LKAG_MST_ID != null and SRCH_LKAG_MST_ID !=""'>
+            AND LMST.LKAG_MST_ID = #{SRCH_LKAG_MST_ID}::INTEGER
+        </if>
+        <if test='SRCH_KEYWORD != null and SRCH_KEYWORD !=""'>
+            AND LMNG.LKAG_NM LIKE CONCAT(CONCAT('%',#{SRCH_KEYWORD}),'%')
+        </if>
+        <if test='CERT_CUSTCO_LKAG_ID != null and CERT_CUSTCO_LKAG_ID !=""'>
+            AND CCL.CERT_CUSTCO_LKAG_ID = #{CERT_CUSTCO_LKAG_ID}::INTEGER
+        </if>
+        <if test='CERT_CUSTCO_ID != null and CERT_CUSTCO_ID !=""'>
+            AND CC.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+        </if>
+        <if test='LKAG_ID != null and LKAG_ID !=""'>
+            AND CCL.LKAG_ID = #{LKAG_ID}::INTEGER
+        </if>
+        <if test='LKAG_MST_ID != null and LKAG_MST_ID !=""'>
+            AND LMST.LKAG_MST_ID = #{LKAG_MST_ID}::INTEGER
+        </if>
+
+    </select>
+    <select id="selectTblList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /* 고객사별 연결테이블 전체목록 selectTblList - kr.co.hkcloud.palette3.admin.lkag.custco.dao.LkagCustcoMapper */
+            LLT.LNKG_TBL_ID, LLT.TBL_NM, LLT.COL_NM, LLT.ATTR_ID, LLT.KEY_COL, LLT.CERT_CUSTCO_ID
+        FROM CUSTCO.PLT_LKAG_LNKG_TBL LLT
+        WHERE 1=1
+          AND LLT.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+        ORDER BY LLT.LNKG_TBL_ID
+    </select>
+
+    <select id="selectHeadersList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        SELECT /* 고객사별 헤더설정목록 selectHeadersList - kr.co.hkcloud.palette3.admin.lkag.custco.dao.LkagCustcoMapper */
+               LH.HEAD_ID, LH.PARAM_COL_NM, LH.KEY_VL, '' as UP_ID, '' AS FULL_PATH, '' AS FULL_PATH_DOT
+             , CCL.CERT_CUSTCO_LKAG_ID, CCL.CERT_CUSTCO_ID, CCL.LKAG_ID
+        FROM CUSTCO.PLT_LKAG_HEAD LH
+       INNER JOIN CUSTCO.PLT_CERT_CUSTCO_LKAG CCL ON CCL.CERT_CUSTCO_LKAG_ID = LH.CERT_CUSTCO_LKAG_ID
+       WHERE 1=1
+        <choose>
+            <when test='SRCH_CERT_CUSTCO_LKAG_ID != null and SRCH_CERT_CUSTCO_LKAG_ID !=""'>
+                AND CCL.CERT_CUSTCO_LKAG_ID =  #{SRCH_CERT_CUSTCO_LKAG_ID}::INTEGER
+            </when>
+            <when test='CERT_CUSTCO_LKAG_ID != null and CERT_CUSTCO_LKAG_ID !=""'>
+                AND CCL.CERT_CUSTCO_LKAG_ID =  #{CERT_CUSTCO_LKAG_ID}::INTEGER
+            </when>
+            <otherwise>
+                AND CCL.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+                AND CCL.LKAG_ID = #{LKAG_ID}::INTEGER
+            </otherwise>
+        </choose>
+        ORDER BY LH.HEAD_ID
+    </select>
+    <select id="treeParamsList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        WITH RECURSIVE LKAG_PARAMS_TREE (PARAM_ARTCL_ID, UP_ARTCL_ID, LKAG_ID, COL_NM, ARTCL_NM, DSPLY_NM, DATA_TYPE_CD, DATA_TYPE_FMT_CD, LKAG_GROUP_CD_ID
+            , ESNTL_YN, ENCPT_YN, BSC_VL, EXPLN, SORT_ORD, RSPNS_ARTCL_ID, RSPNS_COL_NM, RSPNS_LKAG_ID, RSPNS_ARTCL_ID_NM
+            , LVL, SORT, ARTCL_FULL_NM, FULL_PATH, PARAM_ENCPT_MTHD_CD, PARAM_ENCPT_KEY, PARAM_ENCPT_MTHD_CD_NM, PARAM_ENCPT_MTHD_CD_VL
+            , DATA_TYPE_CD_NM, DATA_TYPE_CD_VL, USE_YN, LNKG_TBL_ID, LNKG_TBL_NM, LNKG_COL_NM, LNKG_ATTR_ID, LNKG_KEY_COL, LNKG_SCHEMA_ID, CERT_CUSTCO_LKAG_ID, CERT_CUSTCO_ID ) AS (
+            SELECT PLPA.PARAM_ARTCL_ID, PLPA.UP_ARTCL_ID, PLPA.LKAG_ID, PLPA.COL_NM, PLPA.ARTCL_NM, PLPA.COL_NM ||'(' || PLPA.ARTCL_NM||')' as DSPLY_NM , PLPA.DATA_TYPE_CD, PLPA.DATA_TYPE_FMT_CD, PLPA.LKAG_GROUP_CD_ID
+                , PLPA.ESNTL_YN, PLPA.ENCPT_YN, PLPA.BSC_VL, PLPA.EXPLN, PLPA.SORT_ORD, PLPA.RSPNS_ARTCL_ID, PLRA.COL_NM AS RSPNS_COL_NM, PLRA.LKAG_ID AS RSPNS_LKAG_ID
+                , CASE WHEN PLPA.RSPNS_ARTCL_ID IS NOT NULL THEN
+                    (
+                        SELECT B.MST_NM ||' > '||LKAG_NM || ' > ' || PLRA.COL_NM ||'('|| PLRA.ARTCL_NM ||')'
+                        FROM CUSTCO.PLT_LKAG_MNG A
+                        INNER JOIN CUSTCO.PLT_LKAG_MST B ON B.LKAG_MST_ID = A.LKAG_MST_ID
+                        WHERE LKAG_ID = PLRA.LKAG_ID
+                    )
+                    ELSE NULL
+                END AS RSPNS_ARTCL_ID_NM
+                , 1 AS LVL, LPAD(CAST(PLPA.SORT_ORD AS VARCHAR),5,'0') AS SORT
+                , CAST(PLPA.ARTCL_NM AS VARCHAR(300)) AS ARTCL_FULL_NM
+                , CAST(PLPA.COL_NM AS VARCHAR(300)) AS FULL_PATH
+                , PLM.PARAM_ENCPT_MTHD_CD
+                , PLM.PARAM_ENCPT_KEY
+                , PEMC.CD_NM as PARAM_ENCPT_MTHD_CD_NM
+                , PEMC.CD_VL as PARAM_ENCPT_MTHD_CD_VL
+                , PDTC.CD_NM as DATA_TYPE_CD_NM
+                , PDTC.CD_VL as DATA_TYPE_CD_VL
+                , PLPA.USE_YN
+                , LPL.LNKG_TBL_ID
+                , LLT.TBL_NM AS LNKG_TBL_NM
+                , LLT.COL_NM AS LNKG_COL_NM
+                , LLT.ATTR_ID AS LNKG_ATTR_ID
+                , LLT.KEY_COL AS LNKG_KEY_COL
+                , CC.SCHEMA_ID AS LNKG_SCHEMA_ID
+                , CCL.CERT_CUSTCO_LKAG_ID
+                , CCL.CERT_CUSTCO_ID
+            FROM CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA
+            INNER JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLPA.LKAG_ID
+            INNER JOIN CUSTCO.PLT_CERT_CUSTCO_LKAG CCL ON CCL.LKAG_ID = PLM.LKAG_ID
+            LEFT OUTER JOIN CUSTCO.PLT_LKAG_PARAM_LNKG LPL ON LPL.PARAM_ARTCL_ID = PLPA.PARAM_ARTCL_ID
+            LEFT OUTER JOIN CUSTCO.PLT_LKAG_LNKG_TBL LLT ON LLT.LNKG_TBL_ID = LPL.LNKG_TBL_ID AND LLT.CERT_CUSTCO_ID = CCL.CERT_CUSTCO_ID
+            LEFT OUTER JOIN CUSTCO.PLT_CERT_CUSTCO CC ON CC.CERT_CUSTCO_ID = LLT.CERT_CUSTCO_ID
+            LEFT OUTER JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLPA.RSPNS_ARTCL_ID
+            LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PEMC ON PEMC.CUSTCO_ID = 1 AND PEMC.CD_ID = PLM.PARAM_ENCPT_MTHD_CD AND PEMC.GROUP_CD_ID = 'LKAG_EN_CERT_TP'
+            LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PDTC ON PDTC.CUSTCO_ID = 1 AND PDTC.CD_ID = PLPA.DATA_TYPE_CD AND PDTC.GROUP_CD_ID = 'LKAG_PARAM_ITEM_TP'
+            WHERE PLPA.UP_ARTCL_ID IS NULL
+            AND PLPA.USE_YN = 'Y' AND PLPA.DEL_YN='N'
+            AND CCL.CERT_CUSTCO_LKAG_ID = #{CERT_CUSTCO_LKAG_ID}::INTEGER
+            UNION ALL
+            SELECT PLPA.PARAM_ARTCL_ID, PLPA.UP_ARTCL_ID, PLPA.LKAG_ID, PLPA.COL_NM, PLPA.ARTCL_NM, PLPA.COL_NM ||'(' || PLPA.ARTCL_NM||')' as DSPLY_NM, PLPA.DATA_TYPE_CD, PLPA.DATA_TYPE_FMT_CD, PLPA.LKAG_GROUP_CD_ID
+                , PLPA.ESNTL_YN, PLPA.ENCPT_YN, PLPA.BSC_VL, PLPA.EXPLN, PLPA.SORT_ORD, PLPA.RSPNS_ARTCL_ID, PLRA.COL_NM AS RSPNS_COL_NM, PLRA.LKAG_ID AS RSPNS_LKAG_ID
+                , CASE WHEN PLPA.RSPNS_ARTCL_ID IS NOT NULL THEN
+                    (
+                        SELECT B.MST_NM ||' > '||LKAG_NM || ' > ' || PLRA.COL_NM ||'('|| PLRA.ARTCL_NM ||')'
+                        FROM CUSTCO.PLT_LKAG_MNG A
+                        INNER JOIN CUSTCO.PLT_LKAG_MST B ON B.LKAG_MST_ID = A.LKAG_MST_ID
+                        WHERE LKAG_ID = PLRA.LKAG_ID
+                    )
+                    ELSE NULL
+                END AS RSPNS_ARTCL_ID_NM
+                , LVL + 1, LPT.SORT || ' > ' || LPAD(CAST(PLPA.SORT_ORD AS VARCHAR),5,'0') AS SORT
+                , CAST(LPT.ARTCL_FULL_NM || ' > ' || PLPA.ARTCL_NM AS VARCHAR(300)) AS ARTCL_FULL_NM
+                , CAST(LPT.FULL_PATH || ' > ' || PLPA.COL_NM AS VARCHAR(300)) AS FULL_PATH
+                , PLM.PARAM_ENCPT_MTHD_CD
+                , PLM.PARAM_ENCPT_KEY
+                , PEMC.CD_NM as PARAM_ENCPT_MTHD_CD_NM
+                , PEMC.CD_VL as PARAM_ENCPT_MTHD_CD_VL
+                , PDTC.CD_NM as DATA_TYPE_CD_NM
+                , PDTC.CD_VL as DATA_TYPE_CD_VL
+                , PLPA.USE_YN
+                , LPL.LNKG_TBL_ID
+                , LLT.TBL_NM AS LNKG_TBL_NM
+                , LLT.COL_NM AS LNKG_COL_NM
+                , LLT.ATTR_ID AS LNKG_ATTR_ID
+                , LLT.KEY_COL AS LNKG_KEY_COL
+                , CC.SCHEMA_ID AS LNKG_SCHEMA_ID
+                , CCL.CERT_CUSTCO_LKAG_ID
+                , CCL.CERT_CUSTCO_ID
+            FROM CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA
+            INNER JOIN LKAG_PARAMS_TREE LPT ON PLPA.UP_ARTCL_ID = LPT.PARAM_ARTCL_ID
+            INNER JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLPA.LKAG_ID
+            INNER JOIN CUSTCO.PLT_CERT_CUSTCO_LKAG CCL ON CCL.LKAG_ID = PLM.LKAG_ID
+            LEFT OUTER JOIN CUSTCO.PLT_LKAG_PARAM_LNKG LPL ON LPL.PARAM_ARTCL_ID = PLPA.PARAM_ARTCL_ID
+            LEFT OUTER JOIN CUSTCO.PLT_LKAG_LNKG_TBL LLT ON LLT.LNKG_TBL_ID = LPL.LNKG_TBL_ID AND LLT.CERT_CUSTCO_ID = CCL.CERT_CUSTCO_ID
+            LEFT OUTER JOIN CUSTCO.PLT_CERT_CUSTCO CC ON CC.CERT_CUSTCO_ID = LLT.CERT_CUSTCO_ID
+            LEFT OUTER JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLPA.RSPNS_ARTCL_ID
+            LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PEMC ON PEMC.CUSTCO_ID = 1 AND PEMC.CD_ID = PLM.PARAM_ENCPT_MTHD_CD AND PEMC.GROUP_CD_ID = 'LKAG_EN_CERT_TP'
+            LEFT OUTER JOIN CUSTCO.PLT_COMM_CD PDTC ON PDTC.CUSTCO_ID = 1 AND PDTC.CD_ID = PLPA.DATA_TYPE_CD AND PDTC.GROUP_CD_ID = 'LKAG_PARAM_ITEM_TP'
+            WHERE PLPA.UP_ARTCL_ID IS NOT NULL
+            AND PLPA.USE_YN = 'Y' AND PLPA.DEL_YN='N'
+            AND CCL.CERT_CUSTCO_LKAG_ID = #{CERT_CUSTCO_LKAG_ID}::INTEGER
+        )
+        SELECT PARAM_ARTCL_ID, UP_ARTCL_ID, LKAG_ID, COL_NM, ARTCL_NM, DSPLY_NM, DATA_TYPE_CD, DATA_TYPE_FMT_CD, LKAG_GROUP_CD_ID
+        , ESNTL_YN, ENCPT_YN, BSC_VL, EXPLN, SORT_ORD, RSPNS_ARTCL_ID, RSPNS_COL_NM, RSPNS_LKAG_ID, RSPNS_ARTCL_ID_NM
+        , LVL, SORT, ARTCL_FULL_NM, FULL_PATH, replace(FULL_PATH, ' > ', '.') as FULL_PATH_DOT,  PARAM_ENCPT_MTHD_CD, PARAM_ENCPT_KEY, PARAM_ENCPT_MTHD_CD_NM, PARAM_ENCPT_MTHD_CD_VL
+        , DATA_TYPE_CD_NM, DATA_TYPE_CD_VL
+        , USE_YN , LNKG_TBL_ID, LNKG_TBL_NM, LNKG_COL_NM, LNKG_ATTR_ID, LNKG_KEY_COL, LNKG_SCHEMA_ID, CERT_CUSTCO_LKAG_ID, CERT_CUSTCO_ID,  true as COL_NM_DPCN
+        FROM LKAG_PARAMS_TREE
+        ORDER BY SORT
+    </select>
+    <delete id="delete" parameterType="java.util.HashMap">
+        DELETE FROM CUSTCO.PLT_CERT_CUSTCO_LKAG
+         WHERE CERT_CUSTCO_ID =  #{CERT_CUSTCO_ID}::INTEGER
+           AND LKAG_ID = #{LKAG_ID}::INTEGER
+    </delete>
+    <update id="insert" parameterType="java.util.HashMap">
+        INSERT  /* 고객사연동 등록 insert - kr.co.hkcloud.palette3.admin.lkag.custco.dao.LkagCustcoMapper */
+        INTO CUSTCO.PLT_CERT_CUSTCO_LKAG ( CERT_CUSTCO_LKAG_ID, CERT_CUSTCO_ID, LKAG_ID, ACS_ACNT_KEY, ACS_SECTY_KEY, ACS_ACNT_ID, ETC_01, ETC_02, ETC_03, ETC_04, ETC_05)
+        VALUES ( #{CERT_CUSTCO_LKAG_ID}::INTEGER, #{CERT_CUSTCO_ID}::INTEGER, #{LKAG_ID}::INTEGER, #{ACS_ACNT_KEY}, #{ACS_SECTY_KEY}, #{ACS_ACNT_ID}, #{ETC_01}, #{ETC_02}, #{ETC_03}, #{ETC_04}, #{ETC_05} )
+    </update>
+    <update id="update" parameterType="java.util.HashMap">
+        UPDATE CUSTCO.PLT_CERT_CUSTCO_LKAG
+        SET  CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+          , LKAG_ID = #{LKAG_ID}::INTEGER
+          , ACS_ACNT_KEY = #{ACS_ACNT_KEY}
+          , ACS_SECTY_KEY = #{ACS_SECTY_KEY}
+          , ACS_ACNT_ID = #{ACS_ACNT_ID}
+          , ETC_01 = #{ETC_01}
+          , ETC_02 = #{ETC_02}
+          , ETC_03 = #{ETC_03}
+          , ETC_04 = #{ETC_04}
+          , ETC_05 = #{ETC_05}
+        WHERE CERT_CUSTCO_LKAG_ID = #{CERT_CUSTCO_LKAG_ID}::INTEGER
+    </update>
+    <delete id="deleteHeadersInit" parameterType="java.util.HashMap">
+        DELETE FROM CUSTCO.PLT_LKAG_HEAD
+        WHERE CERT_CUSTCO_LKAG_ID IN (
+         SELECT CERT_CUSTCO_LKAG_ID
+           FROM CUSTCO.PLT_CERT_CUSTCO_LKAG
+          WHERE CERT_CUSTCO_ID =  #{CERT_CUSTCO_ID}::INTEGER
+            AND LKAG_ID = #{LKAG_ID}::INTEGER
+        )
+    </delete>
+    <update id="insertHeaders" parameterType="java.util.HashMap">
+        INSERT  /* 고객사연동 헤더 등록 insertHeaders - kr.co.hkcloud.palette3.admin.lkag.custco.dao.LkagCustcoMapper */
+        INTO CUSTCO.PLT_LKAG_HEAD ( HEAD_ID, PARAM_COL_NM, KEY_VL, CERT_CUSTCO_LKAG_ID, RGTR_ID, REG_DT)
+        VALUES ( #{HEAD_ID}::INTEGER, #{PARAM_COL_NM}, #{KEY_VL}, #{CERT_CUSTCO_LKAG_ID}::INTEGER, #{USER_ID}::INTEGER, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')  )
+    </update>
+    <update id="updateHeaders" parameterType="java.util.HashMap">
+        UPDATE CUSTCO.PLT_LKAG_HEAD
+           SET  PARAM_COL_NM = #{PARAM_COL_NM}
+              , KEY_VL = #{KEY_VL}
+         WHERE HEAD_ID = #{HEAD_ID}::INTEGER
+    </update>
+    <update id="deleteHeaders" parameterType="java.util.HashMap">
+        DELETE FROM CUSTCO.PLT_LKAG_HEAD
+        WHERE HEAD_ID IN
+        <foreach collection="ITEM_LIST" item="item" open="(" separator="," close=")" >
+            #{item.HEAD_ID}::INTEGER
+        </foreach>
+    </update>
+    <update id="insertParamsTbl" parameterType="java.util.HashMap">
+        INSERT INTO CUSTCO.PLT_LKAG_PARAM_LNKG (PARAM_ARTCL_ID, LNKG_TBL_ID)
+        VALUES ( #{PARAM_ARTCL_ID}::INTEGER, #{LNKG_TBL_ID}::INTEGER )
+    </update>
+    <update id="deleteParamsTbl" parameterType="java.util.HashMap">
+        DELETE FROM CUSTCO.PLT_LKAG_PARAM_LNKG
+        WHERE PARAM_ARTCL_ID = #{PARAM_ARTCL_ID}::INTEGER
+    </update>
+    <select id="dpcnChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 1
+        FROM CUSTCO.PLT_CERT_CUSTCO_LKAG
+        WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+          AND LKAG_ID = #{LKAG_ID}::INTEGER
+    </select>
+</mapper>

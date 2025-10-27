@@ -1,0 +1,864 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.main.dao.PaletteMainMapper">
+<!-- <mapper namespace="com.hcteletalk.teletalk.main.hkcdv.dao.TwbMainMapper"> -->
+	<sql id="search">
+		<!-- SMS유형 -->
+		<if test="SMS_TY !='' and SMS_TY != null">
+			AND SMS_TY = #{SMS_TY}
+		</if>
+		<!-- SMS템플릿 -->
+		<if test="SMS_TMPLT !='' and SMS_TMPLT != null">
+			AND SMS_TMPLT = #{SMS_TMPLT}
+		</if>
+		<!-- 제목 -->
+		<if test="TIT !='' and TIT != null">
+			AND TIT LIKE '%' || #{TIT} || '%'
+		</if>
+	</sql>
+	
+	<sql id="searchAlimtalk">
+		<!-- 알림톡유형 -->
+		<if test="NTCN_TALK_TY !='' and NTCN_TALK_TY != null">
+			AND NTCN_TALK_TY = #{NTCN_TALK_TY}
+		</if>
+		<!-- 알림톡템플릿 -->
+		<if test="NTCN_TALK_TMPLT !='' and NTCN_TALK_TMPLT != null">
+			AND NTCN_TALK_TMPLT = #{NTCN_TALK_TMPLT}
+		</if>
+		<!-- 알림톡 제목 -->
+		<if test="TIT !='' and TIT != null">
+			AND TIT LIKE '%' || #{TIT} || '%'
+		</if>
+	</sql>
+	
+
+    <!-- 채팅스크립트리스트 상세조회 -->
+	<select id="selectRtnChatScriptDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+	        CUSTCO_ID
+	        , SCRIPT_ID
+	        , SCRIPT_TIT
+	        , USE_YN
+	        , SCRIPT_AUTH_TYPE AS LVL_NO_NM  
+	        , DBMS_LOB.SUBSTR(SCRIPT_RMK, DBMS_LOB.GETLENGTH(SCRIPT_RMK)) AS SCRIPT_RMK
+	        , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+	        FROM PLT_CHT_SCRT
+		WHERE
+			SCRIPT_ID = #{SCRIPT_ID}
+			AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</select>	
+	
+	<!-- 채팅스크립트리스트 조회 -->
+	<select id="selectRtnChatScript"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+	        CUSTCO_ID
+	        , SCRIPT_ID
+	        , SCRIPT_TIT
+	        , USE_YN
+	        , SCRIPT_AUTH_TYPE AS LVL_NO_NM
+	        , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+	        FROM PLT_CHT_SCRT
+		WHERE
+			 CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</select>	
+	
+	
+	<!-- 스크립트 상세조회 -->
+	<select id="selectRtnScriptDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.CUSTCO_ID
+			, A.SCRIPT_ID
+			, A.UPPER_SCRIPT_ID
+			, (SELECT B.SCRIPT_TIT FROM PLT_PHN_SCRT B WHERE A.UPPER_SCRIPT_ID = B.SCRIPT_ID ) AS UPPER_SCRIPT_NM
+			, A.SCRIPT_TIT
+			, A.LVL_NO
+			, CASE WHEN A.LVL_NO = 1 THEN '대분류'
+                   WHEN A.LVL_NO = 2 THEN '중분류'
+                   WHEN A.LVL_NO = 3 THEN '소분류'
+                   ELSE ''
+              END AS LVL_NO_NM
+			, A.USE_YN
+			, A.ORD_SEQ
+			, A.FILE_GROUP_KEY
+			, DBMS_LOB.SUBSTR(A.SCRIPT_RMK, DBMS_LOB.GETLENGTH(A.SCRIPT_RMK)) AS SCRIPT_RMK
+			, A.BEGIN_DATE
+			, A.EOT_DATE
+			, #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+		FROM
+			PLT_PHN_SCRT A JOIN PLT_ASP_CUS C ON A.CUSTCO_ID = C.CUSTCO_ID
+		WHERE
+			SCRIPT_ID = #{SCRIPT_ID}
+			AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</select>	
+	
+	
+	<!-- 스크립트 리스트 조회 -->
+	<select id="selectRtnScript"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		<![CDATA[
+		/* selectRtnScript 스크립트 리스트 조회 */
+	   SELECT 
+	       SCRIPT_ID
+	       ,CASE WHEN LVL_NO = 1 OR LVL_NO = 2 OR LVL_NO = 3 THEN SCRIPT_NM_1
+	        	ELSE 'x'
+	        END AS SCRIPT_NM_1
+	       ,CASE WHEN LVL_NO = 2 OR LVL_NO = 3 THEN SCRIPT_NM_2
+	        	ELSE 'x'
+	        END AS SCRIPT_NM_2
+	       ,CASE WHEN LVL_NO = 3 THEN SCRIPT_NM_3
+	            ELSE 'x' 
+	        END AS SCRIPT_NM_3
+	       ,SCRIPT_ID_1
+	       ,SCRIPT_ID_2
+	       ,SCRIPT_ID_3
+	       ,UPPER_SCRIPT_ID
+	       ,SCRIPT_TIT
+	       ,USE_YN
+	       ,LVL_NO
+	       ,LVL_NO_NM
+	       ,ORD_SEQ
+	       ,BEGIN_DATE
+	       ,EOT_DATE
+		   ,(SELECT CO_NM FROM PLT_ASP_CUS WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}) AS ASP_NEWCUST_KEY_NM
+	       , #{ASP_NEWCUST_KEY} AS ASP_NEWCUST_KEY
+	    FROM 
+	    (
+	        SELECT 
+	            A.SCRIPT_ID,
+	            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_1) AS SCRIPT_NM_1,
+	            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_2) AS SCRIPT_NM_2,
+	            (SELECT C.SCRIPT_TIT from PLT_PHN_SCRT C where C.SCRIPT_ID = A.SCRIPT_ID_3) AS SCRIPT_NM_3,
+	            A.SCRIPT_ID_1,
+	            A.SCRIPT_ID_2,
+	            A.SCRIPT_ID_3,
+	            A.UPPER_SCRIPT_ID,
+	            A.SCRIPT_TIT,
+	            A.USE_YN,
+	            A.LVL_NO,
+	            A.LVL_NO_NM,
+	            A.ORD_SEQ,
+	            A.BEGIN_DATE,
+	            A.EOT_DATE
+	         FROM   
+	         (           
+	         SELECT
+	            SCRIPT_ID
+	            , SUBSTR(SCRIPT_ID, 0, 4) AS SCRIPT_ID_1
+	            , SUBSTR(SCRIPT_ID, 0, 8) AS SCRIPT_ID_2
+	            , SUBSTR(SCRIPT_ID, 0, 12) AS SCRIPT_ID_3
+	            , UPPER_SCRIPT_ID
+	            , SCRIPT_TIT
+	            , USE_YN
+	            , LVL_NO
+	            , CASE WHEN LVL_NO = 1 THEN '대분류'
+	                   WHEN LVL_NO = 2 THEN '중분류'
+	                   WHEN LVL_NO = 3 THEN '소분류'
+	                   ELSE ''
+	              END AS LVL_NO_NM
+	            , ORD_SEQ
+	            , BEGIN_DATE
+	            , EOT_DATE
+	        FROM
+	            PLT_PHN_SCRT
+			WHERE 1=1 
+				AND CUSTCO_ID = #{ASP_NEWCUST_KEY}   
+		]]>
+			) A 
+			WHERE 1=1
+		<if test="USE_SRCH_YN !='' and USE_SRCH_YN != null">  
+			AND A.USE_YN = #{USE_SRCH_YN}                 
+		</if>
+		<if test="CNSL_DIV == 1">  
+			/* 대분류 인 경우 */
+			AND(
+				 	A.SCRIPT_ID IN (
+			        select SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 1
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+		    )
+		</if>
+		<if test="CNSL_DIV == 2">  
+			/* 중분류 인 경우 */
+			AND(
+				A.SCRIPT_ID IN (
+			        select SCRIPT_ID from PLT_PHN_SCRT
+			        where LVL_NO = 2
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+		    )                 
+		</if>
+		<if test="CNSL_DIV == 3">  
+			/* 소분류 인 경우 */
+			AND(
+			        A.SCRIPT_ID IN (
+			        SELECT SCRIPT_ID FROM PLT_PHN_SCRT
+			        where LVL_NO = 3
+			        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+			    )
+		    )                
+		</if>
+		
+		<if test="CNSL_DIV == '' or CNSL_DIV == null">  
+			<if test="SEARCH_CONT != '' and SEARCH_CONT != null">  
+			/* 전체 검색 */
+			/* 대분류 인 경우 */
+			AND(
+				(
+						 	A.SCRIPT_ID IN (
+					        select SCRIPT_ID from PLT_PHN_SCRT
+					        where LVL_NO = 1
+					        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+					    )
+					    OR A.UPPER_SCRIPT_ID IN (
+					        select SCRIPT_ID from PLT_PHN_SCRT
+					        where LVL_NO = 1
+					        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+					    )
+					    OR A.UPPER_SCRIPT_ID IN (
+					        SELECT SCRIPT_ID 
+					        FROM PLT_PHN_SCRT
+					        WHERE 1=1
+					        AND UPPER_SCRIPT_ID IN (
+					        select SCRIPT_ID from PLT_PHN_SCRT
+					        where LVL_NO = 1
+					        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') )
+					    )
+				)
+				 
+				 /* 중분류 인 경우 */
+				OR(
+					A.SCRIPT_ID IN (
+				        select UPPER_SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 2
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 2
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.UPPER_SCRIPT_ID IN (
+				        select SCRIPT_ID from PLT_PHN_SCRT
+				        where LVL_NO = 2
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+			    )   
+				
+				/* 소분류 인 경우 */
+				OR(
+						A.SCRIPT_ID IN (
+				        SELECT SUBSTR(SCRIPT_ID, 0, 4) FROM PLT_PHN_SCRT
+				        where LVL_NO = 3
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.SCRIPT_ID IN (
+				        SELECT SUBSTR(SCRIPT_ID, 0, 8) FROM PLT_PHN_SCRT
+				        where LVL_NO = 3
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+				    OR A.SCRIPT_ID IN (
+				        SELECT SCRIPT_ID FROM PLT_PHN_SCRT
+				        where LVL_NO = 3
+				        and SCRIPT_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%')
+				    )
+			    )                 
+			)
+			</if>
+		</if>
+		)
+		<if test="CNSL_DIV == '' or CNSL_DIV == null">
+		     START WITH UPPER_SCRIPT_ID IS NULL
+		     CONNECT BY PRIOR SCRIPT_ID = UPPER_SCRIPT_ID
+		     ORDER SIBLINGS BY  ORD_SEQ ASC
+	    </if>        
+	</select>	
+
+	
+	<!-- 전체메뉴를조회한다. -->
+	<select id="selectAllMenu" parameterType="java.util.HashMap" resultType="java.util.HashMap">   
+    <![CDATA[	
+    WITH MENU_TREE AS (
+		SELECT 
+			B.MENU_ID, B.UP_MENU_ID, B.LNKG_MENU_ID, B.MENU_NM, B.MENU_NM_ENG, B.MENU_EXPLN, B.MENU_EXPLN_ENG, B.VIEW_TRGT, 
+			B.USE_YN, B.MENU_SE_CD_LVL, B.PATH_NM, B.POPUP_WD_SZ, B.POPUP_HT_SZ, B.PRGRM_PARAM, B.ICON_CLASS_NM, B.ACT_NM, B.SORT_ORD, B.LAYOUT_ID ,
+			LTRIM(SYS_CONNECT_BY_PATH(LPAD(B.SORT_ORD,5,'0'), ' > '), ' > ') AS SORT,
+			LTRIM(SYS_CONNECT_BY_PATH(B.MENU_NM, ' > '), ' > ') AS FULL_PATH,
+			LTRIM(SYS_CONNECT_BY_PATH(B.MENU_NM_ENG, ' > '), ' > ') AS FULL_PATH_EN
+		FROM PLT_MENU B
+		START WITH  
+			UP_MENU_ID IS NULL
+			AND DEL_YN = 'N'
+			AND USE_YN = 'Y'
+		CONNECT BY PRIOR MENU_ID = B.UP_MENU_ID AND PRIOR B.DEL_YN = 'N' AND PRIOR B.USE_YN = 'Y'
+	)
+	SELECT
+		CASE WHEN MT.VIEW_TRGT != 'POP' THEN CAST(MT.MENU_SE_CD_LVL AS NUMBER) ELSE 99 END AS NODE_LVL
+	    , REPLACE(MT.PATH_NM, '/', '') AS C_NODE_NO
+	    , MT.UP_MENU_ID AS P_NODE_NO
+	    , MT.MENU_NM AS NODE_TITLE
+	    , MT.MENU_NM_ENG AS NODE_TITLE_EN
+	    , MT.MENU_ID AS NODE_ID
+	    , MT.MENU_ID AS NODE_KEY
+	    , CASE WHEN MT.VIEW_TRGT = 'LEFT' THEN COALESCE((SELECT MENU_EXPLN FROM MENU_TREE WHERE MENU_ID = MT.LNKG_MENU_ID), MT.MENU_EXPLN)
+	    	ELSE MT.MENU_EXPLN
+	    END AS MENU_EXPLN
+	    , CASE WHEN MT.VIEW_TRGT = 'LEFT' THEN COALESCE((SELECT FULL_PATH FROM MENU_TREE WHERE MENU_ID = MT.LNKG_MENU_ID), MT.FULL_PATH)
+	    	ELSE MT.FULL_PATH
+	    END AS FULL_PATH
+	    , CASE WHEN MT.VIEW_TRGT = 'LEFT' THEN COALESCE((SELECT MENU_EXPLN_ENG FROM MENU_TREE WHERE MENU_ID = MT.LNKG_MENU_ID), MT.MENU_EXPLN_ENG)
+	    	ELSE MT.MENU_EXPLN_ENG
+	    END AS MENU_EXPLN_EN
+	    , CASE WHEN MT.VIEW_TRGT = 'LEFT' THEN COALESCE((SELECT FULL_PATH_EN FROM MENU_TREE WHERE MENU_ID = MT.LNKG_MENU_ID), MT.FULL_PATH_EN)
+	    	ELSE MT.FULL_PATH_EN
+	    END AS FULL_PATH_EN
+	    , MT.PRGRM_PARAM
+	    , MT.PATH_NM
+	    , MT.VIEW_TRGT
+	    , MT.USE_YN
+	    , CASE WHEN LENGTH(TRIM(COALESCE(MT.PATH_NM, ''))) IS NULL THEN 'D'
+			ELSE 'F'
+		END AS NODE_TYPE
+		, CASE WHEN MT.VIEW_TRGT != 'MAIN' THEN CAST(MT.POPUP_WD_SZ AS CHAR) || '|' || CAST(MT.POPUP_HT_SZ AS CHAR)
+			ELSE ''
+		END AS NODE_ETC
+		, CASE WHEN LENGTH(TRIM(COALESCE(MT.PATH_NM,''))) > 0 AND LENGTH(TRIM(COALESCE(MT.PRGRM_PARAM,''))) > 0 THEN MT.PATH_NM || '?MENU_ID=' || MT.MENU_ID || '&' || MT.PRGRM_PARAM
+			WHEN LENGTH(TRIM(COALESCE(MT.PATH_NM,''))) > 0 AND LENGTH(TRIM(COALESCE(MT.PRGRM_PARAM,''))) IS NULL THEN MT.PATH_NM || '?MENU_ID=' || MT.MENU_ID
+			ELSE ''
+		END AS NODE_URL_MENUID
+		, CASE WHEN LENGTH(TRIM(COALESCE(MT.PATH_NM,''))) > 0 AND LENGTH(TRIM(COALESCE(MT.PRGRM_PARAM,''))) > 0 THEN MT.PATH_NM
+			WHEN LENGTH(TRIM(COALESCE(MT.PATH_NM,''))) > 0 AND LENGTH(TRIM(COALESCE(MT.PRGRM_PARAM,''))) IS NULL THEN MT.PATH_NM
+			ELSE ''
+		END AS NODE_URL
+		, MT.ICON_CLASS_NM
+		, MT.ACT_NM
+		, MT.SORT_ORD
+    , MT.LAYOUT_ID
+		, (SELECT COALESCE(LISTAGG(PB2.SCRN_BTN_ID,',') WITHIN GROUP (ORDER BY NULL), '') FROM PLT_BTN_AUTHRT PBA2 INNER JOIN PLT_BTN PB2 ON PBA2.BTN_ID = PB2.BTN_ID
+			WHERE PBA2.BTN_ID = PB2.BTN_ID
+			AND PBA2.AUTHRT_GROUP_ID IN (
+					SELECT PUA2.AUTHRT_GROUP_ID
+					FROM PLT_USER_AUTHRT PUA2
+					WHERE PUA2.USER_ID = CAST(#{USER_ID} AS NUMBER)
+			)
+			AND PBA2.MENU_ID = MT.MENU_ID GROUP BY PBA2.MENU_ID
+		) AS BTN_AUTH
+	FROM MENU_TREE MT
+		, PLT_AUTHRT_GROUP_PRGRM PAP
+	WHERE MT.MENU_ID = PAP.MENU_ID
+		AND PAP.AUTHRT_GROUP_ID IN (
+					SELECT PUA2.AUTHRT_GROUP_ID
+					FROM PLT_USER_AUTHRT PUA2
+					WHERE PUA2.USER_ID = CAST(#{USER_ID} AS NUMBER))
+	ORDER BY MT.VIEW_TRGT, MT.SORT
+	 ]]>
+	</select>
+
+	<!-- 메뉴 기본 정보를 가져온다. -->
+	<select id="selectGetMenuBaseInfo"
+		parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT MENU_NM
+		, PATH_NM
+		, MENU_ID
+		FROM PLT_MENU
+		WHERE MENU_ID = #{MENU_ID}
+	</select>
+
+	<!-- 메뉴명으로 메뉴정보를 조회한다.(권한정보 포함) custco_id 사용하면 안됨 -->
+	<select id="selectAllMenuInfoWithAuth"
+		parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+		SELECT E.MENU_ID
+		, E.MENU_NM
+		, E.VIEW_TRGT
+		, E.PUP_WIDTH_SIZE
+		, E.PUP_HGHT_SIZE
+		, CASE WHEN E.PATH_NM IS NOT NULL AND E.PGM_PARM IS NOT NULL
+		THEN E.PATH_NM || '?' || E.PGM_PARM
+		WHEN E.PATH_NM IS NOT NULL AND E.PGM_PARM IS NULL
+		THEN E.PATH_NM
+		ELSE ''
+		END AS PATH_NM
+		, E.ICON_CLASS_NM
+		FROM PLT_USER A
+		, PLT_USER_AUTH B
+		, PLT_AUTH C
+		, PLT_AUTH_PRG D
+		, PLT_MENU E
+		WHERE A.USER_ID = B.USER_ID
+		AND B.ATRT_GROUP_ID = C.ATRT_GROUP_ID
+		AND C.ATRT_GROUP_ID = D.ATRT_GROUP_ID
+		AND A.USER_ID = #{USER_ID}
+		AND D.MENU_ID = E.MENU_ID
+		AND E.VIEW_TRGT != 'POP'
+		ORDER BY E.SORT_ORD
+
+	</select>
+
+	<!-- 사용자 세션정보를 조회한다. -->
+	<select id="selectRtnUserSessionInfo"
+		parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		RE.*
+		, (SELECT MNGR_YN FROM PLT_AUTH WHERE ATRT_GROUP_ID =
+		RE.AUTHOR_GROUP_ID_LIST) AS MNGR_YN
+		FROM (
+		SELECT A.USER_ID /*(0)사용자ID*/
+		, A.USER_NM /*(1)사용자명*/
+		, A.CNNCT_IP /*(2)접속IP*/
+		, A.ETC_INFO01 AS LAST_LOGIN_DT /*(3)최근로그인일자*/
+		, ( SELECT COALESCE(ARRAY_TO_STRING(ARRAY_AGG(ATRT_GROUP_ID),','), '20151106173043466TWB14896') /*권한그룹이 존재하지 않을 경우 기본 권한 그룹으로 설정*/
+		FROM PLT_USER_AUTH
+		WHERE USER_ID = A.USER_ID
+		GROUP BY USER_ID
+		) AS AUTHOR_GROUP_ID_LIST /*(4)권한그룹키리스트*/
+
+		/*20190510 ojw: 조직 개편으로 인해 안쓰이는 컬럼이지만 REGR_ID 등 문제를 방지하기 위해 dummy 값 설정*/
+		, 'x' AS DEPT_CD /*(5)조직코드*/
+		, 'x' AS DEPT_NM /*(6)조직코드명*/
+
+		, '' AS AUTH01_ORG_CD /*(7)본부코드(필요시사용)*/
+		, '' AS AUTH02_ORG_CD /*(8)지역본부코드(필요시사용)*/
+		, '' AS AUTH03_ORG_CD /*(9)센터코드(필요시사용)*/
+		, '' AS AUTH04_ORG_CD /*(10)협력업체코드(필요시사용)*/
+		, 'x' AS DEPT_NM_FULL /*(11)부서전체경로명*/
+		, 'x' AS DEPT_CD_FULL /*(12)부서전체경로코드*/
+		, CASE WHEN EXISTS(SELECT 'X' FROM PLT_CHT_USER_INQ
+		WHERE USER_ID='test01')
+		THEN 'true'
+		ELSE 'false' END AS SPEC_CNSL_NM /*(13)전문상담명->멀티전문상담으로 변경 되면서 설정여부값만
+		전송하도록함.*/
+		, A.USER_NICK /*(15)사용자닉네임*/
+
+		<!-- 20190509 ojw added for new user dept -->
+		, A.USER_ATTR_A /*(16)사용자소속A*/
+		, A.USER_ATTR_B /*(17)사용자소속B*/
+		, A.USER_ATTR_C /*(18)사용자소속C*/
+		, A.USER_ATTR_D /*(19)사용자소속D*/
+		FROM PLT_USER A
+		WHERE A.USER_ID = #{USER_ID}
+		) RE
+	</select>
+	<!--2019.01.22 lsm 비밀번호 만료 여부 체크 -->
+	<select id="checkExpiredPwd" parameterType="java.util.HashMap"
+		resultType="java.util.HashMap">
+	<![CDATA[
+	SELECT CASE WHEN  < (PWD_UPD_DTTM + #{pwdTerm})
+			    THEN 'Y'
+			    ELSE 'N' END    AS EXPIREYN --Y(사용가능) / N(비밀번호 수정필요)
+		    FROM PLT_USER
+			WHERE USER_ID = #{USER_ID}
+	]]>
+	</select>
+	<!-- 2018.11.12 kmg 채팅Off 존재 여부 확인, 조건에 CUSTCO_ID 사용하지 않는다 -->
+	<select id="selectTalkReadyOffUserId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			CNT
+			, (SELECT STTS_CD FROM PLT_CHT_RDY_ONOFF_HSTRY WHERE CUSL_ID = #{USER_ID} AND ROWNUM = 1) AS USER_CHT_STAT
+		FROM (
+			SELECT COUNT(*) AS CNT
+			FROM PLT_CHT_RDY_ONOFF_HSTRY
+			WHERE CUSL_ID = #{USER_ID}
+		) RSLT
+	</select>
+
+	<!-- 2020.10.08 umh 자동 채팅Off 존재 여부 확인, 조건에 CUSTCO_ID 사용하지 않는다 -->
+	<select id="selectTalkReadySTOMPOFFUserId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(*) AS CNT
+			, (SELECT STTS_CD FROM PLT_CHT_RDY_ONOFF_HSTRY WHERE CUSL_ID = #{USER_ID} and rownum = 1) AS USER_CHT_STAT
+		FROM PLT_CHT_RDY_ONOFF_HSTRY
+		WHERE CUSL_ID = #{USER_ID}
+			AND STTS_CD LIKE 'STOMPOFF%'
+	</select>
+	
+	<!-- 20201030 추가 -->
+	<select id="selectTalkReadyOffCHATONUserId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(*) AS CNT
+			, (SELECT STTS_CD FROM PLT_CHT_RDY_ONOFF_HSTRY WHERE CUSL_ID = #{USER_ID} OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY) AS USER_CHT_STAT
+		FROM PLT_CHT_RDY_ONOFF_HSTRY
+		WHERE CUSL_ID = #{USER_ID}
+			AND STATUS_CD LIKE 'CHT_WAIT'
+	</select>
+	
+	<!-- 2018.11.12 kmg 채팅Off 존재 여부 확인, 조건에 CUSTCO_ID 사용하지 않는다 -->
+	<select id="selectTalkReadyCHATONUserId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT COUNT(*) AS CNT
+			, (SELECT STTS_CD FROM PLT_CHT_RDY_ONOFF_HSTRY WHERE CUSL_ID = #{USER_ID} OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY) AS USER_CHT_STAT
+		FROM PLT_CHT_RDY_ONOFF_HSTRY
+		WHERE CUSL_ID = #{USER_ID}
+			AND STATUS_CD LIKE 'CHT_WAIT'
+	</select>	
+
+	<!-- 2018.11.12 kmg 채팅Off 시점 등록 -->
+	<insert id="insertTalkReadyOff" parameterType="java.util.HashMap">
+		INSERT INTO PLT_CHT_RDY_ONOFF_HSTRY (
+			CUSL_ID
+			, CUSTCO_ID
+			, STTS_CD
+			, CUTT_BGNG_DT
+			, PRCS_HR
+		) VALUES (
+			#{USER_ID}
+			, #{CUSTCO_ID}
+			, #{USER_CHT_STAT}
+			, TO_CHAR(,'YYYYMMDDHH24MISS')
+			, TO_CHAR(,'YYYYMMDDHH24MISS')
+		)
+	</insert>
+
+	<!-- 2018.11.12 kmg 채팅Off 종료시점 UPDATE 조건에 CUSTCO_ID 사용하지 않는다 -->
+	<update id="updateTalkReadyOffInEndTime" parameterType="java.util.HashMap">
+		UPDATE PLT_CHT_RDY_ONOFF_HSTRY
+		SET CUTT_END_DT = TO_CHAR(,'YYYYMMDDHH24MISS')
+			, PRCS_HR = CUTT_END_DT - CUTT_BGNG_DT
+		WHERE CUSL_ID = #{USER_ID}
+	</update>
+
+	<!-- 2018.11.12 kmg 채팅OFF 히스토리 기록 -->
+	<insert id="insertTalkReadyOffHist" parameterType="java.util.HashMap">
+		INSERT INTO PLT_CHT_RDY_HSTRY (
+			CHT_RDY_HSTRY_ID
+			, CUSL_ID
+			, CUSTCO_ID
+			, STTS_CD
+			, BGNG_HR
+			, END_HR
+			, PRCS_HR
+		)
+		SELECT #{CHT_RDY_HSTRY_ID}
+			, CUSL_ID
+			, CUSTCO_ID
+			, STTS_CD
+			, CUTT_BGNG_DT
+			, CUTT_END_DT
+			, PRCS_HR
+		FROM PLT_CHT_RDY_ONOFF_HSTRY
+		WHERE CUSL_ID = #{USER_ID}
+	</insert>
+
+	<!-- 2018.11.12 kmg 채팅OFF 초기화 -->
+	<delete id="deleteTalkReadyOff"
+		parameterType="java.util.HashMap">
+		DELETE FROM PLT_CHT_RDY_ONOFF_HSTRY
+		WHERE CUSL_ID = #{USER_ID}
+	</delete>
+
+	<!-- 2019.12.05 lyj 실시간 공지 조회  -->
+	<select id="selectRtNotice" parameterType="java.util.HashMap"
+		resultType="java.util.HashMap">
+		SELECT A.BRD_ID -- 통합게시판ID
+		     , A.BRD_NO -- 게시물ID
+		     , A.BRD_TIT -- 제목
+		     , '20170823103037589KC21290' AS MENU_ID -- 메뉴ID
+		  FROM PLT_BLBD_MST A
+		     , PLT_BLBD_MNG B
+		 WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+		<!-- AND B.CUSTCO_ID = #{CUSTCO_ID} -->
+		   AND A.BRD_ID = B.BRD_ID
+		   AND B.RT_NOTI_YN = 'Y'
+		   AND A.USE_YN = 'Y'
+		   AND TO_CHAR(, 'YYYYMMDD') BETWEEN TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDD') AND TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') -- 일자비교
+		   AND A.BULTN_SPNS_DT IS NULL -- 게시중지 확인
+		 ORDER BY A.FST_BRD_DT DESC
+	</select>
+
+	<!-- 2019.12.09 lyj 실시간 공지 팝업 조회 -->
+	<select id="selectPopRtNotice" parameterType="java.util.HashMap"
+		resultType="java.util.HashMap">
+		SELECT A.BRD_ID -- 통합게시판ID
+		     , A.BRD_NO -- 게시물ID
+		     , A.BRD_TIT -- 제목
+		     , '20191204111557453KC39100' AS MENU_ID -- 메뉴ID
+		  FROM PLT_BLBD_MST A
+		     , PLT_BLBD_MNG B
+		 WHERE A.CUSTCO_ID = #{CUSTCO_ID}
+		<!-- AND B.CUSTCO_ID = #{CUSTCO_ID} -->
+		   AND A.BRD_ID = B.BRD_ID
+		   AND B.RT_NOTI_YN = 'Y'
+		   AND A.USE_YN = 'Y'
+		   AND PUP_YN = 'Y'
+		   AND TO_CHAR(, 'YYYYMMDD') BETWEEN TO_CHAR(A.BULTN_FR_DT, 'YYYYMMDD') AND TO_CHAR(A.BULTN_TO_DT, 'YYYYMMDD') -- 일자비교
+		   AND A.BULTN_SPNS_DT IS NULL -- 게시중지 확인
+		 ORDER BY A.FST_BRD_DT DESC
+	</select>
+
+	<!-- 외교부
+		1. 사용자테이블은 상담어플리케이션 테이블을 view 로 생성하여 생성된 view 가지고 조회한다.
+        2. 상담사채팅허용설정테이블(PLT_CHT_USER_CHAT_SET)은 상담어플리케이션 테이블에서 관리하지 않으므로 초기 로그인시 데이터가 있으면 초기값을 insert한다.
+	 -->
+	<select id="selectChatAgentCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+		  COUNT(USER_ID) AS CHAT_AGENT_CNT 
+		FROM PLT_CHT_USER_CHAT_SET
+		WHERE USER_ID = #{userId}
+	</select>	
+	
+	<insert id="insertChatAgentCnt" parameterType="java.util.HashMap">
+		INSERT INTO PLT_CHT_USER_CHAT_SET (
+		  USER_ID
+		  ,CUSTCO_ID
+		  ,MAX_CHAT_AGENT
+		  ,VIEW_BASESCRIPT_YN
+		)
+		VALUES
+		( 
+		     #{userId}
+		   , #{custcoId}
+		   , (SELECT STNG_VL FROM PLT_CHT_ENV WHERE STNG_CD = 'CONT_CHATAGENT_CNT' AND CUSTCO_ID = #{custcoId})
+		   , (SELECT STNG_VL FROM PLT_CHT_ENV WHERE STNG_CD = 'CONT_CHATAGENT_YN' AND CUSTCO_ID = #{custcoId})
+		)
+	</insert>
+	<!-- 알림톡 템플릿을 조회한다.. -->
+	<select id="selectAlimtalkTmplat" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* selectSmsMngList */
+	SELECT ROW_TBL.*
+	         , PAG_TBL.*
+	     FROM (
+		SELECT A.NTCN_TALK_NO           	/* SMS번호 */
+		     , A.CENT_TY          	/* 센터구분 */
+		     , B.CD_NM AS CENT_TY_NM	/* 센터구분명 */
+		     , A.NTCN_TALK_TY           	/* SMS유형 */
+		     , C.CD_NM AS NTCN_TALK_TY_NM	/* SMS유형명 */
+		     , A.NTCN_TALK_TMPLT			/* SMS템플릿 */
+		     , D.CD_NM AS NTCN_TALK_TMPLT_NM	/* SMS템플릿명 */
+		     , A.TIT              	/* 제목 */
+		     , A.NTCN_TALK_CNTN         	/* SMS내용 */
+		     , A.NTCN_TALK_TOT_SEND_YN	/* SMS일괄전송여부 */
+		     , A.CUST_NM_ADD_YN		/* 고객명추가여부 */
+		     , A.CU_INFO_ADD_YN		/* 조합정보추가여부 */
+		     , A.CODE_INFO_ADD_YN	/* 코드정보추가여부 */
+		     , A.USE_YN           	/* 사용여부 */
+		     , A.REG_DTIM         	/* 등록일시 */
+		     , A.REG_MAN          	/* 등록자 */
+		     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.REG_MAN) AS REG_MAN_NM /* 등록자명 */
+		     , A.CHNG_DTIM        	/* 변경일시 */
+		     , A.CHNG_MAN        	/* 변경자 */
+		     , (SELECT USER_NM FROM PLT_USER WHERE USER_ID = A.CHNG_MAN) AS CHNG_MAN_NM /* 변경자명 */
+		     , A.SCR_DISP_YN        	/* 즐겨찾기 */
+		  FROM PLT_PHN_NTCN_TALK_TMPL A
+		  LEFT OUTER JOIN PLT_COMN_CD B
+		    ON A.CENT_TY = B.CD
+		   AND B.USE_YN = 'Y'
+		   AND B.CD != '****'
+		   AND B.GROUP_CD = 'TWB500'
+		  LEFT OUTER JOIN PLT_COMN_CD C
+		    ON A.NTCN_TALK_TY = C.CD
+		   AND C.USE_YN = 'Y'
+		   AND C.CD != '****'
+		   AND C.GROUP_CD = DECODE(A.CENT_TY, 'G', 'TWB503', 'C', 'TWB511', 'E', 'TWB512')
+		  LEFT OUTER JOIN PLT_COMN_CD D
+		    ON A.NTCN_TALK_TMPLT = D.CD
+		   AND D.USE_YN = 'Y'
+		   AND D.CD != '****'
+		   AND D.GROUP_CD = 'RE020'
+		   WHERE A.USE_YN='Y'
+		 	<include refid="searchAlimtalk" />
+	 	ORDER BY NTCN_TALK_NO DESC
+	 	) ROW_TBL
+		, (
+				SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+				  FROM PLT_PHN_NTCN_TALK_TMPL A
+				  <where>
+				 	 <include refid="searchAlimtalk" />
+				  </where> 
+		) PAG_TBL
+	</select>
+	
+	<insert id="insertAlimtalkHist" parameterType="java.util.HashMap">
+	
+	    INSERT
+	    INTO PLT_PHN_NTCN_TALK_SEND_HST(
+		           NTCN_TALK_SEND_HIST_NO		/* NTCN_TALK발송이력번호 */
+				 , CENT_TY				/* 센터구분 */
+				 , CUST_TEL_NO			/* 고객전화번호 */
+				 , NTCN_TALK_NO				/* NTCN_TALK번호 */
+				 , NTCN_TALK_CNTN				/* NTCN_TALK내용 */
+				 , NTCN_TALK_REQ_DTIM			/* NTCN_TALK요청일시 */
+				 , NTCN_TALK_PROC_RSLT		/* NTCN_TALK처리결과 */
+				 , REG_DTIM				/* 등록일시 */
+				 , REG_MAN				/* 등록자 */
+		         )
+		    VALUES(#{SEQ}
+		         , #{CENT_TY}
+		         , #{CUST_TEL_NO}
+		         , #{NTCN_TALK_NO}
+		         , #{NTCN_TALK_CNTN}
+		         , #{NTCN_TALK_REQ_DTIM}
+		         , #{NTCN_TALK_PROC_RSLT}
+		         , #{REG_DTIM}
+		         , #{REG_MAN}
+		         )
+	
+	</insert>
+	<select id="selectCstmrId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT * 
+		FROM PLT_CUS
+		WHERE CUSTOMER_PHONE_NO = #{CUST_TEL_NO} 
+   </select>
+	<!-- SMS 템플릿을 조회 -->
+   <select id="selectSmsMngList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+      /* selectSmsMngList */
+      SELECT ROW_TBL.*
+            , PAG_TBL.*
+        FROM (
+      SELECT A.SMS_NO              /* SMS번호 */
+           , A.CENT_TY             /* 센터구분 */
+           , B.CD_NM AS CENT_TY_NM   /* 센터구분명 */
+           , A.SMS_TY              /* SMS유형 */
+           , C.CD_NM AS SMS_TY_NM   /* SMS유형명 */
+           , A.SMS_TMPLT         /* SMS템플릿 */
+           , D.CD_NM AS SMS_TMPLT_NM   /* SMS템플릿명 */
+           , A.TIT                 /* 제목 */
+           , A.SMS_CNTN            /* SMS내용 */
+        FROM PLT_PHN_SMS_TMPL A
+        LEFT OUTER JOIN PLT_COMN_CD B
+          ON A.CENT_TY = B.CD
+         AND B.USE_YN = 'Y'
+         AND B.CD != '****'
+         AND B.GROUP_CD = 'TWB500'
+        LEFT OUTER JOIN PLT_COMN_CD C
+          ON A.SMS_TY = C.CD
+         AND C.USE_YN = 'Y'
+         AND C.CD != '****'
+         AND C.GROUP_CD = DECODE(A.CENT_TY, 'G', 'TWB503', 'C', 'TWB511', 'E', 'TWB512')
+        LEFT OUTER JOIN PLT_COMN_CD D
+          ON A.SMS_TMPLT = D.CD
+         AND D.USE_YN = 'Y'
+         AND D.CD != '****'
+         AND D.GROUP_CD = 'RE020'
+       <where>
+          <include refid="search" />
+       </where>
+       ORDER BY SMS_NO DESC
+       ) ROW_TBL
+      , (
+            SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+              FROM PLT_PHN_SMS_TMPL A
+              <where>
+                 <include refid="search" />
+              </where> 
+      ) PAG_TBL
+   </select>
+   
+   <!-- 이메일 전송 이력 저장 -->
+   <insert id="insertEmailHist" parameterType="java.util.HashMap">
+	    INSERT
+	    INTO PLT_PHN_EML_SND_HST(
+		           EML_SEND_HIST_NO		/* EML발송이력번호 */
+				 , CENT_TY					/* 센터구분 */
+				 , CUST_NO					/* 고객 번호*/
+				 , CUST_TEL_NO				/* 고객전화번호 */
+				 , EML_NO					/* EML번호 */
+				 , EML_CNTN				/* EML내용 */
+				 , EML_REQ_DTIM			/* EML요청일시 */
+				 , EML_PROC_RSLT			/* EML처리결과 */
+				 , REG_DTIM					/* 등록일시 */
+				 , REG_MAN					/* 등록자 */
+				 , CUSTOMER_ID				/* 고객ID */
+		         )
+		    VALUES(#{SEQ}
+		         , #{CENT_TY}
+		         , #{CUST_NO}
+		         , #{CUST_TEL_NO}
+		         , #{EML_NO}
+		         , #{EML_CNTN}
+		         , #{EML_REQ_DTIM}
+		         , #{EML_PROC_RSLT}
+		         , #{REG_DTIM}
+		         , #{REG_MAN}
+		         , #{CUSTOMER_ID}
+		         )
+	
+	</insert>
+	
+	<select id="selectCustcoId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+		  CUSTCO_ID
+		FROM PLT_USER
+		WHERE USER_ID = #{userId}
+	</select>	
+	
+	<select id="selectAspCustNm" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			CUSTCO_ID	AS CD
+		  	, CO_NM	AS NM
+		FROM PLT_ASP_CUS
+		WHERE #{CUSTCO_ID} LIKE '%'|| CUSTCO_ID || '%'
+	</select>	
+	
+	<select id="selectAuth" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			ATRT_GROUP_ID	AS CD
+		  	, ATRT_GROUP_NM	AS NM
+		  	, CUSTCO_ID
+		FROM PLT_AUTH
+	</select>	
+	
+	<select id="selectCountCNSL" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.CNT_TALK_DAY 			AS CHT_DAY_CNT,
+			    B.CNT_TALK_WEEK 		AS CHT_WEEK_CNT,
+			    C.CNT_TALK_MONTH 		AS CHT_MONTH_CNT,
+			    D.CNT_CALL_DAY 		AS PHN_DAY_CNT,
+			    E.CNT_CALL_WEEK 		AS PHN_WEEK_CNT,
+			    F.CNT_CALL_MONTH 		AS PHN_MONTH_CNT
+		FROM (SELECT COUNT(TALK_CONTACT_ID) AS CNT_TALK_DAY
+			    FROM PLT_CHT_CUTT_HST 
+			    WHERE USER_ID=#{USER_ID}
+			    AND SUBSTR(TALK_START_DT,0,8) BETWEEN #{DAY_ST_DT} AND #{DAY_END_DT}) A,
+			    (SELECT COUNT(TALK_CONTACT_ID) AS CNT_TALK_WEEK
+			    FROM PLT_CHT_CUTT_HST 
+			    WHERE USER_ID=#{USER_ID}
+			    AND SUBSTR(TALK_START_DT,0,8) BETWEEN #{WEEK_ST_DT} AND #{WEEK_END_DT}) B,
+			    (SELECT COUNT(TALK_CONTACT_ID) AS CNT_TALK_MONTH
+			    FROM PLT_CHT_CUTT_HST 
+			    WHERE USER_ID=#{USER_ID}
+			    AND SUBSTR(TALK_START_DT,0,8) BETWEEN #{MONTH_ST_DT} AND #{MONTH_END_DT}) C,
+			    (SELECT COUNT(CNSL_HIST_NO) AS CNT_CALL_DAY
+			    FROM PLT_PHN_CNSL
+			    WHERE CSLT_ID=#{USER_ID}
+			    AND SUBSTR(CNSL_EOT_DATE,0,8) BETWEEN #{DAY_ST_DT} AND #{DAY_END_DT}) D,
+			    (SELECT COUNT(CNSL_HIST_NO) AS CNT_CALL_WEEK
+			    FROM PLT_PHN_CNSL 
+			    WHERE CSLT_ID=#{USER_ID}
+			    AND SUBSTR(CNSL_EOT_DATE,0,8) BETWEEN #{WEEK_ST_DT} AND #{WEEK_END_DT}) E,
+			    (SELECT COUNT(CNSL_HIST_NO) AS CNT_CALL_MONTH
+			    FROM PLT_PHN_CNSL 
+			    WHERE CSLT_ID=#{USER_ID}
+			    AND SUBSTR(CNSL_EOT_DATE,0,8) BETWEEN #{MONTH_ST_DT} AND #{MONTH_END_DT}) F
+	</select>	
+	
+	<select id="getUserAuth" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			AUTHRT_GROUP_ID AS USER_AUTH
+		FROM PLT_USER_AUTHRT
+		WHERE USER_ID = CAST(#{USER_ID} AS INTEGER)
+	</select>	
+
+	<!-- 간편인증 전 사용자 등록 -->
+	<update id="setBFOmniAuthUser" parameterType="java.util.HashMap">
+		UPDATE PLT_CUS
+		SET OMNI_AUTH = 'WAIT'
+			,CUSTOMER_NM = #{CUST_NM}
+			,AMDR_ID = 'SYSTEM'
+			,UPD_DTTM = 
+			,PROC_ID = 'SYSTEM'
+			,IT_PROCESSING = 
+		WHERE OMNI_AUTH = 'CHECK'
+		AND CUSTOMER_PHONE_NO = #{PHONE_NO}
+	</update>
+
+	<!-- 간편인증 후 사용자 등록 -->
+	<update id="setAFOmniAuthUser" parameterType="java.util.HashMap">
+		UPDATE PLT_CUS
+		SET OMNI_AUTH = #{ci}
+			,CUSTOMER_BIRTH = #{birth}
+			,AMDR_ID = 'SYSTEM'
+			,UPD_DTTM = 
+			,PROC_ID = 'SYSTEM'
+			,IT_PROCESSING = 
+		WHERE OMNI_AUTH = 'WAIT'
+		AND CUSTOMER_NM = #{name}
+	</update>
+   
+</mapper>

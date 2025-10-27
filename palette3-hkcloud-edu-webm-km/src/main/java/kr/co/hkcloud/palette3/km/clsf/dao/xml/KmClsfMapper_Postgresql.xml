@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper">
+
+	<select id="clsfTreeList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		WITH RECURSIVE CTE_T AS ( /* 지식분류 Tree 조회 (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.clsfTreeList) */
+			SELECT 
+				1 AS LEVEL
+				, CONCAT(KMS_CLSF_NM) AS FULL_PATH
+<!--				, ARRAY[SORT_ORD] || KMS_CLSF_ID AS SORT-->
+				, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT_ARR
+				, 'N' AS PIC_USE_YN
+				, *
+			FROM PLT_KMS_CLSF
+			WHERE DEL_YN = 'N'
+				<if test=' USE_YN != null and USE_YN != "" '>
+					AND USE_YN = #{USE_YN}
+				</if>
+				AND UP_KMS_CLSF_ID IS NULL
+				AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			UNION ALL 
+			SELECT 
+				LEVEL + 1
+				, CONCAT(FULL_PATH, ' > ', S.KMS_CLSF_NM)
+<!--				, SORT || S.SORT_ORD || S.KMS_CLSF_ID-->
+				, SORT_ARR || ' > ' || LPAD(CAST(S.SORT_ORD AS VARCHAR),5,'0')
+				, CASE 
+						WHEN R.PIC_USE_YN = 'Y' THEN 'Y'
+						ELSE
+							CASE WHEN CA.PIC_ID = #{USER_ID}::INTEGER THEN 'Y' ELSE 'N' END 
+				  END
+				, S.*
+			FROM CTE_T R
+			INNER JOIN PLT_KMS_CLSF S ON R.KMS_CLSF_ID = S.UP_KMS_CLSF_ID 
+				AND S.DEL_YN = 'N'
+				<if test=' USE_YN != null and USE_YN != "" '>
+					AND S.USE_YN = #{USE_YN}
+				</if>
+				AND S.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			LEFT OUTER JOIN PLT_KMS_CLSF_AUTHRT CA ON CA.KMS_CLSF_ID = S.KMS_CLSF_ID AND CA.DEL_YN = 'N'
+		)
+	<![CDATA[
+		SELECT
+			T.SORT_ARR
+			, T.CUSTCO_ID
+			, T.KMS_CLSF_ID											/*		분류ID				*/
+			, T.UP_KMS_CLSF_ID										/*		상위분류ID		*/
+			, (SELECT KMS_CLSF_NM FROM PLT_KMS_CLSF WHERE KMS_CLSF_ID = T.UP_KMS_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS UP_KMS_CLSF_NM	/*		상위분류명	*/
+			, T.KMS_CLSF_NM 										/*		분류명				*/
+			, COALESCE(CC.OPEN_CONTS_CNT, 0) AS OPEN_CONTS_CNT						/*		해당분류의 공개된 컨텐츠 COUNT	*/
+			, COALESCE(CC.CONTS_CNT, 0) AS CONTS_CNT								/*		해당분류의 컨텐츠 COUNT		*/
+			, COALESCE(CC.RIGHT_SCRIPT_CNT, 0) AS RIGHT_SCRIPT_CNT					/*		해당분류의 우측 지식관리 스크립트 - 전체 COUNT	*/
+			, COALESCE(CC.RIGHT_SCRIPT_COMM_CNT, 0) AS RIGHT_SCRIPT_COMM_CNT		/*		해당분류의 우측 지식관리 스크립트 - 공통 CCOUNT	*/
+			, COALESCE(CC.RIGHT_SCRIPT_PRIVATE_CNT, 0) AS RIGHT_SCRIPT_PRIVATE_CNT	/*		해당분류의 우측 지식관리 스크립트 - 개인 CCOUNT	*/
+			
+			, CASE 
+				WHEN COALESCE(T.USE_YN, 'N') = 'N'
+				THEN 
+					CASE WHEN COALESCE(CC.CONTS_CNT, 0) = 0 THEN CONCAT(T.KMS_CLSF_NM, ' <font color="red">(비공개)</font>')
+					ELSE CONCAT(T.KMS_CLSF_NM, ' <font color="blue">(', CC.CONTS_CNT, ')</font>', ' <font color="red">(비공개)</font>') END
+				ELSE 
+					CASE WHEN COALESCE(CC.CONTS_CNT, 0) = 0 THEN CONCAT( T.KMS_CLSF_NM )
+					ELSE CONCAT(T.KMS_CLSF_NM, ' <font color="blue">(', CC.CONTS_CNT, ')</font>' ) END
+			  END AS KMS_CLSF_NM_F								/*		분류명(for Manage Tree)	*/
+			, LEVEL AS LVL													/*		레벨					*/
+			, T.FULL_PATH													/*		경로명				*/
+			, T.FULL_PATH || (CASE WHEN CC.RIGHT_SCRIPT_CNT > 0 THEN '(' || CC.RIGHT_SCRIPT_CNT || ')' ELSE '' END) AS FULL_PATH_SCRIPT_CNT		/*	경로명 + 스크립트 건수	*/
+			, T.USE_YN														/*		사용여부(공개여부)	*/
+			, T.KMS_CLSF_EXPLN
+			, CASE 
+				WHEN COALESCE(T.USE_YN, 'N') = 'N' THEN '비공개'
+				ELSE '공개'
+			  END AS IS_OPEN
+			, CASE 
+				WHEN COALESCE(T.USE_YN, 'N') = 'N' THEN 'N'
+				ELSE 'Y'
+			  END AS IS_OPEN_CD
+			, KC.KMS_CLSF_AUTHRT_ID							/*		권한Key	*/
+			, KC.PIC_ID														/*		담당자 ID	*/
+	]]>
+			<choose>
+				<when test=' ADM_YN != null and ADM_YN != "" and ADM_YN == "Y" '>
+					, #{ADM_YN} AS PIC_USE_YN
+				</when>
+				<otherwise>
+					, T.PIC_USE_YN										/*		관리자여부로 기능 제어	*/
+				</otherwise>
+			</choose>
+			, U.LGN_ID AS LGN_ID									/*		담당자 로그인 ID	*/
+			, U.USER_NM AS PIC_NM								/*		담당자명	*/
+			, T.SORT_ORD													/*		정렬순번		*/
+	<![CDATA[
+			, (SELECT COALESCE(MIN(SORT_ORD),0) FROM PLT_KMS_CLSF WHERE UP_KMS_CLSF_ID = T.UP_KMS_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS MIN_ORD		/*		동일레벨의 최소 순번 -- 순번변경시 사용		*/ 
+			, (SELECT COALESCE(MAX(SORT_ORD),0) FROM PLT_KMS_CLSF WHERE UP_KMS_CLSF_ID = T.UP_KMS_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS MAX_ORD		/*		동일레벨의 최대 순번 -- 순번변경시 사용		*/
+			, (SELECT COALESCE(MAX(SORT_ORD),0) FROM PLT_KMS_CLSF WHERE UP_KMS_CLSF_ID = T.UP_KMS_CLSF_ID AND COALESCE(SORT_ORD,0) < COALESCE(T.SORT_ORD,0) AND COALESCE(DEL_YN, 'Y') != 'Y') AS PRE_ORD		/*		동일레벨의 이전순번 -- 순번변경시 사용		*/
+			, (SELECT COALESCE(MIN(SORT_ORD),0) FROM PLT_KMS_CLSF WHERE UP_KMS_CLSF_ID = T.UP_KMS_CLSF_ID AND COALESCE(SORT_ORD,0) > COALESCE(T.SORT_ORD,0) AND COALESCE(DEL_YN, 'Y') != 'Y') AS NEXT_ORD		/*		동일레벨의 다음순번 -- 순번변경시 사용		*/
+			, (SELECT COALESCE(MAX(SORT_ORD),0) FROM PLT_KMS_CLSF WHERE UP_KMS_CLSF_ID = T.KMS_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS CHILD_MAX_ORD	/*		하위레벨의 최대 순번		-- 분류 추가시 사용	*/
+			, (SELECT COALESCE(COUNT(KMS_CLSF_ID),0) FROM PLT_KMS_CLSF WHERE UP_KMS_CLSF_ID = T.KMS_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS CHILD_CNT	/*		하위분류 COUNT	*/
+	]]>
+		FROM CTE_T T
+		LEFT OUTER JOIN (
+			SELECT 
+				KMS_CLSF_ID
+				, SUM(CASE WHEN COMM_YN = 'Y' THEN 1 ELSE 0 END) AS CONTS_CNT
+				, SUM(CASE WHEN SE_CD = 'KNOWLEDGE' AND STTS_CD = 'PBIC' AND COMM_YN = 'Y' THEN 1 ELSE 0 END) AS OPEN_CONTS_CNT
+				, SUM(CASE WHEN SE_CD = 'SCRIPT' AND STTS_CD = 'PBIC' AND (COMM_YN = 'Y' OR (COMM_YN = 'N' AND RGTR_ID = #{USER_ID}::INTEGER)) THEN 1 ELSE 0 END) AS RIGHT_SCRIPT_CNT
+				, SUM(CASE WHEN SE_CD = 'SCRIPT' AND STTS_CD = 'PBIC' AND COMM_YN = 'Y' THEN 1 ELSE 0 END) AS RIGHT_SCRIPT_COMM_CNT
+				, SUM(CASE WHEN SE_CD = 'SCRIPT' AND STTS_CD = 'PBIC' AND COMM_YN = 'N' AND RGTR_ID = #{USER_ID}::INTEGER THEN 1 ELSE 0 END) AS RIGHT_SCRIPT_PRIVATE_CNT
+			FROM PLT_KMS_CONTS
+			GROUP BY KMS_CLSF_ID
+		) CC ON CC.KMS_CLSF_ID = T.KMS_CLSF_ID
+		LEFT OUTER JOIN PLT_KMS_CLSF_AUTHRT KC ON T.KMS_CLSF_ID = KC.KMS_CLSF_ID AND KC.DEL_YN = 'N'
+		LEFT OUTER JOIN PLT_USER U ON U.USER_ID = KC.PIC_ID
+		ORDER BY SORT_ARR
+	
+	</select>
+
+	<select id="clsfInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* 지식분류 정보 조회 (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.clsfInfo) */
+			C.CUSTCO_ID													/*		고객사 ID					*/
+			, C.KMS_CLSF_ID												/*		분류ID						*/
+			, C.UP_KMS_CLSF_ID										/*		상위분류ID				*/
+			, UP.KMS_CLSF_NM AS UP_KMS_CLSF_NM	/*		상위분류명				*/
+			, C.KMS_CLSF_NM 											/*		분류명						*/
+			, C.USE_YN														/*		사용여부(공개여부)	*/
+			, C.KMS_CLSF_EXPLN										/*		분류설명					*/
+			, C.SORT_ORD													/*		정렬순번					*/
+			, CA.KMS_CLSF_AUTHRT_ID							/*		권한Key					*/
+			, CA.PIC_ID														/*		담당자 ID					*/
+			, U.LGN_ID AS LGN_ID									/*		담당자 로그인 ID		*/
+			, U.USER_NM AS PIC_NM								/*		담당자명					*/
+		FROM PLT_KMS_CLSF C
+		LEFT OUTER JOIN PLT_KMS_CLSF UP ON C.UP_KMS_CLSF_ID = UP.KMS_CLSF_ID
+		LEFT OUTER JOIN PLT_KMS_CLSF_AUTHRT CA ON CA.KMS_CLSF_ID = C.KMS_CLSF_ID AND COALESCE(CA.DEL_YN, 'Y') = 'N'
+		LEFT OUTER JOIN PLT_USER U ON U.USER_ID = CA.PIC_ID
+		WHERE 1=1
+			<choose>
+				<when test=' KMS_CLSF_ID != null and KMS_CLSF_ID != "" '>
+					AND C.KMS_CLSF_ID = CAST(#{KMS_CLSF_ID} AS INTEGER)
+				</when>
+				<when test=' UP_KMS_CLSF_ID != null and UP_KMS_CLSF_ID != "" and SORT_ORD != null and SORT_ORD != "" '>
+					AND C.DEL_YN = 'N'
+					AND C.UP_KMS_CLSF_ID = CAST(#{UP_KMS_CLSF_ID} AS INTEGER)
+					AND C.SORT_ORD = CAST(#{SORT_ORD} AS INTEGER)
+				</when>
+				<otherwise>
+					AND C.KMS_CLSF_ID IS NULL
+				</otherwise>
+			</choose>		
+	</select>
+	
+	<insert id="INSERT_KMS_CLSF"  parameterType= "java.util.HashMap">
+		INSERT /*	지식분류 등록 (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.INSERT_KMS_CLSF)	*/
+		INTO PLT_KMS_CLSF (
+			KMS_CLSF_ID
+			, UP_KMS_CLSF_ID
+			, KMS_CLSF_NM
+			, KMS_CLSF_EXPLN
+			, SORT_ORD
+			, USE_YN
+			, DEL_YN
+			, CUSTCO_ID
+			, RGTR_ID
+			, REG_DT
+			, MDFR_ID
+			, MDFCN_DT
+		) 
+		SELECT 
+			#{KMS_CLSF_ID}::INTEGER
+			, #{UP_KMS_CLSF_ID}::INTEGER
+			, #{KMS_CLSF_NM}
+			, #{KMS_CLSF_EXPLN}
+			<choose>
+				<when test=' SORT_ORD != null and SORT_ORD != "" '>
+					, #{SORT_ORD}::INTEGER
+				</when>
+				<otherwise>
+					, (SELECT COALESCE(MAX(SORT_ORD), 0) + 1 FROM PLT_KMS_CLSF WHERE UP_KMS_CLSF_ID  = #{UP_KMS_CLSF_ID}::INTEGER)::INTEGER
+				</otherwise>
+			</choose>
+			, #{USE_YN}
+			, 'N'
+			, #{CUSTCO_ID}::INTEGER
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		
+		
+	</insert>
+	
+	<insert id="INSERT_KMS_CLSF_AUTHRT"  parameterType= "java.util.HashMap">
+		INSERT /*	지식분류권한 등록 (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.INSERT_KMS_CLSF_AUTHRT)	*/
+		INTO PLT_KMS_CLSF_AUTHRT (
+			KMS_CLSF_AUTHRT_ID
+			, KMS_CLSF_ID
+			, PIC_ID
+			, DEL_YN
+			, RGTR_ID
+			, REG_DT
+			, MDFR_ID
+			, MDFCN_DT
+		) VALUES (
+			#{KMS_CLSF_AUTHRT_ID}::INTEGER
+			, #{KMS_CLSF_ID}::INTEGER
+			, #{PIC_ID}::INTEGER
+			, 'N'
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	<update id="UPDATE_KMS_CLSF"  parameterType= "java.util.HashMap">
+		UPDATE PLT_KMS_CLSF SET /*	지식분류 수정 (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.UPDATE_KMS_CLSF)	*/
+			MDFR_ID = #{USER_ID}::INTEGER
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test=' UP_KMS_CLSF_ID != null and UP_KMS_CLSF_ID != "" '>	, UP_KMS_CLSF_ID = #{UP_KMS_CLSF_ID}::INTEGER	</if>
+			<if test=' KMS_CLSF_NM != null and KMS_CLSF_NM != "" '>				, KMS_CLSF_NM = #{KMS_CLSF_NM}								</if>
+			<if test=' KMS_CLSF_EXPLN != null and KMS_CLSF_EXPLN != "" '>	, KMS_CLSF_EXPLN = #{KMS_CLSF_EXPLN}					</if>
+			<if test=' SORT_ORD != null and SORT_ORD != "" '>							, SORT_ORD = #{SORT_ORD}::INTEGER							</if>
+			<if test=' USE_YN != null and USE_YN != "" '>									, USE_YN = #{USE_YN}													</if>
+			<if test=' DEL_YN != null and DEL_YN != "" '>									, DEL_YN = #{DEL_YN}													</if>
+		WHERE KMS_CLSF_ID = #{KMS_CLSF_ID}::INTEGER
+			<if test=' DEL_YN == "Y" '>
+				AND NOT EXISTS (
+					SELECT KMS_CONTS_ID FROM PLT_KMS_CONTS WHERE KMS_CLSF_ID =#{KMS_CLSF_ID}::INTEGER
+				)
+			</if>
+	</update>
+	
+	<update id="UPDATE_KMS_CLSF_AUTHRT"  parameterType= "java.util.HashMap">
+		UPDATE PLT_KMS_CLSF_AUTHRT SET	/*		지식분류권한 수정 (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.UPDATE_KMS_CLSF_AUTHRT)	*/
+			MDFR_ID = #{USER_ID}::INTEGER
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test=' PIC_ID != null and PIC_ID != "" '>
+					, PIC_ID = #{PIC_ID}::INTEGER
+			</if>
+			<if test=' KMS_CLSF_ID != null and KMS_CLSF_ID != "" '>	, KMS_CLSF_ID = #{KMS_CLSF_ID}::INTEGER	</if>
+			<if test=' DEL_YN != null and DEL_YN != "" '>						, DEL_YN = #{DEL_YN}										</if>
+		WHERE KMS_CLSF_AUTHRT_ID = #{KMS_CLSF_AUTHRT_ID}::INTEGER
+	</update>
+	
+	<update id="UPDATE_KMS_CLSF_AUTHRT_ALL_DEL" parameterType= "java.util.HashMap">
+		UPDATE PLT_KMS_CLSF_AUTHRT SET	/*		선택분류에 대한 분류권한 전체 삭제(업데이트)  (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.UPDATE_KMS_CLSF_AUTHRT_ALL_DEL)	*/
+			DEL_YN = 'Y'
+			, MDFR_ID = #{USER_ID}::INTEGER
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		WHERE KMS_CLSF_ID = #{KMS_CLSF_ID}::INTEGER
+	</update>
+
+	<update id="UPDATE_KMS_CLSF_SORT_ORDER"  parameterType= "java.util.HashMap">
+		UPDATE PLT_KMS_CLSF SET /*		분류의 정렬번호를 다른 분류의 정렬번호로 변경  (kr.co.hkcloud.palette3.km.clsf.dao.kmClsfMapper.UPDATE_KMS_CLSF_SORT_ORDER)	*/
+			MDFR_ID = #{USER_ID}::INTEGER
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test=' CHG_ORD != null and CHG_ORD != "" '>
+				, SORT_ORD = #{CHG_ORD}::INTEGER
+			</if>
+			<if test=' OTHER_KMS_CLSF_ID != null and OTHER_KMS_CLSF_ID != "" '>
+				, SORT_ORD = ( SELECT SORT_ORD FROM PLT_KMS_CLSF WHERE KMS_CLSF_ID = #{OTHER_KMS_CLSF_ID}::INTEGER )
+			</if>
+		WHERE KMS_CLSF_ID = #{KMS_CLSF_ID}::INTEGER
+	</update>
+	
+</mapper>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundRegistSurveyPopupMapper">
+
+	<select id="selectQuestSttcList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap" >
+		/* selectQuestSttcList */
+		SELECT
+				       QUEST_ID
+				     , Q_NO                                                                                                                --설문ID(20)
+				     , Q_NO || '. ' || Q_CNTN                                                                                    AS Q_CNTN     --항목내용(150)
+				     , CASE WHEN ANS_FORM = '01'   THEN   '객관식'  WHEN  ANS_FORM = '02' THEN  '주관식'  ELSE  '미등록'  END     AS ANS_FORM         --답변타입(2)
+				     , ANS_NO || '. ' || ANS_CNTN                                                                                AS ANS        --답변항목(254)
+				     , CASE WHEN RESULT_CNT <![CDATA[ <> ]]>  0     THEN 	RESULT_CNT               ELSE 0 END  AS  RESULT_CNT 				   --답변선택건수(6)
+				     , CASE WHEN ASUM_CNT   <![CDATA[ <> ]]>  0 	THEN 	ROUND(RESULT_CNT/ASUM_CNT*100, 2) || '%' ELSE 0 || '%' END AS PERCENT    --답변선택퍼센트(6)
+                     
+				 FROM 
+                    (
+				       SELECT
+				              T1.QUEST_ID
+				            , T1.Q_NO
+				            , T1.Q_CNTN
+				            , T2.ANS_NO
+				            , T2.ANS_CNTN
+				            , T1.ANS_FORM
+				            , (SELECT
+				                      COUNT(*)
+				                 FROM PLT_PHN_SURV_RST
+				                WHERE QUEST_ID = T1.QUEST_ID
+				                  AND Q_NO = T1.Q_NO  
+				              )                                                                           AS ASUM_CNT
+				            , (SELECT
+				                      COUNT(*)
+				                 FROM PLT_PHN_SURV_RST
+				                WHERE QUEST_ID         = T1.QUEST_ID
+				                  AND Q_NO         = T1.Q_NO
+				                  AND OBJ_RESP = T2.ANS_NO
+				              )                                                                           AS RESULT_CNT
+				         FROM PLT_PHN_SURV_QST T1
+				            , PLT_PHN_SURV_ANS T2
+				        WHERE T1.QUEST_ID = T2.QUEST_ID
+				          AND T1.Q_NO = T2.Q_NO
+					<if test="QUEST_ID != null and QUEST_ID != ''">
+                          AND T1.QUEST_ID = #{QUEST_ID}
+                    </if>
+				      ) 
+				 UNION ALL
+				SELECT
+				       T1.QUEST_ID
+				     , T1.Q_NO
+				     , T1.Q_NO || '. ' || T1.Q_CNTN
+				     , CASE WHEN T1.ANS_FORM = '01'   THEN   '객관식'  WHEN  T1.ANS_FORM = '02' THEN  '주관식'  ELSE  '미등록'  END     AS ANS_FORM      
+				     , T2.SBJ_RESP
+				     , 0  AS  RESULT_CNT
+				     , '0%' AS  PERCENT
+				  FROM       PLT_PHN_SURV_QST T1 LEFT OUTER JOIN PLT_PHN_SURV_RST T2  ON  T1.QUEST_ID     = T2.QUEST_ID AND T1.Q_NO     = T2.Q_NO
+				   
+                   WHERE T1.ANS_FORM = '02'
+
+				   <if test="QUEST_ID != null and QUEST_ID != ''">
+                   		AND T1.QUEST_ID     = #{QUEST_ID}
+				   </if>
+                   
+				 ORDER BY QUEST_ID, Q_NO, Q_CNTN, ANS
+
+	</select>
+
+</mapper>

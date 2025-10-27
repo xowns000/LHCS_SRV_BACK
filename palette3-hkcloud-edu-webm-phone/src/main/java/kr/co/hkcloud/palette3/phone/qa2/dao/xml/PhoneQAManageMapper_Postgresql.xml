@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.qa2.dao.PhoneQAManageMapper">
+
+<!-- QA평가 평가표 조회 -->
+<select id="selectRtnQaEva"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT R.*
+		, ROWNUM AS NUM
+	FROM (
+		SELECT
+	        QA_EVA_ID
+	        , QA_EVA_TY
+	        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT008' AND CD = QA_EVA_TY) AS QA_EVA_TY_NM
+	        , QA_EVA_NM
+	        , QA_EVA_RE_YN
+	        , QA_EVA_CN
+	        , COALESCE((
+	        	SELECT SUM(QA_QS_TY_SC)
+	        	FROM PLT_QA_EVA_RST B, PLT_QA_QS C
+	        	WHERE B.QA_QS_ID = C.QA_QS_ID
+	        	AND B.CUSTCO_ID = C.CUSTCO_ID
+	        	AND B.CUSTCO_ID = A.CUSTCO_ID
+	        	AND B.QA_EVA_ID = A.QA_EVA_ID
+	        ), 0) AS QA_EVA_SUM
+	        , QA_EVA_RT
+	        , (SELECT COUNT(1) FROM PLT_QA WHERE QA_EVA_ID = A.QA_EVA_ID) AS USE_COUNT
+	    FROM PLT_QA_EVA A
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    <if test='QA_EVA_TY != null and QA_EVA_TY != ""'>
+	        AND QA_EVA_TY = #{QA_EVA_TY}
+	    </if>
+	    <choose>
+	    	<when test='QA_EVA_YN == "Y"'>
+	    		AND EXISTS (
+	    			SELECT QA_EVA_ID FROM PLT_QA WHERE QA_EVA_ID = A.QA_EVA_ID
+	    		)
+	    	</when>
+	    	<when test='QA_EVA_YN == "N"'>
+	    		AND NOT EXISTS (
+	    			SELECT QA_EVA_ID FROM PLT_QA WHERE QA_EVA_ID = A.QA_EVA_ID
+	    		)
+	    	</when>
+	    </choose>
+	    <if test='QA_EVA_NM != null and QA_EVA_NM != ""'>
+	        AND QA_EVA_NM LIKE '%' || #{QA_EVA_NM} || '%'
+	    </if>
+	    <if test='QA_EVA_ID != null and QA_EVA_ID != ""'>
+	        AND QA_EVA_ID = #{QA_EVA_ID}
+	    </if>
+	    ORDER BY QA_EVA_ID DESC, QA_EVA_TY, QA_EVA_NM
+	) R
+    
+</select>
+
+<!-- QA평가 평가표 등록-->
+<insert id="insertRtnQaEva" parameterType="java.util.HashMap">
+    INSERT INTO PLT_QA_EVA(
+        CUSTCO_ID
+        , QA_EVA_ID
+        , QA_EVA_TY
+        , QA_EVA_NM
+        , QA_EVA_RE_YN
+        , QA_EVA_CN
+        , QA_EVA_SUM
+        , QA_EVA_RT
+        , REG_DTTM
+        , REG_ID
+        , CHNG_DTTM
+        , CHNG_ID
+    ) VALUES (
+        #{ASP_NEWCUST_KEY}
+        , #{QA_EVA_ID}
+        , #{QA_EVA_TY}
+        , #{QA_EVA_NM}
+        , #{QA_EVA_RE_YN}
+        , #{QA_EVA_CN}
+        , #{QA_EVA_SUM}
+        , #{QA_EVA_RT}
+        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+    )
+</insert>
+
+<!-- QA평가 평가표 복사-->
+<insert id="insertRtnCopyQaEva" parameterType="java.util.HashMap">
+    INSERT INTO PLT_QA_EVA(
+        CUSTCO_ID
+        , QA_EVA_ID
+        , QA_EVA_TY
+        , QA_EVA_NM
+        , QA_EVA_RE_YN
+        , QA_EVA_CN
+        , QA_EVA_SUM
+        , QA_EVA_RT
+        , REG_DTTM
+        , REG_ID
+        , CHNG_DTTM
+        , CHNG_ID
+    ) 
+    SELECT 
+        CUSTCO_ID
+        , #{NEW_QA_EVA_ID}
+        , QA_EVA_TY
+        , QA_EVA_NM || '_복사'
+        , QA_EVA_RE_YN
+        , QA_EVA_CN
+        , QA_EVA_SUM
+        , QA_EVA_RT
+        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+        , TO_CHAR(NOW() ,'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+    FROM PLT_QA_EVA
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_EVA_ID = #{QA_EVA_ID}
+</insert>
+
+<!-- QA평가 평가표 수정-->
+<update id="updateRtnQaEva" parameterType="java.util.HashMap">
+    UPDATE PLT_QA_EVA
+    SET QA_EVA_TY = #{QA_EVA_TY}
+        , QA_EVA_NM = #{QA_EVA_NM}
+        , QA_EVA_CN = #{QA_EVA_CN}
+        , QA_EVA_RE_YN = #{QA_EVA_RE_YN}
+        , QA_EVA_SUM = #{QA_EVA_SUM}
+        , QA_EVA_RT = #{QA_EVA_RT}
+        , CHNG_DTTM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , CHNG_ID = #{REG_ID}
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_EVA_ID = #{QA_EVA_ID}
+</update>
+
+<!-- QA평가 평가표 삭제 -->
+<delete id="deleteRtnQaEva" parameterType="java.util.HashMap">
+    DELETE 
+    FROM PLT_QA_EVA
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_EVA_ID = #{QA_EVA_ID}
+</delete>
+
+<!-- QA평가 평가문항 조회-->
+<select id="selectRtnQaQs" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT AA.*
+    FROM(
+	    SELECT
+	        QA_QS_ID
+	        , QA_TY_L_CD
+	        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT009' AND CD = QA_TY_L_CD) AS QA_TY_L_CD_NM
+	        , QA_TY_M_CD
+	        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT010' AND CD = QA_TY_M_CD) AS QA_TY_M_CD_NM
+	        , QA_QS_NM
+	        , QA_QS_TY
+	        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT011' AND CD = QA_QS_TY) AS QA_QS_TY_NM
+	        , QA_QS_TY_SC
+	        , (SELECT COUNT(1) FROM PLT_QA_EVA_RST WHERE CUSTCO_ID = A.CUSTCO_ID AND QA_QS_ID = A.QA_QS_ID) AS USE_COUNT
+	        , (SELECT COUNT(1) FROM PLT_QA_VE WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND QA_QS_ID = A.QA_QS_ID) AS QA_VE_COUNT
+	    FROM PLT_QA_QS A
+	    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	    <if test='QA_TY_L_CD != null and QA_TY_L_CD != ""'>
+	        AND QA_TY_L_CD = #{QA_TY_L_CD}
+	    </if>
+	    <if test='QA_TY_M_CD != null and QA_TY_M_CD != ""'>
+	        AND QA_TY_M_CD = #{QA_TY_M_CD}
+	    </if>
+	    <if test='QA_QS_ID != null and QA_QS_ID != ""'>
+	        AND QA_QS_ID = #{QA_QS_ID}
+	    </if>
+	    <if test='QA_QS_NM != null and QA_QS_NM != ""'>
+	    	AND QA_QS_NM LIKE '%' || #{QA_QS_NM} || '%'
+	    </if>
+	    <if test='QA_QS_TY != null and QA_QS_TY != ""'>
+	    	AND QA_QS_TY = #{QA_QS_TY}
+	    </if>
+	    ORDER BY QA_QS_ID DESC, QA_TY_L_CD, QA_TY_M_CD
+    ) AA
+    WHERE 1=1
+    <choose>
+    	<when test='QA_QS_YN == "Y"'>
+    		<![CDATA[
+    		AND AA.USE_COUNT > 0
+    		]]>
+    	</when>
+    	<when test='QA_QS_YN == "N"'>
+    		AND AA.USE_COUNT = 0
+    	</when>
+    </choose>
+</select>
+
+<!-- QA평가 평가문항 등록-->
+<insert id="insertRtnQaQs" parameterType="java.util.HashMap">
+    MERGE INTO PLT_QA_QS
+        USING DUAL
+        ON (
+            CUSTCO_ID = #{ASP_NEWCUST_KEY}
+            AND QA_QS_ID = #{QA_QS_ID}
+        )
+        WHEN MATCHED THEN
+            UPDATE SET
+            QA_TY_L_CD = #{QA_TY_L_CD}
+            , QA_TY_M_CD = #{QA_TY_M_CD}
+            , QA_QS_NM = #{QA_QS_NM}
+            , QA_QS_TY = #{QA_QS_TY}
+            , QA_QS_TY_SC = #{QA_QS_TY_SC}
+            , QA_QS_YN = #{QA_QS_YN}
+            , CHNG_DTTM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+            , CHNG_ID = #{REG_ID}
+        WHEN NOT MATCHED THEN 
+            INSERT (
+                CUSTCO_ID
+                , QA_QS_ID
+                , QA_TY_L_CD
+                , QA_TY_M_CD
+                , QA_QS_NM
+                , QA_QS_TY
+                , QA_QS_TY_SC
+                , QA_QS_YN
+                , REG_DTTM
+                , REG_ID
+                , CHNG_DTTM
+                , CHNG_ID
+            ) VALUES (
+                #{ASP_NEWCUST_KEY}
+                , #{QA_QS_ID}
+                , #{QA_TY_L_CD}
+                , #{QA_TY_M_CD}
+                , #{QA_QS_NM}
+                , #{QA_QS_TY}
+                , #{QA_QS_TY_SC}
+                , #{QA_QS_YN}
+                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+                , #{REG_ID}
+                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+                , #{REG_ID}
+            )
+</insert>
+
+<!-- QA평가 평가문항 복사 -->
+<insert id="insertRtnCopyQaQs" parameterType="java.util.HashMap">
+    INSERT INTO PLT_QA_QS(
+        CUSTCO_ID
+        , QA_QS_ID
+        , QA_TY_L_CD
+        , QA_TY_M_CD
+        , QA_QS_NM
+        , QA_QS_TY
+        , QA_QS_TY_SC
+        , QA_QS_YN
+        , REG_DTTM
+        , REG_ID
+        , CHNG_DTTM
+        , CHNG_ID
+    ) SELECT 
+        CUSTCO_ID
+        , #{NEW_QA_QS_ID}
+        , QA_TY_L_CD
+        , QA_TY_M_CD
+        , QA_QS_NM || '_복사'
+        , QA_QS_TY
+        , QA_QS_TY_SC
+        , QA_QS_YN
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+    FROM PLT_QA_QS
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_QS_ID = #{QA_QS_ID}
+</insert>
+
+<!-- QA평가 평가문항 삭제-->
+<delete id="deleteRtnQaQs" parameterType="java.util.HashMap">
+    DELETE
+    FROM PLT_QA_QS
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_QS_ID = #{QA_QS_ID}
+</delete>
+
+<!-- QA평가 평가문항 보기 조회-->
+<select id="selectRtnQaVe" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT 
+        QA_QS_ID
+        , QA_QS_VE_ID
+        , QA_QS_VE_RT
+        , QA_QS_VE_SC
+        , QA_QS_VE_OD
+    FROM PLT_QA_VE
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_QS_ID = #{QA_QS_ID}
+    ORDER BY CAST(QA_QS_VE_OD AS INTEGER)
+</select>
+
+<!-- QA평가 평가문항 보기 등록-->
+<insert id="insertRtnQaVe" parameterType="java.util.HashMap">
+    MERGE INTO PLT_QA_VE
+		USING DUAL
+		ON (
+			QA_QS_ID = #{QA_QS_ID}
+			AND QA_QS_VE_ID = #{QA_QS_VE_ID}
+            AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		)
+		WHEN MATCHED THEN
+            UPDATE SET
+            QA_QS_VE_RT = #{QA_QS_VE_RT}
+            , QA_QS_VE_SC = #{QA_QS_VE_SC}
+            , QA_QS_VE_OD = #{QA_QS_VE_OD}
+            , CHNG_DTTM = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+            , CHNG_ID = #{REG_ID}
+        WHEN NOT MATCHED THEN
+            INSERT (
+                CUSTCO_ID
+                , QA_QS_ID
+                , QA_QS_VE_ID
+                , QA_QS_VE_RT
+                , QA_QS_VE_SC
+                , QA_QS_VE_OD
+                , REG_DTTM
+                , REG_ID
+                , CHNG_DTTM
+                , CHNG_ID
+            ) VALUES (
+                #{ASP_NEWCUST_KEY}
+                , #{QA_QS_ID}
+                , #{QA_QS_VE_ID}
+                , #{QA_QS_VE_RT}
+                , #{QA_QS_VE_SC}
+                , #{QA_QS_VE_OD}
+                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+                , #{REG_ID}
+                , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+                , #{REG_ID}
+            )
+</insert>
+
+<!-- QA평가 평가문항 보기 복사-->
+<insert id="insertRtnCopyQaVe" parameterType="java.util.HashMap">
+    INSERT INTO PLT_QA_VE(
+       CUSTCO_ID
+        , QA_QS_ID
+        , QA_QS_VE_ID
+        , QA_QS_VE_RT
+        , QA_QS_VE_SC
+        , QA_QS_VE_OD
+        , REG_DTTM
+        , REG_ID
+        , CHNG_DTTM
+        , CHNG_ID 
+    ) 
+    SELECT
+         CUSTCO_ID
+        , #{NEW_QA_QS_ID}
+        , #{NEW_QA_QS_VE_ID}
+        , QA_QS_VE_RT
+        , QA_QS_VE_SC
+        , QA_QS_VE_OD
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+    FROM PLT_QA_VE
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_QS_ID = #{QA_QS_ID}
+    AND QA_QS_VE_ID = #{QA_QS_VE_ID}
+</insert>
+
+<!-- QA평가 평가문항 보기 삭제-->
+<delete id="deleteRtnQaVe" parameterType="java.util.HashMap">
+    DELETE 
+    FROM PLT_QA_VE
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_QS_ID = #{QA_QS_ID}
+    <if test='QA_QS_VE_ID != null and QA_QS_VE_ID != ""'>
+        AND QA_QS_VE_ID = #{QA_QS_VE_ID}
+    </if>
+</delete>
+
+<!-- QA평가 평가상세 조회-->
+<select id="selectRtnQaEvaRst" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT RST.QA_QS_ID
+        , QS.QA_TY_L_CD
+        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT009' AND CD = QS.QA_TY_L_CD) AS QA_TY_L_CD_NM
+        , QS.QA_TY_M_CD
+        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT010' AND CD = QS.QA_TY_M_CD) AS QA_TY_M_CD_NM
+        , QS.QA_QS_NM
+        , QS.QA_QS_TY
+        , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'PLT011' AND CD = QS.QA_QS_TY) AS QA_QS_TY_NM
+        , QS.QA_QS_TY_SC
+        , RST.QA_EVA_RST_OD
+    FROM PLT_QA_EVA_RST RST, PLT_QA_EVA EVA, PLT_QA_QS QS
+    WHERE RST.QA_EVA_ID = EVA.QA_EVA_ID
+    AND RST.QA_QS_ID = QS.QA_QS_ID
+    AND RST.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND RST.QA_EVA_ID = #{QA_EVA_ID}
+    <!-- AND QA_QS_YN = 'Y' -->
+    ORDER BY CAST(RST.QA_EVA_RST_OD AS INTEGER) 
+</select>
+<!-- QA평가 평가상세 등록 -->
+<insert id="insertRtnQaEvaRst" parameterType="java.util.HashMap">
+    INSERT INTO PLT_QA_EVA_RST(
+        CUSTCO_ID
+        , QA_EVA_ID
+        , QA_QS_ID
+        , QA_EVA_RST_OD
+        , REG_DTTM
+        , REG_ID
+        , CHNG_DTTM
+        , CHNG_ID
+    ) VALUES (
+        #{ASP_NEWCUST_KEY}
+        , #{QA_EVA_ID}
+        , #{QA_QS_ID}
+        , #{QA_EVA_RST_OD}
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+    )
+</insert>
+
+<!-- QA평가 평가상세 복사 -->
+<insert id="insertRtnCopyEvaRst" parameterType="java.util.HashMap">
+    INSERT INTO PLT_QA_EVA_RST(
+        CUSTCO_ID
+        , QA_EVA_ID
+        , QA_QS_ID
+        , QA_EVA_RST_OD
+        , REG_DTTM
+        , REG_ID
+        , CHNG_DTTM
+        , CHNG_ID
+    ) 
+    SELECT 
+        CUSTCO_ID
+        , #{NEW_QA_EVA_ID}
+        , QA_QS_ID
+        , QA_EVA_RST_OD
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID}
+        , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+        , #{REG_ID} 
+    FROM PLT_QA_EVA_RST
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_EVA_ID = #{QA_EVA_ID}
+</insert>
+<!-- QA평가 평가상세 삭제-->
+<delete id="deleteRtnQaEvaRst" parameterType="java.util.HashMap">
+    DELETE
+    FROM PLT_QA_EVA_RST
+    WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+    AND QA_EVA_ID = #{QA_EVA_ID}
+</delete>
+
+<!-- QA평가 미리보기 조회-->
+<select id="selectRtnQaPreView" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT
+        QS.QA_QS_ID 
+        , QS.QA_QS_NM
+        , QS.QA_QS_TY
+        , QS.QA_QS_TY_SC
+        , VE.QA_QS_VE_RT
+        , VE.QA_QS_VE_SC
+        , RST.QA_EVA_RST_OD
+        , VE.QA_QS_VE_OD
+    FROM PLT_QA_EVA_RST RST, PLT_QA_QS QS, PLT_QA_VE VE
+    WHERE RST.QA_QS_ID = QS.QA_QS_ID
+    AND QS.QA_QS_ID = VE.QA_QS_ID
+    AND RST.QA_EVA_ID = #{QA_EVA_ID}
+    ORDER BY CAST(RST.QA_EVA_RST_OD AS INTEGER), CAST(VE.QA_QS_VE_OD AS INTEGER)
+</select>
+
+<!-- QA평가지 총점 계산 -->
+<update id="updateRtnQaEvaSum" parameterType="java.util.HashMap">
+	UPDATE PLT_QA_EVA
+	SET QA_EVA_SUM = (SELECT SUM(QA_QS_TY_SC) 
+				FROM PLT_QA_EVA_RST A, PLT_QA_QS B 
+				WHERE A.QA_QS_ID = B.QA_QS_ID 
+				AND A.CUSTCO_ID = B.CUSTCO_ID 
+				AND A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				AND A.QA_EVA_ID = #{QA_EVA_ID}
+				)
+	WHERE QA_EVA_ID = #{QA_EVA_ID}
+	AND CUSTCO_ID = #{ASP_NEWCUST_KEY}
+</update>
+
+<!-- QA미리보기 문항 보기 조회 -->
+<select id="selectRtnQaVePreView" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+        QS.QA_QS_ID 
+        , QS.QA_QS_NM
+        , QS.QA_QS_TY
+        , QS.QA_QS_TY_SC
+        , VE.QA_QS_VE_RT
+        , VE.QA_QS_VE_SC
+        , VE.QA_QS_VE_OD
+    FROM PLT_QA_QS QS, PLT_QA_VE VE
+    WHERE QS.QA_QS_ID = VE.QA_QS_ID
+    AND QS.QA_QS_ID IN
+    <foreach collection="qaQsIdList" open="(" close=")" separator="," item="item">
+    	#{item}
+    </foreach>
+    ORDER BY CAST(VE.QA_QS_VE_OD AS INTEGER)
+</select>
+</mapper>

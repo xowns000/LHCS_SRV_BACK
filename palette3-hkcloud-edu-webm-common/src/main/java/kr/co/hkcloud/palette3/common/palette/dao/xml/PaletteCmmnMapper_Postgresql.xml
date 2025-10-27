@@ -1,0 +1,1635 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.common.palette.dao.PaletteCmmnMapper">
+
+
+<resultMap id="chatContentResultMap" type="java.util.HashMap" >
+	<result property="TALK_USER_KEY"        column="TALK_USER_KEY"          jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="CONTENT"              column="CONTENT"                jdbcType="VARCHAR"         javaType="java.lang.String" typeHandler="ContentCipherTypeHandler"/>
+	<result property="CHAT_DATE"            column="CHAT_DATE"              jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="SNDRCV_CD"            column="SNDRCV_CD"              jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="CUSTOMER_NM"          column="CUSTOMER_NM"            jdbcType="VARCHAR"         javaType="java.lang.String" />
+	<result property="CUSTOMER_NM2"         column="CUSTOMER_NM2"           jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="CUSTOMER_NM3"         column="CUSTOMER_NM3"           jdbcType="VARCHAR"         javaType="java.lang.String" />
+	<result property="TYPE"                 column="TYPE"                   jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="IMAGE_URL"            column="IMAGE_URL"              jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="IMAGE_TALK_PATH"      column="IMAGE_TALK_PATH"        jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="LINKS"                column="LINKS"                  jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="SNDR_KEY_NM"    column="SNDR_KEY_NM"      jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="TYPE_NM"              column="TYPE_NM"                jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="USER_ID"              column="USER_ID"                jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="IT_PROCESSING"        column="IT_PROCESSING"          jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="IT_PROCESSING2"       column="IT_PROCESSING2"         jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="ORDER_NUMBER"         column="ORDER_NUMBER"           jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="CUSTOMER_SEQ"         column="CUSTOMER_SEQ"           jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="MEMBER_YN"            column="MEMBER_YN"              jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="VIDEO_TALK_PATH"      column="VIDEO_TALK_PATH"        jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="VIDEO_URL"            column="VIDEO_URL"              jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="VIDEO_THUMNAIL_PATH"  column="VIDEO_THUMNAIL_PATH"    jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="ORG_CONT_ID"          column="ORG_CONT_ID"            jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="ORG_FILE_ID"          column="ORG_FILE_ID"            jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="TALK_SERIAL_NUMBER"   column="TALK_SERIAL_NUMBER"     jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="TALK_CONTACT_ID"   	column="TALK_CONTACT_ID"     	jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="TALK_STAT_CD"   		column="TALK_STAT_CD"     		jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="TALK_STAT_NM"   		column="TALK_STAT_NM"     		jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="CALL_TYP_CD"   		column="CALL_TYP_CD"     		jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="SEND_USER_NM"   		column="SEND_USER_NM"     		jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="SEND_USER_SHORT_NM"   column="SEND_USER_SHORT_NM"     jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="SNDR_KEY"   	column="SNDR_KEY"     	jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="READ_YN"   			column="READ_YN"     			jdbcType="VARCHAR"         javaType="java.lang.String"/>
+	<result property="ORG_FILE_ID"   		column="ORG_FILE_ID"     		jdbcType="VARCHAR"         javaType="java.lang.String"/>
+</resultMap>
+
+	<!--
+	
+	특정 사용자소속을 ComboBox 검색
+	
+	-->
+	<select id="selectRtnAttrDiv"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			  ATTR_DIV_CD AS CD                             /* 코드*/
+			, ATTR_DIV_NM AS CD_NM                          /* 코드명*/
+		FROM PLT_USER_BLNG
+		WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND USE_YN = 'Y'
+		AND ATTR_CD = #{ATTR_CD}
+		<if test="ATTR_DIV_CD != null">
+			AND ATTR_DIV_CD LIKE #{ATTR_DIV_CD} || '%'
+		</if>
+		<!-- <choose>
+			<when test="ATTR_DIV_CD != null">
+				AND ATTR_DIV_CD LIKE #{ATTR_DIV_CD} || '%'
+			</when>
+			<otherwise>
+				AND SUBSTR(ATTR_DIV_CD, 2, 1) != '9'
+			</otherwise>
+		</choose> -->
+		ORDER BY SORT_ORD
+	</select>
+	<!--
+	
+	SNDR_KEY 값을 검색한다.
+	
+	-->
+	<select id="selectRtnAspSenderKey"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT SNDR_KEY AS CD
+		     , DSPTCH_PRF_NM AS CD_NM
+		     , CUSTCO_ID	  AS CUSTCO_ID
+		  FROM PLT_ASP_CUS_CHN
+		 WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		   AND SRVC_MAINT_YN = 'Y' 
+		 ORDER BY SORT_ORD
+	</select>
+	<!--
+	
+	CHN_CLSF_CD 값을 검색한다.
+	
+	-->
+	<select id="selectRtnBizServicesCd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT CD
+		 , (SELECT CHN_NM FROM PLT_CHN WHERE CHN_CLSF_CD = A.CD) AS CD_NM
+	  FROM (SELECT DISTINCT(CHN_CLSF_CD) AS CD                            
+			  FROM PLT_ASP_CUS_CHN
+			 WHERE CUSTCO_ID = #{CUSTCO_ID}
+			   AND SRVC_MAINT_YN = 'Y' 
+			<!--  ORDER BY SORT_ORD  DISTINCT에서 ORDER BY 사용 못함-->
+           )  A
+	</select>
+	
+	<!-- 상담통합이력 insert Arthur.Kim 2021.10.16 -->
+	<insert id="insertRtnCnslUnityHst"  parameterType= "java.util.HashMap">
+	
+		INSERT INTO PLT_CNSL_UNITY_HST (
+			UNITY_HST_ID
+			, CUSTCO_ID
+			, JOBBY_CNSL_HST_ID
+			, CNSL_DIV
+			, CSTMR_TELNO
+			, CSTMR_ID
+			, REGR_DEPT_CD
+			, REGR_ID
+			, REG_DTTM
+			, PROC_ID
+			, IT_PROCESSING
+		) VALUES (
+			#{UNITY_HST_ID}
+			<choose>
+				<when test='ASP_NEWCUST_KEY != null and ASP_NEWCUST_KEY != ""'>
+					, #{ASP_NEWCUST_KEY} 
+				</when>
+				<when test='CNSL_CUST_KEY != null and CNSL_CUST_KEY != ""'>
+					, #{CNSL_CUST_KEY} 
+				</when>
+				<otherwise>
+					, #{CUSTCO_ID} 
+				</otherwise>
+			</choose>
+			, #{JOBBY_CNSL_HST_ID}
+			, #{CNSL_DIV}
+			, #{CSTMR_TELNO}
+			, #{CSTMR_ID}
+			, #{REGR_DEPT_CD}
+			, #{REGR_ID}
+			, NOW()
+			, #{REGR_ID}
+			, NOW()
+		)
+	
+	</insert>
+	
+	<!-- 나의상담이력(통합상담이력) 조회 Arthur.Kim 2021.10.13 -->
+	<select id="selectRtnCnslUnityList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT ROW_TBL.*
+		         , PAG_TBL.*
+		     FROM (
+					SELECT
+					    A.UNITY_HST_ID
+					    , A.JOBBY_CNSL_HST_ID
+					    , A.CNSL_DIV
+					    , CASE WHEN A.CNSL_DIV = '01' THEN 'IN'
+					           WHEN A.CNSL_DIV = '02' THEN 'OB'
+					           WHEN A.CNSL_DIV = '03' THEN 'OB'
+					           WHEN A.CNSL_DIV = '05' THEN 'OB'
+					           ELSE 'CHAT'
+					      END AS CNSL_NM      
+					    , A.CSTMR_TELNO
+					    , A.CSTMR_TELNO AS TEL_NO
+					    , A.REGR_ID
+					    , A.REG_DTTM
+					    , A.CUSTCO_ID
+					    , A.HIST_NO
+					    , A.HIST_DTL_NO
+					    ,( SELECT CNSL_TYP_NM || CASE WHEN NOT A.HST_CNSL_TYP2 IS NULL THEN '/' || ( SELECT CNSL_TYP_NM 
+															             FROM PLT_CHT_CUTT_TYP T
+															            WHERE T.CUSTCO_ID    = A.CUSTCO_ID
+															              AND A.HST_CNSL_TYP2   = T.CNSL_TYP_CD
+															              AND T.CNSL_TYP_DIV_CD = '2'
+															                                       ) 							    
+						                         END
+						                      || CASE WHEN NOT A.HST_CNSL_TYP3 IS NULL THEN '/' || ( SELECT CNSL_TYP_NM 
+															             FROM PLT_CHT_CUTT_TYP T
+															            WHERE T.CUSTCO_ID    = A.CUSTCO_ID
+															              AND A.HST_CNSL_TYP3   = T.CNSL_TYP_CD
+															              AND T.CNSL_TYP_DIV_CD = '3'
+															                                       ) 							    
+						                         END 
+						                      || CASE WHEN NOT A.HST_CNSL_TYP4 IS NULL THEN '/' || ( SELECT CNSL_TYP_NM 
+															             FROM PLT_CHT_CUTT_TYP T
+															            WHERE T.CUSTCO_ID    = A.CUSTCO_ID
+															              AND A.HST_CNSL_TYP4   = T.CNSL_TYP_CD
+															              AND T.CNSL_TYP_DIV_CD = '4'
+															                                       ) 							    
+						                         END   
+					             FROM PLT_CHT_CUTT_TYP T
+					            WHERE T.CUSTCO_ID = A.CUSTCO_ID
+					              AND A.HST_CNSL_TYP = T.CNSL_TYP_CD
+					              AND T.CNSL_TYP_DIV_CD = '1'
+					     ) AS CNSL_TYP
+					    , CASE WHEN A.HST_TITLE_TYPE = 'PHONE' THEN
+					    										  CASE WHEN NOT A.PROC_CODE_MDCLS IS NULL THEN (SELECT CD_NM
+																							                    FROM PLT_COMN_CD K
+																							                   WHERE GROUP_CD          = 'CO002'
+																							                     AND A.PROC_CODE_MDCLS = K.CD)
+																		ELSE (SELECT CD_NM
+															                    FROM PLT_COMN_CD K
+															                   WHERE GROUP_CD         = 'CO001'
+															                     AND A.PROC_CODE_LCLS = K.CD)					                     
+					    										  END
+					           WHEN A.HST_TITLE_TYPE = 'CHAT' THEN (SELECT CD_NM 
+					                                                  FROM PLT_COMN_CD CT 
+					                                                 WHERE CT.GROUP_CD = 'TALK005' 
+					                                                   AND CT.CD       = A.PROC_CODE_MDCLS 
+					                                                   AND CT.CD_TYPE  = '1')
+					      END AS PROC_NM 
+					    ,(SELECT CO_NM  
+							  FROM PLT_ASP_CUS 
+							  WHERE CUSTCO_ID = A.CUSTCO_ID)	AS CO_NM											/*업체명*/
+					    , A.HST_TITLE_TYPE
+					FROM (
+						<if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '01' or CALL_TY == '02' ">
+						    /* 전화상담 */
+						    SELECT PCUH.UNITY_HST_ID												/*통합이력ID*/
+							     , PCUH.JOBBY_CNSL_HST_ID											/*업무별 상담 이력 ID*/
+							     , PCUH.CNSL_DIV													/*상담 구분 콜유형 */
+							     , PCUH.CSTMR_TELNO													/*고객 전화번호*/
+							     , PCUH.REGR_ID														/*등록자ID*/
+							     , TO_CHAR(PCUH.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM		/*등록일시*/
+							     , PCUH.CUSTCO_ID												/*업체코드*/
+							     , PPC.CNSL_HIST_NO AS HIST_NO										/*상담마스터번호*/
+							     , PPC.CNSL_HIST_DTL_NO AS HIST_DTL_NO								/*상담상세번호*/
+							     , PPC.CNSL_TYP_CD AS HST_CNSL_TYP									/*상담유형코드1*/
+							     , PPC.CNSL_TYP_CD_2 AS HST_CNSL_TYP2								/*상담유형코드2*/		
+							     , PPC.CNSL_TYP_CD_3 AS HST_CNSL_TYP3								/*상담유형코드3*/
+							     , PPC.CNSL_TYP_CD_4 AS HST_CNSL_TYP4								/*상담유형코드4*/	
+							     , PPC.PROC_CODE_LCLS AS PROC_CODE_LCLS								/*처리코드대분류*/	
+							     , PPC.PROC_CODE_MDCLS AS PROC_CODE_MDCLS							/*처리코드중분류*/	
+							     , 'PHONE' AS HST_TITLE_TYPE
+						      FROM PLT_CNSL_UNITY_HST PCUH
+						     INNER JOIN (
+								        SELECT A.CNSL_HIST_NO
+								             , B.CNSL_HIST_DTL_NO
+								             , B.CNSL_TYP_CD
+								             , B.CNSL_TYP_CD_2
+								             , B.CNSL_TYP_CD_3
+								             , B.CNSL_TYP_CD_4
+								             , B.PROC_CODE_LCLS
+								             , B.PROC_CODE_MDCLS
+								          FROM PLT_PHN_CNSL A
+								        INNER JOIN PLT_PHN_CNSL_DTL B
+								            ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+								         WHERE 1=1
+								           <if test="CALL_TY =='01'"> <![CDATA[ AND (A.CALL_TY IN ('00001', '00004') OR A.CALL_TY = '01') ]]>  </if>
+								           <if test="CALL_TY =='02' and (CALL_DTL_TY == '' or CALL_DTL_TY == null) ">  
+								           	<![CDATA[ 
+								           		AND (A.CALL_TY IN ('00002', '00003', '00005')
+								           	     OR A.CALL_TY IN ('02', '03', '05')) 
+								           	]]>  
+								           </if>
+								           <if test="CALL_TY =='02' and CALL_DTL_TY == '03' "> 
+								           	<![CDATA[ 
+								           		AND (A.CALL_TY = '00003'
+								           		 OR A.CALL_TY  = '03') 
+								           	]]> 
+								           </if>
+								           <if test="CALL_TY =='02' and CALL_DTL_TY == '04' "> 
+								           	<![CDATA[ 
+								           		AND A.CALL_TY  = '04' 
+								           	]]> 
+								           </if>
+								           <if test="CALL_TY =='02' and CALL_DTL_TY == '05' "> 
+								           	<![CDATA[ 
+								           		AND (A.CALL_TY = '00005' OR A.CALL_TY = '05') 
+								           	]]> 
+								           	</if>   
+								           <if test="CALL_TY =='02' and CALL_DTL_TY == '99' ">
+								           <![CDATA[
+								            AND (A.CALL_TY = '00002' OR A.CALL_TY = '02') 
+								            AND A.CNSL_HIST_NO IN (SELECT CNSL_HIST_NO
+								                                     FROM PLT_PHN_CAMP_CUS_DST
+								                                    WHERE CNSL_HIST_NO IS NOT NULL)
+								           ]]>                          
+								           </if>
+								           <if test="CALL_TY =='02' and CALL_DTL_TY == '02' ">
+								           <![CDATA[
+								            AND (A.CALL_TY = '00002' OR A.CALL_TY = '02') 
+								            AND A.CNSL_HIST_NO NOT IN (SELECT CNSL_HIST_NO
+								                                         FROM PLT_PHN_CAMP_CUS_DST
+								                                        WHERE CNSL_HIST_NO IS NOT NULL)
+								           ]]>
+								           </if>
+								           <if test="PROC_CODE_LCLS !='' and PROC_CODE_LCLS != null">    <![CDATA[ AND B.PROC_CODE_LCLS = #{PROC_CODE_LCLS} ]]>  </if> 
+								 		   <if test="PROC_CODE_MDCLS !='' and PROC_CODE_MDCLS != null">  <![CDATA[ AND B.PROC_CODE_MDCLS = #{PROC_CODE_MDCLS} ]]> </if>
+								        ) PPC
+						        ON PCUH.JOBBY_CNSL_HST_ID = PPC.CNSL_HIST_NO
+							 WHERE 1 =1 
+							 <if test="CNSL_CUST_KEY !='' and CNSL_CUST_KEY != null">  <![CDATA[ AND PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY} ]]> </if> 
+							 <if test="CNSL_BEGIN_DATE !='' and CNSL_BEGIN_DATE != null and CNSL_END_DATE !='' and CNSL_END_DATE != null">
+							 <![CDATA[
+							 	AND  PCUH.REG_DTTM  >=  #{CNSL_BEGIN_DATE} || '000000'
+					         	AND  PCUH.REG_DTTM  <=  #{CNSL_END_DATE} || '235959'
+					         ]]>	
+					         </if>
+					         <if test="CSLT_ID !='' and CSLT_ID != null"> <![CDATA[ AND PCUH.REGR_ID = #{CSLT_ID} ]]> </if> 
+					    </if>
+					    
+					    <if test="CALL_TY == '' or CALL_TY == null ">  <![CDATA[ UNION  ]]> </if>
+					    
+					    <if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '03' ">
+					    /* 채팅상담 */
+						    SELECT
+						        PCUH.UNITY_HST_ID
+						        , PCUH.JOBBY_CNSL_HST_ID
+						        , PCUH.CNSL_DIV
+						        , PCUH.CSTMR_TELNO
+						        , PCUH.REGR_ID
+						        , TO_CHAR(PCUH.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+						        , PCUH.CUSTCO_ID												/*업체코드*/
+						        , PCC.TALK_CONTACT_ID AS HIST_NO
+						        , '' AS HIST_DTL_NO
+						        , PCC.CNSL_TYP_CD AS HST_CNSL_TYP
+						        , PCC.CNSL_TYP_CD_2 AS HST_CNSL_TYP2
+						        , PCC.CNSL_TYP_CD_3 AS HST_CNSL_TYP3
+						        , PCC.CNSL_TYP_CD_4 AS HST_CNSL_TYP4
+						        , PCC.EXEC_RST_CD AS PROC_CODE_LCLS								/*처리코드대분류*/	
+							    , '' AS PROC_CODE_MDCLS											/*처리코드중분류*/	
+						        , 'CHAT' AS HST_TITLE_TYPE
+						    FROM 
+						        PLT_CNSL_UNITY_HST PCUH
+						    INNER JOIN (
+						        SELECT
+						            A.TALK_CONTACT_ID
+						            , A.TALK_USER_KEY
+						            , A.CNSL_TYP_CD
+						            , A.CNSL_TYP_CD_2
+						            , A.CNSL_TYP_CD_3
+						            , A.CNSL_TYP_CD_4
+						            , A.EXEC_RST_CD
+						        FROM PLT_CHT_CUTT A
+						        ) PCC
+						        ON PCUH.JOBBY_CNSL_HST_ID = PCC.TALK_CONTACT_ID
+							WHERE 1=1
+							<if test="CNSL_CUST_KEY !='' and CNSL_CUST_KEY != null"> <![CDATA[ AND PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY} ]]> </if> 
+						    <if test="CNSL_BEGIN_DATE !='' and CNSL_BEGIN_DATE != null and CNSL_END_DATE !='' and CNSL_END_DATE != null">
+							<![CDATA[
+							 	AND  PCUH.REG_DTTM  >=  #{CNSL_BEGIN_DATE} || '000000'
+					         	AND  PCUH.REG_DTTM  <=  #{CNSL_END_DATE} || '235959'
+					        ]]>	
+					        </if> 	
+							<if test="CSLT_ID !='' and CSLT_ID != null">  <![CDATA[ AND PCUH.REGR_ID = #{CSLT_ID} ]]>  </if>
+						</if>	
+					) A
+		          ) ROW_TBL
+		          , (
+			          SELECT COUNT(*) AS TWB_PAGING_TOT_COUNT   /* 총건수 */
+						FROM (
+							<if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '01' or CALL_TY == '02' ">
+							    /* 전화상담 */
+							    SELECT PCUH.UNITY_HST_ID												/*통합이력ID*/
+								  FROM PLT_CNSL_UNITY_HST PCUH
+							     INNER JOIN (
+									        SELECT A.CNSL_HIST_NO
+									          FROM PLT_PHN_CNSL A
+									        INNER JOIN PLT_PHN_CNSL_DTL B
+									            ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+									         WHERE 1=1
+									           <if test="CALL_TY =='01'"> <![CDATA[ AND (A.CALL_TY IN ('00001', '00004') OR A.CALL_TY = '01') ]]>  </if>
+									           <if test="CALL_TY =='02' and (CALL_DTL_TY == '' or CALL_DTL_TY == null) ">  
+									           	<![CDATA[ 
+									           		AND (A.CALL_TY IN ('00002', '00003', '00005')
+									           	     OR A.CALL_TY IN ('02', '03', '04', '05')) 
+									           	]]>  
+									           </if>
+									           <if test="CALL_TY =='02' and CALL_DTL_TY == '03' "> 
+									           	<![CDATA[ 
+									           		AND (A.CALL_TY = '00003'
+									           		 OR A.CALL_TY  = '03') 
+									           	]]> 
+									           </if>
+									           <if test="CALL_TY =='02' and CALL_DTL_TY == '04' "> 
+									           	<![CDATA[ 
+									           		AND A.CALL_TY  = '04' 
+									           	]]> 
+									           </if>
+									           <if test="CALL_TY =='02' and CALL_DTL_TY == '05' "> 
+									           	<![CDATA[ 
+									           		AND (A.CALL_TY = '00005' OR A.CALL_TY = '05') 
+									           	]]> 
+									           	</if>   
+									           <if test="CALL_TY =='02' and CALL_DTL_TY == '99' ">
+									           <![CDATA[
+									            AND (A.CALL_TY = '00002' OR A.CALL_TY = '02') 
+									            AND A.CNSL_HIST_NO IN (SELECT CNSL_HIST_NO
+									                                     FROM PLT_PHN_CAMP_CUS_DST
+									                                    WHERE CNSL_HIST_NO IS NOT NULL)
+									           ]]>                          
+									           </if>
+									           <if test="CALL_TY =='02' and CALL_DTL_TY == '02' ">
+									           <![CDATA[
+									            AND (A.CALL_TY = '00002' OR A.CALL_TY = '02') 
+									            AND A.CNSL_HIST_NO NOT IN (SELECT CNSL_HIST_NO
+									                                         FROM PLT_PHN_CAMP_CUS_DST
+									                                        WHERE CNSL_HIST_NO IS NOT NULL)
+									           ]]>
+									           </if>
+									           <if test="PROC_CODE_LCLS !='' and PROC_CODE_LCLS != null">    <![CDATA[ AND B.PROC_CODE_LCLS = #{PROC_CODE_LCLS} ]]>  </if> 
+									 		   <if test="PROC_CODE_MDCLS !='' and PROC_CODE_MDCLS != null">  <![CDATA[ AND B.PROC_CODE_MDCLS = #{PROC_CODE_MDCLS} ]]> </if>
+									        ) PPC
+							        ON PCUH.JOBBY_CNSL_HST_ID = PPC.CNSL_HIST_NO
+								 WHERE 1 =1 
+								 <if test="CNSL_CUST_KEY !='' and CNSL_CUST_KEY != null">  <![CDATA[ AND PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY} ]]> </if> 
+								 <if test="CNSL_BEGIN_DATE !='' and CNSL_BEGIN_DATE != null and CNSL_END_DATE !='' and CNSL_END_DATE != null">
+								 <![CDATA[
+								 	AND  PCUH.REG_DTTM  >=  #{CNSL_BEGIN_DATE} || '000000'
+						         	AND  PCUH.REG_DTTM  <=  #{CNSL_END_DATE} || '235959'
+						         ]]>	
+						         </if>
+						         <if test="CSLT_ID !='' and CSLT_ID != null"> <![CDATA[ AND PCUH.REGR_ID = #{CSLT_ID} ]]> </if> 
+						    </if>
+						    
+						    <if test="CALL_TY == '' or CALL_TY == null ">  <![CDATA[ UNION  ]]> </if>
+						    
+						    <if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '03' ">
+						    	/* 채팅상담 */
+							    SELECT
+							        PCUH.UNITY_HST_ID
+							        
+							    FROM PLT_CNSL_UNITY_HST PCUH
+							    INNER JOIN (
+									        SELECT
+									            A.TALK_CONTACT_ID
+									        FROM PLT_CHT_CUTT A
+							              ) PCC
+							        ON PCUH.JOBBY_CNSL_HST_ID = PCC.TALK_CONTACT_ID
+								WHERE 1=1
+								<if test="CNSL_CUST_KEY !='' and CNSL_CUST_KEY != null"> <![CDATA[ AND PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY} ]]> </if> 
+							    <if test="CNSL_BEGIN_DATE !='' and CNSL_BEGIN_DATE != null and CNSL_END_DATE !='' and CNSL_END_DATE != null">
+								<![CDATA[
+								 	AND  PCUH.REG_DTTM  >=  #{CNSL_BEGIN_DATE} || '000000'
+						         	AND  PCUH.REG_DTTM  <=  #{CNSL_END_DATE} || '235959'
+						        ]]>	
+						        </if> 	
+								<if test="CSLT_ID !='' and CSLT_ID != null">  <![CDATA[ AND PCUH.REGR_ID = #{CSLT_ID} ]]>  </if>
+							</if>	
+						) A	
+		          ) PAG_TBL
+		<![CDATA[ ORDER BY ROW_TBL.REG_DTTM DESC ]]>          
+	</select>
+	
+	<!-- 통합상담이력 조회 Arthur.Kim 2021.10.14 -->
+	<select id="selectRtnCnslUnityHst"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+	    A.UNITY_HST_ID
+	    , A.JOBBY_CNSL_HST_ID
+	    , A.CNSL_DIV
+	    , A.CSTMR_TELNO
+	    , A.CSTMR_ID
+	    , A.REGR_ID
+	    , (SELECT USER_NM 
+	         FROM PLT_USER PU 
+	        WHERE PU.USER_ID = A.REGR_ID) AS USER_NM
+	    , A.REG_DTTM
+	    , A.HIST_DTL_NO
+	    , A.HST_CNSL_TYP
+	    , A.HST_CNSL_TYP2
+	    , A.HST_CNSL_TYP3
+	    , A.HST_CNSL_TYP4
+	    ,( SELECT CNSL_TYP_NM 
+	             FROM PLT_CHT_CUTT_TYP T
+	            WHERE 
+	            <choose>
+					<when test="CNSL_CUST_KEY != null">
+						T.CUSTCO_ID = #{CNSL_CUST_KEY}
+					</when>
+					<when test="ASP_NEWCUST_KEY != null">
+						T.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					</when>
+					<otherwise>
+						T.CUSTCO_ID = #{CUSTCO_ID}
+					</otherwise>
+				</choose>
+	              AND A.HST_CNSL_TYP = T.CNSL_TYP_CD
+	              AND T.CNSL_TYP_DIV_CD = '1'
+	    ) AS CNSL_TYP
+	    ,( SELECT CNSL_TYP_NM 
+	             FROM PLT_CHT_CUTT_TYP T
+	           WHERE 
+	            <choose>
+					<when test="CNSL_CUST_KEY != null">
+						T.CUSTCO_ID = #{CNSL_CUST_KEY}
+					</when>
+					<when test="ASP_NEWCUST_KEY != null">
+						T.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					</when>
+					<otherwise>
+						T.CUSTCO_ID = #{CUSTCO_ID}
+					</otherwise>
+				</choose>
+	              AND A.HST_CNSL_TYP2 = T.CNSL_TYP_CD
+	              AND T.CNSL_TYP_DIV_CD = '2'
+	    ) AS CNSL_TYP2
+	    ,( SELECT CNSL_TYP_NM 
+	             FROM PLT_CHT_CUTT_TYP T
+	           WHERE 
+	            <choose>
+					<when test="CNSL_CUST_KEY != null">
+						T.CUSTCO_ID = #{CNSL_CUST_KEY}
+					</when>
+					<when test="ASP_NEWCUST_KEY != null">
+						T.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					</when>
+					<otherwise>
+						T.CUSTCO_ID = #{CUSTCO_ID}
+					</otherwise>
+				</choose>
+	              AND A.HST_CNSL_TYP3 = T.CNSL_TYP_CD
+	              AND T.CNSL_TYP_DIV_CD = '3'
+	    ) AS CNSL_TYP3
+	    ,( SELECT CNSL_TYP_NM 
+	             FROM PLT_CHT_CUTT_TYP T
+	           WHERE 
+	            <choose>
+					<when test="CNSL_CUST_KEY != null">
+						T.CUSTCO_ID = #{CNSL_CUST_KEY}
+					</when>
+					<when test="ASP_NEWCUST_KEY != null">
+						T.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+					</when>
+					<otherwise>
+						T.CUSTCO_ID = #{CUSTCO_ID}
+					</otherwise>
+				</choose>
+	              AND A.HST_CNSL_TYP4 = T.CNSL_TYP_CD
+	              AND T.CNSL_TYP_DIV_CD = '4'
+	    ) AS CNSL_TYP4
+	    , A.HST_CONTEXT
+	    , A.PROC_CODE_LCLS  AS PROC_CODE_LCLS
+	    , A.PROC_CODE_MDCLS AS PROC_CODE_MDCLS
+	    , A.PROC_CODE_NM
+	    , A.HST_TYPE
+	    , A.HST_CLASS
+	    , A.HST_TITLE_TYPE
+        , A.CALL_REC 
+        , A.CNSL_CHN_1_NM
+        , A.CNSL_CONT_NM
+        , A.VIS_PATH_NM
+        , A.CATGEGORY_NM
+        , A.CONDITION_NM
+	FROM (
+		
+		<if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '01' or CALL_TY == '02' ">
+	    /* 전화상담 */
+	    SELECT
+	        PCUH.UNITY_HST_ID
+	        , PCUH.JOBBY_CNSL_HST_ID
+	        , PCUH.CNSL_DIV
+	        , PCUH.CSTMR_TELNO
+	        , PCUH.CSTMR_ID
+	        , PCUH.REGR_ID
+	        , TO_CHAR(PCUH.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+	        , PPC.CNSL_HIST_NO AS HIST_NO
+	        , PPC.CNSL_HIST_DTL_NO AS HIST_DTL_NO
+	        , PPC.CNSL_TYP_CD AS HST_CNSL_TYP
+	        , PPC.CNSL_TYP_CD_2 AS HST_CNSL_TYP2
+	        , PPC.CNSL_TYP_CD_3 AS HST_CNSL_TYP3
+	        , PPC.CNSL_TYP_CD_4 AS HST_CNSL_TYP4
+	        , PPC.CNSL_CNTN AS HST_CONTEXT
+	        , PPC.PROC_CODE_LCLS AS PROC_CODE_LCLS
+	        , PPC.PROC_CODE_MDCLS AS PROC_CODE_MDCLS
+	        , CASE WHEN NOT PPC.PROC_CODE_MDCLS IS NULL THEN (SELECT CD_NM
+															    FROM PLT_COMN_CD K
+															   WHERE GROUP_CD          = 'CO002'
+															     AND PPC.PROC_CODE_MDCLS = K.CD)
+				  ELSE (SELECT CD_NM
+						  FROM PLT_COMN_CD K
+						 WHERE GROUP_CD         = 'CO001'
+						   AND PPC.PROC_CODE_LCLS = K.CD)					                     
+			  END AS PROC_CODE_NM
+	        , PPC.HST_TYPE
+	        , PPC.HST_CLASS
+	        , 'BLOCK' AS HST_TITLE_TYPE
+            , PPC.CALL_REC
+            , PPC.CNSL_CHN_1_NM
+            , PPC.CNSL_CONT_NM
+            , PPC.VIS_PATH_NM
+            , PPC.CATGEGORY_NM
+            , PPC.CONDITION_NM
+	    FROM 
+	        PLT_CNSL_UNITY_HST PCUH
+	    INNER JOIN (
+	        SELECT
+	            A.CNSL_HIST_NO
+	            , A.CALL_TY
+	            , B.CNSL_HIST_DTL_NO
+	            , B.CNSL_TYP_CD
+	            , B.CNSL_TYP_CD_2
+	            , B.CNSL_TYP_CD_3
+	            , B.CNSL_TYP_CD_4
+	            , B.CNSL_CNTN
+	            , B.PROC_CODE_LCLS
+	            , B.PROC_CODE_MDCLS
+	            , CASE
+	                WHEN A.CALL_TY IN ('01', '04') THEN 'inbound'
+	                WHEN A.CALL_TY IN ('02', '03', '05') THEN 'outbound'
+	              END AS HST_TYPE
+	            , CASE
+	                WHEN A.CALL_TY IN ('01', '04') THEN 'is-inbound'
+	                WHEN A.CALL_TY IN ('02', '03', '05') THEN 'is-outbound'
+	            END AS HST_CLASS
+            	, A.RDWT_FILE_NM AS CALL_REC
+                , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'MTC012' AND CD = B.CNSL_CHN_1) 	AS CNSL_CHN_1_NM
+                , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'MTC001' AND CD = B.CNSL_CONT) 	AS CNSL_CONT_NM
+                , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'MTC002' AND CD = B.VIS_PATH) 	AS VIS_PATH_NM
+                , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'MTC009' AND CD = B.CATEGORY) 	AS CATGEGORY_NM
+                , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'MTC005' AND CD = B.CONDITION) 	AS CONDITION_NM
+	        FROM PLT_PHN_CNSL A
+	        INNER JOIN PLT_PHN_CNSL_DTL B
+	            ON A.CNSL_HIST_NO = B.CNSL_HIST_NO
+	        ) PPC
+	        ON PCUH.JOBBY_CNSL_HST_ID = PPC.CNSL_HIST_NO
+		WHERE
+			<choose>
+				<when test="CNSL_CUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY}
+				</when>
+				<when test="ASP_NEWCUST_KEY != null">
+					PCUH.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				</when>
+				<otherwise>
+					PCUH.CUSTCO_ID  = #{CUSTCO_ID}
+				</otherwise>
+			</choose>
+			
+			<choose>
+				<when test="CALL_TY == 01">
+					<![CDATA[ AND (PPC.CALL_TY IN ('00001', '00004') OR PPC.CALL_TY = '01') ]]>
+				</when>
+				<when test="CALL_TY == 02">
+					<![CDATA[ 
+					AND (PPC.CALL_TY IN ('00002', '00003', '00005') OR PPC.CALL_TY IN ('02', '03', '04', '05'))	
+					]]>
+				</when>
+			</choose>
+			<if test="CSTMR_ID != '' and CSTMR_ID != null "> <![CDATA[ AND PCUH.CSTMR_ID = #{CSTMR_ID} ]]> </if>
+			<if test="CSTMR_ID == '' or CSTMR_ID == null ">  <![CDATA[ AND PCUH.CSTMR_TELNO = #{CSTMR_TELNO}  ]]> </if>
+			
+	   </if>
+	    
+	   <if test="CALL_TY == '' or CALL_TY == null ">  <![CDATA[ UNION  ]]> </if>    
+	     
+	   <if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '03' or CALL_TY == '06' or CALL_TY == '07' or CALL_TY == '08' or CALL_TY == '09' or CALL_TY == '10' or CALL_TY == '11' ">  
+	    /* 채팅상담 */
+	    SELECT
+	        PCUH.UNITY_HST_ID
+	        , PCUH.JOBBY_CNSL_HST_ID
+	        , PCUH.CNSL_DIV
+	        , PCUH.CSTMR_TELNO
+	        , PCUH.CSTMR_ID
+	        , PCUH.REGR_ID
+	        , TO_CHAR(PCUH.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+	        , PCC.TALK_CONTACT_ID AS HIST_NO
+	        , '' AS HIST_DTL_NO
+	        , PCC.CNSL_TYP_CD AS HST_CNSL_TYP
+	        , PCC.CNSL_TYP_CD_2 AS HST_CNSL_TYP2
+	        , PCC.CNSL_TYP_CD_3 AS HST_CNSL_TYP3
+	        , PCC.CNSL_TYP_CD_4 AS HST_CNSL_TYP4
+	        , PCC.TALK_QST AS HST_CONTEXT
+	        , PCC.PROC_CODE_LCLS AS PROC_CODE_LCLS
+	        , PCC.PROC_CODE_MDCLS AS PROC_CODE_MDCLS
+	        , (SELECT CD_NM 
+				 FROM PLT_COMN_CD CT 
+				WHERE CT.GROUP_CD = 'TALK005' 
+				  AND CT.CD       = PCC.PROC_CODE_LCLS
+				  AND CT.CD_TYPE  = '1'
+	          ) AS PROC_CODE_NM
+	        , PCC.HST_TYPE
+	        , PCC.HST_CLASS
+	        , 'BLOCK' AS HST_TITLE_TYPE
+            , '' AS CALL_REC
+            , '' AS CNSL_CHN_1_NM
+            , '' AS CNSL_CONT_NM
+            , '' AS VIS_PATH_NM
+            , '' AS CATGEGORY_NM
+            , '' AS CONDITION_NM
+	    FROM 
+	        PLT_CNSL_UNITY_HST PCUH
+	    INNER JOIN (
+	        SELECT
+	            A.TALK_CONTACT_ID
+	            , A.TALK_USER_KEY
+	            , A.CNSL_TYP_CD
+	            , A.CNSL_TYP_CD_2
+	            , A.CNSL_TYP_CD_3
+	            , A.CNSL_TYP_CD_4
+	            , A.TALK_QST
+	            , A.EXEC_RST_CD AS PROC_CODE_LCLS
+	            , '' AS PROC_CODE_MDCLS
+	            , A.TALK_ANS
+	            , A.TALK_TITLE
+	            , CASE
+	                WHEN A.CALL_TYP_CD = 'KAKAO' THEN 'kakao'
+	                WHEN A.CALL_TYP_CD = 'TTALK' THEN 'ttalk'
+	                WHEN A.CALL_TYP_CD = 'LINE' THEN 'line'
+	                WHEN A.CALL_TYP_CD = 'FACEBOOK' THEN 'facebook'
+	            END HST_TYPE
+	            , CASE
+	                WHEN A.CALL_TYP_CD = 'KAKAO' THEN 'is-kakao'
+	                WHEN A.CALL_TYP_CD = 'TTALK' THEN 'is-ttalk'
+	                WHEN A.CALL_TYP_CD = 'LINE' THEN 'is-line'
+	                WHEN A.CALL_TYP_CD = 'FACEBOOK' THEN 'is-facebook'
+	            END HST_CLASS
+	            , A.CALL_TYP_CD
+            	, '' AS CALL_REC
+	            , '' AS CNSL_CHN_1_NM
+	            , '' AS CNSL_CONT_NM
+	            , '' AS VIS_PATH_NM
+	            , '' AS CATGEGORY_NM
+	            , '' AS CONDITION_NM
+	        FROM PLT_CHT_CUTT A
+	        ) PCC
+	        ON PCUH.JOBBY_CNSL_HST_ID = PCC.TALK_CONTACT_ID
+		WHERE
+			<choose>
+				<when test="CNSL_CUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY}
+				</when>
+				<when test="ASP_NEWCUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{ASP_NEWCUST_KEY}
+				</when>
+				<otherwise>
+					PCUH.CUSTCO_ID  = #{ASP_NEWCUST_KEY}
+				</otherwise>
+			</choose>	
+			<choose>
+				<when test="TALK_USER_KEY !='' and TALK_USER_KEY != null">
+				AND PCC.CHT_CUTT_ID = #{CHT_CUTT_ID}::INTEGER
+				</when>
+				<otherwise>
+					<if test="CSTMR_ID != '' and CSTMR_ID != null "> 
+						AND PCUH.CSTMR_ID = (SELECT TALK_USER_KEY 
+											   FROM PLT_CUS
+											  WHERE 
+											        <choose>
+														<when test="CNSL_CUST_KEY != null">
+															CUSTCO_ID = #{CNSL_CUST_KEY}
+														</when>
+														<when test="ASP_NEWCUST_KEY != null">
+															CUSTCO_ID = #{ASP_NEWCUST_KEY}
+														</when>
+														<otherwise>
+															CUSTCO_ID = #{CUSTCO_ID}
+														</otherwise>
+													</choose>	
+											    AND CUSTOMER_ID  = #{CSTMR_ID})
+					OR PCUH.CSTMR_ID = (SELECT CUSTOMER_ID
+											   FROM PLT_CUS
+											  WHERE 
+													<choose>
+														<when test="CNSL_CUST_KEY != null">
+															CUSTCO_ID = #{CNSL_CUST_KEY}
+														</when>
+														<when test="ASP_NEWCUST_KEY != null">
+															CUSTCO_ID = #{ASP_NEWCUST_KEY}
+														</when>
+														<otherwise>
+															CUSTCO_ID = #{CUSTCO_ID}
+														</otherwise>
+													</choose>	
+											    AND CUSTOMER_ID  = #{CSTMR_ID}) 
+					</if>
+					<if test="CSTMR_ID == '' or CSTMR_ID == null ">  <![CDATA[ AND PCUH.CSTMR_TELNO = #{CSTMR_TELNO}  ]]> </if>
+				</otherwise>
+			</choose>
+			<if test="CALL_TY == '06' or CALL_TY == '07' or CALL_TY == '08' or CALL_TY == '09' or CALL_TY == '10' or CALL_TY == '11' "> 
+			<choose>
+				<when test="CALL_TY == '06'">
+				AND PCC.CALL_TYP_CD = 'KAKAO'
+				</when>
+				<when test="CALL_TY == '07'">
+				AND PCC.CALL_TYP_CD = 'TTALK'
+				</when>
+				<when test="CALL_TY == '08'">
+				AND PCC.CALL_TYP_CD = 'LINE'
+				</when>
+				<when test="CALL_TY == '09'">
+				AND PCC.CALL_TYP_CD = 'FACEBOOK'
+				</when>
+				<otherwise>
+				AND PCC.CALL_TYP_CD NOT IN ('KAKAO', 'TTALK', 'LINE', 'FACEBOOK')
+				</otherwise>
+			</choose>
+			</if>
+		</if>
+			
+		<if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '03' ">  <![CDATA[ UNION  ]]> </if>    
+	    
+	    <if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '03' ">
+	    /* 메일이력 */
+	    SELECT
+	        PCUH.UNITY_HST_ID
+	        , PCUH.JOBBY_CNSL_HST_ID
+	        , PCUH.CNSL_DIV
+	        , PCUH.CSTMR_TELNO
+	        , PCUH.CSTMR_ID
+	        , PCUH.REGR_ID
+	        , TO_CHAR(PCUH.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+	        , PPESH.EML_SEND_HIST_NO AS HIST_NO
+	        , '' AS HIST_DTL_NO
+	        , '' AS HST_CNSL_TYP
+	        , '' AS HST_CNSL_TYP2
+	        , '' AS HST_CNSL_TYP3
+	        , '' AS HST_CNSL_TYP4
+	        , PPESH.EML_CNTN AS HST_CONTEXT
+	        , '' AS PROC_CODE_LCLS
+	        , '' AS PROC_CODE_MDCLS
+	        , '' AS PROC_CODE_NM
+	        , 'mail' AS HST_TYPE
+	        , 'is-mail' AS HST_CLASS
+	        , 'NONE' AS HST_TITLE_TYPE
+            , '' AS CALL_REC
+            , '' AS CNSL_CHN_1_NM
+            , '' AS CNSL_CONT_NM
+            , '' AS VIS_PATH_NM
+            , '' AS CATGEGORY_NM
+            , '' AS CONDITION_NM
+	    FROM 
+	        PLT_CNSL_UNITY_HST PCUH
+	    INNER JOIN PLT_PHN_EML_SND_HST PPESH
+	        ON PCUH.JOBBY_CNSL_HST_ID = PPESH.EML_SEND_HIST_NO
+		WHERE
+			<choose>
+				<when test="CNSL_CUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY}
+				</when>
+				<when test="ASP_NEWCUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{ASP_NEWCUST_KEY}
+				</when>
+				<otherwise>
+					PCUH.CUSTCO_ID  = #{CUSTCO_ID}
+				</otherwise>
+			</choose>
+			<if test="CSTMR_ID != '' and CSTMR_ID != null "> <![CDATA[ AND PCUH.CSTMR_ID    = #{CSTMR_ID} ]]> </if>
+			<if test="CSTMR_ID == '' or CSTMR_ID == null ">  <![CDATA[ AND PCUH.CSTMR_TELNO = #{CSTMR_TELNO}  ]]> </if>	
+		</if>
+			
+	    <if test="CALL_TY == '' or CALL_TY == null ">  <![CDATA[ UNION  ]]> </if>     
+	    
+	    <if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '04' ">
+	    /* 문자이력 */
+	    SELECT
+	        PCUH.UNITY_HST_ID
+	        , PCUH.JOBBY_CNSL_HST_ID
+	        , PCUH.CNSL_DIV
+	        , PCUH.CSTMR_TELNO
+	        , PCUH.CSTMR_ID
+	        , PCUH.REGR_ID
+	        , TO_CHAR(PCUH.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+	        , PPSSH.SMS_SEND_HIST_NO AS HIST_NO
+	        , '' AS HIST_DTL_NO
+	        , '' AS HST_CNSL_TYP
+	        , '' AS HST_CNSL_TYP2
+	        , '' AS HST_CNSL_TYP3
+	        , '' AS HST_CNSL_TYP4
+	        , PPSSH.SMS_CNTN AS HST_CONTEXT
+	        , '' AS PROC_CODE_LCLS
+	        , '' AS PROC_CODE_MDCLS
+	        , '' AS PROC_CODE_NM
+	        , 'sms' AS HST_TYPE
+	        , 'is-sms' AS HST_CLASS
+	        , 'NONE' AS HST_TITLE_TYPE
+            , '' AS CALL_REC
+            , '' AS CNSL_CHN_1_NM
+            , '' AS CNSL_CONT_NM
+            , '' AS VIS_PATH_NM
+            , '' AS CATGEGORY_NM
+            , '' AS CONDITION_NM
+	    FROM 
+	        PLT_CNSL_UNITY_HST PCUH
+	    INNER JOIN PLT_PHN_SMS_SND_HST PPSSH
+	        ON PCUH.JOBBY_CNSL_HST_ID = PPSSH.SMS_SEND_HIST_NO
+		WHERE
+			<choose>
+				<when test="CNSL_CUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY}
+				</when>
+				<when test="ASP_NEWCUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{ASP_NEWCUST_KEY}
+				</when>
+				<otherwise>
+					PCUH.CUSTCO_ID  = #{CUSTCO_ID}
+				</otherwise>
+			</choose>
+			<if test="CSTMR_ID != '' and CSTMR_ID != null "> <![CDATA[ AND PCUH.CSTMR_ID    = #{CSTMR_ID} ]]> </if>
+			<if test="CSTMR_ID == '' or CSTMR_ID == null ">  <![CDATA[ AND PCUH.CSTMR_TELNO = #{CSTMR_TELNO}  ]]> </if>		
+		</if>
+		
+	    <if test="CALL_TY == '' or CALL_TY == null ">  <![CDATA[ UNION  ]]> </if>     
+	    
+	    <if test="CALL_TY == '' or CALL_TY == null or CALL_TY == '05' ">
+	    /* 알림톡이력 */
+	    SELECT
+	        PCUH.UNITY_HST_ID
+	        , PCUH.JOBBY_CNSL_HST_ID
+	        , PCUH.CNSL_DIV
+	        , PCUH.CSTMR_TELNO
+	        , PCUH.CSTMR_ID
+	        , PCUH.REGR_ID
+	        , TO_CHAR(PCUH.REG_DTTM, 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+	        , PNTSH.NTCN_TALK_SEND_HIST_NO AS HIST_NO
+	        , '' AS HIST_DTL_NO
+	        , '' AS HST_CNSL_TYP
+	        , '' AS HST_CNSL_TYP2
+	        , '' AS HST_CNSL_TYP3
+	        , '' AS HST_CNSL_TYP4
+	        , PNTSH.NTCN_TALK_CNTN AS HST_CONTEXT
+	        , '' AS PROC_CODE_LCLS
+	        , '' AS PROC_CODE_MDCLS
+	        , '' AS PROC_CODE_NM
+	        , 'talk' AS HST_TYPE
+	        , 'is-talk' AS HST_CLASS
+	        , 'NONE' AS HST_TITLE_TYPE
+            , '' AS CALL_REC
+            , '' AS CNSL_CHN_1_NM
+            , '' AS CNSL_CONT_NM
+            , '' AS VIS_PATH_NM
+            , '' AS CATGEGORY_NM
+            , '' AS CONDITION_NM
+	    FROM 
+	        PLT_CNSL_UNITY_HST PCUH
+	    INNER JOIN PLT_PHN_NTCN_TALK_SEND_HST PNTSH
+	        ON PCUH.JOBBY_CNSL_HST_ID = PNTSH.NTCN_TALK_SEND_HIST_NO
+		WHERE
+			<choose>
+				<when test="CNSL_CUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{CNSL_CUST_KEY}
+				</when>
+				<when test="ASP_NEWCUST_KEY != null">
+					PCUH.CUSTCO_ID  = #{ASP_NEWCUST_KEY}
+				</when>
+				<otherwise>
+					PCUH.CUSTCO_ID  = #{CUSTCO_ID}
+				</otherwise>
+			</choose>
+			<if test="CSTMR_ID != '' and CSTMR_ID != null "> <![CDATA[ AND PCUH.CSTMR_ID    = #{CSTMR_ID} ]]> </if>
+			<if test="CSTMR_ID == '' or CSTMR_ID == null ">  <![CDATA[ AND PCUH.CSTMR_TELNO = #{CSTMR_TELNO}  ]]> </if>	
+		</if>	
+			
+	) A
+	
+	WHERE 1=1
+	
+	<if test="CNSL_DIV !='' and CNSL_DIV != null"> <![CDATA[ AND A.CNSL_DIV = #{CNSL_DIV} ]]> </if>
+	<if test="AGENT_ID !='' and AGENT_ID != null"> AND A.REGR_ID = #{AGENT_ID}</if>
+    <if test="ST_DATE !='' and ST_DATE != null and END_DATE !='' and END_DATE != null"> AND TO_CHAR(A.REG_DTTM) BETWEEN #{ST_DATE} AND #{END_DATE}</if>
+    <if test="CHAT_RESULT !='' and CHAT_RESULT != null"> AND A.PROC_CODE_LCLS = #{CHAT_RESULT}</if>
+    <if test="RESULT !='' and RESULT != null"> AND A.HST_TYPE = #{RESULT}</if>
+    <if test="CHENNEL !='' and CHENNEL != null"> AND A.HST_CLASS = #{CHENNEL}</if>
+    
+	
+	ORDER BY A.REG_DTTM DESC
+	
+	</select>
+	
+	<!-- 통합상담이력 상세조회  - 전화 -->
+	<select id="selectRtnCnslUnityHstPhone"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		    /* 이력마스터 */
+		    PPC.CNSL_HIST_NO
+		    , PPC.CENT_TY
+		    , PPC.ORGZ_ID
+		    , PPC.CSLT_ID
+		    , PPC.CNSL_BEGIN_DATE
+		    , PPC.CNSL_BEGIN_TIME
+		    , PPC.CNSL_EOT_DATE
+		    , PPC.CNSL_EOT_TIME
+		    , PPC.CALL_TY
+		    , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD  ='CO003' AND CD = PPC.CALL_TY) AS CALL_TY_NM
+		    , PPC.TEL_TIME
+		    , PPC.CNSL_SAVE_DTIM
+		    , PPC.AF_PROC_TIME
+		    , PPC.CUST_TEL_NO
+		    , PPC.RDWT_FILE_NM
+		    , PPC.RDWT_FILE_PATH
+		    , PPC.RDWT_SEND_YN
+		    /* 이력디테일 */
+		    , PPCD.CNSL_HIST_DTL_NO
+		    , PPCD.CNSL_TYP_CD
+		    , PPCD.CNSL_TYP_CD_2
+		    , PPCD.CNSL_TYP_CD_3
+		    , PPCD.CNSL_TYP_CD_4
+		    , PPCD.PROC_CODE_LCLS
+		    , PPCD.PROC_CODE_MDCLS
+		    , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD  ='CO001' AND CD = PPCD.PROC_CODE_LCLS) AS PROC_CODE_LCLS_NM
+		    , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD  ='CO002' AND CD = PPCD.PROC_CODE_MDCLS) AS PROC_CODE_MDCLS_NM
+		    , PPCD.CNSL_CNTN
+		    /* 예약콜 */
+		    , TO_CHAR(TO_DATE(RESV_DATE || RESV_TIME, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS RESV_DATE
+		    , PPCR.RESV_TEL_NO
+		    , PPCR.FISH_YN
+		FROM 
+		    PLT_PHN_CNSL PPC
+		INNER JOIN PLT_PHN_CNSL_DTL PPCD
+		    ON PPC.CNSL_HIST_NO = PPCD.CNSL_HIST_NO
+		LEFT OUTER JOIN PLT_PHN_CNSL_RSV PPCR
+		    ON PPC.CNSL_HIST_NO = PPCR.CNSL_HIST_NO
+		WHERE
+		    PPC.CNSL_HIST_NO = #{CNSL_HIST_NO}
+	</select>
+	
+	<!-- 통합상담이력 상세조회  - 채팅 -->
+	<select id="selectRtnCnslUnityHstChat"  parameterType= "java.util.HashMap" resultMap="chatContentResultMap">
+		SELECT A.TALK_USER_KEY
+			, B.CONTENT
+			, TO_CHAR(B.IT_PROCESSING,'HH24 : MI') AS CHAT_DATE
+			, B.SNDRCV_CD
+			, (CASE WHEN B.SNDRCV_CD = 'RCV' THEN COALESCE(C.CUSTOMER_NM, '알수없음')
+	             WHEN D.USER_NM IS NULL THEN B.USER_ID
+	             ELSE (SELECT UBI.ATTR_DIV_NM || '_' || D.USER_NM
+	                     FROM PLT_USER_BLNG  UBI
+	                    WHERE <choose>
+			                    <when test="ASP_NEWCUST_KEY != null">
+									UBI.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+								</when>
+								<otherwise>
+									UBI.CUSTCO_ID  = #{CUSTCO_ID}
+								</otherwise>
+							</choose>
+	                      AND UBI.ATTR_DIV_CD  = D.USER_ATTR_C
+	                      AND UBI.USE_YN = 'Y') 
+	        END) AS CUSTOMER_NM
+	     , (CASE WHEN B.SNDRCV_CD = 'RCV' THEN (CASE WHEN C.TID = '' OR C.TID IS NULL THEN ('비회원_-_-') 
+	                                                 ELSE ('회원_' || C.REFERENCE_CUSTOMER_KEY || '_' || C.TID)
+	                                             END)
+	             WHEN D.USER_NM IS NULL THEN B.USER_ID
+	             ELSE (SELECT UBI.ATTR_DIV_NM || '_' || D.USER_NM
+	                     FROM PLT_USER_BLNG  UBI
+	                    WHERE <choose>
+			                    <when test="ASP_NEWCUST_KEY != null">
+									UBI.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+								</when>
+								<otherwise>
+									UBI.CUSTCO_ID  = #{CUSTCO_ID}
+								</otherwise>
+							</choose>
+	                      AND UBI.ATTR_DIV_CD  = D.USER_ATTR_C
+	                      AND UBI.USE_YN = 'Y')
+	        END) AS CUSTOMER_NM2
+	     , C.CUSTOMER_NM AS CUSTOMER_NM3
+	     , B.TYPE
+	     , B.IMAGE_URL
+	     , B.IMAGE_TALK_PATH 
+	     , B.LINKS
+	     , (SELECT DSPTCH_PRF_NM FROM PLT_ASP_CUS_CHN CT WHERE CT.SNDR_KEY=A.SNDR_KEY) AS DSPTCH_PRF_KEY_NM
+	     , CASE B.SNDRCV_CD WHEN 'SND' THEN '송신' WHEN 'RCV' THEN '수신' WHEN 'TRAN' THEN '3자' END AS TYPE_NM
+	     , B.USER_ID
+	     , TO_CHAR(B.IT_PROCESSING , 'YYYY/MM/DD HH24:MI:SS')  AS IT_PROCESSING
+	     , TO_CHAR(B.IT_PROCESSING , 'YYYYMMDDHH24MISS')       AS IT_PROCESSING2
+	     , A.ORDER_NUMBER
+	     , C.CUSTOMER_SEQ
+	     , COALESCE(C.MEMBER_YN, 'N')   AS MEMBER_YN
+	     , B.VIDEO_TALK_PATH
+	     , B.VIDEO_URL
+	     , B.VIDEO_THUMNAIL_PATH
+	     , B.ORG_CONT_ID
+	     , F.FILE_GROUP_KEY   AS FILE_GROUP_KEY /* 파일크룹키 */
+	     , F.FILE_KEY         AS FILE_KEY       /* 파일키 */
+	     , F.FILE_PATH                                      AS FILE_PATH		/* 파일 경로 */
+     	 , F.STRG_FILE_NM                                  AS STRG_FILE_NM	/* 파일 이름 */
+	     , B.TALK_SERIAL_NUMBER
+	     , A.TALK_CONTACT_ID
+	     , A.TALK_STAT_CD
+	     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD  ='TALK001' AND CD = A.TALK_STAT_CD) AS TALK_STAT_NM
+	     , A.CALL_TYP_CD
+	     , (CASE WHEN B.USER_ID IN ('system') THEN 'SYSTEM' 
+	     		 WHEN D.USER_NM IS NOT NULL THEN D.USER_NM
+	     		ELSE 'SYSTEM' END) SEND_USER_NM
+	     , (CASE WHEN B.USER_ID IN ('system') THEN 'S'
+	     		   WHEN B.USER_ID = #{USER_ID} THEN '나'  
+	     		   WHEN D.USER_NM IS NOT NULL  THEN SUBSTR(D.USER_NM, 1 , 1) 
+	     		   ELSE 'S' END) SEND_USER_SHORT_NM
+	     , A.SNDR_KEY
+	     , B.READ_YN AS READ_YN /* 20201028 */
+	     , B.ORG_FILE_ID
+	     , C.CUSTOMER_PHONE_NO
+	     , CASE
+			WHEN A.TALK_QST != null and A.TALK_QST != '' THEN A.TALK_QST
+			ELSE A.TALK_ANS
+		END TALK_CONTEXT
+	  FROM PLT_CHT_CUTT A
+	  INNER JOIN PLT_CHT_CUTT_DTL B
+	   	ON A.TALK_CONTACT_ID = B.TALK_CONTACT_ID
+	  LEFT OUTER JOIN  PLT_CUS C
+	  	ON A.TALK_USER_KEY   = C.TALK_USER_KEY
+	  LEFT OUTER JOIN  PLT_USER D
+	  	ON B.USER_ID = D.USER_ID
+	  LEFT OUTER JOIN PLT_FILE F
+	    ON B.FILE_GROUP_KEY = F.FILE_GROUP_KEY
+	    AND B.FILE_KEY = F.FILE_KEY
+	 WHERE <choose>
+				<when test="ASP_NEWCUST_KEY != null">
+					A.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+				</when>
+				<otherwise>
+					A.CUSTCO_ID  = #{CUSTCO_ID}
+				</otherwise>
+			</choose>
+	   AND A.TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+	   AND B.TYPE NOT IN ('reference', 'SKIPON', 'SKIPOFF')
+	   AND B.SNDRCV_CD IS NOT NULL
+	 ORDER BY B.IT_PROCESSING ASC
+	</select>
+	
+	<!-- 통합상담이력 상세조회  - 메일 -->
+	<select id="selectRtnCnslUnityHstMail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		    EML_SEND_HIST_NO
+		    , CENT_TY
+		    , CUST_NO
+		    , CUST_TEL_NO
+		    , EML_NO
+		    , SUBSTR(EML_CNTN, 0, 25) AS EML_TITL
+		    , EML_CNTN
+		    , EML_REQ_DTIM
+		    , EML_PROC_RSLT
+		    , '코드명' AS EML_PROC_RSLT_NM /* 공통코드확인후 처리 */
+		    , TO_CHAR(TO_DATE(REG_DTIM, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+			, REG_MAN
+		FROM
+		    PLT_PHN_EML_SND_HST
+		WHERE    
+		    EML_SEND_HIST_NO = #{EML_SEND_HIST_NO}
+	</select>
+	
+	<!-- 통합상담이력 상세조회  - sms -->
+	<select id="selectRtnCnslUnityHstSms"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		    SMS_SEND_HIST_NO
+		    , CENT_TY
+		    , CUST_NO
+		    , CUST_TEL_NO
+		    , SMS_NO
+		    , SUBSTR(SMS_CNTN, 0, 25) AS SMS_TITL
+		    , SMS_CNTN
+		    , SMS_REQ_DTIM
+		    , SMS_PROC_RSLT
+		    , '코드명' AS SMS_PROC_RSLT_NM /* 공통코드확인후 처리 */
+		    , TO_CHAR(TO_DATE(REG_DTIM, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+			, REG_MAN
+		FROM
+		    PLT_PHN_SMS_SND_HST
+		WHERE    
+		    SMS_SEND_HIST_NO = #{SMS_SEND_HIST_NO}
+	</select>
+	
+	<!-- 통합상담이력 상세조회  - 알림톡 -->
+	<select id="selectRtnCnslUnityHstNtcnTalk"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		    NTCN_TALK_SEND_HIST_NO
+		    , CENT_TY
+		    , CUST_NO
+		    , CUST_TEL_NO
+		    , NTCN_TALK_NO
+		    , SUBSTR(NTCN_TALK_CNTN, 0, 25) AS NTCN_TALK_TITL
+		    , NTCN_TALK_CNTN
+		    , NTCN_TALK_REQ_DTIM
+		    , NTCN_TALK_PROC_RSLT
+		    , '코드명' AS NTCN_TALK_PROC_RSLT_NM /* 공통코드확인후 처리 */
+		    , TO_CHAR(TO_DATE(REG_DTIM, 'YYYYMMDDHH24MISS'), 'YYYY/MM/DD HH24:MI:SS') AS REG_DTTM
+		    , REG_MAN
+		FROM
+		    PLT_PHN_NTCN_TALK_SEND_HST
+		WHERE    
+		    NTCN_TALK_SEND_HIST_NO = #{NTCN_TALK_SEND_HIST_NO}
+	</select>
+	
+	<!-- 최상위공통코드 검색 -->
+	<select id="getCmmCode1"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		    GROUP_CD,
+		    CD_NM
+		FROM
+		    PLT_COMN_CD
+		WHERE    
+		    CD = '****'
+		AND ETC_INFO01 = #{INFO1}
+	</select>
+	
+	<!-- 최상위공통코드 검색 -->
+	<select id="getCompanyNM"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		    CO_NM
+		FROM
+		    PLT_ASP_CUS
+		WHERE    
+		    CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	</select>
+	
+	<insert id="cuttItgrtHistReg"  parameterType= "java.util.HashMap">
+		INSERT /*상담 통합 이력 저장 (kr.co.hkcloud.palette3.common.palette.dao.PaletteCmmnMapper.cuttItgrtHistReg)*/
+		INTO PLT_CUTT_ITGRT_HSTRY ( ITGRT_HSTRY_ID
+		       	, CUSTCO_ID
+		       	, CUST_ID
+		       	<if test="PHN_CUTT_ID != NULL and PHN_CUTT_ID != ''">, PHN_CUTT_ID</if>
+		       	<if test="CHT_CUTT_ID != NULL and CHT_CUTT_ID != ''">, CHT_CUTT_ID</if>
+		       ) 
+		VALUES ( #{ITGRT_HSTRY_ID}::INT
+		       , #{CUSTCO_ID}::INT
+		       , #{CUST_ID}::INT
+		       <if test="PHN_CUTT_ID != NULL and PHN_CUTT_ID != ''">, #{PHN_CUTT_ID}::INT</if>
+		       <if test="CHT_CUTT_ID != NULL and CHT_CUTT_ID != ''">, #{CHT_CUTT_ID}::INT</if>
+		       )
+	</insert>
+
+	<insert id="phnCallHistReg"  parameterType= "java.util.HashMap">
+		INSERT /*전화 발신 이력 저장 (kr.co.hkcloud.palette3.common.palette.dao.PaletteCmmnMapper.phnCallHistReg)*/
+		INTO PLT_PHN_DSPTCH_HSTRY ( DSPTCH_HSTRY_ID
+		       	<if test="CUTT_RSVT_ID != NULL and CUTT_RSVT_ID != ''">, CUTT_RSVT_ID</if>
+		       	<if test="CLBK_ID != NULL and CLBK_ID != ''">, CLBK_ID</if>
+		       	<if test="CUST_ID != NULL and CUST_ID != ''">, CUST_ID</if>
+		       	<if test="CPI_ID != NULL and CPI_ID != ''">, CPI_ID</if>
+		       	<if test="CUST_PHN_NO != NULL and CUST_PHN_NO != ''">, CUST_PHN_NO</if>
+		       	, CUSL_ID
+		       	, REG_DT
+		       ) 
+		VALUES ( #{DSPTCH_HSTRY_ID}::INT
+		       <if test="CUTT_RSVT_ID != NULL and CUTT_RSVT_ID != ''">, #{CUTT_RSVT_ID}::INT</if>
+		       <if test="CLBK_ID != NULL and CLBK_ID != ''">, #{CLBK_ID}::INT</if>
+		       <if test="CUST_ID != NULL and CUST_ID != ''">, #{CUST_ID}::INT</if>
+		       <if test="CPI_ID != NULL and CPI_ID != ''">, #{CPI_ID}::INT</if>
+		       <if test="CUST_PHN_NO != NULL and CUST_PHN_NO != ''">, #{CUST_PHN_NO}</if>
+		       , #{USER_ID}::INT
+		       , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		       )
+	</insert>
+	
+	
+	<!-- 발신프로필 키를 통한 고객사 테넌트 검색(custco테넌시에서 검색) -->
+	<select id="getCertCustcoId"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT			/* getCertCustcoId - 발신프로필 키를 통한 고객사 테넌트 검색(custco테넌시에서 검색) */
+		    PCC.SCHEMA_ID AS CERT_CUSTCO_TENANT_ID
+		FROM CUSTCO.PLT_CERT_CUSTCO_CHN PCCC
+		LEFT JOIN CUSTCO.PLT_CERT_CUSTCO PCC
+			ON PCC.CERT_CUSTCO_ID = PCCC.CERT_CUSTCO_ID
+		WHERE DSPTCH_PRF_KEY = #{DSPTCH_PRF_KEY}
+	</select>
+	
+	<select id="cuttTrnsfHstryList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* 이관 처리 현황 목록 (kr.co.hkcloud.palette3.common.palette.dao.PaletteCmmnMapper.cuttTrnsfHstryList)*/
+			PCT.CUTT_TRNSF_ID
+			, PCT.REG_DT
+			, PC.CUST_ID
+			, PC.CUST_NM
+			, PC.CUST_PHN_NO
+			, PCT.DMND_CUSL_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PCT.DMND_CUSL_ID) AS CUSL_NM
+			, PCT.TRGT_USER_ID AS TRGT_TYPE_ID
+			, CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+				   THEN '-'
+				   WHEN PCT.TARGET_OPT_CD = 'DEPT'
+				   THEN (SELECT DEPT_NM FROM PLT_OGNZ WHERE DEPT_ID = PCT.TRGT_USER_ID::INTEGER)
+				   WHEN PCT.TARGET_OPT_CD = 'CODE'
+				   THEN (SELECT CD_NM FROM PLT_COMM_CD WHERE GROUP_CD_ID = 'TRNSF_TRGT_CD' AND CD_ID::INTEGER = PCT.TRGT_USER_ID) || ' 관리자'
+					END AS TRGT_TYPE_NM
+			, CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+							   THEN PCT.TRGT_USER_ID
+							   ELSE PCTA.CUSL_ID
+								END AS TRGT_USER_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = CASE WHEN PCT.TARGET_OPT_CD = 'USER' OR PCT.TARGET_OPT_CD IS NULL
+															     THEN PCT.TRGT_USER_ID
+															     ELSE PCTA.CUSL_ID
+																  END) AS TRGT_USER_NM
+			, PCIH.PHN_CUTT_ID
+			, PCIH.CHT_CUTT_ID
+			, PCT.STTS_CD
+			, PCT.RSN
+			, PCT.TARGET_OPT_CD
+			, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND GROUP_CD_ID = 'TRNSF_STTS_CD' AND CD_ID = PCT.STTS_CD) AS STTS_CD_NM
+			, (SELECT MAX(REG_DT) FROM PLT_CUTT_TRNSF_HSTRY WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID) AS STTS_CHG_DT
+			, CASE WHEN PCIH.CHT_CUTT_ID IS NULL THEN (SELECT REC_FILE_NM FROM PLT_PHN_CUTT WHERE PHN_CUTT_ID = PCIH.PHN_CUTT_ID) ELSE NULL END AS REC_FILE_NM
+			, CASE WHEN PCIH.CHT_CUTT_ID IS NULL THEN
+				(SELECT custco.gen_decrypt(CUTT_CN, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_PHN_CUTT_DTL_CN WHERE PHN_CUTT_ID = PCIH.PHN_CUTT_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'CONSEL' AND EXPSN_ATTR_COL_ID = 'CUSL_CN' AND BSC_PVSN_ATTR_YN = 'N'))
+			ELSE
+				(SELECT CUTT_CN FROM PLT_CHT_CUTT WHERE CHT_CUTT_ID = PCIH.CHT_CUTT_ID)
+			END AS CUTT_CN
+			, CASE WHEN PCIH.CHT_CUTT_ID IS NULL THEN
+				(SELECT ATTR_VL::INT FROM PLT_PHN_CUTT_DTL_EXPSN WHERE PHN_CUTT_ID = PCIH.PHN_CUTT_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'CONSEL' AND EXPSN_ATTR_COL_ID = 'CUSL_TP_CL' AND BSC_PVSN_ATTR_YN = 'N'))
+			ELSE
+				(SELECT CUTT_TYPE_ID FROM PLT_CHT_CUTT WHERE CHT_CUTT_ID = PCIH.CHT_CUTT_ID)
+			END AS CUTT_TYPE_ID
+			, CASE WHEN PCT.CUTT_TRNSF_ID <![CDATA[<]]> 200000 THEN (SELECT ATTR_VL FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'TRNSF' AND EXPSN_ATTR_COL_ID = 'TRNSF_NO')) ELSE LPAD(CAST(PCT.CUTT_TRNSF_ID AS VARCHAR), 6,'0') END AS NEW_TRNSF_NO
+			<foreach collection="EXPSN_ATTR_LIST" item="ATTR" open="" separator="" close="" >
+				<choose>
+					<when test='ATTR.DATA_TYPE_CD == "COE" or ATTR.DATA_TYPE_CD == "COE_MULTI"'>
+						, (
+							SELECT
+								<choose>
+									<when test='ATTR.DATA_TYPE_CD == "COE"'>
+									(SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND GROUP_CD_ID = '${ATTR.GROUP_CD_ID}' AND CD_ID = PCTE.ATTR_VL)
+									</when>
+									<otherwise>
+									(SELECT ARRAY_TO_STRING(ARRAY_AGG(PCC.CD_NM), ',') FROM PLT_COMM_CD PCC INNER JOIN (SELECT UNNEST(REGEXP_SPLIT_TO_ARRAY(PCTE.ATTR_VL, ',')) AS VAL) VAL ON VAL.VAL = PCC.CD_ID WHERE PCC.CUSTCO_ID = PCIH.CUSTCO_ID AND PCC.GROUP_CD_ID = '${ATTR.GROUP_CD_ID}' AND PCC.CD_ID = VAL.VAL)
+									</otherwise>
+								</choose>
+							FROM PLT_CUTT_TRNSF_EXPSN_ATTR PCTE
+							WHERE PCTE.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+							AND PCTE.ATTR_ID = '${ATTR.ATTR_ID}'::INT
+						) AS ${ATTR.EXPSN_ATTR_COL_ID}_NM
+						, (
+							SELECT
+								PCTE.ATTR_VL
+							FROM PLT_CUTT_TRNSF_EXPSN_ATTR PCTE
+							WHERE PCTE.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+							AND PCTE.ATTR_ID = '${ATTR.ATTR_ID}'::INT
+						) AS ${ATTR.EXPSN_ATTR_COL_ID}
+					</when>
+					<otherwise>
+						<if test='ATTR.ATTR_ID != null and ATTR.ATTR_ID != ""'>
+							<choose>
+								<when test='ATTR.INDI_INFO_ENCPT_YN == "Y"'>
+								, (SELECT custco.gen_decrypt(ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_CUTT_TRNSF_EXPSN_ATTR PCTE WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = '${ATTR.ATTR_ID}'::INT) AS ${ATTR.EXPSN_ATTR_COL_ID}_NM
+								</when>
+								<otherwise>
+								, (SELECT ATTR_VL FROM PLT_CUTT_TRNSF_EXPSN_ATTR PCTE WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = '${ATTR.ATTR_ID}'::INT) AS ${ATTR.EXPSN_ATTR_COL_ID}_NM
+								</otherwise>
+							</choose>
+						</if>
+					</otherwise>
+				</choose>
+			</foreach>
+			, CUTT.FULL_PATH
+		FROM PLT_CUTT_TRNSF PCT
+   LEFT OUTER JOIN PLT_CUTT_TRNSF_ALTMNT PCTA
+			    ON PCTA.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+		INNER JOIN PLT_CUTT_ITGRT_HSTRY PCIH ON PCIH.ITGRT_HSTRY_ID = PCT.ITGRT_HSTRY_ID
+		INNER JOIN PLT_CUST PC ON PC.CUST_ID = PCIH.CUST_ID
+		LEFT OUTER JOIN (
+			WITH RECURSIVE CUTT_TREE AS (
+				SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID,  CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PLT_CUTT_TYPE.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END  AS CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_EXPLN, CUTT_TYPE_LVL, USE_YN, DEL_YN, SORT_ORD, 1 AS LVL, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE
+				WHERE UP_CUTT_TYPE_ID IS NULL
+				AND CUSTCO_ID = #{CUSTCO_ID}::INT
+				UNION ALL
+				SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_NM, B.CUTT_TYPE_EXPLN, B.CUTT_TYPE_LVL, B.USE_YN, B.DEL_YN, B.SORT_ORD, C.LVL + 1 AS LVL, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, C.FULL_CUTT_TYPE_ID || ' > ' || CAST(B.CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(CASE WHEN C.LVL >1 THEN C.FULL_PATH || ' > ' ELSE '' END || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE B
+				INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+				WHERE B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+				AND B.CUSTCO_ID = #{CUSTCO_ID}::INT
+				)
+				SELECT
+					CT.CUSTCO_ID
+					, CT.CUTT_TYPE_SE_CD
+					, CT.CUTT_TYPE_ID
+					, CT.UP_CUTT_TYPE_ID
+					, CT.USE_YN
+					, CT.DEL_YN
+					, CT.FULL_PATH
+					, CT.FULL_CUTT_TYPE_ID
+					, CT.SORT
+				FROM CUTT_TREE CT
+			ORDER BY CT.SORT
+		) CUTT ON 
+			CASE WHEN PCIH.PHN_CUTT_ID IS NULL THEN CUTT.CUTT_TYPE_ID = (SELECT CUTT_TYPE_ID FROM PLT_CHT_CUTT WHERE CUTT_TYPE_ID IS NOT NULL AND CHT_CUTT_ID = PCIH.CHT_CUTT_ID)
+			ELSE CUTT.CUTT_TYPE_ID = (SELECT PPCDE.ATTR_VL::INT FROM PLT_PHN_CUTT_DTL_EXPSN PPCDE WHERE PPCDE.PHN_CUTT_ID = COALESCE(PCIH.PHN_CUTT_ID, PCIH.CHT_CUTT_ID) AND PPCDE.ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR PEA WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND SE = 'CONSEL' AND BSC_PVSN_ATTR_YN = 'N' AND EXPSN_ATTR_COL_ID = 'CUSL_TP_CL'))
+			END
+		WHERE PCIH.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<if test="SCH_STTS_CD !='' and SCH_STTS_CD != null">
+			AND PCT.STTS_CD = #{SCH_STTS_CD}
+		</if>
+		<choose>
+			<when test='AUTHRT_GROUP_ID == "6"'><!--상담사-->
+<!--			AND PCT.DMND_CUSL_ID = #{USER_ID}::INT-->
+			</when>
+			<when test='AUTHRT_GROUP_ID == "7"'><!--담당자-->
+			AND EXISTS (SELECT 1 FROM PLT_USER_AUTHRT WHERE USER_ID = PCT.TRGT_USER_ID AND AUTHRT_GROUP_ID = 7)
+			</when>
+			<otherwise></otherwise>
+		</choose>
+		<choose>
+			<when test='SCH_KEY != null and SCH_KEY != ""'>
+				<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+					<choose>
+						<when test='SCH_KEY == "CUST_NM"'>
+						AND PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+						</when>
+						<when test='SCH_KEY == "CUST_PHN_NO"'>
+						AND PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+						</when>
+						<when test='SCH_KEY == "LGN_ID"'>
+						AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_ID = PCT.DMND_CUSL_ID AND LGN_ID LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%'))
+						</when>
+						<when test='SCH_KEY == "USER_NM"'>
+						AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_ID = PCT.DMND_CUSL_ID AND USER_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%'))
+						</when>
+					</choose>
+				</if>
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+		<if test='SCH_CUTT_TYPE != null and SCH_CUTT_TYPE !=""'>
+		AND (STRING_TO_ARRAY(CUTT.FULL_CUTT_TYPE_ID, ' > '))[#{LVL}::INT]::INT = #{SCH_CUTT_TYPE}::INT
+		</if>
+		<if test='SCH_ST_DTS != null and SCH_ST_DTS != "" and SCH_END_DTS != null and SCH_END_DTS != ""'>
+			AND PCT.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+		</if>
+		<if test='SCH_CUST_EXPSN_ATTR != null and SCH_CUST_EXPSN_ATTR != ""'>
+			<foreach collection="SCH_CUST_EXPSN_ATTR" item="SCH_CUST_ATTR" open="" separator="" close="" >
+				<if test='SCH_CUST_ATTR.V_ATTR_SCH_MODEL != NULL and SCH_CUST_ATTR.V_ATTR_SCH_MODEL != ""'>
+				AND EXISTS (SELECT 1 FROM PLT_CUST_DTL_EXPSN WHERE ATTR_ID = ${SCH_CUST_ATTR.ATTR_ID} AND <choose><when test='SCH_CUST_ATTR.DATA_TYPE_CD =="COE"'>ATTR_VL = '${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'</when><otherwise>ATTR_VL LIKE CONCAT(CONCAT('%','${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'), '%')</otherwise></choose> AND CUST_ID = PC.CUST_ID)
+				</if>
+			</foreach>
+		</if>
+		<if test='SCH_TRNSF_EXPSN_ATTR != null and SCH_TRNSF_EXPSN_ATTR != ""'>
+			<foreach collection="SCH_TRNSF_EXPSN_ATTR" item="SCH_TRNSF_ATTR" open="" separator="" close="" >
+				<if test='SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL != NULL and SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL != ""'>
+				AND EXISTS (SELECT 1 FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE ATTR_ID = ${SCH_TRNSF_ATTR.ATTR_ID} AND <choose><when test='SCH_TRNSF_ATTR.DATA_TYPE_CD =="COE"'>ATTR_VL = '${SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL}'</when><otherwise>ATTR_VL LIKE CONCAT(CONCAT('%','${SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL}'), '%')</otherwise></choose> AND CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID)
+				</if>
+			</foreach>
+		</if>
+		<if test='SCH_OLD_CUTT_TRNSF_ID != null and SCH_OLD_CUTT_TRNSF_ID != ""'>
+		AND EXISTS (SELECT 1 FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'TRNSF' AND EXPSN_ATTR_COL_ID = 'TRNSF_NO') AND ATTR_VL LIKE CONCAT(CONCAT('%', #{SCH_OLD_CUTT_TRNSF_ID}), '%'))
+		</if>
+		<if test='SCH_CUTT_TRNSF_ID != null and SCH_CUTT_TRNSF_ID != ""'>
+		AND PCT.CUTT_TRNSF_ID::TEXT LIKE CONCAT(CONCAT('%', #{SCH_CUTT_TRNSF_ID}), '%')
+		</if>
+		ORDER BY PCT.REG_DT DESC
+	</select>
+	
+	<select id="cuttTrnsfHistExcelDwnldTbl" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /* 이관 처리현황 EXCEL 다운로드 (kr.co.hkcloud.palette3.phone.cutt.dao.CuttMapper.cuttTrnsfHistExcelDwnldTbl)*/
+			ROW_NUMBER() OVER(ORDER BY PCT.CUTT_TRNSF_ID DESC) AS RNUM
+			, PCT.CUTT_TRNSF_ID
+			, PCT.REG_DT
+			, TO_CHAR(TO_TIMESTAMP(PCT.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') AS CONVERT_REG_DT
+			, PC.CUST_ID
+			, PC.CUST_NM
+			, PC.CUST_PHN_NO
+			, PCT.DMND_CUSL_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PCT.DMND_CUSL_ID) AS CUSL_NM
+			, PCT.TRGT_USER_ID
+			, (SELECT USER_NM FROM PLT_USER WHERE USER_ID = PCT.TRGT_USER_ID) AS TRGT_USER_NM
+			, PCIH.PHN_CUTT_ID
+			, PCIH.CHT_CUTT_ID
+			, PCT.STTS_CD
+			, PCT.RSN
+			, (SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND GROUP_CD_ID = 'TRNSF_STTS_CD' AND CD_ID = PCT.STTS_CD) AS STTS_CD_NM
+			, (SELECT MAX(REG_DT) FROM PLT_CUTT_TRNSF_HSTRY WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID) AS STTS_CHG_DT
+			, CASE WHEN PCIH.CHT_CUTT_ID IS NULL THEN (SELECT REC_FILE_NM FROM PLT_PHN_CUTT WHERE PHN_CUTT_ID = PCIH.PHN_CUTT_ID) ELSE NULL END AS REC_FILE_NM
+			, CASE WHEN PCIH.CHT_CUTT_ID IS NULL THEN
+				(SELECT custco.gen_decrypt(CUTT_CN, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_PHN_CUTT_DTL_CN WHERE PHN_CUTT_ID = PCIH.PHN_CUTT_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'CONSEL' AND EXPSN_ATTR_COL_ID = 'CUSL_CN' AND BSC_PVSN_ATTR_YN = 'N'))
+			ELSE
+				(SELECT CUTT_CN FROM PLT_CHT_CUTT WHERE CHT_CUTT_ID = PCIH.CHT_CUTT_ID)
+			END AS CUTT_CN
+			, CASE WHEN PCIH.CHT_CUTT_ID IS NULL THEN
+				(SELECT ATTR_VL::INT FROM PLT_PHN_CUTT_DTL_EXPSN WHERE PHN_CUTT_ID = PCIH.PHN_CUTT_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'CONSEL' AND EXPSN_ATTR_COL_ID = 'CUSL_TP_CL' AND BSC_PVSN_ATTR_YN = 'N'))
+			ELSE
+				(SELECT CUTT_TYPE_ID FROM PLT_CHT_CUTT WHERE CHT_CUTT_ID = PCIH.CHT_CUTT_ID)
+			END AS CUTT_TYPE_ID
+			, CASE WHEN PCT.CUTT_TRNSF_ID <![CDATA[<]]> 200000 THEN (SELECT ATTR_VL FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'TRNSF' AND EXPSN_ATTR_COL_ID = 'TRNSF_NO')) ELSE LPAD(CAST(PCT.CUTT_TRNSF_ID AS VARCHAR), 6,'0') END AS NEW_TRNSF_NO
+			<foreach collection="EXPSN_ATTR_LIST" item="ATTR" open="" separator="" close="" >
+				<if test='ATTR.SE == "CUSTOM"'>
+					<choose>
+						<when test='ATTR.DATA_TYPE_CD == "COE" or ATTR.DATA_TYPE_CD == "COE_MULTI"'>
+							, (
+								SELECT
+									<choose>
+										<when test='ATTR.DATA_TYPE_CD == "COE"'>
+										(SELECT CASE WHEN SYS_CD_YN = 'Y' THEN CASE WHEN #{LOCALE} = 'ko' THEN CD_NM ELSE CD_NM_ENG END ELSE CD_NM END FROM PLT_COMM_CD WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND GROUP_CD_ID = #{ATTR.GROUP_CD_ID} AND CD_ID = PCDE.ATTR_VL)
+										</when>
+										<otherwise>
+										(SELECT ARRAY_TO_STRING(ARRAY_AGG(CASE WHEN SYS_CD_YN = 'Y' THEN CASE WHEN #{LOCALE} = 'ko' THEN PCC.CD_NM ELSE PCC.CD_NM_ENG END ELSE PCC.CD_NM END), ',') FROM PLT_COMM_CD PCC INNER JOIN (SELECT UNNEST(REGEXP_SPLIT_TO_ARRAY(PCDE.ATTR_VL, ',')) AS VAL) VAL ON VAL.VAL = PCC.CD_ID WHERE PCC.CUSTCO_ID = PCIH.CUSTCO_ID AND PCC.GROUP_CD_ID = #{ATTR.GROUP_CD_ID} AND PCC.CD_ID = VAL.VAL)
+										</otherwise>
+									</choose>
+								FROM PLT_CUST_DTL_EXPSN PCDE
+								WHERE PCDE.CUST_ID = PC.CUST_ID
+								AND PCDE.ATTR_ID = #{ATTR.ATTR_ID}::INT
+							) AS ${ATTR.value}
+						</when>
+						<otherwise>
+							<choose>
+								<when test='ATTR.INDI_INFO_ENCPT_YN == "Y"'>
+								, (SELECT custco.gen_decrypt(ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = #{ATTR.ATTR_ID}::INT) AS ${ATTR.value}
+								</when>
+								<otherwise>
+								, (SELECT ATTR_VL FROM PLT_CUST_DTL_EXPSN PCDE WHERE CUST_ID = PC.CUST_ID AND ATTR_ID = #{ATTR.ATTR_ID}::INT) AS ${ATTR.value}
+								</otherwise>
+							</choose>
+						</otherwise>
+					</choose>
+				</if>
+			</foreach>
+			<foreach collection="EXPSN_ATTR_LIST" item="ATTR" open="" separator="" close="" >
+				<if test='ATTR.SE == "TRNSF"'>
+					<choose>
+						<when test='ATTR.DATA_TYPE_CD == "COE" or ATTR.DATA_TYPE_CD == "COE_MULTI"'>
+							, (
+								SELECT
+									(SELECT ARRAY_TO_STRING(ARRAY_AGG(CASE WHEN SYS_CD_YN = 'Y' THEN CASE WHEN #{LOCALE} = 'ko' THEN PCC.CD_NM ELSE PCC.CD_NM_ENG END ELSE PCC.CD_NM END), ',') FROM PLT_COMM_CD PCC INNER JOIN (SELECT UNNEST(REGEXP_SPLIT_TO_ARRAY(PPCDE.ATTR_VL, ',')) AS VAL) VAL ON VAL.VAL = PCC.CD_ID WHERE PCC.CUSTCO_ID = PCIH.CUSTCO_ID AND PCC.GROUP_CD_ID = #{ATTR.GROUP_CD_ID} AND PCC.CD_ID = VAL.VAL)
+								FROM PLT_CUTT_TRNSF_EXPSN_ATTR PPCDE
+								WHERE PPCDE.CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID
+								AND PPCDE.ATTR_ID = #{ATTR.ATTR_ID}::INT
+							) AS ${ATTR.value}
+						</when>
+						<otherwise>
+							<choose>
+								<when test='ATTR.value == "CUSL_CN"'>
+								</when>
+								<otherwise>
+									<choose>
+										<when test='ATTR.INDI_INFO_ENCPT_YN == "Y"'>
+										, (SELECT custco.gen_decrypt(ATTR_VL, #{PP_KEY_PP}, #{PP_ALG_PP}) FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = #{ATTR.ATTR_ID}::INT) AS ${ATTR.value}
+										</when>
+										<otherwise>
+										, (SELECT ATTR_VL FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = #{ATTR.ATTR_ID}::INT) AS ${ATTR.value}
+										</otherwise>
+									</choose>
+								</otherwise>
+							</choose>
+						</otherwise>
+					</choose>
+				</if>
+			</foreach>
+			, CUTT.FULL_PATH
+		FROM PLT_CUTT_TRNSF PCT
+		INNER JOIN PLT_CUTT_ITGRT_HSTRY PCIH ON PCIH.ITGRT_HSTRY_ID = PCT.ITGRT_HSTRY_ID
+		INNER JOIN PLT_CUST PC ON PC.CUST_ID = PCIH.CUST_ID
+		LEFT OUTER JOIN (
+			WITH RECURSIVE CUTT_TREE AS (
+				SELECT CUSTCO_ID, CUTT_TYPE_ID, UP_CUTT_TYPE_ID,  CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = PLT_CUTT_TYPE.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END  AS CUTT_TYPE_SE_CD, CUTT_TYPE_NM, CUTT_TYPE_EXPLN, CUTT_TYPE_LVL, USE_YN, DEL_YN, SORT_ORD, 1 AS LVL, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT, CAST(CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE
+				WHERE UP_CUTT_TYPE_ID IS NULL
+				AND CUSTCO_ID = #{CUSTCO_ID}::INT
+				UNION ALL
+				SELECT B.CUSTCO_ID, B.CUTT_TYPE_ID, B.UP_CUTT_TYPE_ID, B.CUTT_TYPE_SE_CD, B.CUTT_TYPE_NM, B.CUTT_TYPE_EXPLN, B.CUTT_TYPE_LVL, B.USE_YN, B.DEL_YN, B.SORT_ORD, C.LVL + 1 AS LVL, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT, C.FULL_CUTT_TYPE_ID || ' > ' || CAST(B.CUTT_TYPE_ID AS VARCHAR) AS FULL_CUTT_TYPE_ID, CAST(CASE WHEN C.LVL >1 THEN C.FULL_PATH || ' > ' ELSE '' END || B.CUTT_TYPE_NM AS VARCHAR(300)) AS FULL_PATH
+				FROM PLT_CUTT_TYPE B
+				INNER JOIN CUTT_TREE C ON C.CUTT_TYPE_ID = B.UP_CUTT_TYPE_ID
+				WHERE B.CUTT_TYPE_SE_CD = CASE WHEN (SELECT ITGRT_USE_YN FROM PLT_CUTT_TYPE_STNG WHERE CUSTCO_ID = B.CUSTCO_ID) = 'Y' THEN 'ITGRT' ELSE 'IN' END
+				AND B.CUSTCO_ID = #{CUSTCO_ID}::INT
+				)
+				SELECT
+					CT.CUSTCO_ID
+					, CT.CUTT_TYPE_SE_CD
+					, CT.CUTT_TYPE_ID
+					, CT.UP_CUTT_TYPE_ID
+					, CT.USE_YN
+					, CT.DEL_YN
+					, CT.FULL_PATH
+					, CT.FULL_CUTT_TYPE_ID
+					, CT.SORT
+				FROM CUTT_TREE CT
+			ORDER BY CT.SORT
+		) CUTT ON 
+			CASE WHEN PCIH.PHN_CUTT_ID IS NULL THEN CUTT.CUTT_TYPE_ID = (SELECT CUTT_TYPE_ID FROM PLT_CHT_CUTT WHERE CUTT_TYPE_ID IS NOT NULL AND CHT_CUTT_ID = PCIH.CHT_CUTT_ID)
+			ELSE CUTT.CUTT_TYPE_ID = (SELECT PPCDE.ATTR_VL::INT FROM PLT_PHN_CUTT_DTL_EXPSN PPCDE WHERE PPCDE.PHN_CUTT_ID = COALESCE(PCIH.PHN_CUTT_ID, PCIH.CHT_CUTT_ID) AND PPCDE.ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR PEA WHERE CUSTCO_ID = #{CUSTCO_ID}::INT AND SE = 'CONSEL' AND BSC_PVSN_ATTR_YN = 'N' AND EXPSN_ATTR_COL_ID = 'CUSL_TP_CL'))
+			END
+		WHERE PCIH.CUSTCO_ID = #{CUSTCO_ID}::INT
+		<if test="SCH_STTS_CD !='' and SCH_STTS_CD != null">
+			AND PCT.STTS_CD = #{SCH_STTS_CD}
+		</if>
+		<choose>
+			<when test='AUTHRT_GROUP_ID == "6"'><!--상담사-->
+<!--			AND PCT.DMND_CUSL_ID = #{USER_ID}::INT-->
+			</when>
+			<when test='AUTHRT_GROUP_ID == "7"'><!--담당자-->
+			AND EXISTS (SELECT 1 FROM PLT_USER_AUTHRT WHERE USER_ID = PCT.TRGT_USER_ID AND AUTHRT_GROUP_ID = 7)
+			</when>
+			<otherwise></otherwise>
+		</choose>
+		<choose>
+			<when test='SCH_KEY != null and SCH_KEY != ""'>
+				<if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+					<choose>
+						<when test='SCH_KEY == "CUST_NM"'>
+						AND PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+						</when>
+						<when test='SCH_KEY == "CUST_PHN_NO"'>
+						AND PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+						</when>
+						<when test='SCH_KEY == "LGN_ID"'>
+						AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_ID = PCT.DMND_CUSL_ID AND LGN_ID LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%'))
+						</when>
+						<when test='SCH_KEY == "USER_NM"'>
+						AND EXISTS (SELECT 1 FROM PLT_USER WHERE USER_ID = PCT.DMND_CUSL_ID AND USER_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%'))
+						</when>
+					</choose>
+				</if>
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+		<if test='SCH_CUTT_TYPE != null and SCH_CUTT_TYPE !=""'>
+		AND (STRING_TO_ARRAY(CUTT.FULL_CUTT_TYPE_ID, ' > '))[#{LVL}::INT]::INT = #{SCH_CUTT_TYPE}::INT
+		</if>
+		<if test='SCH_ST_DTS != null and SCH_ST_DTS != "" and SCH_END_DTS != null and SCH_END_DTS != ""'>
+			AND PCT.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+		</if>
+		<if test='SCH_CUST_EXPSN_ATTR != null and SCH_CUST_EXPSN_ATTR != ""'>
+			<foreach collection="SCH_CUST_EXPSN_ATTR" item="SCH_CUST_ATTR" open="" separator="" close="" >
+				<if test='SCH_CUST_ATTR.V_ATTR_SCH_MODEL != NULL and SCH_CUST_ATTR.V_ATTR_SCH_MODEL != ""'>
+				AND EXISTS (SELECT 1 FROM PLT_CUST_DTL_EXPSN WHERE ATTR_ID = ${SCH_CUST_ATTR.ATTR_ID} AND <choose><when test='SCH_CUST_ATTR.DATA_TYPE_CD =="COE"'>ATTR_VL = '${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'</when><otherwise>ATTR_VL LIKE CONCAT(CONCAT('%','${SCH_CUST_ATTR.V_ATTR_SCH_MODEL}'), '%')</otherwise></choose> AND CUST_ID = PC.CUST_ID)
+				</if>
+			</foreach>
+		</if>
+		<if test='SCH_TRNSF_EXPSN_ATTR != null and SCH_TRNSF_EXPSN_ATTR != ""'>
+			<foreach collection="SCH_TRNSF_EXPSN_ATTR" item="SCH_TRNSF_ATTR" open="" separator="" close="" >
+				<if test='SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL != NULL and SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL != ""'>
+				AND EXISTS (SELECT 1 FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE ATTR_ID = ${SCH_TRNSF_ATTR.ATTR_ID} AND <choose><when test='SCH_TRNSF_ATTR.DATA_TYPE_CD =="COE"'>ATTR_VL = '${SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL}'</when><otherwise>ATTR_VL LIKE CONCAT(CONCAT('%','${SCH_TRNSF_ATTR.V_ATTR_SCH_MODEL}'), '%')</otherwise></choose> AND CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID)
+				</if>
+			</foreach>
+		</if>
+		<if test='SCH_OLD_CUTT_TRNSF_ID != null and SCH_OLD_CUTT_TRNSF_ID != ""'>
+		AND EXISTS (SELECT 1 FROM PLT_CUTT_TRNSF_EXPSN_ATTR WHERE CUTT_TRNSF_ID = PCT.CUTT_TRNSF_ID AND ATTR_ID = (SELECT ATTR_ID FROM PLT_EXPSN_ATTR WHERE CUSTCO_ID = PCIH.CUSTCO_ID AND SE = 'TRNSF' AND EXPSN_ATTR_COL_ID = 'TRNSF_NO') AND ATTR_VL LIKE CONCAT(CONCAT('%', #{SCH_OLD_CUTT_TRNSF_ID}), '%'))
+		</if>
+		<if test='SCH_CUTT_TRNSF_ID != null and SCH_CUTT_TRNSF_ID != ""'>
+		AND PCT.CUTT_TRNSF_ID::TEXT LIKE CONCAT(CONCAT('%', #{SCH_CUTT_TRNSF_ID}), '%')
+		</if>
+		ORDER BY PCT.REG_DT DESC
+	</select>
+
+	<!-- 해당 고객사의 이관 담당자 옵션 코드 조회 -->
+	<select id="getTrnsfTargetOptCd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT PCCTO.TARGET_OPT_CD
+		  FROM CUSTCO.PLT_CERT_CUSTCO_TRNSF_OPT PCCTO
+		 WHERE PCCTO.CERT_CUSTCO_ID = (SELECT PCC.CERT_CUSTCO_ID
+									     FROM PLT_CUSTCO PC
+											  LEFT OUTER JOIN CUSTCO.PLT_CERT_CUSTCO PCC
+														   ON PCC.CUSTCO_ID = PC.CUSTCO_ID
+														  AND PCC.ASP_CUST_KEY = PC.ASP_CUST_KEY
+														  AND PCC.SCHEMA_ID = #{SCHEMA_ID}
+									    WHERE PC.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		 )
+	</select>
+
+	<!-- (설문)부서 리스트 조회 -->
+	<select id="getDeptList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		/* getDeptList - (설문)부서 리스트 조회 */
+		SELECT DEPT_ID
+			, DEPT_NM
+			, LKAG_DEPT
+		FROM PLT_OGNZ
+		WHERE DEL_YN = 'N'
+			AND USE_YN = 'Y'
+			AND LKAG_DEPT IS NOT NULL
+	</select>
+	
+</mapper>

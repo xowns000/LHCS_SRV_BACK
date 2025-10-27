@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.status.dao.ChatStatusCounselingListMapper">
+
+    
+<!-- ######################################################################### -->
+<!-- 상담현황 데이터 페이징 조회 -->
+<!-- 20190910 hyg :: 상담현황관리 문의유형 가져오는 컬럼 수정 -->
+<select id="selectRtnPageCnslMgmt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+
+   SELECT
+   	ROW_TBL.*
+   FROM(
+	   SELECT
+	   	  ROW_NUMBER() OVER(ORDER BY TALK_DIST_DT) AS ROW_NUMBER 
+	   	 , CC.USER_ID
+	     , B01.USER_NM
+	     , B01.USER_NICK
+	     , '11' AS CNSL_SUPPORT
+	     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TALK001' AND CD = CC.TALK_STAT_CD AND CD_TYPE = '1') AS TALK_STAT_NM
+	     , CASE WHEN T5.INQRY_TYP_DIV_CD = '1' THEN T5.INQRY_TYP_NM 
+				ELSE (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = T5.SPST_INQRY_TYP_CD) 
+		   END 		   																											   AS TALK_INQRY_NM_1
+		 , CASE WHEN T5.INQRY_TYP_DIV_CD = '2' THEN T5.INQRY_TYP_NM ELSE '' 
+		   END 		   	   																										   AS TALK_INQRY_NM_2
+	     , TO_CHAR(TO_DATE(CC.TALK_DIST_DT, 'YYYYMMDDHH24MISS' ), 'YYYY/MM/DD HH24:MI:SS') AS TALK_DIST_DT
+	     , TO_CHAR(TO_DATE(CC.TALK_START_DT, 'YYYYMMDDHH24MISS' ), 'YYYY/MM/DD HH24:MI:SS') AS TALK_START_DT
+	     , CASE WHEN CC.TALK_DIST_DT IS NULL 
+	              OR CC.TALK_START_DT IS NULL 
+	            THEN NULL 
+	            ELSE 
+				     TRUNC((to_date(TALK_START_DT,'yyyymmddhh24miss')-to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24) || ':' ||
+		             TRUNC(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24,1)*60) || ':' ||
+		             TRUNC(round(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24*60,1)*60))
+	        END AS WAIT_TIME
+	     
+	     /*hidden data column*/
+	     , CC.TALK_CONTACT_ID
+	     , CC.TALK_STAT_CD
+	     , CC.SNDR_KEY
+	     , CC.TALK_USER_KEY
+	     , COALESCE(CC.CUSTOMER_ID, CC.TALK_USER_KEY) AS CUSTOMER_ID
+	     , (SELECT CUSTOMER_NM FROM PLT_CUS WHERE TALK_USER_KEY = CC.TALK_USER_KEY) AS CUSTOMER_NM
+	     , CC.CALL_TYP_CD
+	  FROM (
+	        SELECT  PG.TALK_CONTACT_ID
+	             , PG.TALK_STAT_CD
+	             , PG.TALK_DIST_DT
+	             , PG.TALK_START_DT
+	             , PG.USER_ID
+	             , PG.SNDR_KEY
+	             , PG.TALK_USER_KEY
+	             , PG.CUSTOMER_ID
+	             , PG.TALK_INQRY_CD
+	             , PG.BOT_SERVICE_NM
+	             , PG.BOT_INQRY_NM
+	             , PG.CALL_TYP_CD
+	          FROM (
+	                SELECT  CT.TALK_CONTACT_ID
+	                     , CT.TALK_STAT_CD
+	                     , CT.TALK_DIST_DT
+	                     , CT.TALK_START_DT
+	                     , CT.USER_ID
+	                     , CT.SNDR_KEY
+	                     , CT.TALK_USER_KEY
+	                     , CT.CUSTOMER_ID
+	                     , CT.TALK_INQRY_CD
+	                     , CT.BOT_SERVICE_NM
+	                     , CT.BOT_INQRY_NM
+	                     , CT.CALL_TYP_CD
+	                  FROM PLT_CHT_CUTT CT
+	                 WHERE CT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                   AND CT.TALK_DIST_DT >= #{TALK_DIST_DT_START}
+	                   AND CT.TALK_STAT_CD = '12'
+	        		<if test="USER_ID != '' or USER_ATTR_A != '' or USER_ATTR_B != '' or USER_ATTR_C != '' or USER_ATTR_D != ''">
+	                   AND EXISTS (SELECT 1 
+	                                 FROM PLT_USER 
+	                                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                                  AND USER_ID = CT.USER_ID
+	        						<if test="USER_ID !=''">AND USER_ID = #{USER_ID}</if>
+	        						<if test="USER_ATTR_A !=''">AND USER_ATTR_A = #{USER_ATTR_A}</if>
+	        						<if test="USER_ATTR_B !=''">AND USER_ATTR_B = #{USER_ATTR_B}</if>
+	        						<if test="USER_ATTR_C !=''">AND USER_ATTR_C = #{USER_ATTR_C}</if>
+	        						<if test="USER_ATTR_D !=''">AND USER_ATTR_D = #{USER_ATTR_D}</if>
+	                               )
+	        		</if>
+	                 ORDER BY CT.TALK_DIST_DT DESC
+	             ) PG
+	        ) CC
+	 JOIN PLT_USER B01
+	   ON CC.USER_ID = B01.USER_ID
+	 LEFT OUTER JOIN PLT_CHT_INQ_TYP T5
+		ON CC.TALK_INQRY_CD = T5.INQRY_TYP_CD
+		-- AND T2.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	 ORDER BY TALK_DIST_DT
+	) ROW_TBL
+
+</select>
+
+<!-- 모빌리티 상담현황 데이터 페이징 조회 -->
+<select id="selectCorrectedDate" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+  SELECT
+	    TO_CHAR(CASE WHEN TO_CHAR(NOW(), 'HH24MI') < '0800'
+	            THEN NOW()-1 ELSE  NOW()  END, 'YYYYMMDD') AS CORRECTED_DATE
+  
+]]>
+</select>
+
+
+<resultMap id="mapselectRtnPageCnslMgmtByKaom_new" type="java.util.HashMap" >
+	<result property="ROW_NUMBER"				column="ROW_NUMBER"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="USER_ID"					column="USER_ID"		  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="USER_NM"					column="USER_NM"	  			jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="USER_NICK"      			column="USER_NICK"      		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CNSL_SUPPORT"      		column="CNSL_SUPPORT"      		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_STAT_NM"          	column="TALK_STAT_NM"           jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_INQRY_NM_1"          column="TALK_INQRY_NM_1"        jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_INQRY_NM_2"         	column="TALK_INQRY_NM_2"        jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_DIST_DT"        		column="TALK_DIST_DT"        	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_START_DT"       		column="TALK_START_DT"       	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="WAIT_TIME"          		column="WAIT_TIME"             	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_CONTACT_ID"			column="TALK_CONTACT_ID"	  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_STAT_CD"				column="TALK_STAT_CD"		  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="SNDR_KEY"			column="SNDR_KEY"		  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CD_NM"					column="CD_NM"	  				jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TALK_USER_KEY"			column="TALK_USER_KEY"	  		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_ID"				column="CUSTOMER_ID"		  	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_NM"				column="CUSTOMER_NM"		  	jdbcType="VARCHAR" 	javaType="java.lang.String"  typeHandler="ContentCipherTypeHandler"/>
+	<result property="CUSTOMER_MEMBER"			column="CUSTOMER_MEMBER"		jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="REFERENCE_CUSTOMER_KEY"	column="REFERENCE_CUSTOMER_KEY"	jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="TID"						column="TID"	  				jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CUSTOMER_NM2"             column="CUSTOMER_NM2"           jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+	<result property="CALL_TYP_CD"         		column="CALL_TYP_CD"            jdbcType="VARCHAR" 	javaType="java.lang.String"/>
+</resultMap>
+
+
+<select id="selectRtnPageCnslMgmtByKaom_new" parameterType="java.util.HashMap" resultMap="mapselectRtnPageCnslMgmtByKaom_new">
+
+SELECT
+	ROW_TBL.*
+FROM (
+SELECT 
+	ROW_NUMBER() OVER(ORDER BY TALK_DIST_DT) AS ROW_NUMBER 
+	 , CC.USER_ID
+     , B01.USER_NM
+     , B01.USER_NICK
+     , '11' AS CNSL_SUPPORT
+     , (SELECT CD_NM FROM PLT_COMN_CD WHERE GROUP_CD = 'TALK001' AND CD = CC.TALK_STAT_CD AND CD_TYPE = '1') AS TALK_STAT_NM
+     , CASE WHEN CC.BOT_SERVICE_NM IS NOT NULL 
+             AND CC.BOT_SERVICE_NM != ''
+            THEN CC.BOT_SERVICE_NM
+            ELSE (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = CC.TALK_INQRY_CD)
+        END            AS TALK_INQRY_NM_1
+     , CC.BOT_INQRY_NM AS TALK_INQRY_NM_2
+
+     , TO_CHAR(TO_DATE(CC.TALK_DIST_DT, 'YYYYMMDDHH24MISS' ), 'YYYY/MM/DD HH24:MI:SS') AS TALK_DIST_DT
+	 , TO_CHAR(TO_DATE(CC.TALK_START_DT, 'YYYYMMDDHH24MISS' ), 'YYYY/MM/DD HH24:MI:SS') AS TALK_START_DT
+              
+     , CASE WHEN CC.TALK_DIST_DT IS NULL 
+              OR CC.TALK_START_DT IS NULL 
+            THEN NULL 
+            ELSE 
+			     TRUNC((to_date(TALK_START_DT,'yyyymmddhh24miss')-to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24) || ':' ||
+	             TRUNC(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24,1)*60) || ':' ||
+	             TRUNC(round(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24*60,1)*60))
+        END AS WAIT_TIME
+     
+     /*hidden data column*/
+     , CC.TALK_CONTACT_ID
+     , CC.TALK_STAT_CD
+     , CC.SNDR_KEY
+     , CC.CD_NM																	AS SNDR_KEY_NM
+     , CC.TALK_USER_KEY
+     , COALESCE(CUS.CUSTOMER_SEQ, CC.TALK_USER_KEY)                                   AS CUSTOMER_ID /*ABL 고객ID, 없는 경우에는 talkUserKey*/
+     , CUS.CUSTOMER_NM AS CUSTOMER_NM		
+     , CASE WHEN CUS.TID = '' OR CUS.TID IS NULL THEN '비회원' ELSE '회원' END		AS CUSTOMER_MEMBER
+     , CUS.REFERENCE_CUSTOMER_KEY 												AS REFERENCE_CUSTOMER_KEY
+     , CUS.TID 		   															AS TID
+     , (CASE WHEN CUS.TID = '' OR CUS.TID IS NULL THEN ('비회원_-_-') ELSE ('회원_'|| CUS.REFERENCE_CUSTOMER_KEY || '_' || CUS.TID) END) AS CUSTOMER_NM2
+  	 , CC.CALL_TYP_CD
+  FROM (
+        SELECT  PG.TALK_CONTACT_ID
+             , PG.TALK_STAT_CD
+             , PG.TALK_DIST_DT
+             , PG.TALK_START_DT
+             , PG.USER_ID
+             , PG.SNDR_KEY
+             , PG.CD_NM
+             , PG.TALK_USER_KEY
+             , PG.CUSTOMER_ID
+             , PG.TALK_INQRY_CD
+             , PG.BOT_SERVICE_NM
+             , PG.BOT_INQRY_NM
+             , PG.CALL_TYP_CD
+          FROM (
+                SELECT CT.TALK_CONTACT_ID
+                     , CT.TALK_STAT_CD
+                     , CT.TALK_DIST_DT
+                     , CT.TALK_START_DT
+                     , CT.USER_ID
+                     , CT.SNDR_KEY
+                     , T4.DSPTCH_PRF_NM AS CD_NM
+                     , CT.TALK_USER_KEY
+                     , CT.CUSTOMER_ID
+                     , CT.TALK_INQRY_CD
+                     , CT.BOT_SERVICE_NM
+                     , CT.BOT_INQRY_NM
+                     , CT.CALL_TYP_CD
+                  FROM PLT_CHT_CUTT CT
+                  LEFT JOIN PLT_ASP_CUS_CHN T4
+					ON CT.SNDR_KEY = T4.SNDR_KEY
+					<if test="USER_NM !='' and USER_NM != null ">	
+						<if test="USER_NICK =='' or USER_NICK == null">	
+							INNER JOIN PLT_USER PU
+							ON PU.USER_NM = #{USER_NM}
+						</if>
+					</if>
+					<if test="USER_NICK !='' and USER_NICK != null">	
+						<if test="USER_NM =='' or USER_NM == null ">					
+							INNER JOIN PLT_USER PU
+							ON PU.USER_NICK = #{USER_NICK}
+						</if>
+					</if>
+					<if test="USER_NM !='' and USER_NM != null and USER_NICK !='' and USER_NICK != null">
+							INNER JOIN PLT_USER PU
+							ON PU.USER_NM = #{USER_NM}
+							AND PU.USER_NICK = #{USER_NICK}
+					</if>
+                 WHERE CT.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                   AND CT.TALK_DIST_DT >= #{TALK_DIST_DT_START}
+                   AND CT.TALK_STAT_CD = '12'
+        		<if test="USER_ID != '' or USER_ATTR_A != '' or USER_ATTR_B != '' or USER_ATTR_C != '' or USER_ATTR_D != ''">
+                   AND EXISTS (SELECT 1 
+                                 FROM PLT_USER 
+                                WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+                                  AND USER_ID = CT.USER_ID
+        						<if test="USER_ID !=''">AND USER_ID = #{USER_ID}</if>
+        						<if test="USER_ATTR_A !=''">AND USER_ATTR_A = #{USER_ATTR_A}</if>
+        						<if test="USER_ATTR_B !=''">AND USER_ATTR_B = #{USER_ATTR_B}</if>
+        						<if test="USER_ATTR_C !=''">AND USER_ATTR_C = #{USER_ATTR_C}</if>
+        						<if test="USER_ATTR_D !=''">AND USER_ATTR_D = #{USER_ATTR_D}</if>
+                               )
+        		</if>
+        		<if test="USER_NM !='' and USER_NM != null ">	
+					<if test="USER_NICK =='' or USER_NICK == null">	
+						AND CT.USER_ID = PU.USER_ID
+					</if>
+				</if>
+				<if test="USER_NICK !='' and USER_NICK != null">	
+					<if test="USER_NM =='' or USER_NM == null ">					
+						AND CT.USER_ID = PU.USER_ID
+					</if>
+				</if>
+				<if test="USER_NM !='' and USER_NM != null and USER_NICK !='' and USER_NICK != null">
+						AND CT.USER_ID = PU.USER_ID
+				</if>
+        		
+                 ORDER BY CT.TALK_DIST_DT DESC
+            ) PG
+        ) CC
+ JOIN PLT_USER B01
+   ON CC.USER_ID = B01.USER_ID
+ LEFT OUTER JOIN PLT_CUS CUS
+   ON CC.TALK_USER_KEY = CUS.TALK_USER_KEY
+   ORDER BY TALK_DIST_DT
+ ) ROW_TBL
+
+</select>
+
+<select id="selectRtnPageCnslMgmtByKaom"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+ SELECT  PG.*
+      , (SELECT DSPTCH_PRF_NM FROM PLT_ASP_CUS_CHN CT WHERE CT.SNDR_KEY=PG.SNDR_KEY) 	AS SNDR_KEY_NM /* UUID */
+      , (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = PG.TALK_INQRY_CD AND INQRY_TYP_DIV_CD = '1') AS TALK_INQRY_NM_1
+      , (SELECT INQRY_TYP_NM FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} AND INQRY_TYP_CD = PG.TALK_INQRY_CD AND INQRY_TYP_DIV_CD = '2') AS TALK_INQRY_NM_2
+   FROM (
+	    	 SELECT  A.*
+	    	      , COALESCE(C.CUSTOMER_ID, A.TALK_USER_KEY)                                                        AS CUSTOMER_ID
+	    	      , CASE WHEN C.CUSTOMER_ID != NULL                                                            
+	    	             THEN ''                                                                               
+	    	             ELSE COALESCE(C.CUSTOMER_NM, '알수없음') END											   AS CUSTOMER_NM         /* 고객명 */
+	    	      , USR.USER_NM                                                                                AS USER_NM             /* 상담사명 */
+	    	      , USR.USER_NICK                                                                              AS USER_NICK           /* 상담사닉네임 */
+	    	      , C.CUSTOMER_SEQ
+	    	      , COALESCE(C.MEMBER_YN, 'N') AS MEMBER_YN
+	    	   FROM (
+<![CDATA[
+	                  SELECT C.TALK_CONTACT_ID                                                                                                               /* 상담이력ID */
+	                       , C.TALK_USER_KEY                                                                                                                 /* 카카오고객KEY */
+	                       , C.SNDR_KEY                                                                                                               /* SNDR_KEY */
+	                       , ''                                                                                                        			AS TALK_SERIAL_NUMBER /* TALK_SERIAL_NUMBER */
+	                       , C.TALK_STAT_CD                                                                                                                  /* 상담톡상태코드 */
+	                       , CASE WHEN COALESCE(C.EXEC_RST_CD,'0') = '4' THEN
+	                       				CT2.CD_NM||'(콜백)'
+	                       		  ELSE  CT2.CD_NM END AS TALK_STAT_NM       /* 상담톡상태 */
+	                       , C.TALK_TITLE                                                                                                                    /* 상담제목 - 사용하지 않음, TALK_QST로 변경 */
+	                       , TO_CHAR(TO_DATE(C.TALK_DIST_DT,'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS')         AS TALK_DIST_DT        
+	                       , TO_CHAR(TO_DATE(C.TALK_READ_DT,'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS')         AS TALK_READ_DT
+	                       
+	                       , CASE WHEN C.TALK_START_DT IS NULL OR C.TALK_DIST_DT IS NULL THEN ''
+	                              ELSE 
+	                                  TO_DATE(SUBSTR(TALK_START_DT, 1, 8), 'YYYYMMDD') - TO_DATE(SUBSTR(TALK_DIST_DT, 1, 8), 'YYYYMMDD') || '일 '||
+	                                  TRUNC((to_date(TALK_START_DT,'yyyymmddhh24miss')-to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24) || ':' ||
+	                                  TRUNC(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24,1)*60) || ':' ||
+	                                  TRUNC(round(mod((to_date(TALK_START_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24*60,1)*60)) 
+	                          END  AS WAIT_TIME          /* 대기시간 */
+	                       , TO_CHAR(TO_DATE(C.TALK_START_DT,'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS')        AS TALK_START_DT                            /* 상담시작일시 */
+	                       , CASE WHEN C.TALK_END_DT = '' THEN NULL ELSE TO_CHAR(TO_DATE(C.TALK_END_DT,'YYYYMMDDHH24MISS'),'YYYY/MM/DD HH24:MI:SS') END      AS TALK_END_DT                              /* 상담종료일시 */
+	                       , CASE WHEN C.TALK_END_DT IS NULL OR C.TALK_START_DT IS NULL THEN ''
+	                              ELSE 
+	                                  TO_DATE(SUBSTR(TALK_END_DT, 1, 8), 'YYYYMMDD') - TO_DATE(SUBSTR(TALK_START_DT, 1, 8), 'YYYYMMDD') || '일 '||
+	                                  TRUNC((to_date(TALK_END_DT,'yyyymmddhh24miss')-to_date(TALK_START_DT, 'yyyymmddhh24miss'))*24) || ':' ||
+	                                  TRUNC(mod((to_date(TALK_END_DT,'yyyymmddhh24miss') - to_date(TALK_START_DT, 'yyyymmddhh24miss'))*24,1)*60) || ':' ||
+	                                  TRUNC(round(mod((to_date(TALK_END_DT,'yyyymmddhh24miss') - to_date(TALK_START_DT, 'yyyymmddhh24miss'))*24*60,1)*60)) 
+	                          END AS TALK_TIME          /* 상담소요시간 */
+                       	   , CASE WHEN C.TALK_END_DT IS NULL OR C.TALK_DIST_DT IS NULL THEN ''
+	                              ELSE 
+	                                  TO_DATE(SUBSTR(TALK_END_DT, 1, 8), 'YYYYMMDD') - TO_DATE(SUBSTR(TALK_DIST_DT, 1, 8), 'YYYYMMDD') || '일 '||
+	                                  TRUNC((to_date(TALK_END_DT,'yyyymmddhh24miss')-to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24) || ':' ||
+	                                  TRUNC(mod((to_date(TALK_END_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24,1)*60) || ':' ||
+	                                  TRUNC(round(mod((to_date(TALK_END_DT,'yyyymmddhh24miss') - to_date(TALK_DIST_DT, 'yyyymmddhh24miss'))*24*60,1)*60)) 
+	                          END   AS TOTAL_TALK_TIME    /* 총 소요시간 */   
+	                          
+	                       , C.USER_ID                                                                                                                       /* 상담원ID */
+	                       , CASE WHEN C.TALK_STAT_CD IN ('12')
+	                              THEN '11'
+	                              ELSE '00'
+	                          END                                                                                                      AS CNSL_SUPPORT       /* 지원상담 */
+	                       , REPLACE(
+	                            REPLACE(
+	                                REPLACE(
+	                                  REPLACE (
+	                                    REPLACE( 
+	                                      REPLACE(REPLACE(C.TALK_QST,'&'||'amp;#40;','('),'&'||'amp;#41;',')')
+	                                    ,'&'||'amp;lt;','<') 
+	                                  ,'&'||'amp;gt;','>')
+	                                ,'&'||'amp;#91;','[')	
+	                               ,'&'||'amp;#93;',']')
+	                           ,'&'||'amp;quot;','"') AS TALK_TYPE           /* 상담제목 */
+	                       , C.IT_PROCESSING
+	                       , C.ORDER_NUMBER
+	                       , C.TALK_INQRY_CD
+	                    FROM PLT_CHT_CUTT C
+	                    LEFT OUTER JOIN PLT_CHT_CUTT_TYP CT
+	                    	ON C.CNSL_TYP_CD = CT.CNSL_TYP_CD
+	                    	-- AND CT.C.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                    LEFT OUTER JOIN PLT_COMN_CD CT2 
+							ON CT2.GROUP_CD = 'TALK001' AND CT2.CD=C.TALK_STAT_CD AND CT2.CD_TYPE  = '1'
+						WHERE C.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+	                ) A
+	              LEFT OUTER JOIN PLT_USER USR
+	              	ON A.USER_ID = USR.USER_ID
+	              LEFT OUTER JOIN PLT_CUS C
+	              	ON A.TALK_USER_KEY = C.TALK_USER_KEY
+]]>	              	
+	          WHERE 1=1 
+	          AND A.TALK_STAT_CD = '12'
+	<if test="USER_ID !=''">AND USR.USER_ID = #{USER_ID}</if>
+	<if test="USER_ATTR_A !=''">AND USR.USER_ATTR_A = #{USER_ATTR_A}</if>
+	<if test="USER_ATTR_B !=''">AND USR.USER_ATTR_B = #{USER_ATTR_B}</if>
+	<if test="USER_ATTR_C !=''">AND USR.USER_ATTR_C = #{USER_ATTR_C}</if>
+	<if test="USER_ATTR_D !=''">AND USR.USER_ATTR_D = #{USER_ATTR_D}</if>
+	
+	ORDER BY CASE A.TALK_STAT_CD WHEN '12' THEN 1 END, A.TALK_END_DT DESC NULLS FIRST
+        ) PG
+</select>
+
+<!-- 상담템플릿 삭제시 상담유형코드가 갖고있던 해당 상담템플릿 ID를 빈문자열('')로 바꿔준다. -->
+<update id="updateTemplateIDNull" parameterType="java.util.HashMap">
+	UPDATE PLT_CHT_CUTT_TYP SET TEMPLATE_ID = '' 
+	WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY} 
+	  AND TEMPLATE_ID = #{TEMPLATE_ID}
+</update>
+
+<!-- ######################################################################### -->
+
+ 
+</mapper>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.setting.system.dao.SettingSystemLargeCapacityExcelListMapper">
+
+<!-- ######################################################################### -->
+<!-- 대용량엑셀 요청 현황 조회(페이징) -->
+<select id="selectRtnReqList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+<![CDATA[
+
+	SELECT ROW_TBL.*
+      FROM (
+              SELECT ROW_NUMBER() OVER(ORDER BY REQUEST_DT DESC) AS ROW_NUMBER
+              	   , EXCEL_KEY
+                   , FILE_KEY
+                   , (SELECT FILE_GROUP_KEY FROM PLT_FILE WHERE FILE_KEY = A.FILE_KEY) AS FILE_GROUP_KEY
+                   , FILE_NM
+                   , MENU_ID
+                   , FILE_NM AS MENU_INFO
+                   , USER_ID
+                   , (SELECT USER_NM FROM PLT_USER USR WHERE USR.USER_ID = A.USER_ID)	AS USER_NM
+                   , TO_CHAR(REQUEST_DT,'YYYY/MM/DD HH24:MI:SS')     AS REQUEST_DT
+                   , TO_CHAR(COMPLETE_DT,'YYYY/MM/DD HH24:MI:SS')    AS COMPLETE_DT
+                   , PROCESS_CODE
+                   , TO_CHAR(IT_PROCESSING, 'YYYY/MM/DD HH24:MI:SS') AS IT_PROCESSING
+                   , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TWB008' AND CT.CD=PROCESS_CODE AND CT.CD_TYPE  = '1') AS PROCESS_NAME
+                   , DATA_CNT
+                   , CASE WHEN PROCESS_CODE = '30' THEN '11' ELSE '00' END AS DOWN_BUTTON
+                   , CASE WHEN (FILE_SZ / 1024) < 102.4
+                          THEN ROUND(FILE_SZ / 1024,1) || ' Kb'
+                          ELSE ROUND(FILE_SZ / 1024 / 1024 ,1) ||' Mb'
+                     END FILE_SZ
+                   , CASE WHEN PROCESS_CODE = '30'
+                          THEN TRUNC(( COMPLETE_DT - REQUEST_DT )*24) || ':' ||
+                               TRUNC(MOD(( COMPLETE_DT - REQUEST_DT )*24,1)*60) || ':' ||
+                               TRUNC(ROUND(MOD(( COMPLETE_DT - REQUEST_DT )*24*60,1)*60))
+                          ELSE '-'
+                     END AS ELAPSED_TIME
+                FROM (
+                       SELECT A.EXCEL_KEY
+                            , B.FILE_KEY
+                            , B.STRG_FILE_NM			AS FILE_NM		--파일명
+                            , A.MENU_ID
+                            , A.MENU_INFO
+                            , A.USER_ID
+                            , A.REQUEST_DT
+                            , A.COMPLETE_DT
+                            , A.PROCESS_CODE
+                            , A.IT_PROCESSING
+                            , A.DATA_CNT
+                            , B.FILE_SZ
+                         FROM (
+                               SELECT EXCEL_KEY           AS EXCEL_KEY     -- 엑셀키
+                                    , MIN(MENU_ID)        AS MENU_ID       -- 메뉴ID(화면(ID)
+                                    , MIN(MENU_INFO)      AS MENU_INFO     -- 메뉴명
+                                    , MIN(USER_ID)        AS USER_ID       -- 요청자ID
+                                    , MIN(REQUEST_DT)     AS REQUEST_DT    -- 요청일시
+                                    , MAX(COMPLETE_DT)    AS COMPLETE_DT   -- 완료일시
+                                    , MAX(PROCESS_CODE)   AS PROCESS_CODE  -- 상태코드[ 10: 요청, 20: 처리중, 30: 완료, 90: 삭제, 99: 처리상태오류 ]
+                                    , MAX(IT_PROCESSING)  AS IT_PROCESSING -- 처리일시
+                                    , SUM(DATA_CNT)       AS DATA_CNT      -- 건수
+                                    , MAX(FILE_KEY)       AS FILE_KEY      -- 파일키(PLT_FILE)
+                                 FROM PLT_EXCL
+                                WHERE CUSTCO_ID = #{CUSTCO_ID}
+                                  AND REQUEST_DT          >= TO_DATE(#{REQUEST_DT_FROM} || '000000', 'YYYYMMDDHH24MISS' )  
+                                  AND REQUEST_DT          <= TO_DATE(#{REQUEST_DT_TO}   || '235959', 'YYYYMMDDHH24MISS' ) 
+]]>
+	<if test="PROCESS_CODE 	!='' and PROCESS_CODE 	!= null">  AND PROCESS_CODE         = #{PROCESS_CODE}                       </if>
+	<if test="MENU_INFO 	!='' and MENU_INFO 		!= null">  AND UPPER(MENU_INFO)     LIKE '%' || UPPER(#{MENU_INFO}) || '%'  </if>
+	                         	GROUP BY EXCEL_KEY                         
+	                                    ) A
+	                              INNER JOIN PLT_FILE B 
+	                                 ON A.FILE_KEY = B.FILE_KEY
+	                              INNER JOIN PLT_USER C
+	                                 ON A.USER_ID = C.USER_ID
+	                              WHERE B.CUSTCO_ID = #{CUSTCO_ID}
+	<if test="USER_ID != '' and USER_ID != null"> 
+	                                AND C.USER_ID LIKE '%' || #{USER_ID} || '%'  
+	</if>
+	<if test="USER_NM != '' and USER_NM != null"> 
+	                                AND C.USER_NM LIKE '%' || #{USER_NM} || '%'  
+	</if>
+	<if test="USER_NICK != '' and USER_NICK != null"> 
+	                                AND C.USER_NICK LIKE '%' || #{USER_NICK} || '%'  
+	</if>
+	                           ) A
+	            ORDER BY REQUEST_DT DESC 
+		) ROW_TBL
+	       
+</select>
+
+</mapper>

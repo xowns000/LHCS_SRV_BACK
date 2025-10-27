@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.admin.custco.dao.MtsCalculateManageMapper">
+
+<!-- mts발송결과통계 조회 -->
+<select id="sndngStat" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	/* sndngStat - mts발송결과통계 조회 */
+	SELECT * FROM mtssndngstat(#{SCH_ST_DT}, #{SCH_END_DT}) AS TBL(
+			SCHEMA_ID TEXT
+			, ASP_CUST_KEY TEXT
+			, CUSTCO_NM TEXT
+			, CUSTCO_LOGO TEXT
+			, ATALK BIGINT
+			, ATALK_SUCCESS BIGINT
+			, ATALK_FAIL BIGINT
+			, FTALK BIGINT
+			, FTALK_SUCCESS BIGINT
+			, FTALK_FAIL BIGINT
+			, SMS BIGINT
+			, SMS_SUCCESS BIGINT
+			, SMS_FAIL BIGINT
+			, LMS BIGINT
+			, LMS_SUCCESS BIGINT
+			, LMS_FAIL BIGINT
+			, MMS BIGINT
+			, MMS_SUCCESS BIGINT
+			, MMS_FAIL BIGINT
+			)
+</select>
+
+
+</mapper>

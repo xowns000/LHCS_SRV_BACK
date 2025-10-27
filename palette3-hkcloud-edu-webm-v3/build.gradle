@@ -1,0 +1,18 @@
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+// palette-hkcloud-edu-v3
+//
+////////////////////////////////////////////////////////////////////////////////////////////
+jar {
+    enabled = true
+}
+
+bootJar {
+    enabled = false
+}
+
+dependencies {
+    implementation project(":palette3-hkcloud-edu-webm-common")
+    implementation project(":palette3-hkcloud-edu-webm-login")
+    implementation project(":palette3-hkcloud-edu-webm-vst")
+}

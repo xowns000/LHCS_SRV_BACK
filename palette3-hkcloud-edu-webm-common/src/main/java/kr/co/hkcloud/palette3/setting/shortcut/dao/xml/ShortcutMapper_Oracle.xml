@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper">
+
+	<select id="selectShortcutList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/*		사용자 단축키 조회 (kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper.selectShortcutList)	*/
+			SK.SHORT_KEY_ID
+			, SK.CUSTCO_ID
+			, SK.SHORT_TYPE_CD
+			, SK.LNK_ID
+			, CASE 
+				WHEN SK.SHORT_TYPE_CD = 'KMS_SCRIPT' THEN KC.KMS_CONTS_CN 
+				WHEN SK.SHORT_TYPE_CD = 'MENU' THEN TO_CLOB(M.PATH_NM)
+				ELSE TO_CLOB('')
+			  END AS LNK_CN
+			, SK.ALT_KEY_YN
+			, SK.SHIFT_KEY_YN
+			, SK.KEY_CD
+			, CC_KEY_CD.CD_NM
+		FROM PLT_SHORT_KEY SK 
+		LEFT OUTER JOIN (
+			SELECT C.KMS_CONTS_ID, CC.KMS_CONTS_CN FROM PLT_KMS_CONTS C INNER JOIN PLT_KMS_CONTS_CN CC ON C.KMS_CONTS_ID = CC.KMS_CONTS_ID AND C.STTS_CD = 'PBIC'
+		) KC ON KC.KMS_CONTS_ID = SK.LNK_ID
+		LEFT OUTER JOIN PLT_MENU M ON M.MENU_ID = SK.LNK_ID
+		LEFT OUTER JOIN PLT_COMM_CD CC_KEY_CD ON CC_KEY_CD.CUSTCO_ID = #{CUSTCO_ID} AND CC_KEY_CD.CD_ID  = SK.KEY_CD AND CC_KEY_CD.GROUP_CD_ID = 'SHROTCUT_CD'
+		WHERE 
+			SK.CUSTCO_ID = #{CUSTCO_ID}
+			AND SK.RGTR_ID = #{USER_ID}
+	</select>
+	
+	<select id="selectShortcutKeyList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT /*		단축키 키 목록 조회 (kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper.selectShortcutKeyList)	*/
+			CC.CD_ID
+			, CC.CD_NM
+			, CASE WHEN SK.LNK_ID IS NOT NULL THEN CC.CD_NM || '(사용중)' ELSE CC.CD_NM END AS CD_NM_WITH_USING
+			, CASE WHEN SK.LNK_ID IS NOT NULL THEN 'Y' ELSE 'N' END AS CD_STTS
+			, SK.LNK_ID
+			, CASE WHEN SK.LNK_ID IS NOT NULL THEN (SELECT KMS_CONTS_NM FROM PLT_KMS_CONTS WHERE KMS_CONTS_ID = SK.LNK_ID) ELSE NULL END LNK_NM
+		FROM PLT_COMM_CD CC
+		LEFT OUTER JOIN PLT_SHORT_KEY SK ON  SK.KEY_CD = CC.CD_ID AND SK.SHIFT_KEY_YN='N' AND SK.CUSTCO_ID = #{CUSTCO_ID} AND SK.RGTR_ID = #{USER_ID}
+		WHERE CC.CUSTCO_ID = #{CUSTCO_ID} AND CC.GROUP_CD_ID = 'SHROTCUT_CD'
+		ORDER BY CC.SORT_ORD ASC
+	</select>
+	
+	
+	<select id="selectDupCheck" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	/*		단축키 중복 체크 (kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper.selectDupCheck)	*/
+			SHORT_KEY_ID, CUSTCO_ID, SHORT_TYPE_CD, LNK_ID, KEY_CD, ALT_KEY_YN, SHIFT_KEY_YN, RGTR_ID,
+			CASE WHEN SK.LNK_ID = #{LNK_ID} THEN 'Y' ELSE 'N' END AS DUP_LNK_YN
+		FROM PLT_SHORT_KEY SK 
+		WHERE CUSTCO_ID = #{CUSTCO_ID} 
+			AND RGTR_ID = #{USER_ID}
+			AND SHORT_TYPE_CD = #{SHORT_TYPE_CD} 
+			AND ALT_KEY_YN = #{ALT_KEY_YN}
+			AND SHIFT_KEY_YN = #{SHIFT_KEY_YN}
+			AND (LNK_ID = #{LNK_ID} OR KEY_CD = #{KEY_CD})
+		ORDER BY DUP_LNK_YN DESC
+	</select>
+	
+	
+	<insert id="insertShortcut" parameterType= "java.util.HashMap">
+		INSERT INTO PLT_SHORT_KEY (	/*		단축키 등록 (kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper.insertShortcut)	*/
+			SHORT_KEY_ID					/* 단축_키_ID */
+			, CUSTCO_ID						/* 고객사_ID */
+			, SHORT_TYPE_CD					/* 단축_유형_코드 */
+			, LNK_ID						/* 링크_ID */
+			, ALT_KEY_YN					/* ALT_키_여부 */
+			, SHIFT_KEY_YN					/* SHIFT_키_여부 */
+			, KEY_CD						/* 키_코드 */
+			, RGTR_ID						/* 등록자_ID */
+			, REG_DT						/* 등록_일시 */
+		) VALUES (
+			#{SHORT_KEY_ID}
+			, #{CUSTCO_ID}
+			, #{SHORT_TYPE_CD}
+			, #{LNK_ID}
+			, #{ALT_KEY_YN}
+			, #{SHIFT_KEY_YN}
+			, #{KEY_CD}
+			, #{USER_ID}
+			, TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')
+		)
+	</insert>
+	
+	<update id="updateShortcut" parameterType= "java.util.HashMap">
+		UPDATE PLT_SHORT_KEY SET	/*		단축키 수정 (kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper.updateShortcut)	*/
+			MDFR_ID = #{USER_ID}					/* 수정자_ID */
+			, MDFCN_DT = TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS')	/* 수정_일시 */
+			<if test=' SHORT_TYPE_CD != null and SHORT_TYPE_CD != "" '>
+				, SHORT_TYPE_CD = #{SHORT_TYPE_CD}			/* 단축_유형_코드 */
+			</if>
+			<if test=' LNK_ID != null and LNK_ID != "" '>
+				, LNK_ID = #{LNK_ID}						/* 링크_ID */
+			</if>
+			<if test=' ALT_KEY_YN != null and ALT_KEY_YN != "" '>
+				, ALT_KEY_YN = #{ALT_KEY_YN}				/* ALT_키_여부 */
+			</if>
+			<if test=' SHIFT_KEY_YN != null and SHIFT_KEY_YN != "" '>
+				, SHIFT_KEY_YN = #{SHIFT_KEY_YN}			/* SHIFT_키_여부 */
+			</if>
+			<if test=' KEY_CD != null and KEY_CD != "" '>
+				, KEY_CD = #{KEY_CD}						/* 키_코드 */
+			</if>
+		WHERE SHORT_KEY_ID = #{SHORT_KEY_ID}
+			AND CUSTCO_ID = #{CUSTCO_ID}
+			AND RGTR_ID = #{USER_ID}
+	</update>
+	
+	<delete id="deleteShortcut" parameterType= "java.util.HashMap">
+		DELETE FROM PLT_SHORT_KEY	/*		단축키 복수 삭제 (kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper.deleteShortcutOne)	*/
+		WHERE CUSTCO_ID = #{CUSTCO_ID}
+			<if test=' SHORT_KEY_ID != null and SHORT_KEY_ID != "" '>
+				AND SHORT_KEY_ID = #{SHORT_KEY_ID}
+			</if>
+			<if test=' LNK_ID != null and LNK_ID != "" '>
+				AND LNK_ID = #{LNK_ID}
+			</if>
+			<if test=' USER_ID != null and USER_ID != "" '>
+				AND RGTR_ID = #{USER_ID}
+			</if>
+	</delete>
+	
+	<delete id="deleteShortcutOne" parameterType= "java.util.HashMap">
+		DELETE FROM PLT_SHORT_KEY	/*		단축키 단건 삭제 (kr.co.hkcloud.palette3.setting.shortcut.dao.ShortcutMapper.deleteShortcutOne)	*/
+		WHERE SHORT_KEY_ID = #{SHORT_KEY_ID}
+			AND CUSTCO_ID = #{CUSTCO_ID}
+			AND RGTR_ID = #{USER_ID}
+	</delete>
+	
+</mapper>

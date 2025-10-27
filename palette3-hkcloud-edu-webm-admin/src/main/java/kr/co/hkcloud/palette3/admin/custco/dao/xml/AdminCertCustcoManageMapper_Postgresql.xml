@@ -1,0 +1,888 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper">
+
+<!-- 기업고객관리 목록 조회 -->
+<select id="selectCertCustco" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+SELECT ROW_TBL.*
+FROM ( 
+		SELECT
+            ROW_NUMBER() OVER(ORDER BY
+            <choose>
+                <when test="SRCH_ORDER_BY != null and SRCH_ORDER_BY !=''"> ${SRCH_ORDER_BY}  </when>
+                <otherwise> PCC.CERT_CUSTCO_ID </otherwise>
+            </choose> ) AS ROW_NUMBER
+		  , PCC.CERT_CUSTCO_ID																	/* 인증_고객사_ID */
+		  , PCC.CUSTCO_NM																		/* 고객사_명 */
+		  , PCC.SRVC_GDS_ID																		/* 서비스_상품_ID */
+		  , PCSG.SRVC_GDS_NM																	/* 서비스_상품_명 */
+		  , SRVC_STTS_CD																		/* 서비스_상태_코드 */
+          , PCC.BRNO /* 사업자 등록번호 */
+          , PCC.APLY_USER_NM /* 담당자 이름 */
+          , CD_CL.CD_NM AS CUSTCO_SE_CD /* 고객 구분 */
+          , PCC.ADDR || ' ' || PCC.DTL_ADDR AS CUSTCO_ADDR /* 고객사 주소 */
+		  , CD.CD_NM  as SRVC_STTS_CD_NM														/* 서비스_상태_코드_명 */ 
+		  , TO_CHAR(TO_DATE(SRVC_BGNG_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD' ) AS SRVC_BGNG_DT	/* 서비스_시작_일시 */
+		  , TO_CHAR(TO_DATE(SRVC_END_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD' ) AS SRVC_END_DT		/* 서비스_종료_일시 */
+		  , PCC.APLY_USER_EXT_NO																/* 신청_사용자_내선_번호 */
+		  , PCC.APLY_USER_PHN_NO																/* 신청_사용자_전화_번호 */
+          , PCC.SCHEMA_ID
+		  , PCC.SCHEMA_ID || '_' || PCC.CUSTCO_ID AS ROOM_ID
+		  , PCC.ICON_FILE_GROUP_KEY
+		  , PF_ICON.FILE_PATH || '/' || PF_ICON.STRG_FILE_NM AS CUSTCO_ICON			/* 고객사 아이콘 */
+		  , PCC.IMG_FILE_GROUP_KEY
+		  , PF_IMG.FILE_PATH || '/' || PF_IMG.STRG_FILE_NM AS CUSTCO_LOGO			/* 고객사 로고이미지 */
+		FROM CUSTCO.PLT_CERT_CUSTCO PCC
+		LEFT OUTER JOIN CUSTCO.PLT_CERT_SRVC_GDS PCSG ON PCSG.SRVC_GDS_ID = PCC.SRVC_GDS_ID
+		LEFT OUTER JOIN CUSTCO.PLT_COMM_CD CD ON CD.GROUP_CD_ID='PCS_SVC_ST' AND CD.CD_ID = PCC.SRVC_STTS_CD
+        LEFT OUTER JOIN CUSTCO.PLT_COMM_CD CD_CL ON CD_CL.GROUP_CD_ID='PCS_CUST_CL' AND CD_CL.CD_ID = PCC.CUSTCO_SE_CD
+		LEFT JOIN CUSTCO.PLT_FILE PF_ICON ON PF_ICON.FILE_GROUP_KEY = PCC.ICON_FILE_GROUP_KEY
+		LEFT JOIN CUSTCO.PLT_FILE PF_IMG ON PF_IMG.FILE_GROUP_KEY = PCC.IMG_FILE_GROUP_KEY
+		WHERE BFR_SYS_YN = 'N'
+		<if test="SEARCH_KEYWORD !='' and SEARCH_KEYWORD != null">
+			AND PCC.CUSTCO_NM LIKE '%' || #{SEARCH_KEYWORD} || '%'
+		</if>
+		ORDER BY PCC.CERT_CUSTCO_ID DESC
+) ROW_TBL
+
+</select>
+
+
+<!-- 기업고객관리 - 기업고객 정보 조회 -->
+<select id="selectCertCustcoInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+  	PCC.CERT_CUSTCO_ID						/* 인증_고객사_ID */
+	, PCC.CUSTCO_NM							/* 고객사_명 */
+	, PCC.CUSTCO_SE_CD						/* 고객사_구분_코드 */
+	, PCC.SIC								/* 표준산업분류 */
+	, PCC.CRNO								/* 법인등록번호 */
+	, PCC.BRNO								/* 사업자등록번호 */
+	, PCC.RPRS_PHN_NO						/* 대표_전화_번호 */
+	, PCC.ZIP								/* 우편번호 */
+	, PCC.ADDR								/* 주소 */
+	, PCC.DTL_ADDR							/* 상세_주소 */
+	, TO_CHAR(TO_DATE(PCC.APLY_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD' ) AS APLY_DT							/* 신청_일시 */
+	, PCC.APLY_SE_CD						/* 신청_구분_코드 */
+	, PCC.APLY_USER_NM						/* 신청_사용자_명 */
+	, PCC.GEND								/* 성별 */
+	, PCC.REL_SE_CD							/* 관계_구분_코드 */
+	, PCC.APLY_USER_EXT_NO					/* 신청_사용자_내선_번호 */
+	, PCC.APLY_USER_PHN_NO					/* 신청_사용자_전화_번호 */
+	, PCC.EML								/* 이메일 */
+	, PCC.RGTR_ID 							/* 등록자_ID */
+	, PCC.REG_DT							/* 등록_일시 */
+	, PCC.ICON_FILE_GROUP_KEY
+	, PF_ICON.FILE_PATH || '/' || PF_ICON.STRG_FILE_NM AS CUSTCO_ICON		/* 고객사 아이콘 */
+	, PCC.IMG_FILE_GROUP_KEY
+	, PF_IMG.FILE_PATH || '/' || PF_IMG.STRG_FILE_NM AS CUSTCO_LOGO			/* 고객사 로고이미지 */
+FROM PLT_CERT_CUSTCO PCC
+LEFT JOIN CUSTCO.PLT_FILE PF_ICON ON PF_ICON.FILE_GROUP_KEY = PCC.ICON_FILE_GROUP_KEY
+LEFT JOIN CUSTCO.PLT_FILE PF_IMG ON PF_IMG.FILE_GROUP_KEY = PCC.IMG_FILE_GROUP_KEY
+WHERE BFR_SYS_YN = 'N'
+	AND PCC.CERT_CUSTCO_ID=#{CERT_CUSTCO_ID}::INTEGER
+</select>
+
+<!-- 기업고객관리 - 서비스 설정 조회 -->
+<select id="selectServiceSetting" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+  	PCC.CERT_CUSTCO_ID																				/* 인증_고객사_ID */
+	, PCC.SRVC_GDS_ID																				/* 서비스_상품_ID */
+	, PCSG.SRVC_GDS_NM																				/* 서비스_상품_명 */
+  	, TO_CHAR(TO_DATE(PCC.SRVC_BGNG_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD' ) AS SRVC_BGNG_DT			/* 서비스_시작_일시 */
+	, TO_CHAR(TO_DATE(PCC.SRVC_END_DT,'YYYYMMDDHH24MISS'), 'YYYY-MM-DD' ) AS SRVC_END_DT			/* 서비스_종료_일시 */
+	, PCC.USER_ACNT_CNT																				/* 사용자_계정_수 */
+	, PCC.USER_LGN_SMS_CERT_YN																		/* 사용자_로그인_2차_인증_여부*/
+FROM PLT_CERT_CUSTCO PCC
+	LEFT OUTER JOIN PLT_CERT_SRVC_GDS PCSG ON PCSG.SRVC_GDS_ID = PCC.SRVC_GDS_ID
+WHERE PCC.CERT_CUSTCO_ID=#{CERT_CUSTCO_ID}::INTEGER
+</select>
+
+
+<!-- 기업고객관리 - 서비스 계정 정보 조회 -->
+<select id="selectServiceAccount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+  	  PCC.CERT_CUSTCO_ID																				/* 인증_고객사_ID */
+	, PCC.SCHEMA_ID  																				/* 스키마_ID */
+	, PCC.ASP_CUST_KEY																				/* ASP_고객_키 */
+	, (SELECT LGN_ID 
+		FROM PLT_CERT_USER PCU 
+		WHERE PCU.CERT_USER_ID = (SELECT MIN(PCCU.CERT_USER_ID) FROM PLT_CERT_CUSTCO_USER PCCU INNER JOIN PLT_CERT_USER CU ON CU.CERT_USER_ID = PCCU.CERT_USER_ID WHERE POSITION('#' IN CU.LGN_ID) = 0 AND PCCU.CERT_CUSTCO_ID = PCC.CERT_CUSTCO_ID) 
+	) AS LGN_ID																						/* 시스템 관리자 계정 */
+	, PCC.SRVC_STTS_CD																				/* 서비스_상태_코드 */
+	, PCC.SRVC_CRT_DT																				/* 서비스_생성_일시 */
+	, PCC.SRVC_GDS_ID																				/* 서비스_상품_ID */
+	, PCC.CUSTCO_ID																				/* 고객사_ID  */
+FROM PLT_CERT_CUSTCO PCC
+WHERE PCC.CERT_CUSTCO_ID=#{CERT_CUSTCO_ID}::INTEGER
+</select>
+
+
+<!-- 기업고객관리 - IPCC 연동 설정 정보 조회 -->
+<select id="selectIpccSetting" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+  	PCC.CERT_CUSTCO_ID																				/* 인증_고객사_ID */
+	, PCC.ASP_CUST_KEY																				/* ASP_고객_키 */
+	, IPCC_SRVR_ID																					/* IPCC_서버_ID */
+FROM PLT_CERT_CUSTCO PCC
+WHERE PCC.CERT_CUSTCO_ID=#{CERT_CUSTCO_ID}::INTEGER
+</select>
+
+
+
+<!-- 기업고객관리 - 기업고객 정보 등록 -->
+<insert id="insertCertCustcoInfo" parameterType="java.util.HashMap">
+INSERT INTO PLT_CERT_CUSTCO 
+       ( CERT_CUSTCO_ID						/* 인증_고객사_ID */
+		, CUSTCO_NM							/* 고객사_명 */
+		, CUSTCO_SE_CD						/* 고객사_구분_코드 */
+		, SIC								/* 표준산업분류 */
+		, CRNO								/* 법인등록번호 */
+		, BRNO								/* 사업자등록번호 */
+		, RPRS_PHN_NO						/* 대표_전화_번호 */
+		, ZIP								/* 우편번호 */
+		, ADDR								/* 주소 */
+		, DTL_ADDR							/* 상세_주소 */
+		, APLY_DT							/* 신청_일시 */
+		, APLY_SE_CD						/* 신청_구분_코드 */
+		, APLY_USER_NM						/* 신청_사용자_명 */
+		, GEND								/* 성별 */
+		, REL_SE_CD							/* 관계_구분_코드 */
+		, APLY_USER_EXT_NO					/* 신청_사용자_내선_번호 */
+		, APLY_USER_PHN_NO					/* 신청_사용자_전화_번호 */
+		, EML								/* 이메일 */
+		, RGTR_ID 							/* 등록자_ID */
+		, REG_DT							/* 등록_일시 */
+		, BFR_SYS_YN						/* 이전_시스템_여부 */
+        , ICON_FILE_GROUP_KEY				/* 고객사 아이콘 */
+        , IMG_FILE_GROUP_KEY				/* 고객사 로고이미지 */
+) VALUES 
+       ( #{CERT_CUSTCO_ID}           			/* 인증_고객사_ID */
+		, #{CUSTCO_NM}           				/* 고객사_명 */
+		, #{CUSTCO_SE_CD}						/* 고객사_구분_코드 */
+		, #{SIC}								/* 표준산업분류 */
+		, #{CRNO}								/* 법인등록번호 */
+		, #{BRNO}								/* 사업자등록번호 */
+		, #{RPRS_PHN_NO}						/* 대표_전화_번호 */
+		, #{ZIP}								/* 우편번호 */
+		, #{ADDR}								/* 주소 */
+		, #{DTL_ADDR}							/* 상세_주소 */
+		, #{APLY_DT}							/* 신청_일시 */
+		, #{APLY_SE_CD}							/* 신청_구분_코드 */
+		, #{APLY_USER_NM}						/* 신청_사용자_명 */
+		, #{GEND}								/* 성별 */
+		, #{REL_SE_CD}							/* 관계_구분_코드 */
+		, #{APLY_USER_EXT_NO}					/* 신청_사용자_내선_번호 */
+		, #{APLY_USER_PHN_NO}					/* 신청_사용자_전화_번호 */
+		, #{EML}								/* 이메일 */
+		, #{RGTR_ID}::INTEGER					/* 등록자_ID */
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 등록_일시 */
+		, 'N'
+	    , #{CUSTCO_ICON}						/* 고객사 아이콘 */
+	    , #{CUSTCO_LOGO}							/* 고객사 로고이미지 */
+)
+</insert>
+
+
+<!-- 기업고객관리 - 기업고객 정보 수정 -->
+<update id="updateCertCustcoInfo" parameterType="java.util.HashMap">
+UPDATE PLT_CERT_CUSTCO SET 
+	CUSTCO_NM = #{CUSTCO_NM}							/* 고객사_명 */
+	, CUSTCO_SE_CD = #{CUSTCO_SE_CD}					/* 고객사_구분_코드 */
+	, SIC = #{SIC}										/* 표준산업분류 */
+	, CRNO = #{CRNO}									/* 법인등록번호 */
+	, BRNO = #{BRNO}									/* 사업자등록번호 */
+	, RPRS_PHN_NO = #{RPRS_PHN_NO}						/* 대표_전화_번호 */
+	, ZIP = #{ZIP}										/* 우편번호 */
+	, ADDR = #{ADDR}									/* 주소 */
+	, DTL_ADDR = #{DTL_ADDR}							/* 상세_주소 */
+	, APLY_DT = #{APLY_DT}								/* 신청_일시 */
+	, APLY_SE_CD = #{APLY_SE_CD}						/* 신청_구분_코드 */
+	, APLY_USER_NM = #{APLY_USER_NM}					/* 신청_사용자_명 */
+	, GEND = #{GEND}									/* 성별 */
+	, REL_SE_CD = #{REL_SE_CD}							/* 관계_구분_코드 */
+	, APLY_USER_EXT_NO = #{APLY_USER_EXT_NO}			/* 신청_사용자_내선_번호 */
+	, APLY_USER_PHN_NO = #{APLY_USER_PHN_NO}			/* 신청_사용자_전화_번호 */
+	, EML = #{EML}										/* 이메일 */
+	, MDFR_ID = #{RGTR_ID}::INTEGER						/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 수정_일시 */
+	, ICON_FILE_GROUP_KEY = #{CUSTCO_ICON}				/* 고객사 아이콘 */
+    , IMG_FILE_GROUP_KEY = #{CUSTCO_LOGO}				/* 고객사 로고이미지 */
+WHERE CERT_CUSTCO_ID  = #{CERT_CUSTCO_ID}::INTEGER
+</update>
+
+
+
+<!-- 테넌트 고객사 업데이트 -->
+<update id="updateTenantCustco" parameterType="java.util.HashMap">
+UPDATE PLT_CUSTCO SET 
+	CO_NM = #{CUSTCO_NM}																	/* 고객사_명 */
+	, SRVC_MAINT_YN = (CASE WHEN #{SRVC_STTS_CD} = 'ON' THEN 'Y' ELSE 'N' END)				/* 서비스_유지_여부 */
+	, USER_ACNT_CNT = #{USER_ACNT_CNT}::INTEGER												/* 사용자_계정_수 */
+	, USER_LGN_SMS_CERT_YN = #{USER_LGN_SMS_CERT_YN}										/* 사용자_로그인_2차_인증_여부 */
+	, MDFR_ID = 2																			/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')											/* 수정_일시 */
+WHERE CUSTCO_ID  = #{CUSTCO_ID}::INTEGER
+</update>
+
+
+<!-- 기업고객관리 - 서비스 설정 수정 -->
+<update id="updateServiceSetting" parameterType="java.util.HashMap">
+UPDATE PLT_CERT_CUSTCO SET 
+	SRVC_GDS_ID = #{SRVC_GDS_ID}::INTEGER				/* 서비스_상품_ID */
+  	, SRVC_BGNG_DT = #{SRVC_BGNG_DT}    				/* 서비스_시작_일시 */
+	, SRVC_END_DT	= #{SRVC_END_DT}      				/* 서비스_종료_일시 */
+	, USER_ACNT_CNT = #{USER_ACNT_CNT}::INTEGER         /* 사용자_계정_수 */
+	, USER_LGN_SMS_CERT_YN = #{USER_LGN_SMS_CERT_YN}	/* 사용자_로그인_2차_인증_여부 */
+	, MDFR_ID = #{RGTR_ID}::INTEGER						/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 수정_일시 */
+WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+</update>
+
+<!-- 기업고객관리 - 서비스 설정 - 서비스 정보 등록 -->
+<insert id="insertServiceInfo" parameterType="java.util.HashMap">
+INSERT INTO PLT_CERT_CUSTCO_SRVC 
+       ( CERT_CUSTCO_ID					/* 인증_고객사_ID */
+       , SRVC_GDS_DTL_ID				/* 서비스_상품_상세_ID */
+       , USE_YN							/* 사용_여부 */
+       , RGTR_ID						/* 등록자_ID */
+       , REG_DT							/* 등록_일시 */
+       
+) VALUES 
+       ( #{CERT_CUSTCO_ID}::INTEGER        /* 인증_고객사_ID */
+       , #{SRVC_GDS_DTL_ID}::INTEGER           	/* 서비스_상품_상세_ID */
+       , #{USE_YN}								/* 사용_여부 */
+       , #{RGTR_ID}::INTEGER					/* 등록자_ID */
+       , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 등록_일시 */
+)
+</insert>
+
+<!-- 기업고객관리 - 서비스 설정 - 서비스 정보 수정 -->
+<update id="updateServiceInfo" parameterType="java.util.HashMap">
+UPDATE PLT_CERT_CUSTCO_SRVC SET 
+	USE_YN = #{USE_YN}									/* 사용_여부 */
+	, MDFR_ID = #{RGTR_ID}::INTEGER						/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 수정_일시 */
+WHERE CERT_CUSTCO_ID = #{SRVC_CERT_CUSTCO_ID}::INTEGER
+	AND SRVC_GDS_DTL_ID = #{SRVC_GDS_DTL_ID}::INTEGER
+</update>
+
+<delete id="deleteServiceOmniCoInfo" parameterType="java.util.HashMap">
+DELETE FROM PLT_CERT_CUSTCO_SRVC_INST /*고객사 간편인증(OMNIONE) 서비스 인증기관사 삭제 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.deleteServiceOmniCoInfo)*/
+WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+AND SRVC_GDS_DTL_ID IN (SELECT SRVC_GDS_DTL_ID FROM PLT_CERT_SRVC_GDS_DTL WHERE SRVC_GDS_ID!=#{SRVC_GDS_ID}::INTEGER)
+</delete>
+
+<delete id="deleteServiceOmniKeyInfo" parameterType="java.util.HashMap">
+DELETE FROM PLT_CERT_CUSTCO_SRVC_KEY /*고객사 간편인증(OMNIONE) 서비스 키 삭제 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.deleteServiceOmniKeyInfo)*/
+WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+AND SRVC_GDS_DTL_ID IN (SELECT SRVC_GDS_DTL_ID FROM PLT_CERT_SRVC_GDS_DTL WHERE SRVC_GDS_ID!=#{SRVC_GDS_ID}::INTEGER)
+</delete>
+
+<!-- 기업고객관리 - 서비스 설정 - 서비스 정보 삭제(다른 서비스 상품의 서비스 정보가 있을 시 삭제.) -->
+<delete id="deleteServiceInfo" parameterType="java.util.HashMap">
+DELETE FROM PLT_CERT_CUSTCO_SRVC /*고객사 서비스 삭제 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.deleteServiceInfo)*/
+WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+AND SRVC_GDS_DTL_ID IN (SELECT SRVC_GDS_DTL_ID FROM PLT_CERT_SRVC_GDS_DTL WHERE SRVC_GDS_ID!=#{SRVC_GDS_ID}::INTEGER)
+</delete>
+
+
+<!-- 기업고객관리 - 서비스 계정 정보 수정 -->
+<update id="updateServiceAccount" parameterType="java.util.HashMap">
+UPDATE PLT_CERT_CUSTCO SET 
+	SCHEMA_ID = #{SCHEMA_ID}							/* 스키마_ID */
+  	, ASP_CUST_KEY = #{ASP_CUST_KEY}    				/* ASP_고객_키 */
+	, SRVC_STTS_CD = #{SRVC_STTS_CD}      				/* 서비스_상태_코드 */
+	, MDFR_ID = #{RGTR_ID}::INTEGER						/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 수정_일시 */
+WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+</update>
+
+
+<!-- 기업고객관리 - IPCC 연동 설정 수정 -->
+<update id="updateIpccSetting" parameterType="java.util.HashMap">
+UPDATE PLT_CERT_CUSTCO SET 
+	IPCC_SRVR_ID = #{IPCC_SRVR_ID}::INTEGER				/* IPCC_서버_ID */
+	, MDFR_ID = #{RGTR_ID}::INTEGER						/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 수정_일시 */
+WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+</update>
+
+<!-- 기업고객관리 - IPCC 연동 설정 - 전화 번호 정보 등록 -->
+<insert id="insertCustcoDsptchNo" parameterType="java.util.HashMap">
+INSERT INTO PLT_CERT_CUSTCO_DSPTCH_NO 
+       ( CERT_CUSTCO_DSPTCH_NO_ID				/* 인증_고객사_발신_번호_ID */
+       , CERT_CUSTCO_ID							/* 인증_고객사_ID */
+       , RPRS_NO								/* 대표_번호 */
+       , DSPTCH_NO								/* 발신_번호 */
+       , DSPTCH_NM								/* 발신_명 */
+       
+) VALUES 
+       ( #{CERT_CUSTCO_DSPTCH_NO_ID}::INTEGER   /* 인증_고객사_발신_번호_ID */
+       , #{CERT_CUSTCO_ID}::INTEGER           	/* 인증_고객사_ID */
+       , #{RPRS_NO}								/* 대표_번호 */
+       , #{DSPTCH_NO}							/* 발신_번호 */
+       , #{DSPTCH_NM}							/* 발신_명 */
+)
+</insert>
+
+<!-- 기업고객관리 - IPCC 연동 설정 - 전화 번호 정보 수정 -->
+<update id="updateCustcoDsptchNo" parameterType="java.util.HashMap">
+UPDATE PLT_CERT_CUSTCO_DSPTCH_NO SET 
+	DSPTCH_NO = #{DSPTCH_NO}						/* 발신_번호 */
+	, DSPTCH_NM = #{DSPTCH_NM}					/* 발신_명 */
+WHERE CERT_CUSTCO_ID = #{PCCDN_CERT_CUSTCO_ID}::INTEGER
+	AND CERT_CUSTCO_DSPTCH_NO_ID = #{CERT_CUSTCO_DSPTCH_NO_ID}::INTEGER
+</update>
+
+<!-- 기업고객관리 - IPCC 연동 설정 - 전화 번호 정보 삭제 -->
+<delete id="deleteCustcoDsptchNo" parameterType="java.util.HashMap">
+DELETE FROM PLT_CERT_CUSTCO_DSPTCH_NO
+WHERE CERT_CUSTCO_ID = #{PCCDN_CERT_CUSTCO_ID}::INTEGER
+AND CERT_CUSTCO_DSPTCH_NO_ID = #{CERT_CUSTCO_DSPTCH_NO_ID}::INTEGER
+</delete>
+
+
+<!-- 인증_사용자 조회 -->
+<select id="selectCertUser" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT LGN_ID
+FROM PLT_CERT_USER
+WHERE LGN_ID=#{LGN_ID}
+</select>
+
+
+<!-- 인증_사용자 등록 -->
+<insert id="insertCertUser" parameterType="java.util.HashMap">
+INSERT INTO PLT_CERT_USER 
+       ( CERT_USER_ID							/* 인증_사용자_ID */
+       , LGN_ID									/* 로그인_ID */
+       
+) VALUES 
+       ( #{CERT_USER_ID}::INTEGER       		/* 인증_사용자_ID */
+       , #{LGN_ID}           					/* 로그인_ID */
+)
+</insert>
+
+
+<!-- 인증_고객사_사용자 등록 -->
+<insert id="insertCertCustcoUser" parameterType="java.util.HashMap">
+INSERT INTO PLT_CERT_CUSTCO_USER 
+       ( CERT_CUSTCO_ID							/* 인증_고객사_ID */
+       , CERT_USER_ID							/* 인증_사용자_ID */
+       , USE_YN									/* 사용_여부 */
+       , SORT_ORD								/* 정렬_순서 */
+       , RGTR_ID								/* 등록자_ID */
+       , REG_DT									/* 등록_일시 */
+       
+) VALUES 
+       ( #{CERT_CUSTCO_ID}::INTEGER           	/* 인증_고객사_ID */
+       , #{CERT_USER_ID}::INTEGER           	/* 인증_사용자_ID */
+       , 'Y'									/* 사용_여부 */
+       , 1										/* 정렬_순서 */
+       , #{RGTR_ID}::INTEGER					/* 등록자_ID */
+	   , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 등록_일시 */
+)
+</insert>
+
+
+<!-- 테넌트 schema의 고객사 저장을 위한 CUSTCO의 인증_고객사 조회 -->
+<select id="selectCertCustco4TenantSave" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+  	PCC.CERT_CUSTCO_ID											/* 인증_고객사_ID */
+	, PCC.CUSTCO_NM												/* 고객사_명 */
+	, PCC.CUSTCO_SE_CD											/* 고객사_구분_코드 */
+	, PCC.SIC													/* 표준산업분류 */
+	, PCC.CRNO													/* 법인등록번호 */
+	, PCC.BRNO													/* 사업자등록번호 */
+	, PCC.RPRS_PHN_NO											/* 대표_전화_번호 */
+	, PCC.ZIP													/* 우편번호 */
+	, PCC.ADDR													/* 주소 */
+	, PCC.DTL_ADDR												/* 상세_주소 */
+	, SUBSTRING(PCC.APLY_DT,0,13) AS APLY_DT					/* 신청_일시 */
+	, PCC.APLY_SE_CD											/* 신청_구분_코드 */
+	, PCC.APLY_USER_NM											/* 신청_사용자_명 */
+	, PCC.GEND													/* 성별 */
+	, PCC.REL_SE_CD												/* 관계_구분_코드 */
+	, PCC.APLY_USER_EXT_NO										/* 신청_사용자_내선_번호 */
+	, PCC.APLY_USER_PHN_NO										/* 신청_사용자_전화_번호 */
+	, PCC.EML													/* 이메일 */
+	, PCC.RGTR_ID 												/* 등록자_ID */
+	, PCC.REG_DT												/* 등록_일시 */
+	, PCC.SRVC_GDS_ID											/* 서비스_상품_ID */
+  	, SUBSTRING(PCC.SRVC_BGNG_DT,0,13) AS SRVC_BGNG_DT			/* 서비스_시작_일시 */
+	, SUBSTRING(PCC.SRVC_END_DT,0,13) AS SRVC_END_DT			/* 서비스_종료_일시 */
+	, PCC.USER_ACNT_CNT											/* 사용자_계정_수 */
+	, PCC.SCHEMA_ID  											/* 스키마_ID */
+	, PCC.ASP_CUST_KEY											/* ASP_고객_키 */
+	, (SELECT LGN_ID 
+		FROM PLT_CERT_USER PCU 
+		WHERE PCU.CERT_USER_ID = (SELECT MIN(PCCU.CERT_USER_ID) FROM PLT_CERT_CUSTCO_USER PCCU INNER JOIN PLT_CERT_USER CU ON CU.CERT_USER_ID = PCCU.CERT_USER_ID WHERE POSITION('#' IN CU.LGN_ID) = 0 AND PCCU.CERT_CUSTCO_ID = PCC.CERT_CUSTCO_ID) 
+	) AS LGN_ID
+	, PCC.ASP_CUST_KEY || 'svy' AS SVY_LGN_ID					/* 설문 전용 계정 */
+	, PCC.SRVC_STTS_CD											/* 서비스_상태_코드 */
+FROM PLT_CERT_CUSTCO PCC
+WHERE PCC.CERT_CUSTCO_ID=#{CERT_CUSTCO_ID}::INTEGER
+</select>
+
+
+
+<insert id="insertCustcoUser" parameterType="java.util.HashMap">
+/*로그인 사용자*/
+INSERT INTO PLT_USER
+       ( USER_ID
+       , LGN_ID
+       , USER_NM
+       , USER_NNM
+       , PSWD
+       , CNTN_IP
+       , PSWD_FAIL_CNT
+       , BRDT
+       , MBL_PHN_NO
+       , EML
+       , SOLAR_SE_CD
+       , JNCMP_YMD
+       , RSGNTN_YMD
+       , USER_SE_CD
+       , USER_STTS_CD
+       , JBTTL_CD
+       , USE_YN
+       , PSWD_MDFCN_DT
+       , PSWD_STTS
+       , USER_CERT_YN
+       , PSWD_ENCPT_CD
+       , DPCN_LGN_PM_YN
+       , TOP_MSG
+       , ICON
+       , CLBK_YN
+       , RGTR_ID
+       , REG_DT
+) VALUES
+      ( <choose><when test='USER_ID != null and USER_ID !=""'>#{USER_ID}::INT</when><otherwise>CUSTCO.PLT_FUNC_GET_TBL_SEQ(#{CERT_CUSTCO_ID}::INTEGER, 'USER_ID')</otherwise></choose>
+      , #{LGN_ID}								/* 로그인_ID */
+      , #{USER_NM}
+      , #{USER_NM}
+      , #{PSWD}									/* 비밀번호 */
+      , NULL
+      , '0'
+      , ''
+      , ''
+      , ''
+      , 'SOLAR0'
+      , TO_CHAR(NOW(), 'YYYYMMDD')
+      , NULL
+      , 'USER0'
+      , 'WORK'
+      , '1'
+      , 'Y'
+      , NULL
+      , 'NORMAL'
+      , 'Y'
+      , #{ENCRYPT_KEY}							/* 비밀번호_암호화_코드 */
+      , 'Y'							/* 중복로그인 허용 */
+      , '상단메시지 미사용'
+      , 'f04'
+      , 'N'
+      , 2										/* 등록자_ID */
+      , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+)
+</insert>
+
+<!-- 테넌트 고객사 로그인_ID 수정 -->
+<select id="createCustcoData" parameterType="java.util.HashMap" resultType="java.util.HashMap" statementType="CALLABLE">
+CALL PLT_PROC_ADD_CUSTCO_DATA(
+	#{CERT_CUSTCO_ID, mode=IN, jdbcType=INTEGER}::INTEGER
+)
+</select>
+
+
+<!-- 테넌트 사용자 로그인_ID 수정 -->
+<!--<update id="updateTenantUser" parameterType="java.util.HashMap">
+UPDATE PLT_USER SET 
+	LGN_ID = #{LGN_ID}   						/* 로그인_ID */
+	, PSWD = #{PSWD}							/* 비밀번호 */
+	, PSWD_ENCPT_CD = #{ENCRYPT_KEY}			/* 비밀번호_암호화_코드 */
+WHERE USER_ID  = 1
+</update>-->
+
+
+<!-- 인증_고객사 - 서비스_생성_일시 수정 -->
+<update id="updateCustcoSrvcCrtDt" parameterType="java.util.HashMap">
+UPDATE PLT_CERT_CUSTCO SET 
+	SRVC_CRT_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 서비스_생성_일시 */
+WHERE CERT_CUSTCO_ID=#{CERT_CUSTCO_ID}::INTEGER
+</update>
+
+<select id="selectTenantOfLgnId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT SCHEMA_ID , PCC.CERT_CUSTCO_ID
+FROM CUSTCO.PLT_CERT_CUSTCO PCC 
+	JOIN CUSTCO.PLT_CERT_CUSTCO_USER PCCU ON PCC.CERT_CUSTCO_ID = PCCU.CERT_CUSTCO_ID
+	JOIN CUSTCO.PLT_CERT_USER PCU ON PCCU.CERT_USER_ID = PCU.CERT_USER_ID AND PCU.LGN_ID = #{LGN_ID}
+WHERE PCC.SRVC_STTS_CD = 'ON'
+ORDER BY SORT_ORD
+LIMIT 1 OFFSET 0
+</select>
+
+
+<!-- PLT_CERT_CUSTCO(인증_고객사) 스키마_ID 중복 조회 -->	
+<select id="dpcnChkSchemaId" parameterType="java.util.HashMap" resultType="java.util.HashMap">			
+SELECT SCHEMA_ID						/* 스키마_ID */ 
+  FROM PLT_CERT_CUSTCO
+WHERE SCHEMA_ID = #{SCHEMA_ID}
+</select>
+
+
+<!-- PLT_CERT_USER(인증_사용자) 로그인 ID 중복 조회 -->	
+<select id="dpcnChkLgnId" parameterType="java.util.HashMap" resultType="java.util.HashMap">			
+SELECT LGN_ID							/* 로그인 ID */ 
+  FROM PLT_CERT_USER
+WHERE LGN_ID = #{LGN_ID} OR LGN_ID = #{LGN_ID}||'svy'
+</select>
+
+
+<!-- PLT_CERT_CUSTCO(인증_고객사) ASP_고객_키 중복 조회 -->	
+<select id="dpcnChkAspCustKey" parameterType="java.util.HashMap" resultType="java.util.HashMap">			
+SELECT ASP_CUST_KEY						/* ASP_고객_키 */ 
+  FROM PLT_CERT_CUSTCO
+WHERE ASP_CUST_KEY = #{ASP_CUST_KEY}
+</select>
+
+
+<!-- plt_cert_custco_dsptch_no(인증_고객사_발신_번호) 발신_번호 중복 조회 -->	
+<select id="dpcnChkDsptchNo" parameterType="java.util.HashMap" resultType="java.util.HashMap">			
+SELECT
+	CERT_CUSTCO_DSPTCH_NO_ID 
+	, RPRS_NO							/* 발신_번호 */ 
+  FROM PLT_CERT_CUSTCO_DSPTCH_NO
+WHERE RPRS_NO = #{RPRS_NO}
+</select>
+
+<!-- 발신번호 삭제 가능 여부 체크 -->
+<select id="chkDeleteDsptchNo" parameterType="java.util.HashMap" resultType="java.util.HashMap">			
+SELECT PCT.CUSTCO_DSPTCH_NO_ID 
+FROM PLT_CUTT_TYPE PCT
+	JOIN PLT_CUSTCO_DSPTCH_NO PCDN ON PCT.CUSTCO_DSPTCH_NO_ID = PCDN.CUSTCO_DSPTCH_NO_ID
+WHERE PCDN.RPRS_NO = #{RPRS_NO}
+</select>
+
+<!-- 서비스 설정 - 서비스 상품 목록 조회 -->
+<select id="selectSrvcGds" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	SRVC_GDS_ID								/* 서비스_상품_ID */
+	, SRVC_GDS_NM 							/* 서비스_상품_명 */
+FROM PLT_CERT_SRVC_GDS PCSG 
+ORDER BY SRVC_GDS_ID
+</select>
+
+
+<!-- 서비스 설정 - 서비스 상품 선택에 따른 서비스 정보 목록 조회 -->
+<select id="selectSrvcGdsDtl" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	PCSGD.SRVC_GDS_DTL_ID 
+	, PCSGD.SRVC_GDS_DTL_CD 
+	, (SELECT CD_NM FROM PLT_COMM_CD PCC WHERE GROUP_CD_ID='PCS_PROD' AND PCC.CD_ID=PCSGD.SRVC_GDS_DTL_CD) AS SRVC_GDS_DTL_CD_NM
+	, PCSGD.SRVC_GDS_ID 
+	, PCSGD.NTSL_YN 
+	, PCSGD.DEL_YN 
+	, PCSGD.SORT_ORD 
+	, PCCS.CERT_CUSTCO_ID AS SRVC_CERT_CUSTCO_ID
+	, COALESCE(PCCS.USE_YN, 'Y') USE_YN								/* 사용_여부 - 등록 시 기본값은 'Y' */
+	, CUSTCO_CD
+	, SRVC_KEY
+	, (SELECT ARRAY_TO_STRING(ARRAY_AGG(INST_CD||','||INST_NM), '_##_') FROM PLT_CERT_CUSTCO_SRVC_INST PCCL WHERE CERT_CUSTCO_ID = PCCSK.CERT_CUSTCO_ID AND SRVC_GDS_DTL_ID = PCCSK.SRVC_GDS_DTL_ID) AS INST_NM
+	, TARGET_OPT_CD
+FROM PLT_CERT_SRVC_GDS_DTL PCSGD
+	LEFT OUTER JOIN PLT_CERT_CUSTCO_SRVC PCCS 
+		ON PCSGD.SRVC_GDS_DTL_ID = PCCS.SRVC_GDS_DTL_ID AND PCCS.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+	LEFT OUTER JOIN PLT_CERT_CUSTCO_SRVC_KEY PCCSK ON PCCSK.CERT_CUSTCO_ID = PCCS.CERT_CUSTCO_ID AND PCCSK.SRVC_GDS_DTL_ID = PCCS.SRVC_GDS_DTL_ID
+	LEFT OUTER JOIN PLT_CERT_CUSTCO_TRNSF_OPT PCCTO ON PCCTO.CERT_CUSTCO_ID = PCCS.CERT_CUSTCO_ID
+WHERE SRVC_GDS_ID=#{SRVC_GDS_ID}::INTEGER
+ORDER BY PCSGD.SORT_ORD
+</select>
+
+<!-- IPCC 연동 설정 - IPCC 서버 정보 -->
+<select id="selectIpccSrvr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	PCIS.IPCC_SRVR_ID						/* IPCC_서버_ID */
+	, PCIS.SRVR_NM							/* 서버_명 */
+	, PCIS.IP								/* IP */
+	, PCIS.API_URI							/* API_URI */
+	, PCIS.SRVR_STTS_CD						/* 서버_상태_코드 */
+FROM PLT_CERT_IPCC_SRVR PCIS
+<where>
+	<if test="IPCC_SRVR_ID !='' and IPCC_SRVR_ID != null">
+		PCIS.IPCC_SRVR_ID = #{IPCC_SRVR_ID}::INTEGER
+	</if>
+</where>
+ORDER BY PCIS.IPCC_SRVR_ID
+</select>
+
+<!-- IPCC 연동 설정 - 전화 번호 정보 -->
+<select id="selectCertCustcoDsptchNo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	PCCDN.CERT_CUSTCO_DSPTCH_NO_ID							/* 인증_고객사_발신_번호_ID */
+	, PCCDN.CERT_CUSTCO_ID AS PCCDN_CERT_CUSTCO_ID			/* 인증_고객사_ID */
+	, PCCDN.RPRS_NO											/* 대표_번호 */
+	, PCCDN.DSPTCH_NO										/* 발신_번호 */
+	, PCCDN.DSPTCH_NM											/* 발신_명 */
+FROM PLT_CERT_CUSTCO_DSPTCH_NO PCCDN
+	JOIN PLT_CERT_CUSTCO PCC
+		ON PCCDN.CERT_CUSTCO_ID = PCC.CERT_CUSTCO_ID AND PCC.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+ORDER BY PCCDN.CERT_CUSTCO_DSPTCH_NO_ID
+</select>
+
+<select id="selectCertCustcoLocaleInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT /* 서비스 계정 관리 - 언어 설정 정보 조회 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.selectCertCustcoLocaleInfo) */
+	PCC.CD_ID
+	, PCC.CD_NM
+	, CASE WHEN PCC.CD_ID = 'ko' THEN 'ko' ELSE CASE WHEN COALESCE(PCCL.USE_YN, 'N') = 'Y' THEN PCCL.LANG_CD ELSE NULL END END AS LANG_CD
+	, CASE WHEN PCC.CD_ID = 'ko' THEN 'Y' ELSE COALESCE(PCCL.USE_YN, 'N') END AS USE_YN
+	, PCCL.YMD_EXPSR_MTHD_CD
+	, PCCL.YMD_SE_CD
+FROM PLT_COMM_CD PCC
+LEFT OUTER JOIN PLT_CERT_CUSTCO_LANG PCCL ON PCCL.LANG_CD = PCC.CD_ID AND PCCL.CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INTEGER
+WHERE PCC.GROUP_CD_ID = 'LOCALE'
+AND PCC.DEL_YN = 'N'
+AND PCC.USE_YN = 'Y'
+ORDER BY PCC.SORT_ORD
+</select>
+
+<insert id="upsertLocaleInfoSetting"  parameterType= "java.util.HashMap">
+	<foreach collection="LANG_LIST" item="ITEM" open="" separator="" close="" >
+	WITH UPSERT  /*서비스 계정 관리 - 언어 설정 정보 저장, 수정 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.upsertLocaleInfoSetting)*/
+	AS (UPDATE PLT_CERT_CUSTCO_LANG
+			SET MDFR_ID = #{RGTR_ID}::INT
+				, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				<choose>
+					<when test='ITEM.LANG_CD != null and ITEM.LANG_CD != ""'>
+					, USE_YN = 'Y'
+					, YMD_EXPSR_MTHD_CD = #{ITEM.YMD_EXPSR_MTHD_CD}
+					, YMD_SE_CD = #{ITEM.YMD_SE_CD}
+					</when>
+					<otherwise>
+					, USE_YN = 'N'
+					, YMD_EXPSR_MTHD_CD = NULL
+					, YMD_SE_CD = NULL
+					</otherwise>
+				</choose>
+		WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INT
+		AND LANG_CD = #{ITEM.CD_ID}
+	RETURNING *)
+	INSERT INTO PLT_CERT_CUSTCO_LANG (CERT_CUSTCO_ID, LANG_CD, YMD_EXPSR_MTHD_CD, YMD_SE_CD, BSC_LANG_YN, USE_YN, SORT_ORD, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT)
+	SELECT #{CERT_CUSTCO_ID}::INT, CASE WHEN #{ITEM.LANG_CD} = '' THEN #{ITEM.CD_ID} ELSE #{ITEM.LANG_CD} END, CASE WHEN #{ITEM.YMD_EXPSR_MTHD_CD} = '' THEN NULL ELSE #{ITEM.YMD_EXPSR_MTHD_CD} END
+			, CASE WHEN #{ITEM.YMD_SE_CD} = '' THEN NULL ELSE #{ITEM.YMD_SE_CD} END, CASE WHEN #{ITEM.LANG_CD} = 'ko' THEN 'Y' ELSE 'N' END, CASE WHEN #{ITEM.LANG_CD} = '' THEN 'N' ELSE 'Y' END, (SELECT COALESCE(MAX(SORT_ORD), 0)+1 FROM PLT_CERT_CUSTCO_LANG WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INT), #{RGTR_ID}::INT, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'), #{RGTR_ID}::INT, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE NOT EXISTS (SELECT * FROM UPSERT);
+	</foreach>
+</insert>
+
+<!-- 모든 스키마 정보 조회 -->
+<select id="selectAllSchemaIds" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT SCHEMA_ID 
+FROM CUSTCO.PLT_CERT_CUSTCO PCC 
+WHERE SCHEMA_ID NOT IN ('public', 'tta')
+	AND SRVC_CRT_DT IS NOT NULL AND SRVC_CRT_DT != ''
+GROUP BY SCHEMA_ID
+ORDER BY SCHEMA_ID
+</select>
+
+
+<!-- 해당 IPCC 서버와 연동된 인증_고객사 목록 조회 -->
+<select id="selectIpccSrvrCertCustco" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	CERT_CUSTCO_ID
+	, CUSTCO_NM
+	, BFR_SYS_YN 
+FROM PLT_CERT_CUSTCO
+WHERE IPCC_SRVR_ID=#{IPCC_SRVR_ID}::INTEGER
+ORDER BY BFR_SYS_YN, ASP_CUST_KEY
+</select>
+
+
+<!-- 테넌트의 고객사 정보 조회 -->
+<select id="selectTenantCustco" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	CUSTCO_ID
+	, ASP_CUST_KEY
+	, API_URI
+FROM PLT_CUSTCO
+WHERE ASP_CUST_KEY=#{ASP_CUST_KEY}
+</select>
+
+
+<!-- 테넌트의 고객_발신_번호 조회 -->
+<select id="selectTenantCustcoSrvc" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	CUSTCO_ID
+	, SRVC_GDS_DTL_CD 
+	, USE_YN 
+FROM PLT_CUSTCO_SRVC
+WHERE CUSTCO_ID=#{CUSTCO_ID}::INTEGER
+</select>
+
+
+<!-- 고객사_발신_번호 삭제 -->
+<delete id="deleteTenantCustcoSrvc" parameterType="java.util.HashMap">
+DELETE FROM PLT_CUSTCO_SRVC
+WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+AND SRVC_GDS_DTL_CD = #{SRVC_GDS_DTL_CD}
+</delete>
+
+
+<insert id="insertTenantCustcoSrvc" parameterType="java.util.HashMap">
+INSERT INTO PLT_CUSTCO_SRVC
+       ( CUSTCO_ID							/* 고객사_ID */
+        , SRVC_GDS_DTL_CD					/* 서비스_상품_상세_코드 */
+        , USE_YN							/* 사용_여부 */
+        , RGTR_ID							/* 등록자_ID */
+        , REG_DT							/* 등록_일시 */
+       
+) VALUES 
+       ( #{CUSTCO_ID}::INTEGER           	/* 고객사_ID */
+		, #{SRVC_GDS_DTL_CD}				/* 서비스_상품_상세_코드 */
+		, #{USE_YN}							/* 사용_여부 */
+		, 2									/* 등록자_ID */
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')	/* 등록_일시 */
+)
+</insert>
+
+<update id="updateTenantCustcoSrvc" parameterType="java.util.HashMap">
+UPDATE PLT_CUSTCO_SRVC SET
+	USE_YN = #{USE_YN}						/* 사용_여부 */
+	, MDFR_ID = 2										/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 수정_일시 */
+WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+AND SRVC_GDS_DTL_CD = #{SRVC_GDS_DTL_CD}
+</update>
+
+
+<!-- 테넌트 고객사 테이블의 api_uri 업데이트 -->
+<update id="updateTenantCustcoApiUri" parameterType="java.util.HashMap">
+UPDATE PLT_CUSTCO SET
+	API_URI = #{API_URI}								/* API_URI */
+	, MDFR_ID = 2										/* 수정자_ID */
+	, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')		/* 수정_일시 */
+WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+</update>
+
+
+<!-- 테넌트의 고객_발신_번호 조회 -->
+<select id="selectTenantCustcoDsptchNo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	CUSTCO_DSPTCH_NO_ID
+	, CUSTCO_ID
+	, RPRS_NO
+	, DSPTCH_NO
+FROM PLT_CUSTCO_DSPTCH_NO
+WHERE CUSTCO_ID=#{CUSTCO_ID}::INTEGER
+</select>
+
+
+<!-- 고객사_발신_번호 삭제 -->
+<delete id="deleteTenantCustcoDsptchNo" parameterType="java.util.HashMap">
+DELETE FROM PLT_CUSTCO_DSPTCH_NO
+WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+AND CUSTCO_DSPTCH_NO_ID = #{CUSTCO_DSPTCH_NO_ID}::INTEGER
+</delete>
+
+
+<insert id="insertTenantCustcoDsptchNo" parameterType="java.util.HashMap">
+INSERT INTO PLT_CUSTCO_DSPTCH_NO
+       ( CUSTCO_DSPTCH_NO_ID				/* 고객사_발신_번호_ID */
+        , CUSTCO_ID							/* 고객사_ID */
+		, RPRS_NO							/* 대표_번호 */
+		, DSPTCH_NO							/* 발신_번호 */
+       
+) VALUES 
+       ( #{CUSTCO_DSPTCH_NO_ID}::INTEGER	/* 고객사_발신_번호_ID */
+		, #{CUSTCO_ID}::INTEGER           	/* 고객사_ID */
+		, #{RPRS_NO}						/* 대표_번호 */
+		, #{DSPTCH_NO}						/* 발신_번호 */
+)
+</insert>
+
+<update id="updateTenantCustcoDsptchNo" parameterType="java.util.HashMap">
+UPDATE PLT_CUSTCO_DSPTCH_NO SET
+	DSPTCH_NO = #{DSPTCH_NO}					/* 발신_번호 */
+WHERE CUSTCO_ID  = #{CUSTCO_ID}::INTEGER
+	AND RPRS_NO = #{RPRS_NO}
+</update>
+
+<select id="selectUserList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+SELECT 
+	USER_NM || '(' || LGN_ID || ')' AS text
+	, USER_ID AS value
+FROM PLT_USER
+WHERE 1 = 1
+AND USER_ID IN
+<foreach collection="userList" item="item" open="(" separator="," close=")" >
+	#{item}::INT
+</foreach>
+</select>
+
+<insert id="insertCertCustcoSrvcKey" parameterType="java.util.HashMap">
+	INSERT /*본인 간편인증 고객사별 키 저장 처리 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.insertCertCustcoSrvcInst)*/
+	INTO PLT_CERT_CUSTCO_SRVC_KEY (CERT_CUSTCO_ID, SRVC_GDS_DTL_ID, CUSTCO_CD, SRVC_KEY, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT)
+	VALUES ( #{CERT_CUSTCO_ID}::INT
+			, #{SRVC_GDS_DTL_ID}::INT
+			, #{CUSTCO_CD}
+			, #{SRVC_KEY}
+			, #{USER_ID}::INT
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INT
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			)
+</insert>
+
+<update id="updateCertCustcoSrvcKey" parameterType="java.util.HashMap">
+	WITH UPSERT  /*본인 간편인증 키 관리 UPSERT (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.updateCertCustcoSrvcKey)*/
+	AS (UPDATE PLT_CERT_CUSTCO_SRVC_KEY
+			SET MDFR_ID = #{USER_ID}::INT
+				, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+				<if test='CUSTCO_CD != null and CUSTCO_CD != ""'>, CUSTCO_CD = #{CUSTCO_CD}</if>
+				<if test='SRVC_KEY != null and SRVC_KEY != ""'>, SRVC_KEY = #{SRVC_KEY}</if>
+		WHERE CERT_CUSTCO_ID  = #{CERT_CUSTCO_ID}::INT
+		AND SRVC_GDS_DTL_ID = #{SRVC_GDS_DTL_ID}::INT
+	RETURNING *)
+	INSERT INTO PLT_CERT_CUSTCO_SRVC_KEY (CERT_CUSTCO_ID, SRVC_GDS_DTL_ID, CUSTCO_CD, SRVC_KEY, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT)
+	SELECT #{CERT_CUSTCO_ID}::INT, #{SRVC_GDS_DTL_ID}::INT, #{CUSTCO_CD}, #{SRVC_KEY}, #{USER_ID}::INT, TO_CHAR(NOW(),'YYYYMMDDHH24MISS'), #{USER_ID}::INT, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	WHERE NOT EXISTS (SELECT * FROM UPSERT);
+</update>
+
+<insert id="insertCertCustcoSrvcInst" parameterType="java.util.HashMap">
+	<foreach collection="OMNIONE_PROVD_CO" item="item" index="index" open="" separator="" close="" >
+	INSERT /*본인 간편인증 인증사 저장 처리 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.insertCertCustcoSrvcInst)*/
+	INTO PLT_CERT_CUSTCO_SRVC_INST (CERT_CUSTCO_ID, SRVC_GDS_DTL_ID, INST_CD, INST_NM, SORT_ORD, RGTR_ID, REG_DT)
+	VALUES ( #{CERT_CUSTCO_ID}::INT
+			, #{SRVC_GDS_DTL_ID}::INT
+			, #{item.value}
+			, #{item.text}
+			, #{index}
+			, #{USER_ID}::INT
+			, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			);
+	</foreach>
+</insert>
+
+<insert id="insertCertCustcoTrnsfOpt" parameterType="java.util.HashMap">
+	INSERT /*인증 고객사 이관 옵션 저장 처리 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.insertCertCustcoTrnsfInst)*/
+	INTO PLT_CERT_CUSTCO_TRNSF_OPT (CERT_CUSTCO_ID, TARGET_OPT_CD, RGTR_ID, REG_DT)
+	VALUES ( #{CERT_CUSTCO_ID}::INTEGER
+		   , #{TARGET_OPT_CD}
+		   , #{RGTR_ID}::INTEGER
+		   , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		   )
+	ON CONFLICT (CERT_CUSTCO_ID)
+	DO UPDATE SET
+		  TARGET_OPT_CD = #{TARGET_OPT_CD}
+	    , MDFR_ID = #{RGTR_ID}::INTEGER
+		, MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS');
+</insert>
+
+<delete id="deleteCertCustcoSrvcInst" parameterType="java.util.HashMap">
+	DELETE /*본인 간편인증 인증사 삭제 처리 (kr.co.hkcloud.palette3.admin.custco.dao.AdminCertCustcoManageMapper.deleteCertCustcoSrvcInst)*/
+	FROM PLT_CERT_CUSTCO_SRVC_INST
+	WHERE CERT_CUSTCO_ID = #{CERT_CUSTCO_ID}::INT
+	AND SRVC_GDS_DTL_ID = #{SRVC_GDS_DTL_ID}::INT
+</delete>
+
+</mapper>

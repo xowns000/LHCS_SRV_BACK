@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.svy.dao.svyTmplItemsMapper">
+
+	<select id="clsfTreeList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		WITH RECURSIVE CTE_T AS ( /* 설문분류 Tree 조회 - clsfTreeList */
+			SELECT 
+				1 AS LEVEL
+				, CONCAT(SRVY_CLSF_NM) AS FULL_PATH
+				, LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT_ARR
+				, 'N' AS PIC_USE_YN
+				, *
+			FROM PLT_SRVY_CLSF
+			WHERE DEL_YN = 'N'
+				<if test=' USE_YN != null and USE_YN != "" '>
+					AND USE_YN = #{USE_YN}
+				</if>
+				AND UP_SRVY_CLSF_ID IS NULL
+				AND CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			UNION ALL 
+			SELECT 
+				LEVEL + 1
+				, CONCAT(FULL_PATH, ' > ', S.SRVY_CLSF_NM)
+				, SORT_ARR || ' > ' || LPAD(CAST(S.SORT_ORD AS VARCHAR),5,'0')
+				, 'N'
+				, S.*
+			FROM CTE_T R
+			INNER JOIN PLT_SRVY_CLSF S ON R.SRVY_CLSF_ID = S.UP_SRVY_CLSF_ID 
+				AND S.DEL_YN = 'N'
+				<if test=' USE_YN != null and USE_YN != "" '>
+					AND S.USE_YN = #{USE_YN}
+				</if>
+				AND S.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		)
+		SELECT
+			T.SORT_ARR
+			, T.CUSTCO_ID
+			, T.SRVY_CLSF_ID											/*		분류ID				*/
+			, T.UP_SRVY_CLSF_ID										/*		상위분류ID		*/
+			, (SELECT SRVY_CLSF_NM FROM PLT_SRVY_CLSF WHERE SRVY_CLSF_ID = T.UP_SRVY_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS UP_SRVY_CLSF_NM	/*		상위분류명	*/
+			, T.SRVY_CLSF_NM 										/*		분류명				*/
+			, COALESCE(CC.QITEM_CNT, 0) AS QITEM_CNT						/*		해당분류의 공개된 컨텐츠 COUNT	*/
+			, COALESCE(CC.RLS_QITEM_CNT, 0) AS RLS_QITEM_CNT						/*		해당분류의 공개된 컨텐츠 COUNT	*/
+		<![CDATA[
+			, CASE 
+				WHEN COALESCE(T.USE_YN, 'N') = 'N'
+				THEN 
+					CASE WHEN COALESCE(CC.QITEM_CNT, 0) = 0 THEN CONCAT(T.SRVY_CLSF_NM, ' <font color="red">(비공개)</font>')
+					ELSE CONCAT(T.SRVY_CLSF_NM, ' <font color="blue">(', CC.QITEM_CNT, ')</font>', ' <font color="red">(비공개)</font>') END
+				ELSE 
+					CASE WHEN COALESCE(CC.QITEM_CNT, 0) = 0 THEN CONCAT( T.SRVY_CLSF_NM )
+					ELSE CONCAT(T.SRVY_CLSF_NM, ' <font color="blue">(', CC.QITEM_CNT, ')</font>' ) END
+			  END AS SRVY_CLSF_NM_F								/*		분류명(for Manage Tree)	*/
+		]]>
+			, LEVEL AS LVL													/*		레벨					*/
+			, T.FULL_PATH													/*		경로명				*/
+			, T.USE_YN														/*		사용여부(공개여부)	*/
+			, T.SRVY_CLSF_EXPLN
+			, CASE 
+				WHEN COALESCE(T.USE_YN, 'N') = 'N' THEN '비공개'
+				ELSE '공개'
+			  END AS IS_OPEN
+			, T.SORT_ORD													/*		정렬순번		*/
+	<![CDATA[
+			, (SELECT COALESCE(MIN(SORT_ORD),0) FROM PLT_SRVY_CLSF WHERE UP_SRVY_CLSF_ID = T.UP_SRVY_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS MIN_ORD		/*		동일레벨의 최소 순번 -- 순번변경시 사용		*/ 
+			, (SELECT COALESCE(MAX(SORT_ORD),0) FROM PLT_SRVY_CLSF WHERE UP_SRVY_CLSF_ID = T.UP_SRVY_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS MAX_ORD		/*		동일레벨의 최대 순번 -- 순번변경시 사용		*/
+			, (SELECT COALESCE(MAX(SORT_ORD),0) FROM PLT_SRVY_CLSF WHERE UP_SRVY_CLSF_ID = T.UP_SRVY_CLSF_ID AND COALESCE(SORT_ORD,0) < COALESCE(T.SORT_ORD,0) AND COALESCE(DEL_YN, 'Y') != 'Y') AS PRE_ORD		/*		동일레벨의 이전순번 -- 순번변경시 사용		*/
+			, (SELECT COALESCE(MIN(SORT_ORD),0) FROM PLT_SRVY_CLSF WHERE UP_SRVY_CLSF_ID = T.UP_SRVY_CLSF_ID AND COALESCE(SORT_ORD,0) > COALESCE(T.SORT_ORD,0) AND COALESCE(DEL_YN, 'Y') != 'Y') AS NEXT_ORD		/*		동일레벨의 다음순번 -- 순번변경시 사용		*/
+			, (SELECT COALESCE(MAX(SORT_ORD),0) FROM PLT_SRVY_CLSF WHERE UP_SRVY_CLSF_ID = T.SRVY_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS CHILD_MAX_ORD	/*		하위레벨의 최대 순번		-- 분류 추가시 사용	*/
+			, (SELECT COALESCE(COUNT(SRVY_CLSF_ID),0) FROM PLT_SRVY_CLSF WHERE UP_SRVY_CLSF_ID = T.SRVY_CLSF_ID AND COALESCE(DEL_YN, 'Y') != 'Y') AS CHILD_CNT	/*		하위분류 COUNT	*/
+	]]>
+		FROM CTE_T T
+		LEFT OUTER JOIN (
+			SELECT 
+				SRVY_CLSF_ID
+				, SUM(1) AS QITEM_CNT
+				, SUM(CASE WHEN RLS_YN = 'Y' THEN 1 ELSE 0 END) AS RLS_QITEM_CNT
+			FROM PLT_SRVY_QITEM
+			WHERE DEL_YN='N'
+				<if test="RLS_YN != null and RLS_YN != ''">
+					AND RLS_YN = #{RLS_YN}
+				</if>
+			GROUP BY SRVY_CLSF_ID
+		) CC ON CC.SRVY_CLSF_ID = T.SRVY_CLSF_ID
+		ORDER BY SORT_ARR
+	
+	</select>
+
+	<select id="clsfInfo"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			C.CUSTCO_ID													/*		고객사 ID					*/
+			, C.SRVY_CLSF_ID												/*		분류ID						*/
+			, C.UP_SRVY_CLSF_ID										/*		상위분류ID				*/
+			, UP.SRVY_CLSF_NM AS UP_SRVY_CLSF_NM	/*		상위분류명				*/
+			, C.SRVY_CLSF_NM 											/*		분류명						*/
+			, C.USE_YN														/*		사용여부(공개여부)	*/
+			, C.SRVY_CLSF_EXPLN										/*		분류설명					*/
+			, C.SORT_ORD													/*		정렬순번					*/
+		FROM PLT_SRVY_CLSF C
+		LEFT OUTER JOIN PLT_SRVY_CLSF UP ON C.UP_SRVY_CLSF_ID = UP.SRVY_CLSF_ID
+		WHERE 1=1
+			<choose>
+				<when test=' SRVY_CLSF_ID != null and SRVY_CLSF_ID != "" '>
+					AND C.SRVY_CLSF_ID = CAST(#{SRVY_CLSF_ID} AS INTEGER)
+				</when>
+				<when test=' UP_SRVY_CLSF_ID != null and UP_SRVY_CLSF_ID != "" and SORT_ORD != null and SORT_ORD != "" '>
+					AND C.DEL_YN = 'N'
+					AND C.UP_SRVY_CLSF_ID = CAST(#{UP_SRVY_CLSF_ID} AS INTEGER)
+					AND C.SORT_ORD = CAST(#{SORT_ORD} AS INTEGER)
+				</when>
+				<otherwise>
+					AND C.SRVY_CLSF_ID IS NULL
+				</otherwise>
+			</choose>		
+	</select>
+	
+	<insert id="insertSrvyClsf"  parameterType= "java.util.HashMap">
+		INSERT /*	설문분류 등록 - insertSrvyClsf	*/
+		INTO PLT_SRVY_CLSF (
+			SRVY_CLSF_ID
+			, UP_SRVY_CLSF_ID
+			, SRVY_CLSF_NM
+			, SRVY_CLSF_EXPLN
+			, SORT_ORD
+			, USE_YN
+			, DEL_YN
+			, CUSTCO_ID
+			, RGTR_ID
+			, REG_DT
+			, MDFR_ID
+			, MDFCN_DT
+		) 
+		SELECT 
+			#{SRVY_CLSF_ID}::INTEGER
+			, #{UP_SRVY_CLSF_ID}::INTEGER
+			, #{SRVY_CLSF_NM}
+			, #{SRVY_CLSF_EXPLN}
+			<choose>
+				<when test=' SORT_ORD != null and SORT_ORD != "" '>
+					, #{SORT_ORD}::INTEGER
+				</when>
+				<otherwise>
+					, (SELECT COALESCE(MAX(SORT_ORD), 0) + 1 FROM PLT_SRVY_CLSF WHERE UP_SRVY_CLSF_ID  = #{UP_SRVY_CLSF_ID}::INTEGER)::INTEGER
+				</otherwise>
+			</choose>
+			, #{USE_YN}
+			, 'N'
+			, #{CUSTCO_ID}::INTEGER
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			, #{USER_ID}::INTEGER
+			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+		
+		
+	</insert>
+	
+	<update id="updateSrvyClsf"  parameterType= "java.util.HashMap">
+		UPDATE PLT_SRVY_CLSF SET /*	설문분류 수정 - updateSrvyClsf	*/
+			MDFR_ID = #{USER_ID}::INTEGER
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test=' UP_SRVY_CLSF_ID != null and UP_SRVY_CLSF_ID != "" '>	, UP_SRVY_CLSF_ID = #{UP_SRVY_CLSF_ID}::INTEGER	</if>
+			<if test=' SRVY_CLSF_NM != null and SRVY_CLSF_NM != "" '>				, SRVY_CLSF_NM = #{SRVY_CLSF_NM}								</if>
+			<if test=' SRVY_CLSF_EXPLN != null and SRVY_CLSF_EXPLN != "" '>	, SRVY_CLSF_EXPLN = #{SRVY_CLSF_EXPLN}					</if>
+			<if test=' SORT_ORD != null and SORT_ORD != "" '>							, SORT_ORD = #{SORT_ORD}::INTEGER							</if>
+			<if test=' USE_YN != null and USE_YN != "" '>									, USE_YN = #{USE_YN}													</if>
+			<if test=' DEL_YN != null and DEL_YN != "" '>									, DEL_YN = #{DEL_YN}													</if>
+		WHERE SRVY_CLSF_ID = #{SRVY_CLSF_ID}::INTEGER
+			<if test=' DEL_YN == "Y" '>
+				AND NOT EXISTS (
+					SELECT SRVY_QITEM_ID FROM PLT_SRVY_QITEM WHERE SRVY_CLSF_ID =#{SRVY_CLSF_ID}::INTEGER AND DEL_YN='N'
+				)
+			</if>
+	</update>
+	
+	<update id="updateSrvyClsfSortOrder"  parameterType= "java.util.HashMap">
+		UPDATE PLT_SRVY_CLSF SET /*	분류의 정렬번호를 다른 분류의 정렬번호로 변경 - updateSrvyClsfSortOrder	*/
+			MDFR_ID = #{USER_ID}::INTEGER
+			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+			<if test=' CHG_ORD != null and CHG_ORD != "" '>
+				, SORT_ORD = #{CHG_ORD}::INTEGER
+			</if>
+			<if test=' OTHER_SRVY_CLSF_ID != null and OTHER_SRVY_CLSF_ID != "" '>
+				, SORT_ORD = ( SELECT SORT_ORD FROM PLT_SRVY_CLSF WHERE SRVY_CLSF_ID = #{OTHER_SRVY_CLSF_ID}::INTEGER )
+			</if>
+		WHERE SRVY_CLSF_ID = #{SRVY_CLSF_ID}::INTEGER
+	</update>
+	
+	<select id="selectTmplItemList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	 /*	설문문항관리 - 설문항목 조회 - selectTmplItemList	*/
+			ROW_NUMBER() OVER(ORDER BY SQ.SORT_ORD) AS ROW_NUMBER
+			,(CASE WHEN SQ.SRVY_QITEM_ID IS NULL THEN 0 ELSE 1 END) AS QITEM_CNT
+			,SQ.SRVY_QITEM_ID
+			,SQ.SRVY_QITEM_CN
+			,SQ.SRVY_QITEM_EXPLN
+			,SQ.QITEM_TYPE_CD
+			,E.CD_NM AS QITEM_TYPE_NM
+			,(CASE WHEN SQ.ESNTL_YN = 'N' THEN '' ELSE SQ.ESNTL_YN END) AS ESNTL_YN
+			,SQ.CHC_PM_CNT
+			,SQ.ANS_LEN_CD
+			,SQ.HR_APLCN_YN
+			,SQ.SORT_ORD AS ITEM_SORT_ORD
+			,SQ.DEL_YN
+			,SQ.FILE_GROUP_KEY
+			,(SELECT COUNT(X.QITEM_CHC_ID) FROM PLT_SRVY_QITEM_CHC X WHERE X.SRVY_QITEM_ID = SQ.SRVY_QITEM_ID AND X.DEL_YN = 'N') AS CHC_CNT
+			,'' AS ACTIVE
+			,'' AS RENAME
+			,'' AS NEWFLAG
+			,(CASE WHEN SQ.ESNTL_YN = 'Y' THEN SQ.ESNTL_YN ELSE '' END) AS REQUIRED
+			,SQ.RLS_YN
+			,(CASE WHEN SQ.RLS_YN = 'Y' THEN '공개' ELSE '비공개' END) AS RLS_YN_NM
+			,SQ.SCR_USE_YN
+			,SQ.GROUP_MVMN_USE_YN
+			,SC.SRVY_CLSF_ID
+			,SC.SRVY_CLSF_NM
+			,U.USER_NM RGTR_NM
+			,TO_CHAR(TO_TIMESTAMP(SC.REG_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') REG_DT_F
+		from PLT_SRVY_QITEM SQ
+		INNER JOIN PLT_SRVY_CLSF SC
+			ON SQ.SRVY_CLSF_ID = SC.SRVY_CLSF_ID AND SC.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+		INNER JOIN PLT_USER U
+			ON SQ.RGTR_ID = U.USER_ID
+		LEFT OUTER JOIN PLT_COMM_CD E
+			ON SQ.QITEM_TYPE_CD = E.CD_ID AND E.GROUP_CD_ID = 'SUVY_QST_TP' AND E.CUSTCO_ID = #{CUSTCO_ID}::BIGINT
+		WHERE 	SQ.DEL_YN	= 'N'
+			AND SC.SRVY_CLSF_ID = #{SRVY_CLSF_ID}::BIGINT
+			<if test=' RLS_YN != null and RLS_YN != "" '>
+				AND SQ.RLS_YN = #{RLS_YN}
+			</if>
+			<if test=' QITEM_TYPE_CD != null and QITEM_TYPE_CD != "" '>
+				AND SQ.QITEM_TYPE_CD = #{QITEM_TYPE_CD}
+			</if>
+			<if test=' SRVY_QITEM_CN != null and SRVY_QITEM_CN != "" '>
+				AND SQ.SRVY_QITEM_CN LIKE '%'||#{SRVY_QITEM_CN}||'%'
+			</if>
+			
+			<if test=' SRVY_QITEM_ID != null and SRVY_QITEM_ID != "" '>
+				AND SQ.SRVY_QITEM_ID = #{SRVY_QITEM_ID}::BIGINT
+			</if>
+	</select>
+	
+	<update id="deleteTmplItem" parameterType= "java.util.HashMap">
+		UPDATE /* deleteTmplItem 설문문항 삭제 */
+			PLT_SRVY_QITEM
+		SET 
+			DEL_YN 	= 'Y'
+		WHERE 
+			SRVY_QITEM_ID = #{SRVY_QITEM_ID}::BIGINT
+			AND SRVY_CLSF_ID = #{SRVY_CLSF_ID}::BIGINT
+	</update>
+	
+	
+	<select id="selectPreviewQitem" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT	 /* selectPreviewQitem 미리보기 데이터 조회 */
+				C.SRVY_QITEM_ID
+				,C.SRVY_QITEM_CN
+				,COALESCE(C.ESNTL_YN,'N') AS ESNTL_YN
+				,C.SRVY_QITEM_EXPLN
+				,C.QITEM_TYPE_CD
+				,C.ESNTL_YN
+				,C.CHC_PM_CNT
+				,C.HR_APLCN_YN
+				,C.SORT_ORD
+				,C.SCR_USE_YN
+				,C.GROUP_MVMN_USE_YN
+				,D.QITEM_CHC_ID
+				,D.SRVY_QITEM_ID AS CHC_SRVY_QITEM_ID
+				,D.QITEM_CHC_CN
+				,D.SORT_ORD
+				,D.MVMN_SRVY_QITEM_GROUP_ID AS CHC_MVMN_SRVY_QITEM_GROUP_ID
+				,D.RSPNS_USE_YN
+				,D.SCR
+		FROM	PLT_SRVY_CLSF	A
+		LEFT OUTER JOIN PLT_SRVY_QITEM C
+			ON A.SRVY_CLSF_ID = C.SRVY_CLSF_ID AND C.DEL_YN = 'N'
+		LEFT OUTER JOIN PLT_SRVY_QITEM_CHC D
+			ON C.SRVY_QITEM_ID = D.SRVY_QITEM_ID AND D.DEL_YN = 'N'
+		 WHERE  C.SRVY_QITEM_ID = #{SRVY_QITEM_ID}::INTEGER  
+		ORDER BY C.SORT_ORD, D.SORT_ORD
+	</select>
+	
+</mapper>

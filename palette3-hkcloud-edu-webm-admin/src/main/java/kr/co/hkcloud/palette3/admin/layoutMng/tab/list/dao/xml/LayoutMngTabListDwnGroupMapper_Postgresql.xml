@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.layoutMng.tab.list.dao.LayoutMngTabListDwnGroupMapper">
+  <select id="selectDwnGroup" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT
+        PLLDGD.LIST_DWN_GROUP_DTL_ID
+        , PLL.TAB_ID
+        , PLLDG.LIST_DWN_GROUP_ID
+        , PLLDG.LIST_ID
+        , PLLDG.LIST_DWN_GROUP_TTL
+        , PLM.LKAG_ID
+        , PLM.LKAG_NM
+        , PLLDGD.RSPNS_ARTCL_ID
+        , PLLDGD.LABEL_NM
+        , PLLDGD.EPSZ_YN
+        , PLLDGD.COLOR_CD
+        , PLLDGD.SORT_ORD
+        , PLLDG.WD_SZ
+        , PLLDG.SORT_ORD AS GROUP_SORT_ORD
+        , PLLDGD.RSPNS_EPSZ_YN
+        , PLLDGD.RSPNS_COLOR_CD
+        , PLRA.COL_NM
+        , PLRA.DATA_TYPE_CD
+        , PLRA2.RSPNS_ARTCL_ID AS UP_RSPNS_ARTCL_ID
+        , PLRA2.COL_NM AS UP_RSPNS_ARTCL_COL_NM
+        , PLRA2.DATA_TYPE_CD AS UP_RSPNS_DATA_CD
+    FROM PLT_LAYOUT_LIST_DWN_GROUP PLLDG
+    JOIN PLT_LAYOUT_LIST PLL ON PLL.LIST_ID = PLLDG.LIST_ID
+    LEFT JOIN PLT_LAYOUT_LIST_DWN_GROUP_DTL PLLDGD ON PLLDG.LIST_DWN_GROUP_ID = PLLDGD.LIST_DWN_GROUP_ID
+    LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLLDGD.RSPNS_ARTCL_ID
+    LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA2 ON PLRA2.RSPNS_ARTCL_ID = PLRA.UP_ARTCL_ID
+    LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLRA.LKAG_ID
+    WHERE PLLDG.LIST_ID IN
+    <foreach collection="arrListId" item="listId" open="(" separator="," close=")">
+      #{listId}::INTEGER
+    </foreach>
+    ORDER BY PLLDG.SORT_ORD ,PLLDGD.SORT_ORD
+  </select>
+  <insert id="insertDwnGroup" parameterType="java.util.HashMap">
+    INSERT INTO PLT_LAYOUT_LIST_DWN_GROUP( LIST_DWN_GROUP_ID
+                                         , LIST_ID
+                                         , LIST_DWN_GROUP_TTL
+                                         , WD_SZ
+                                         , SORT_ORD
+                                         , RGTR_ID
+                                         , REG_DT)
+    VALUES ( #{LIST_DWN_GROUP_ID}::INTEGER
+           , #{LIST_ID}::INTEGER
+           , #{LIST_DWN_GROUP_TTL}
+           , #{WD_SZ}::INTEGER
+           , #{GROUP_SORT_ORD}::INTEGER
+           , #{USER_ID}::INTEGER
+           , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'));
+  </insert>
+  <update id="updateListDwnGroup" parameterType="java.util.HashMap">
+    UPDATE PLT_LAYOUT_LIST_DWN_GROUP
+    SET REG_DT= TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+      , RGTR_ID = #{USER_ID}::INTEGER
+    <if test="LIST_DWN_GROUP_TTL != null and LIST_DWN_GROUP_TTL != ''">
+      , LIST_DWN_GROUP_TTL=#{LIST_DWN_GROUP_TTL}
+    </if>
+    <if test="LIST_DWN_GROUP_TTL != null and LIST_DWN_GROUP_TTL != ''">
+      , WD_SZ = #{WD_SZ}::INTEGER
+    </if>
+    <if test="SORT_ORD != null and SORT_ORD != ''">
+      , SORT_ORD = #{GROUP_SORT_ORD}::INTEGER
+    </if>
+    WHERE LIST_DWN_GROUP_ID=#{LIST_DWN_GROUP_ID}::INTEGER;
+  </update>
+  <insert id="insertListDwnGroupDtl" parameterType="java.util.HashMap">
+    INSERT INTO PLT_LAYOUT_LIST_DWN_GROUP_DTL
+    ( LIST_DWN_GROUP_DTL_ID
+    , LIST_DWN_GROUP_ID
+    , RSPNS_ARTCL_ID
+    , LABEL_NM
+    , EPSZ_YN
+    , COLOR_CD
+    , RSPNS_EPSZ_YN
+    , RSPNS_COLOR_CD
+    , SORT_ORD
+    , RGTR_ID
+    , REG_DT)
+    VALUES ( #{LIST_DWN_GROUP_DTL_ID}::INTEGER
+           , #{LIST_DWN_GROUP_ID}::INTEGER
+           , #{RSPNS_ARTCL_ID}::INTEGER
+           , #{LABEL_NM}
+           , #{EPSZ_YN}
+           , #{COLOR_CD}
+           , #{RSPNS_EPSZ_YN}
+           , #{RSPNS_COLOR_CD}
+           , #{SORT_ORD}::INTEGER
+           , #{USER_ID}::INTEGER
+           , TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'));
+  </insert>
+  <delete id="deleteListDwnGroupDtl" parameterType="java.util.HashMap">
+    DELETE FROM PLT_LAYOUT_LIST_DWN_GROUP_DTL
+    WHERE LIST_DWN_GROUP_ID = #{LIST_DWN_GROUP_ID}::INTEGER
+  </delete>
+  <delete id="deleteListDwnGroup" parameterType="java.util.HashMap">
+    DELETE FROM PLT_LAYOUT_LIST_DWN_GROUP
+    WHERE LIST_DWN_GROUP_ID = #{LIST_DWN_GROUP_ID}::INTEGER
+  </delete>
+</mapper>

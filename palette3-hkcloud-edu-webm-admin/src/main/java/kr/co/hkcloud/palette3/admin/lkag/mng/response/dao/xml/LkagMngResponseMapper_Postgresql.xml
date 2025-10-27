@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.admin.lkag.mng.response.dao.LkagMngResponseMapper">
+    <select id="selectList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+        WITH RECURSIVE LKAG_RSPNS_TREE (RSPNS_ARTCL_ID, UP_ARTCL_ID, LKAG_ID, COL_NM, ARTCL_NM, DATA_TYPE_CD, DATA_TYPE_FMT_CD, ENCPT_YN, EXPLN
+            , DSPLY_NM, SORT_ORD, LVL, SORT, ARTCL_FULL_NM, FULL_PATH, RSPNS_DECPT_MTHD_CD, RSPNS_DECPT_KEY, RSPNS_DECPT_MTHD_CD_NM, RSPNS_DECPT_MTHD_CD_VL
+            , DATA_TYPE_CD_NM, DATA_TYPE_CD_VL, USE_YN, LKAG_GROUP_CD_ID
+            ) AS (
+            SELECT PARA.RSPNS_ARTCL_ID, PARA.UP_ARTCL_ID, PARA.LKAG_ID, PARA.COL_NM, PARA.ARTCL_NM, PARA.DATA_TYPE_CD, PARA.DATA_TYPE_FMT_CD, ENCPT_YN, PARA.EXPLN
+                 , PARA.COL_NM ||'(' || PARA.ARTCL_NM ||')' as DSPLY_NM
+                 , PARA.SORT_ORD, 1 AS LVL, LPAD(CAST(PARA.SORT_ORD AS VARCHAR),5,'0') AS SORT
+                 , CAST(PARA.ARTCL_NM AS VARCHAR(300)) AS ARTCL_FULL_NM
+                 , CAST(PARA.COL_NM AS VARCHAR(300)) AS FULL_PATH
+                 , PLM.RSPNS_DECPT_MTHD_CD
+                 , PLM.RSPNS_DECPT_KEY
+                 , RDMC.CD_NM as RSPNS_DECPT_MTHD_CD_NM
+                 , RDMC.CD_VL as RSPNS_DECPT_MTHD_CD_VL
+                 , RDTC.CD_NM as DATA_TYPE_CD_NM
+                 , RDTC.CD_VL as DATA_TYPE_CD_VL
+                 , PARA.USE_YN
+                 , PARA.LKAG_GROUP_CD_ID
+            FROM CUSTCO.PLT_LKAG_RSPNS_ARTCL PARA
+         INNER JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PARA.LKAG_ID
+         LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDMC ON RDMC.CUSTCO_ID = 1 AND RDMC.CD_ID = PLM.RSPNS_DECPT_MTHD_CD AND RDMC.GROUP_CD_ID = 'LKAG_DE_CERT_TP'
+         LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDTC ON RDTC.CUSTCO_ID = 1 AND RDTC.CD_ID = PARA.DATA_TYPE_CD AND RDTC.GROUP_CD_ID = 'LKAG_PARAM_ITEM_TP'
+            WHERE PARA.UP_ARTCL_ID IS NULL
+              AND PARA.USE_YN = 'Y' AND PARA.DEL_YN='N'
+                <choose>
+                    <when test="SRCH_LKAG_ID != null and SRCH_LKAG_ID !=''">  AND PARA.LKAG_ID = #{SRCH_LKAG_ID}::INTEGER   </when>
+                    <otherwise> AND PARA.LKAG_ID = #{LKAG_ID}::INTEGER </otherwise>
+                </choose>
+                <if test="SRCH_EX_LKAG_ID !='' and SRCH_EX_LKAG_ID != null"> AND PARA.LKAG_ID <![CDATA[<>]]> #{SRCH_EX_LKAG_ID} </if>
+            UNION ALL
+            SELECT PARA.RSPNS_ARTCL_ID, PARA.UP_ARTCL_ID, PARA.LKAG_ID, PARA.COL_NM, PARA.ARTCL_NM, PARA.DATA_TYPE_CD, PARA.DATA_TYPE_FMT_CD, PARA.ENCPT_YN, PARA.EXPLN
+                 , PARA.COL_NM ||'(' || PARA.ARTCL_NM ||')' as DSPLY_NM
+                 , PARA.SORT_ORD, LVL + 1, LRT.SORT || ' > ' || LPAD(CAST(PARA.SORT_ORD AS VARCHAR),5,'0') AS SORT
+                 , CAST(LRT.ARTCL_FULL_NM || ' > ' || PARA.ARTCL_NM AS VARCHAR(300)) AS ARTCL_FULL_NM
+                 , CAST(LRT.FULL_PATH || ' > ' || PARA.COL_NM AS VARCHAR(300)) AS FULL_PATH
+                 , PLM.RSPNS_DECPT_MTHD_CD
+                 , PLM.RSPNS_DECPT_KEY
+                 , RDMC.CD_NM as RSPNS_DECPT_MTHD_CD_NM
+                 , RDMC.CD_VL as RSPNS_DECPT_MTHD_CD_VL
+                 , RDTC.CD_NM as DATA_TYPE_CD_NM
+                 , RDTC.CD_VL as DATA_TYPE_CD_VL
+                 , PARA.USE_YN
+                 , PARA.LKAG_GROUP_CD_ID
+            FROM CUSTCO.PLT_LKAG_RSPNS_ARTCL PARA
+         INNER JOIN LKAG_RSPNS_TREE LRT ON PARA.UP_ARTCL_ID = LRT.RSPNS_ARTCL_ID
+         INNER JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PARA.LKAG_ID
+         LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDMC ON RDMC.CUSTCO_ID = 1 AND RDMC.CD_ID = PLM.RSPNS_DECPT_MTHD_CD AND RDMC.GROUP_CD_ID = 'LKAG_DE_CERT_TP'
+         LEFT OUTER JOIN CUSTCO.PLT_COMM_CD RDTC ON RDTC.CUSTCO_ID = 1 AND RDTC.CD_ID = PARA.DATA_TYPE_CD AND RDTC.GROUP_CD_ID = 'LKAG_PARAM_ITEM_TP'
+            WHERE PARA.UP_ARTCL_ID IS NOT NULL
+              AND PARA.USE_YN = 'Y' AND PARA.DEL_YN='N'
+                <choose>
+                    <when test="SRCH_LKAG_ID != null and SRCH_LKAG_ID !=''">  AND PARA.LKAG_ID = #{SRCH_LKAG_ID}::INTEGER   </when>
+                    <otherwise> AND PARA.LKAG_ID = #{LKAG_ID}::INTEGER </otherwise>
+                </choose>
+                <if test="SRCH_EX_LKAG_ID !='' and SRCH_EX_LKAG_ID != null"> AND PARA.LKAG_ID <![CDATA[<>]]> #{SRCH_EX_LKAG_ID} /* 제외 */</if>
+
+        )
+        SELECT RSPNS_ARTCL_ID, UP_ARTCL_ID, LKAG_ID, COL_NM, ARTCL_NM, DATA_TYPE_CD, DATA_TYPE_FMT_CD, ENCPT_YN, SORT_ORD, EXPLN
+               , DSPLY_NM, LVL, SORT, ARTCL_FULL_NM, FULL_PATH, replace(FULL_PATH, ' > ', '.') as FULL_PATH_DOT, RSPNS_DECPT_MTHD_CD, RSPNS_DECPT_KEY, RSPNS_DECPT_MTHD_CD_NM, RSPNS_DECPT_MTHD_CD_VL
+               , DATA_TYPE_CD_NM, DATA_TYPE_CD_VL, USE_YN, LKAG_GROUP_CD_ID
+               , true as COL_NM_DPCN
+               , (SELECT COUNT(*) FROM CUSTCO.PLT_LKAG_RSPNS_ARTCL WHERE LKAG_ID = RT.LKAG_ID AND COALESCE(UP_ARTCL_ID,-1) = COALESCE(RT.UP_ARTCL_ID,-1) AND DEL_YN = 'N') AS MAX_SORT_ORD
+        FROM LKAG_RSPNS_TREE RT
+        ORDER BY SORT
+    </select>
+
+    <update id="insert" parameterType="java.util.HashMap">
+        INSERT  /* 연동관리 데이터전문 Response 등록 insert - kr.co.hkcloud.palette3.admin.lkag.mng.response.dao.LkagMngResponseMapper */
+            INTO CUSTCO.PLT_LKAG_RSPNS_ARTCL ( UP_ARTCL_ID, RSPNS_ARTCL_ID, LKAG_ID, COL_NM, ARTCL_NM, DATA_TYPE_CD, DATA_TYPE_FMT_CD, LKAG_GROUP_CD_ID
+            , ENCPT_YN, EXPLN, USE_YN, SORT_ORD, RGTR_ID, REG_DT, MDFR_ID, MDFCN_DT, DEL_YN)
+        VALUES ( #{UP_ARTCL_ID}::INTEGER, #{RSPNS_ARTCL_ID}::INTEGER, #{LKAG_ID}::INTEGER, #{COL_NM}, #{ARTCL_NM}, #{DATA_TYPE_CD}, #{DATA_TYPE_FMT_CD}, #{LKAG_GROUP_CD_ID}
+            , <choose>
+                <when test="ENCPT_YN == null or ENCPT_YN ==''">'N'</when>
+                <otherwise>#{ENCPT_YN}</otherwise>
+              </choose>
+            , #{EXPLN}, 'Y'
+            , (
+                SELECT COALESCE(COUNT(1), 0) + 1
+                FROM CUSTCO.PLT_LKAG_RSPNS_ARTCL WHERE LKAG_ID = #{LKAG_ID}::INTEGER
+                <choose>
+                    <when test="UP_ARTCL_ID == null or UP_ARTCL_ID ==''">
+                        AND UP_ARTCL_ID IS NULL
+                    </when>
+                    <otherwise>
+                        AND UP_ARTCL_ID=#{UP_ARTCL_ID}::INTEGER
+                    </otherwise>
+                </choose>
+                )
+                , <choose>
+                    <when test="USER_ID == null or USER_ID ==''">
+                        1
+                    </when>
+                    <otherwise>
+                        #{USER_ID}::INTEGER
+                    </otherwise>
+                </choose>
+                , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+                , <choose>
+                    <when test="USER_ID == null or USER_ID ==''">
+                        1
+                    </when>
+                    <otherwise>
+                        #{USER_ID}::INTEGER
+                    </otherwise>
+                </choose>
+                , TO_CHAR(NOW(),'YYYYMMDDHH24MISS'), 'N'
+            )
+    </update>
+
+    <update id="update" parameterType="java.util.HashMap">
+        UPDATE /* 연동관리 데이터전문 Request Parameter 수정 update - kr.co.hkcloud.palette3.admin.lkag.mng.dao.LkagMngMapper */
+            CUSTCO.PLT_LKAG_RSPNS_ARTCL
+        SET COL_NM = #{COL_NM}, /* 파라미터_컬럼_명 */
+            ARTCL_NM = #{ARTCL_NM},/* 파라미터_명 */
+            DATA_TYPE_CD = #{DATA_TYPE_CD},/* 파라미터_자료_유형_코드 => LKAG_PARAM_ITEM_TP*/
+            DATA_TYPE_FMT_CD = #{DATA_TYPE_FMT_CD},/* 파라미터_자료_유형_포멧_코드 => LPIT_DATETIME_FMT*/
+            LKAG_GROUP_CD_ID = #{LKAG_GROUP_CD_ID},/* 파라미터_자료_유형_코드 => LKAG_PARAM_ITEM_TP*/
+            ENCPT_YN = #{ENCPT_YN},/* 암호화_여부 */
+            EXPLN = #{EXPLN},/* 설명 */
+            USE_YN = #{USE_YN},/* 사용_여부 */
+            SORT_ORD = #{SORT_ORD}::INTEGER, /* 정렬_순서 */
+            MDFR_ID = #{USER_ID}::INTEGER,
+            MDFCN_DT = TO_CHAR(NOW(),'YYYYMMDDHH24MISS'),
+            /* 응답_항목_ID */
+            UP_ARTCL_ID =
+            <choose>
+                <when test="UP_ARTCL_ID == null or UP_ARTCL_ID ==''">NULL</when>
+                <otherwise>#{UP_ARTCL_ID}::INTEGER</otherwise>
+            </choose>
+            /* 상위_파라미터_항목_ID */
+        WHERE 1=1
+        AND RSPNS_ARTCL_ID = #{RSPNS_ARTCL_ID}::INTEGER
+        AND LKAG_ID = #{LKAG_ID}::INTEGER
+    </update>
+
+    <update id="delete" parameterType="java.util.HashMap">
+        DELETE FROM CUSTCO.PLT_LKAG_RSPNS_ARTCL WHERE RSPNS_ARTCL_ID = #{RSPNS_ARTCL_ID}::INTEGER
+    </update>
+    <update id="deleteReal" parameterType="java.util.HashMap">
+        DELETE FROM CUSTCO.PLT_LKAG_RSPNS_ARTCL WHERE LKAG_ID = #{LKAG_ID}::INTEGER
+    </update>
+    <select id="dpcnChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 1 FROM PLT_LKAG_RSPNS_ARTCL
+         WHERE LKAG_ID = #{LKAG_ID}::INTEGER
+           AND COL_NM = #{COL_NM}
+           <choose>
+                <when test="RSPNS_ARTCL_ID !='' and RSPNS_ARTCL_ID != null">
+                    AND RSPNS_ARTCL_ID <![CDATA[<>]]> #{RSPNS_ARTCL_ID}::INTEGER
+                    <choose>
+                        <when test="UP_ARTCL_ID != null and UP_ARTCL_ID !=''">  AND UP_ARTCL_ID = #{UP_ARTCL_ID}::INTEGER  </when>
+                        <otherwise> AND UP_ARTCL_ID IS NULL </otherwise>
+                    </choose>
+                </when>
+                <otherwise> AND UP_ARTCL_ID IS NULL </otherwise>
+           </choose>
+    </select>
+    <update id="UPDATE_OTHER_SORT_ORDER" parameterType="java.util.HashMap">
+        UPDATE PLT_LKAG_RSPNS_ARTCL /*해당노드(제외) 정렬 순서 변경 (kr.co.hkcloud.palette3.admin.lkag.mng.request.dao.LkagMngRequestMapper.UPDATE_OTHER_SORT_ORDER)*/
+        SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+          , MDFR_ID  = #{USER_ID}::INTEGER
+          , SORT_ORD = SORT_ORD + (#{ADD_NUM}:: INTEGER)
+        WHERE LKAG_ID = #{LKAG_ID}::INTEGER
+        <choose>
+            <when test="UP_ARTCL_ID !=null and UP_ARTCL_ID != ''">AND UP_ARTCL_ID = #{UP_ARTCL_ID}:: INTEGER</when>
+            <otherwise>AND UP_ARTCL_ID IS NULL</otherwise>
+        </choose>
+        AND SORT_ORD = #{SORT_ORD}::INTEGER
+    </update>
+
+    <update id="UPDATE_SORT_ORDER" parameterType="java.util.HashMap">
+        UPDATE PLT_LKAG_RSPNS_ARTCL /*해당노드(제외) 정렬 순서 변경 (kr.co.hkcloud.palette3.admin.lkag.mng.request.dao.LkagMngRequestMapper.UPDATE_OTHER_SORT_ORDER)*/
+        SET MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
+          , MDFR_ID  = #{USER_ID}::INTEGER
+          , SORT_ORD = #{SORT_ORD}::INTEGER
+        WHERE LKAG_ID = #{LKAG_ID}::INTEGER
+        AND RSPNS_ARTCL_ID = #{RSPNS_ARTCL_ID}::INTEGER
+    </update>
+</mapper>

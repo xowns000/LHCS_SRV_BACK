@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.qa.dao.ChatQAExecuteManagePopupMapper">
+
+<!-- QA 대상 평가 조회 -->
+<select id="selectRtnQaEval"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 
+		   A.QA_YM
+		 , A.QA_TY_CD
+		 , A.QA_TY_ID
+	     , A.QA_TY_L_CD
+	     , A.QA_TY_L
+	     , A.QA_TY_M_CD
+	     , A.QA_TY_M
+	     , A.QA_TY_S
+	     , A.QA_TY_S_P
+	     , C.SCORE_CHK
+	     , (CASE WHEN C.SCORE_CHK = '1' THEN '*' ELSE ' ' END) AS CHK_STAR 
+	     , C.EVAL_CN
+	     , B.QA_SEQ
+	     , B.QA_USER_ID
+	     , B.USER_ID
+	     , B.TALK_CONTACT_ID
+	     , B.QA_CN
+	     , B.QA_NOTIN
+  	  FROM (
+			SELECT 
+			       A.QA_YM
+				 , A.QA_TY_CD
+				 , A.QA_TY_ID
+				 , A.QA_TY_L_CD
+				 , A.QA_TY_L
+				 , A.QA_TY_M_CD
+				 , A.QA_TY_M
+				 , A.QA_TY_S
+				 , A.QA_TY_S_P
+			  FROM PLT_CHT_QA_EVAL_SHT A
+			 WHERE A.QA_YM = #{QA_YM}
+			   AND A.QA_TY_CD = #{QA_TY_CD}
+        	) A
+      LEFT JOIN (
+				SELECT 
+				       QRM.QA_YM
+				     , QRM.QA_TY_CD
+				     , QRM.QA_SEQ
+				     , QRM.USER_ID
+				     , QRM.QA_USER_ID
+				     , QRM.TALK_CONTACT_ID
+				     , QRM.QA_CN
+				     , QRM.QA_NOTIN
+				  FROM PLT_CHT_QA_EVAL QRM
+				 WHERE CUSTCO_ID = #{CUSTCO_ID}
+				   AND QRM.QA_YM = #{QA_YM}
+				   AND QRM.QA_TY_CD = #{QA_TY_CD}
+				   AND QRM.USER_ID = #{USER_ID}
+				   AND QRM.QA_SEQ = #{QA_SEQ}
+				   AND QRM.TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+        		) B
+		ON A.QA_YM = B.QA_YM
+	   AND A.QA_TY_CD = B.QA_TY_CD
+	  LEFT JOIN (
+	  			SELECT 
+	  				   QR.QA_YM
+				     , QR.QA_TY_CD
+             		 , QR.QA_TY_ID
+				     , QR.QA_SEQ
+				     , QR.TALK_CONTACT_ID
+				     , QR.SCORE_CHK
+             		 , QR.EVAL_CN
+             	  FROM PLT_CHT_QA_EVAL_RST QR
+             	 WHERE CUSTCO_ID = #{CUSTCO_ID}
+             	   AND QR.QA_YM = #{QA_YM}
+				   AND QR.QA_TY_CD = #{QA_TY_CD}
+				   AND QR.USER_ID = #{USER_ID}
+				   AND QR.QA_SEQ = #{QA_SEQ} 
+	  			) C
+	    ON A.QA_YM = C.QA_YM
+	   AND A.QA_TY_CD = C.QA_TY_CD
+       AND A.QA_TY_ID = C.QA_TY_ID
+       AND B.TALK_CONTACT_ID = C.TALK_CONTACT_ID
+	 WHERE 1 = 1
+     ORDER BY A.QA_TY_L_CD, A.QA_TY_M_CD, A.QA_TY_S_P DESC
+	 
+</select>
+
+<!-- QA 대상 평가등록 -->
+<update id="insertRtnQaRsltMst"  parameterType= "java.util.HashMap">
+UPDATE PLT_CHT_QA_EVAL
+	SET	QA_USER_ID = #{QA_USER_ID}
+	  , AMDR_ID = #{AMDR_ID}
+	  , UPD_DTTM = NOW()
+	  , QA_NOTIN = #{QA_NOTIN}
+	  , QA_CN = #{QA_CN}
+      WHERE CUSTCO_ID = #{CUSTCO_ID}
+      AND QA_YM = #{QA_YM}
+      AND QA_TY_CD = #{QA_TY_CD}
+      AND TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+      AND QA_SEQ = #{QA_SEQ}
+      AND USER_ID = #{USER_ID}
+</update>
+
+<!-- QA 대상 평가 등록 -->
+<insert id="insertRtnQaRslt"  parameterType= "java.util.HashMap">
+<![CDATA[
+INSERT INTO PLT_CHT_QA_EVAL_RST
+       ( 
+	    CUSTCO_ID
+	  , ID
+	  , QA_YM
+	  , QA_TY_CD
+	  , QA_TY_ID
+	  , QA_SEQ
+	  , TALK_CONTACT_ID
+	  , USER_ID
+	  , SCORE_CHK
+	  , EVAL_CN
+	  , REGR_ID
+	  , REG_DTTM
+       ) 
+VALUES ( 
+		NULLIF('HKCTALKMNG','')
+	  , #{SEQNo}
+	  , #{QA_YM}
+	  , #{QA_TY_CD}
+	  , #{QA_TY_ID}
+	  , #{QA_SEQ}
+	  , #{TALK_CONTACT_ID}
+	  , #{USER_ID}
+	  , #{SCORE_CHK}
+	  , #{EVAL_CN}
+	  , #{REGR_ID}
+	  , NOW()
+       )
+]]>
+</insert>
+
+<!-- QA 대상 평가 수정 -->
+<update id="updateRtnQaRsltMst"  parameterType= "java.util.HashMap">
+   UPDATE PLT_CHT_QA_EVAL
+	  SET AMDR_ID = #{AMDR_ID}
+		, UPD_DTTM = NOW()
+		, QA_USER_ID = #{QA_USER_ID}
+		, QA_NOTIN = #{QA_NOTIN}
+		, QA_CN = #{QA_CN}
+	WHERE CUSTCO_ID = #{CUSTCO_ID}
+	  AND QA_YM = #{QA_YM}
+      AND QA_TY_CD = #{QA_TY_CD}
+      AND QA_SEQ = #{QA_SEQ}
+      AND USER_ID = #{USER_ID}
+      AND TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+</update>
+
+<!-- QA 대상 평가 수정 -->
+<update id="updateRtnQaRslt"  parameterType= "java.util.HashMap">
+   UPDATE PLT_CHT_QA_EVAL_RST 
+	  SET AMDR_ID = #{AMDR_ID}
+		, UPD_DTTM = NOW()
+		<if test="SCORE_CHK != null"> , SCORE_CHK = #{SCORE_CHK} </if>
+		<if test="EVAL_CN 	!= null"> , EVAL_CN = #{EVAL_CN} </if>
+	WHERE QA_YM = #{QA_YM}
+      AND QA_TY_CD = #{QA_TY_CD}
+      AND QA_TY_ID = #{QA_TY_ID}
+      AND QA_SEQ = #{QA_SEQ}
+      AND CHRGR_ID = #{USER_ID}
+</update>
+
+<!-- QA 평가 결과 마스터 존재하는지 체크 -->
+<select id="selectChkQaRsltMst"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT QA_YM || '_' || QA_TY_CD AS QA_EVAL_NM
+	  FROM PLT_CHT_QA_EVAL_RST
+	 WHERE CUSTCO_ID = #{CUSTCO_ID}
+	   AND QA_YM = #{QA_YM}
+	   AND QA_TY_CD = #{QA_TY_CD}
+	   AND QA_SEQ = #{QA_SEQ}
+	   AND TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+       AND USER_ID = #{USER_ID}
+</select>
+
+<!-- QA 평가 결과 존재하는지 체크 -->
+<select id="selectChkQaRslt"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT QA_YM || '_' || QA_TY_CD AS QA_EVAL_NM
+	  FROM PLT_CHT_QA_EVAL_RST
+	 WHERE QA_YM = #{QA_YM}
+	   AND QA_TY_CD = #{QA_TY_CD}
+	   AND QA_SEQ = #{QA_SEQ}
+       AND CHRGR_ID = #{USER_ID}
+</select>
+
+<!-- QA 평가결과 삭제 -->
+<delete id="deleteRtnQaRslt"  parameterType= "java.util.HashMap">
+   DELETE FROM PLT_CHT_QA_EVAL_RST
+	WHERE CUSTCO_ID = #{CUSTCO_ID}
+	  AND QA_YM = #{QA_YM}
+      AND QA_TY_CD = #{QA_TY_CD}
+      AND QA_SEQ = #{QA_SEQ}
+      AND TALK_CONTACT_ID = #{TALK_CONTACT_ID}
+      AND USER_ID = #{USER_ID}
+</delete>
+
+<!-- QA 평가결과 MST 삭제 -->
+<delete id="deleteRtnQaRsltMst"  parameterType= "java.util.HashMap">
+   DELETE FROM PLT_CHT_QA_EVAL
+	WHERE QA_YM = #{QA_YM}
+      AND QA_TY_CD = #{QA_TY_CD}
+      AND QA_SEQ = #{QA_SEQ}
+      AND CHRGR_ID = #{USER_ID}
+</delete>
+
+<!-- QA 결과 MST ID조회 -->
+<select id="selectRtnID"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 
+		   CNSLT_ID
+	     , TEL_ID
+	  FROM PLT_CHT_QA_EVAL
+	 WHERE QA_YM = #{QA_YM}
+	   AND QA_TY_CD = #{QA_TY_CD}
+	   AND QA_SEQ = #{QA_SEQ}
+       AND CHRGR_ID = #{USER_ID}
+</select>
+
+</mapper>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.hkcloud.palette3.layout.dao.LayoutMapper">
+  <select id="selectLayout" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    select
+  </select>
+  <select id="selectTabList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT
+           PL.LAYOUT_ID
+         , PLT.TAB_ID
+         , PLT.TAB_NM
+         , PLT.RSPNS_ARTCL_ID
+         , PLT.SORT_ORD
+         , PLT.EXPSR_YN
+         , PLM.LKAG_ID
+         , PLM.LKAG_NM
+         , PLRA.COL_NM
+         , PLRA.DATA_TYPE_CD
+         , PLRA2.RSPNS_ARTCL_ID AS UP_RSPNS_ARTCL_ID
+         , PLRA2.COL_NM AS UP_RSPNS_ARTCL_COL_NM
+         , PLRA2.DATA_TYPE_CD AS UP_RSPNS_DATA_CD
+         , PLMS.LKAG_BEAN_ID
+         , PLMS.LKAG_MST_ID
+         , CCL.ACS_ACNT_KEY AAK
+         , CCL.ACS_SECTY_KEY ASK
+         , CCL.ACS_ACNT_ID AAI
+         , CCL.ETC_01 E1
+         , CCL.ETC_02 E2
+         , CCL.ETC_03 E3
+         , CCL.ETC_04 E4
+         , CCL.ETC_05 E5
+    FROM
+      PLT_LAYOUT_TAB PLT
+        JOIN PLT_LAYOUT PL ON PL.LAYOUT_ID = PLT.LAYOUT_ID
+        LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA ON PLRA.RSPNS_ARTCL_ID = PLT.RSPNS_ARTCL_ID
+        LEFT JOIN CUSTCO.PLT_LKAG_RSPNS_ARTCL PLRA2 ON PLRA2.RSPNS_ARTCL_ID = PLRA.UP_ARTCL_ID
+        LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLRA.LKAG_ID
+        LEFT JOIN CUSTCO.PLT_LKAG_MST PLMS ON PLMS.LKAG_MST_ID = PLM.LKAG_MST_ID
+        LEFT JOIN CUSTCO.PLT_CERT_CUSTCO_LKAG CCL ON CCL.LKAG_ID = PLM.LKAG_ID
+    WHERE PL.USE_YN = 'Y'
+      AND PL.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+      AND PL.LAYOUT_ID = #{LAYOUT_ID}:: INTEGER
+    ORDER BY PLT.SORT_ORD
+  </select>
+  <select id="selectLayoutList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT TAB_ID, LIST_ID FROM PLT_LAYOUT_LIST PLL WHERE TAB_ID IN
+    <foreach collection="arrTabId" item="tabId" open="(" separator="," close=")" >
+      #{tabId}::INTEGER
+    </foreach>
+  </select>
+  <select id="selectSrch" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    SELECT PLL.TAB_ID
+         , PLM.LKAG_ID
+         , PLM.LKAG_MST_ID
+         , PLM.LKAG_NM
+         , PLPA.COL_NM
+         , PLPA.ESNTL_YN
+         , PLPA.LKAG_GROUP_CD_ID
+         , PLPA.BSC_VL
+         , PLPA.DATA_TYPE_CD
+         , PLPA.PARAM_ARTCL_ID
+         , PLPA2.PARAM_ARTCL_ID AS UP_PARAM_ARTCL_ID
+         , PLPA2.COL_NM AS UP_COL_NM
+    FROM PLT_LAYOUT_LIST_SRCH PLLS
+           JOIN PLT_LAYOUT_LIST PLL ON PLL.LIST_ID = PLLS.LIST_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA ON PLPA.PARAM_ARTCL_ID = PLLS.PARAM_ARTCL_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_PARAM_ARTCL PLPA2 ON PLPA2.PARAM_ARTCL_ID = PLPA.UP_ARTCL_ID
+           LEFT JOIN CUSTCO.PLT_LKAG_MNG PLM ON PLM.LKAG_ID = PLPA.LKAG_ID
+    WHERE PLLS.LIST_ID IN
+    <foreach collection="arrListId" item="listId" open="(" separator="," close=")" >
+      #{listId}::INTEGER
+    </foreach>
+  </select>
+</mapper>

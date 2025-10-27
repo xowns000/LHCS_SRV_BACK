@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.phone.script.dao.PhoneScriptChangeManageMapper">
+
+	<!-- 스크립트변경이력 조회 -->
+	<select id="selectScrtChngList"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		<![CDATA[
+		/* selectScrtChngList 스크립트변경이력 조회 */
+		SELECT
+		    t1.REG_DTIM
+		    , t2.USER_NM AS REQ_USER_NM
+			, t3.LVL_NO
+			, CASE WHEN t3.LVL_NO = 1 THEN '대분류'
+				WHEN t3.LVL_NO = 2 THEN '중분류'
+				WHEN t3.LVL_NO = 3 THEN '소분류'
+				ELSE ''
+		  	END AS LVL_NO_NM
+		    , t1.CHNG_BF_TIT
+		    , t1.CHNG_AF_TIT 
+		    , t1.CHNG_BF_CNTN
+		    , t1.CHNG_AF_CNTN
+		    , t1.CHNG_HIST_NO
+			, C.CO_NM AS ASP_NEWCUST_KEY
+			, t1.CHNG_REQ
+			, (SELECT CD_NM
+				FROM PLT_COMN_CD
+				WHERE CD = t1.CHNG_REQ)			AS CHNG_REQ_NM
+			, t1.SCRIPT_ID
+			, t3.BEGIN_DATE
+			, t3.EOT_DATE
+			, t3.USE_TY
+      		, (SELECT CD_NM 
+      			FROM PLT_COMN_CD 
+      			WHERE GROUP_CD='SCP001' 
+      			AND CD=t3.USE_TY) 				AS USE_TY_NM
+		FROM PLT_PHN_SCRT_CHG_HST t1, PLT_USER t2, PLT_PHN_SCRT t3 JOIN PLT_ASP_CUS C ON t3.CUSTCO_ID = C.CUSTCO_ID 
+		WHERE t1.REQ_USER_ID = t2.USER_ID
+		AND t1.SCRIPT_ID = t3.SCRIPT_ID
+		AND t3.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		AND t1.REG_DTIM >= REPLACE(#{START_DATE},'-','') || '000000'
+		AND t1.REG_DTIM <= REPLACE(#{END_DATE},'-','') || '235959'
+		]]>
+
+		<if test="CNSL_DIV == 1">  
+			AND t3.LVL_NO = 1
+			AND ( t1.CHNG_BF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') OR t1.CHNG_AF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') )                
+		</if>
+		<if test="CNSL_DIV == 2">  
+			AND t3.LVL_NO = 2
+			AND ( t1.CHNG_BF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') OR t1.CHNG_AF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') )                 
+		</if>
+		<if test="CNSL_DIV == 3">  
+			AND t3.LVL_NO = 3
+			AND ( t1.CHNG_BF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') OR t1.CHNG_AF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') )                 
+		</if>
+		<if test="CNSL_DIV == '' or CNSL_DIV == null">  
+			<if test="SEARCH_CONT != '' and SEARCH_CONT != null">  
+				AND ( t1.CHNG_BF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') OR t1.CHNG_AF_TIT LIKE ('%'|| #{SEARCH_CONT} ||'%') )                
+			</if>
+		</if>
+		<if test="CHNG_REQ != '' and CHNG_REQ != null">
+			AND t1.CHNG_REQ = #{CHNG_REQ}
+		</if>
+		<if test="USE_TY != '' and USE_TY != null">
+			AND t3.USE_TY = #{USE_TY}
+		</if>
+			ORDER BY t1.REG_DTIM DESC, t3.LVL_NO ASC
+			
+	</select>
+	
+	<!-- 스크립트변경이력 상세조회 -->
+	<select id="selectScrtChngDetail"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		/* selectScrtChngDetail 스크립트변경이력 상세조회 */
+		SELECT
+			CHNG_HIST_NO
+			, CHNG_BF_CNTN
+		    , CHNG_AF_CNTN
+		FROM
+			PLT_PHN_SCRT_CHG_HST
+		WHERE
+			CHNG_HIST_NO  = #{CHNG_HIST_NO}
+	</select>	
+	
+	<!-- 스크립트변경이력 등록  -->
+	<insert id="insertScrtChng" parameterType="java.util.HashMap">
+	INSERT INTO PLT_PHN_SCRT_CHG_HST ( 
+	      CHNG_HIST_NO
+	     , SCRIPT_ID
+	     , REQ_USER_ID 
+	     , CHNG_BF_TIT
+	     , CHNG_AF_TIT
+	     , CHNG_BF_CNTN 
+	     , CHNG_AF_CNTN 
+	     , REG_DTIM 
+	     , REG_MAN 
+	     , CHNG_DTIM 
+	     , CHNG_MAN 
+	     , CHNG_REQ
+	) VALUES (
+	      (SELECT COALESCE(MAX(CHNG_HIST_NO), 0) + 1 FROM PLT_PHN_SCRT_CHG_HST),
+	      #{SCRIPT_ID},
+	      #{USER_ID},
+	      (SELECT SCRIPT_TIT FROM PLT_PHN_SCRT WHERE SCRIPT_ID = #{SCRIPT_ID}),
+	      #{SCRIPT_TIT},
+	      (SELECT SCRIPT_RMK FROM PLT_PHN_SCRT WHERE SCRIPT_ID = #{SCRIPT_ID}),
+	      #{SCRIPT_RMK},
+	      TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+	      #{USER_ID},
+	      TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+	      #{USER_ID},
+	      #{CHNG_REQ}
+	)
+	</insert>
+	
+</mapper>

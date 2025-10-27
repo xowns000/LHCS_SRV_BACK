@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.signup.dao.TalkSignUpMapper">
+<!-- <mapper namespace="com.hcteletalk.teletalk.signup.dao.TalkSignUpMapper"> -->
+
+<!-- 이메일 중복 여부 조회 -->
+<select id="selectChkDupleEmail"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT EML 
+	  FROM PLT_ASP_CUS
+	 WHERE EML = #{EML}
+</select>
+
+<!-- 이메일 인증  사용자 정보 추출 -->
+<select id="selectSignUpUserNmId"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT USER_ID, USER_NM, A.CUSTCO_ID, B.CO_NM 
+	  FROM PLT_USER A
+	  LEFT OUTER JOIN PLT_ASP_CUS B
+	  	ON A.CUSTCO_ID = B.CUSTCO_ID
+	 WHERE CERTI_VALUE = #{CERTI_VALUE}
+</select>
+
+<!-- 이메일 인증  데이터 삭제 -->
+<update id="updatEmailSignUp"  parameterType= "java.util.HashMap">
+	UPDATE PLT_USER 
+	   SET CERTI_VALUE = NULL
+	      ,USE_YN='Y'
+	      ,CERTI_YN='Y'
+	      ,PWD_STATUS = 'NORMAL'
+	 WHERE CERTI_VALUE = #{CERTI_VALUE}
+</update>
+
+<!-- 이메일 인증  재전송 데이터 조회 -->
+<select id="selectRequestCerti"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT USER_ID, USER_NM, EML_ADDR, CERTI_YN, CERTI_VALUE, ENCRYPT_KEY
+	  FROM PLT_USER
+	 WHERE USER_ID = #{USER_ID}
+	   AND PWD = #{PWD}
+</select>
+
+<!-- 이메일 인증  재전송 암호화 키 조회 -->
+<select id="selectRequestCertiId"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT ENCRYPT_KEY
+	  FROM PLT_USER
+	 WHERE USER_ID = #{USER_ID}
+</select>
+
+<!-- 초기 데이터 삭제 -->
+<delete id="deleteInitProhibiteWord"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_CHT_PRH_WRD WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteIniTalkEnv"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_CHT_ENV WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteInitTalkSystemMsg"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_CHT_SYS_MSG WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteInitTalkSystemMsgLinks"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_CHT_SYS_LNK WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteInitTalkWorkTimeHist"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_CHT_WRK_TIME_HST WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteInitUserBelongItem"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_USER_BLNG WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteInitTalkCnslTyp"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_CHT_CUTT_TYP WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteInitCustChannel"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_ASP_CUS_CHN WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<delete id="deleteInitTalkInqryTyp"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_CHT_INQ_TYP WHERE CUSTCO_ID=#{CUSTCO_ID}
+</delete>
+
+<!-- 초기 데이터 적제 -->
+<insert id="insertInitProhibiteWord"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_PRH_WRD (
+	             CUSTCO_ID
+				,PROH_CODE
+				,FBDWD
+				,SSTTT
+				,REGR_ID
+				,REGR_NAME
+				,REGR_DTTM
+				,USE_YN
+				,AMDR_ID
+				,UPD_DTTM
+				,PROC_ID
+				,IT_PROCESSING
+				,REGR_DEPT_CD
+				,AMDR_DEPT_CD
+	            )
+	SELECT	#{CUSTCO_ID}
+				,PROH_CODE
+				,FBDWD
+				,SSTTT
+				,REGR_ID
+				,REGR_NAME
+				,NOW()
+				,USE_YN
+				,AMDR_ID
+				,UPD_DTTM
+				,PROC_ID
+				,NOW()
+				,REGR_DEPT_CD
+				,AMDR_DEPT_CD
+	 FROM INIT_ASP_PLT_CHT_PRH_WRD
+	 WHERE CUSTCO_ID='HKCTALKMNG'
+</insert>
+
+<insert id="insertIniTalkEnv"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_ENV (
+	             CUSTCO_ID
+	            ,STNG_CD
+	            ,STNG_CD_NM
+	            ,STNG_VL
+	            ,USE_YN
+	            ,REGR_DEPT_CD
+	            ,REGR_ID
+	            ,REG_DTTM
+	            ,AMDR_DEPT_CD
+	            ,AMDR_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,IT_PROCESSING
+	            )
+	SELECT	#{CUSTCO_ID}
+	            ,STNG_CD
+	            ,STNG_CD_NM
+	            ,STNG_VL
+	            ,USE_YN
+	            ,REGR_DEPT_CD
+	            ,REGR_ID
+	            ,NOW()
+	            ,AMDR_DEPT_CD
+	            ,AMDR_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,NOW()
+	 FROM INIT_ASP_PLT_CHT_ENV
+	 WHERE CUSTCO_ID='HKCTALKMNG'
+</insert>
+
+<insert id="insertInitTalkSystemMsg"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_SYS_MSG (
+	             CUSTCO_ID
+	            ,SYS_MSG_ID
+	            ,MSG_CL
+	            ,SNDRCV_CD
+	            ,MSG_TYPE
+	            ,MSG_TIME
+	            ,MSG_CN
+	            ,MSG_DESC
+	            ,LINKS_TYPE
+	            ,USE_YN
+	            ,REG_DEPT_CD
+	            ,REG_ID
+	            ,REG_DTTM
+	            ,UPD_DEPT_CD
+	            ,UPD_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,IT_PROCESSING
+	            )
+	SELECT	#{CUSTCO_ID}
+	            ,SYS_MSG_ID
+	            ,MSG_CL
+	            ,SNDRCV_CD
+	            ,MSG_TYPE
+	            ,MSG_TIME
+	            ,MSG_CN
+	            ,MSG_DESC
+	            ,LINKS_TYPE
+	            ,USE_YN
+	            ,REG_DEPT_CD
+	            ,REG_ID
+	            ,NOW()
+	            ,UPD_DEPT_CD
+	            ,UPD_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,NOW()
+	 FROM INIT_ASP_PLT_CHT_SYS_MSG
+	 WHERE CUSTCO_ID='HKCTALKMNG'
+</insert>
+
+<insert id="insertInitTalkSystemMsgLinks"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_SYS_LNK (
+	             CUSTCO_ID
+	            ,SYSTEM_MSG_LINKS_ID
+	            ,SYS_MSG_ID
+	            ,BTN_NM
+	            ,EXTRA
+	            ,URL_MOBILE
+	            ,URL_PC
+	            ,SCHEME_ADROID
+	            ,SCHEME_IOS
+	            ,SORT_ORD
+	            ,USE_YN
+	            ,REG_DEPT_CD
+	            ,REG_ID
+	            ,REG_DTTM
+	            ,UPD_DEPT_CD
+	            ,UPD_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,IT_PROCESSING
+	            )
+	SELECT	#{CUSTCO_ID}
+	            ,SYSTEM_MSG_LINKS_ID
+	            ,SYS_MSG_ID
+	            ,BTN_NM
+	            ,EXTRA
+	            ,URL_MOBILE
+	            ,URL_PC
+	            ,SCHEME_ADROID
+	            ,SCHEME_IOS
+	            ,SORT_ORD
+	            ,USE_YN
+	            ,REG_DEPT_CD
+	            ,REG_ID
+	            ,NOW()
+	            ,UPD_DEPT_CD
+	            ,UPD_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,NOW()
+	 FROM INIT_ASP_PLT_CHT_SYS_LNK
+	 WHERE CUSTCO_ID='HKCTALKMNG'
+</insert>
+
+<insert id="insertInitTalkWorkTimeHist"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_WRK_TIME_HST (
+	             CUSTCO_ID
+	            ,ID
+	            ,MANAGE_DATE_FROM
+	            ,MANAGE_DATE_TO
+	            ,WORK_TIME_FROM
+	            ,WORK_TIME_TO
+	            ,USE_YN
+	            ,REG_ID
+	            ,REG_DTTM
+	            ,UPD_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,IT_PROCESSING
+	            )
+	SELECT	#{CUSTCO_ID}
+	            ,ID
+	            ,MANAGE_DATE_FROM
+	            ,MANAGE_DATE_TO
+	            ,WORK_TIME_FROM
+	            ,WORK_TIME_TO
+	            ,USE_YN
+	            ,REG_ID
+	            ,NOW()
+	            ,UPD_ID
+	            ,UPD_DTTM
+	            ,PROC_ID
+	            ,NOW()
+	 FROM INIT_ASP_PLT_CHT_WRK_TIME_HST
+	 WHERE CUSTCO_ID='HKCTALKMNG'
+</insert>
+
+<update id="updateInitUserChatAgent"  parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_USER_CHAT_SET 
+	   SET MAX_CHAT_AGENT = (SELECT MAX(MAX_CHAT_AGENT)
+	                           FROM INIT_ASP_PLT_CHT_USER_CHAT_SET
+	                          WHERE CUSTCO_ID='HKCTALKMNG'
+	                         )
+	 WHERE CUSTCO_ID=#{CUSTCO_ID}
+</update>
+
+<insert id="insertInitUserBelongItem"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_BLNG (
+	            CUSTCO_ID
+	            ,ATTR_CD
+	            ,ATTR_DIV_CD
+	            ,ATTR_DIV_NM
+	            ,USE_YN
+	            ,SORT_ORD
+	            ,REGR_ID
+	            ,REG_DTTM
+	            ,AMDR_ID
+	            ,UPD_DTTM
+	            )
+	SELECT	#{CUSTCO_ID}
+	            ,ATTR_CD
+	            ,ATTR_DIV_CD
+	            ,ATTR_DIV_NM
+	            ,USE_YN
+	            ,SORT_ORD
+	            ,REGR_ID
+	            ,NOW()
+	            ,AMDR_ID
+	            ,UPD_DTTM
+	 FROM INIT_ASP_PLT_USER_BLNG
+	 WHERE CUSTCO_ID='HKCTALKMNG'
+</insert>
+
+<insert id="insertInitTalkCnslTyp"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_CUTT_TYP (
+				CUSTCO_ID
+				,CNSL_TYP_CD
+				,CNSL_TYP_NM
+				,SPST_CNSL_TYP_CD
+				,CNSL_TYP_DIV_CD
+				,USE_YN
+				,SORT_ORD
+				,REGR_DEPT_CD
+				,REGR_ID
+				,REG_DTTM
+				,AMDR_DEPT_CD
+				,AMDR_ID
+				,UPD_DTTM
+				,PROC_ID
+				,IT_PROCESSING
+				,INQRY_USE_YN
+				,INQRY_ALIAS_NM
+				,INQRY_TYPE
+				,INQRY_DESC
+				,INQRY_USE_CHANNEL
+				,TEMPLATE_ID
+				)
+	SELECT	#{CUSTCO_ID}
+				,CNSL_TYP_CD
+				,CNSL_TYP_NM
+				,SPST_CNSL_TYP_CD
+				,CNSL_TYP_DIV_CD
+				,USE_YN
+				,SORT_ORD
+				,'X'
+				,'teleweb'
+				,NOW()
+				,'X'
+				,null
+				,NULL
+				,'teleweb'
+				,NOW()
+				,INQRY_USE_YN
+				,INQRY_ALIAS_NM
+				,INQRY_TYPE
+				,INQRY_DESC
+				,INQRY_USE_CHANNEL
+				,TEMPLATE_ID
+	 FROM INIT_ASP_PLT_CHT_CUTT_TYP
+	 WHERE CUSTCO_ID='HKCTALKMNG'
+</insert>
+
+<insert id="insertInitTalkInqryTyp"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_INQ_TYP(
+				CUSTCO_ID
+				,INQRY_TYP_CD
+				,INQRY_TYP_NM
+				,INQRY_DESC
+				,INQRY_TYPE
+				,INQRY_USE_CHANNEL
+				,SPST_INQRY_TYP_CD
+				,INQRY_TYP_DIV_CD
+				,USE_YN
+				,SORT_ORD
+				,REGR_DEPT_CD
+				,REGR_ID
+				,REG_DTTM
+				,AMDR_DEPT_CD
+				,AMDR_ID
+				,UPD_DTTM
+				,PROC_ID
+				,IT_PROCESSING
+				,INQRY_TYP_ENG_NM
+				,CALL_TYP_CD
+			)
+	SELECT	#{CUSTCO_ID}
+			,INQRY_TYP_CD
+			,INQRY_TYP_NM
+			,INQRY_DESC
+			,INQRY_TYPE
+			,INQRY_USE_CHANNEL
+			,SPST_INQRY_TYP_CD
+			,INQRY_TYP_DIV_CD
+			,USE_YN
+			,SORT_ORD
+			,REGR_DEPT_CD
+			,REGR_ID
+			,REG_DTTM
+			,AMDR_DEPT_CD
+			,AMDR_ID
+			,UPD_DTTM
+			,PROC_ID
+			,IT_PROCESSING
+			,INQRY_TYP_ENG_NM
+			,CALL_TYP_CD
+	FROM INIT_ASP_PLT_CHT_INQ_TYP
+	WHERE CUSTCO_ID = 'HKCTALKMNG'
+</insert>
+
+<!-- 사용자 소속 항목 삭제 -->
+<delete id="deleteInitTwbBas07"  parameterType= "java.util.HashMap">
+	DELETE FROM PLT_USER_AUTH WHERE USER_ID = #{USER_ID}
+</delete>
+
+<!-- 사용자 소속 항목 등록 -->
+<insert id="insertInitTwbBas07"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_AUTH (
+				 ATRT_GROUP_ID
+				, USER_ID
+				, REGR_DEPT_CD
+				, REGR_ID
+				, REG_DTTM
+				, AMDR_DEPT_CD
+				, AMDR_ID
+				, UPD_DTTM
+				, PROC_ID
+				, IT_PROCESSING
+			) 
+	VALUES (
+				'20190503054503024TWB168613' <!-- ASP 고객사 권한 '20190125141939798TWB52868' 시스템 권한-->
+				, #{USER_ID}
+				, 'X'
+				, 'teleweb'
+				, NOW()
+				, ''
+				, null
+				, null
+				, 'teleweb'
+				, NOW()
+			)
+</insert>
+
+<!-- 이메일 인증  사용자 정보 추출 -->
+<select id="selectFindUserId"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT USER_ID 
+	  FROM PLT_USER
+	 WHERE EML_ADDR =#{EML_ADDR}
+	   AND PWD   = #{PWD}
+</select>
+
+<select id="selectFindUserIdEnc"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT USER_ID, ENCRYPT_KEY
+	  FROM PLT_USER
+	 WHERE EML_ADDR =#{EML_ADDR}
+</select>
+
+<!-- 이메일 인증  사용자 정보 추출 -->
+<select id="selectFindPwd"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT EML_ADDR, ENCRYPT_KEY 
+	  FROM PLT_USER
+	 WHERE EML_ADDR =#{EML_ADDR}
+	   AND USER_ID   = #{USER_ID}
+</select>
+
+<!-- 임시 비밀번호 발급 -->
+<update id="updateInitPwd"  parameterType= "java.util.HashMap">
+	UPDATE PLT_USER
+		SET		PWD = #{PWD}
+				,PWD_STATUS = 'RESET'
+	 WHERE USER_ID   = #{USER_ID}
+</update>
+
+<!-- Trial 기간 확인 -->
+<select id="selectSignUpTrial"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT CUSTCO_ID
+	  FROM PLT_CUSTCO
+	 WHERE CUSTCO_ID = #{CUSTCO_ID}
+	   AND SRVC_MAINT_YN = 'Y'
+</select>
+
+<!-- 서비스 유지 여부 확인 -->
+<select id="selectSignUpServiceKeep"  parameterType= "java.util.HashMap" resultType= "java.util.HashMap">
+	SELECT CUSTCO_ID
+	  FROM PLT_CUSTCO 
+	 WHERE CUSTCO_ID = #{CUSTCO_ID}
+	   AND SRVC_MAINT_YN = 'N'	/* 서비스 이용여부가 미사용일 떄 */
+</select>
+
+</mapper>

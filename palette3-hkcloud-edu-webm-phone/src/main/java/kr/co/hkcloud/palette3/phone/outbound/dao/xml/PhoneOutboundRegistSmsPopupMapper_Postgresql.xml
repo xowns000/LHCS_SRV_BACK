@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <!-- 상담유형 관리 -->
+<mapper namespace="kr.co.hkcloud.palette3.phone.outbound.dao.PhoneOutboundRegistSmsPopup">
+	
+	<!-- 데이터 ResultMap -->	
+	<resultMap id="selectHashMap" type="java.util.HashMap" >
+		<!-- 전체 암복호화  -->
+		<result property="HOUSE_TEL_NO" column="HOUSE_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CO_TEL_NO" column="CO_TEL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="MOBIL_NO" column="MOBIL_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="CARD_NO" column="CARD_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<result property="ACT_NO" column="ACT_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoDecryptionCipherTypeHandler" />
+		<!-- 부분 암복호화  -->
+		<result property="CUST_NO" column="CUST_NO" javaType="java.lang.String" typeHandler="kr.co.hkcloud.palette3.core.security.crypto.DamoPartialDecryptionCipherTypeHandler" />
+	</resultMap>
+
+	<select id="selectObndCustMainList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+		<![CDATA[
+			/* selectObndCustMainList 아웃바운드 고객조회(SMS팝업조회 포함) */
+   			 SELECT 
+					   A.CAM_ID
+					 , A.FISH_TY
+					 ,(SELECT C.CD_NM FROM PLT_COMN_CD C 
+					   WHERE GROUP_CD = 'OU003'
+					   AND C.CD = A.FISH_TY) AS FISH_TY_NM
+				 	 , A.TRY_CNT
+				 	 , B.CUST_NO
+				 	 , B.CUST_NM
+				 	 , B.MOBIL_NO
+				 	 , B.HOUSE_TEL_NO
+				 	 , B.CO_TEL_NO
+				 	 , B.REM
+				 	 , C.SECU_NO
+					 , C.JOB_DTL_NM
+					 , C.SALE_START_DATE
+				 	 , C.UPDT_DATE
+					 , A.CHNG_DTIM AS LST_TRY_DT
+				   FROM PLT_PHN_CAMP_CUS_DST A
+				   			, (SELECT *
+								FROM PLT_PHN_OBD_CUS
+								where CAM_ID = #{CAM_ID}) B
+				   			, PLT_PHN_OBD_CUS_ADD C
+				   			
+				  WHERE A.CUST_NO  = B.CUST_NO 
+				  	AND A.CAM_ID = B.CAM_ID
+				  	AND B.CAM_ID(+) = C.CAM_ID
+					AND B.CUST_NO(+)  = C.CUST_NO
+					AND A.CAM_ID = #{CAM_ID} 
+		]]>
+			<if test="CSLT_ID !='' and CSLT_ID != null"> 
+			  	<![CDATA[	AND A.CSLT_ID = #{CSLT_ID}	   ]]>
+			</if>
+			<if test="FISH_TY !='' and FISH_TY != null"> 
+			  	/* 완료처리가 아닌 경우만 조회 */
+			  	<![CDATA[	AND A.FISH_TY <> #{FISH_TY}  ]]>
+			</if>
+		<![CDATA[			
+				ORDER BY A.FISH_TY, B.CUST_NM
+		]]>
+	</select>
+<!-- 	<select id="selectObndCustMainList" parameterType= "java.util.HashMap" resultMap="selectHashMap"> -->
+<!-- 		<![CDATA[ -->
+<!--    			 SELECT  -->
+<!-- 					   A.CAM_ID -->
+<!-- 					 , A.FISH_TY -->
+<!-- 					 ,(SELECT C.CD_NM FROM PLT_COMN_CD C  -->
+<!-- 					   WHERE GROUP_CD = 'OU003' -->
+<!-- 					   AND C.CD = A.FISH_TY) AS FISH_TY_NM -->
+<!-- 					 , COALESCE(D.CNTC_CNT, 0) as CNTC_CNT -->
+<!-- 					 , COALESCE(E.CNTC_DATE, 0) as CNTC_DATE -->
+<!-- 				 	 , A.TRY_CNT -->
+<!-- 				 	 , B.CUST_NO -->
+<!-- 				 	 , B.CUST_NM -->
+<!-- 				 	 , B.MOBIL_NO -->
+<!-- 				 	 , B.HOUSE_TEL_NO -->
+<!-- 				 	 , B.CO_TEL_NO -->
+<!-- 				 	 , B.REM -->
+<!-- 				 	 , C.SECU_NO -->
+<!-- 					 , C.JOB_DTL_NM -->
+<!-- 					 , C.SALE_START_DATE -->
+<!-- 				 	 , C.UPDT_DATE -->
+<!-- 					 , A.CHNG_DTIM AS LST_TRY_DT -->
+<!-- 				   FROM PLT_PHN_CAMP_CUS_DST A -->
+<!-- 				   			, (SELECT * -->
+<!-- 								FROM PLT_PHN_OBD_CUS -->
+<!-- 								where CAM_ID = #{CAM_ID}) B -->
+<!-- 				   			, PLT_PHN_OBD_CUS_ADD C -->
+				   			
+<!-- 				   			,(SELECT CUST_NO, COUNT(*) as CNTC_CNT -->
+<!-- 					          FROM ( -->
+<!-- 				                     SELECT  CUST_NO , CNTC_DATE, SUM(CNTC_CNT) AS CNT -->
+<!-- 				                     FROM PLT_PHN_CAMP_CUS_CNT -->
+<!-- 				                     WHERE CAM_ID = #{CAM_ID} -->
+<!-- 				                     group by  CUST_NO , CNTC_DATE -->
+<!-- 				                     HAVING SUM(CNTC_CNT) > 1 -->
+<!-- 						           ) GROUP BY CUST_NO  -->
+<!-- 					         ) D -->
+								         
+<!-- 						    , (SELECT CUST_NO , COUNT(*) AS CNTC_DATE -->
+<!-- 						    		FROM PLT_PHN_CAMP_CUS_CNT -->
+<!-- 						    		where CAM_ID = #{CAM_ID} -->
+<!-- 						    		AND CNTC_DATE = TO_CHAR(NOW(),'YYYYMMDD') -->
+<!-- 						    		GROUP BY CUST_NO  -->
+<!-- 					    		) E -->
+<!-- 				  WHERE A.CUST_NO  = B.CUST_NO  -->
+<!-- 				  	AND A.CAM_ID = B.CAM_ID -->
+<!-- 				  	AND B.CAM_ID(+) = C.CAM_ID -->
+<!-- 					AND B.CUST_NO(+)  = C.CUST_NO -->
+<!-- 					AND B.CUST_NO  = D.CUST_NO(+)  -->
+<!-- 					AND B.CUST_NO  = E.CUST_NO(+) -->
+<!-- 					AND A.CAM_ID = #{CAM_ID}  -->
+<!-- 		]]> -->
+<!-- 			<if test="CSLT_ID !='' and CSLT_ID != null">  -->
+<!-- 			  	<![CDATA[	AND A.CSLT_ID = #{CSLT_ID}	   ]]> -->
+<!-- 			</if> -->
+<!-- 			<if test="FISH_TY !='' and FISH_TY != null">  -->
+<!-- 			  	/* 완료처리가 아닌 경우만 조회 */ -->
+<!-- 			  	<![CDATA[	AND A.FISH_TY <> #{FISH_TY}  ]]> -->
+<!-- 			</if> -->
+<!-- 		<![CDATA[			 -->
+<!-- 				ORDER BY A.FISH_TY, B.CUST_NM -->
+<!-- 		]]> -->
+<!-- 	</select> -->
+</mapper>

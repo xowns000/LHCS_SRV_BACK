@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="kr.co.hkcloud.palette3.chat.status.dao.ChatStatusAgentAwayHistoryMapper">
+
+<!-- 2019.01.02 KMG 상담사 이석상태 리스트 -->
+<select id="selectUserReadyOffHistory"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+			SELECT REG_DATE 
+				 , USER_ID
+				 , USER_NM
+				 , (SELECT CD_NM FROM PLT_COMN_CD CT WHERE CT.GROUP_CD = 'TALK030' AND CT.CD=USER_STATUS_CD AND CT.CD_TYPE  = '1') AS USER_STATUS_CD
+				 , TALK_START_DT
+				 , TALK_END_DT
+				 , RE.USER_NICK
+				 , RE.ATTR_DIV_NM_A
+				 , RE.ATTR_DIV_NM_B
+				 , RE.ATTR_DIV_NM_C
+				 , RE.ATTR_DIV_NM_D
+				 , RE.TWB_PAGING_TOT_COUNT
+			  FROM (
+		
+SELECT PG.*
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%'||#{ASP_NEWCUST_KEY}||'%')AND ATTR_CD = 'A' AND ATTR_DIV_CD = PG.USER_ATTR_A) AS ATTR_DIV_NM_A /* 사용자소속A */
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%'||#{ASP_NEWCUST_KEY}||'%')AND ATTR_CD = 'B' AND ATTR_DIV_CD = PG.USER_ATTR_B) AS ATTR_DIV_NM_B /* 사용자소속B */
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%'||#{ASP_NEWCUST_KEY}||'%')AND ATTR_CD = 'C' AND ATTR_DIV_CD = PG.USER_ATTR_C) AS ATTR_DIV_NM_C /* 사용자소속C */
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%'||#{ASP_NEWCUST_KEY}||'%')AND ATTR_CD = 'D' AND ATTR_DIV_CD = PG.USER_ATTR_D) AS ATTR_DIV_NM_D /* 사용자소속D */
+  FROM (
+
+SELECT ROW_NUMBER() OVER(ORDER BY RW.TALK_START_DT) AS ROW_NUMBER
+     , RW.*
+  FROM (
+	     SELECT REG_DATE
+		      , USER_ID
+		      , USER_NM
+		      , USER_STATUS_CD
+		      , TALK_START_DT
+		      , TALK_END_DT
+		      , USER_NICK
+		      , USER_ATTR_A
+              , USER_ATTR_B
+			  , USER_ATTR_C
+              , USER_ATTR_D
+	       FROM (
+		          SELECT TO_CHAR(T1.IT_PROCESSING,'YYYY/MM/DD') AS REG_DATE
+			           , T1.USER_ID
+			           , T2.USER_NM
+			           , T1.BIZ_DIV AS USER_STATUS_CD
+			           , TO_CHAR(T1.WRT_DTTM,'YYYY/MM/DD HH24:MI:SS') AS TALK_START_DT
+			           , TO_CHAR(T1.IT_PROCESSING,'YYYY/MM/DD HH24:MI:SS') AS TALK_END_DT
+			           , T2.USER_NICK
+			           , T2.USER_ATTR_A
+                       , T2.USER_ATTR_B
+			           , T2.USER_ATTR_C
+                       , T2.USER_ATTR_D
+		            FROM PLT_USER_LOG T1
+		           INNER JOIN PLT_USER T2
+		              ON T1.USER_ID = T2.USER_ID 
+		             AND T2.CUSTCO_ID LIKE ('%'||#{ASP_NEWCUST_KEY}||'%')
+		           WHERE T1.IT_PROCESSING >= TO_DATE(#{SEARCH_DATE_FROM} || '000000', 'YYYYMMDDHH24MISS')
+		             AND T1.IT_PROCESSING <![CDATA[<=]]> TO_DATE(#{SEARCH_DATE_TO} || '235959', 'YYYYMMDDHH24MISS')
+		<if test="USER_ID != '' and USER_ID != null">
+		             AND T1.USER_ID = #{USER_ID}
+		</if>
+		<if test="USER_NM != ''">AND T2.USER_NM LIKE '%' || #{USER_NM} || '%'</if>
+		<if test="USER_NICK != ''">AND T2.USER_NICK LIKE '%' || #{USER_NICK} || '%'</if>
+		<if test="USER_ATTR_A !=''">AND T2.USER_ATTR_A = #{USER_ATTR_A}</if>
+		<if test="USER_ATTR_B !=''">AND T2.USER_ATTR_B = #{USER_ATTR_B}</if>
+		<if test="USER_ATTR_C !=''">AND T2.USER_ATTR_C = #{USER_ATTR_C}</if>
+		<if test="USER_ATTR_D !=''">AND T2.USER_ATTR_D = #{USER_ATTR_D}</if>
+	            )A
+	      UNION
+	     SELECT REG_DATE
+		      , USER_ID
+		      , USER_NM
+		      , USER_STATUS_CD
+		      , TALK_START_DT
+		      , TALK_END_DT
+		      , USER_NICK
+		      , USER_ATTR_A
+              , USER_ATTR_B
+			  , USER_ATTR_C
+              , USER_ATTR_D
+	       FROM (
+		          SELECT TO_CHAR(T1.TALK_END_DT,'YYYY/MM/DD') AS REG_DATE
+			           , T1.USER_ID
+			           , T2.USER_NM
+			           , GROUP_T.DEPT_NM AS DEPT_NM
+			           , T1.USER_STATUS_CD
+			           , TO_CHAR(T1.TALK_START_DT,'YYYY/MM/DD HH24:MI:SS') AS TALK_START_DT
+			           , TO_CHAR(T1.TALK_END_DT, 'YYYY/MM/DD HH24:MI:SS') AS TALK_END_DT
+			           , T2.USER_NICK
+			           , T2.USER_ATTR_A
+                       , T2.USER_ATTR_B
+			           , T2.USER_ATTR_C
+                       , T2.USER_ATTR_D
+		            FROM PLT_CHT_RDY_HST T1
+		           INNER JOIN PLT_USER T2
+	             	  ON T1.USER_ID = T2.USER_ID
+	               LEFT OUTER JOIN PLT_ORGZ GROUP_T
+							  ON GROUP_T.DEPT_CD = T2.DEPT_CD	  
+		           WHERE T1.CUSTCO_ID = #{ASP_NEWCUST_KEY}
+		             AND TALK_START_DT >= TO_DATE(#{SEARCH_DATE_FROM} || '000000', 'YYYYMMDDHH24MISS')
+		             AND TALK_END_DT <![CDATA[<=]]> TO_DATE(#{SEARCH_DATE_TO} || '235959', 'YYYYMMDDHH24MISS')
+		<if test="USER_ID != '' and USER_ID != null">
+		             AND T1.USER_ID = #{USER_ID}
+		</if>
+		<if test="USER_NM != ''">AND T2.USER_NM LIKE '%' || #{USER_NM} || '%'</if>
+		<if test="USER_NICK != ''">AND T2.USER_NICK LIKE '%' || #{USER_NICK} || '%'</if>
+		<if test="USER_ATTR_A !=''">AND T2.USER_ATTR_A = #{USER_ATTR_A}</if>
+		<if test="USER_ATTR_B !=''">AND T2.USER_ATTR_B = #{USER_ATTR_B}</if>
+		<if test="USER_ATTR_C !=''">AND T2.USER_ATTR_C = #{USER_ATTR_C}</if>
+		<if test="USER_ATTR_D !=''">AND T2.USER_ATTR_D = #{USER_ATTR_D}</if>
+	            )B
+        ) RW
+		<if test="USER_STATUS_CD != '' and USER_STATUS_CD != null"> WHERE USER_STATUS_CD = #{USER_STATUS_CD} </if>
+
+        ) PG
+				            
+			       )RE
+			 ORDER BY TALK_START_DT ASC
+</select>
+
+<insert id="insertUserAwayHst" parameterType= "java.util.HashMap">
+	INSERT INTO PLT_USER_LOG(
+				 USER_LOG_ID    /* 로그ID         */
+			   , USER_ID        /* 사용자ID       */
+			   , TASK_SE_CD     /* 업무구분       */
+			   , RGTR_ID		/* 등록자 */
+			   , REG_DT			/* 등록일자 */
+				) 
+		VALUES 
+	       ( 
+			     #{USER_LOG_ID}::INTEGER
+			   , #{USER_ID}::INTEGER
+			   , #{USER_CHT_STAT}
+			   , #{USER_ID}::INTEGER
+			   , TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+			)
+</insert>
+</mapper>

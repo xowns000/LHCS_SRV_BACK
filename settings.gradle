@@ -1,0 +1,19 @@
+rootProject.name = 'palette3-hkcloud-edu-webm'
+
+include 'palette3-hkcloud-edu-webm-common'
+include 'palette3-hkcloud-edu-webm-login'
+
+include 'palette3-hkcloud-edu-webm-phone'
+include 'palette3-hkcloud-edu-webm-chat'
+include 'palette3-hkcloud-edu-webm-km'
+include 'palette3-hkcloud-edu-webm-qa'
+include 'palette3-hkcloud-edu-webm-svy'
+include 'palette3-hkcloud-edu-webm-admin'
+
+include 'palette3-hkcloud-edu-webm-rsvt'
+include 'palette3-hkcloud-edu-webm-vst'
+
+include 'palette3-hkcloud-edu-webm-run'
+include 'palette3-hkcloud-edu-webm-stt'
+include 'palette3-hkcloud-edu-webm-v3'
+include 'palette3-hkcloud-edu-webm-batch'

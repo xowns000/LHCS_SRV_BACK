@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hkcloud.palette3.setting.customer.dao.SettingCautionCustomerListMapper">
+
+  <select id="selectCautionCustList" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+    SELECT /* 주의고객목록 selectCautionCustList - kr.co.hkcloud.palette3.setting.customer.dao.SettingCautionCustomerListMapper */
+      ROW_NUMBER() OVER(ORDER BY PC.MDFCN_DT DESC) AS ROW_NUMBER
+			, PC.CUST_ID
+      , PC.CUST_NM
+      , PC.CUST_PHN_NO
+      , PC.CUST_STTS_CD
+      ,(SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND GROUP_CD_ID = 'CUST_ST' AND CD_ID = PC.CUST_STTS_CD) AS CUST_STAT
+      , PC.CAUTION_CUST_CD
+      ,(SELECT CD_NM FROM PLT_COMM_CD WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND GROUP_CD_ID = 'CAUTION_TP' AND CD_ID = PC.CAUTION_CUST_CD) AS CAUTION_TP
+			, PC.CAUTION_CUST_YN
+			, PC.CAUTION_CUST_CD
+			, PC.CAUTION_CUST_FNDWAY
+			, PC.CAUTION_CUST_REG_DT
+			, PC.CAUTION_CUST_RGTR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.CAUTION_CUST_RGTR_ID) AS CAUTION_CUST_RGTR_NM
+			, PC.CAUTION_CUST_MDFCN_DT
+			, PC.CAUTION_CUST_MDFR_ID
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.CAUTION_CUST_MDFR_ID) AS CAUTION_CUST_MDFR_NM
+			, PC.CAUTION_VLD_BGNG_DT
+			, PC.CAUTION_VLD_END_DT
+			, PC.REG_DT
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.RGTR_ID) AS RGTR_NM
+			, PC.MDFCN_DT
+			, (SELECT PU.USER_NM FROM PLT_USER PU WHERE PU.USER_ID = PC.MDFR_ID) AS MDFR_NM
+      FROM PLT_CUST PC
+      WHERE CUSTCO_ID = 1::INTEGER
+      AND PC.CAUTION_CUST_YN = 'Y'
+      <if test="SCH_CUST_STAT       !='' and SCH_CUST_STAT       != null">
+          -- 고객상태
+        AND PC.CUST_STTS_CD = #{SCH_CUST_STAT}
+      </if>
+      <if test="SCH_CAUTION_CUST_TP !='' and SCH_CAUTION_CUST_TP       != null">
+            -- 주의고객 유형
+            AND PC.CAUTION_CUST_CD = #{SCH_CAUTION_CUST_TP}
+      </if>
+      <choose>
+        <when test='SCH_GB != null and SCH_GB != ""'>
+          <choose>
+            <when test='SCH_GB == "CUST_ID"'>
+              AND PC.CUST_ID::VARCHAR = #{SCH_KEYWORD}
+            </when>
+            <when test='SCH_GB == "CUST_NM"'>
+              AND PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+            </when>
+            <when test='SCH_GB == "CUST_PHN_NO"'>
+              AND PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+            </when>
+          </choose>
+        </when>
+        <otherwise>
+          <if test='SCH_KEYWORD != null and SCH_KEYWORD != ""'>
+            AND (
+            PC.CUST_NM LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+            OR PC.CUST_PHN_NO LIKE CONCAT(CONCAT('%', #{SCH_KEYWORD}), '%')
+            )
+          </if>
+        </otherwise>
+      </choose>
+    <if test='SCH_ST_DTS != null and SCH_ST_DTS != "" and SCH_END_DTS != null and SCH_END_DTS != ""'>
+      <choose>
+        <when test='SCH_CUST_REG_TP != null and SCH_CUST_REG_TP != ""'>
+          <choose>
+            <when test='SCH_CUST_REG_TP == "REG_DT"'>
+              AND PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+            </when>
+            <when test='SCH_CUST_REG_TP == "MDFCN_DT"'>
+              AND PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+            </when>
+          </choose>
+        </when>
+        <otherwise>
+          AND ( PC.REG_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+          OR
+          PC.MDFCN_DT BETWEEN CONCAT(#{SCH_ST_DTS}, '000000') AND CONCAT(#{SCH_END_DTS}, '235959')
+          )
+        </otherwise>
+      </choose>
+    </if>
+  </select>
+
+
+
+</mapper>

@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <!-- 상담유형 관리 -->
+<mapper namespace="kr.co.hkcloud.palette3.chat.setting.dao.ChatSettingProCounselByAgentManageMapper">
+
+<!-- PLT_CHT_USER_INQ(사용자별문의유형 권한) 테이블 데이터 등록 -->
+<insert id="INSERT_TALK_USER_INQRY"  parameterType= "java.util.HashMap">
+	INSERT INTO PLT_CHT_USER_SKILL
+	(
+		QSTN_TYPE_ID
+		, USER_ID
+		, CUSTCO_ID
+		, DEPT_ID
+		, RGTR_ID
+		, REG_DT
+		, MDFR_ID
+		, MDFCN_DT
+	)
+	VALUES
+	(
+		#{QSTN_TYPE_ID}::INTEGER
+		, #{STNG_USER_ID}::INTEGER
+		, #{CUSTCO_ID}::INTEGER
+		, #{DEPT_ID}::INTEGER
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+		, #{USER_ID}::INTEGER
+		, TO_CHAR(NOW(),'YYYYMMDDHH24MISS')
+	)
+</insert>
+
+<!-- 2레벨 문의유형 조회 -->
+<select id="SELECT_TALK_USER_INQRY_LEVEL2" parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+SELECT
+	INQRY_TYP_CD
+FROM PLT_CHT_INQ_TYP
+WHERE CUSTCO_ID = #{ASP_NEWCUST_KEY}
+  AND SPST_INQRY_TYP_CD = #{TALK_INQRY_CD}
+ORDER BY SORT_ORD
+</select>
+
+<!-- 사용자별 문의유형 삭제 -->
+<delete id="deleteRtnUserInqryByUser"  parameterType= "java.util.HashMap">	
+DELETE FROM PLT_CHT_USER_INQ 
+ WHERE USER_ID = #{USER_ID}
+</delete>
+
+<!-- 문의유형별 사용자 삭제 -->
+<delete id="deleteRtnUserInqryByInqry"  parameterType= "java.util.HashMap">	
+DELETE FROM PLT_CHT_USER_INQ 
+ WHERE TALK_INQRY_CD = #{TALK_INQRY_CD}
+</delete>
+
+<!-- 문의유형(전문상담) 할당 및 미할당 유져를 조회한다. -->
+<select id="selectRtnUserInqry"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+     		SELECT AA.USER_ID
+             , AA.USER_NM
+             , AA.USER_NICK
+             , #{TALK_INQRY_CD}      AS TALK_INQRY_CD
+             , AA.ATTR_DIV_NM_A
+             , AA.ATTR_DIV_NM_B
+             , AA.ATTR_DIV_NM_C
+             , AA.ATTR_DIV_NM_D
+             , AA.TWB_PAGING_TOT_COUNT
+          FROM (
+          
+SELECT PG.*
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'A' AND ATTR_DIV_CD = PG.USER_ATTR_A) AS ATTR_DIV_NM_A /* 사용자소속A */
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'B' AND ATTR_DIV_CD = PG.USER_ATTR_B) AS ATTR_DIV_NM_B /* 사용자소속B */
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'C' AND ATTR_DIV_CD = PG.USER_ATTR_C) AS ATTR_DIV_NM_C /* 사용자소속C */
+     , (SELECT ATTR_DIV_NM FROM PLT_USER_BLNG WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%') AND ATTR_CD = 'D' AND ATTR_DIV_CD = PG.USER_ATTR_D) AS ATTR_DIV_NM_D /* 사용자소속D */
+  FROM (
+
+                SELECT ROW_NUMBER() OVER(ORDER BY A.USER_NICK, A.USER_NM, A.USER_ID) AS ROW_NUMBER
+                     , A.USER_ID
+                     , A.USER_NM
+                     , A.USER_NICK
+                     , A.USER_ATTR_A
+                     , A.USER_ATTR_B
+                     , A.USER_ATTR_C
+                     , A.USER_ATTR_D
+                  FROM PLT_USER A
+                 WHERE A.CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%')
+                   AND A.USE_YN = 'Y'
+                   AND A.USER_ID NOT IN (SELECT USER_ID 
+                                           FROM PLT_CHT_USER_INQ 
+                                          WHERE CUSTCO_ID LIKE ('%' || #{ASP_NEWCUST_KEY} || '%')
+                                          <choose>
+                                          	<when test="TALK_INQRY_CD2 !='' and TALK_INQRY_CD2 != null">
+                                          		AND TALK_INQRY_CD =  #{TALK_INQRY_CD2} 
+                                          	</when>
+                                          	<otherwise>
+	                                          	AND TALK_INQRY_CD = #{TALK_INQRY_CD}
+                                          	</otherwise>
+                                          </choose>
+                                         )
+<if test="USER_ID != ''">AND A.USER_ID LIKE '%' || #{USER_ID} || '%'</if>
+<if test="USER_NM != ''">AND A.USER_NM LIKE '%' || #{USER_NM} || '%'</if>
+<if test="USER_NICK != ''">AND A.USER_NICK LIKE '%' || #{USER_NICK} || '%'</if>
+<if test="USER_ATTR_A !=''">AND A.USER_ATTR_A = #{USER_ATTR_A}</if>
+<if test="USER_ATTR_B !=''">AND A.USER_ATTR_B = #{USER_ATTR_B}</if>
+<if test="USER_ATTR_C !=''">AND A.USER_ATTR_C = #{USER_ATTR_C}</if>
+<if test="USER_ATTR_D !=''">AND A.USER_ATTR_D = #{USER_ATTR_D}</if>
+
+                 /* GROUP BY A.USER_ID, A.USER_NM, A.USER_NICK */
+
+
+        ) PG
+
+               ) AA
+</select>
+
+<select id="selectRtnUserAllocInqry"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT ROW_NUMBER() OVER() AS ROW_NUMBER 				/* 번호 */
+		 , PU.USER_ID										/* 사용자ID */
+		 , PU.LGN_ID										/* 로그인ID */
+		 , PU.USER_NM										/* 사용자이름 */
+		 , PUO.DEPT_ID										/* 부서코드 */
+		 , (WITH RECURSIVE DEPT_TREE 
+		 	AS(SELECT DEPT_ID,DEPT_NM,UP_DEPT_ID,DEPT_NM AS full_path
+		    	FROM PLT_OGNZ
+		    	WHERE DEPT_ID = PUO.DEPT_ID
+		    	UNION ALL
+		    	SELECT PO.DEPT_ID,PO.DEPT_NM,PO.UP_DEPT_ID, cast(DT.DEPT_NM || ' > ' || PO.DEPT_NM AS VARCHAR(100))
+		    	FROM DEPT_TREE DT
+		    	INNER JOIN PLT_OGNZ PO on PO.DEPT_ID = DT.UP_DEPT_ID
+			)SELECT FULL_PATH 
+				FROM DEPT_TREE 
+				WHERE UP_DEPT_ID IS NULL)	AS FULL_PATH	/* 부서 */
+		, PCUS.QSTN_TYPE_ID									/* 할당 스킬(문의유형) */
+		, PCUS.MDFCN_DT										/* 설정일 */
+	FROM PLT_USER PU
+	LEFT JOIN PLT_USER_OGNZ PUO
+		ON PUO.USER_ID = PU.USER_ID
+		AND PUO.USE_YN = 'Y'
+		AND PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+	LEFT JOIN PLT_CHT_USER_SKILL PCUS
+		ON PCUS.USER_ID = PU.USER_ID
+		AND PCUS.QSTN_TYPE_ID = #{QSTN_TYPE_ID}::INTEGER
+	LEFT JOIN PLT_OGNZ PO
+		ON PO.DEPT_ID = PCUS.DEPT_ID
+	WHERE PUO.CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		AND PU.LGN_ID LIKE ('%' || #{SRCH_USER_ID} || '%')
+		AND PU.USER_NM LIKE ('%' || #{SRCH_USER_NM} || '%')
+</select>
+
+<!-- 문의유형(전문상담) 할당 및 미할당 유져를 조회한다.(사용자별) -->
+<select id="selectRtnUserInqryByUser"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	WITH RECURSIVE QSTN_TYPE_TREE AS (
+			SELECT QSTN_TYPE_ID, UP_QSTN_TYPE_ID, QSTN_TYPE_NM, QSTN_TYPE_EXPLN, QSTN_TYPE_CD, QSTN_TYPE_SE_CD, SNDR_KEY, FILE_GROUP_KEY, USE_YN,LPAD(CAST(SORT_ORD AS VARCHAR),5,'0') AS SORT
+			FROM PLT_CHT_QSTN_TYPE
+			WHERE UP_QSTN_TYPE_ID IS NULL
+			AND DEL_YN = 'N'
+			and CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+			UNION ALL
+			SELECT B.QSTN_TYPE_ID, B.UP_QSTN_TYPE_ID, B.QSTN_TYPE_NM, B.QSTN_TYPE_EXPLN, B.QSTN_TYPE_CD, B.QSTN_TYPE_SE_CD, B.SNDR_KEY, B.FILE_GROUP_KEY, B.USE_YN, C.SORT || ' > ' || LPAD(CAST(B.SORT_ORD AS VARCHAR),5,'0') AS SORT
+			FROM PLT_CHT_QSTN_TYPE B
+			INNER JOIN QSTN_TYPE_TREE C ON C.QSTN_TYPE_ID::INTEGER = B.UP_QSTN_TYPE_ID::INTEGER
+			WHERE B.DEL_YN = 'N'
+			and CUSTCO_ID = #{CUSTCO_ID}::INTEGER
+		)
+		SELECT ROW_NUMBER() OVER (PARTITION BY PCUS.USER_ID ORDER BY QTT.SORT) AS ROW_NUMBER
+			, QTT.QSTN_TYPE_ID
+			, QTT.UP_QSTN_TYPE_ID
+			, QTT.QSTN_TYPE_NM
+			, QTT.QSTN_TYPE_EXPLN
+			, QTT.QSTN_TYPE_CD
+			, (SELECT CD_NM
+				FROM PLT_COMM_CD
+				WHERE CUSTCO_ID = #{CUSTCO_ID}::INTEGER AND GROUP_CD_ID = 'CHAT_INQ_TP'
+				AND CD_ID = QSTN_TYPE_CD) AS QSTN_TYPE_CD_NM
+			, QTT.QSTN_TYPE_SE_CD
+			, QTT.SNDR_KEY
+			, QTT.FILE_GROUP_KEY
+			, QTT.USE_YN
+			, QTT.SORT
+			, PCUS.USER_ID
+			, PCUS.MDFCN_DT
+		FROM QSTN_TYPE_TREE QTT
+		LEFT JOIN PLT_CHT_USER_SKILL PCUS 
+			ON QTT.QSTN_TYPE_ID = PCUS.QSTN_TYPE_ID
+			AND USER_ID = (SELECT USER_ID
+							FROM PLT_USER
+							WHERE LGN_ID = #{SRCH_USER_ID})::INTEGER
+		ORDER BY QTT.SORT
+</select>
+
+<!-- 사용자/문의유형 삭제 -->
+<delete id="DELETE_TALK_USER_INQRY" parameterType= "java.util.HashMap">	
+DELETE FROM PLT_CHT_USER_SKILL
+ WHERE QSTN_TYPE_ID = #{QSTN_TYPE_ID}::INTEGER
+   AND USER_ID = #{STNG_USER_ID}::INTEGER
+</delete>
+
+<!-- 문의유형 운선순위 업데이트 -->
+<update id="updateUserSkillRank" parameterType= "java.util.HashMap">
+	UPDATE PLT_CHT_USER_INQ
+	SET
+	SKILL_RANK = #{SKILL_RANK}
+	WHERE 	CUSTCO_ID = #{CUSTCO_ID}
+	AND		USER_ID = #{USER_ID}
+	AND 	TALK_INQRY_CD = #{TALK_INQRY_CD}
+</update>
+
+<!-- 문의유형 정보를 가져온다 (코드값) -->	
+<select id="selectRtnInqryCd"  parameterType= "java.util.HashMap" resultType="java.util.HashMap">
+	SELECT INQRY_TYP_CD AS CD
+	     , INQRY_TYP_NM AS CD_NM
+	  FROM PLT_CHT_INQ_TYP
+	 WHERE CUSTCO_ID = #{CUSTCO_ID}
+	<if test="INQRY_TYP_CD !='' and INQRY_TYP_CD != null">
+	   AND INQRY_TYP_CD = #{INQRY_TYP_CD}
+	</if>
+	<if test="USE_YN !='' and USE_YN != null">
+	   AND USE_YN = #{USE_YN}
+	</if>
+	<if test="SPST_INQRY_TYP_CD !='' and SPST_INQRY_TYP_CD != null">
+	   AND SPST_INQRY_TYP_CD = #{SPST_INQRY_TYP_CD}
+	</if>
+	<if test="INQRY_TYP_DIV_CD !='' and INQRY_TYP_DIV_CD != null">
+	   AND INQRY_TYP_DIV_CD = #{INQRY_TYP_DIV_CD}
+	</if>
+	 ORDER BY SORT_ORD
+</select>
+
+
+</mapper>
