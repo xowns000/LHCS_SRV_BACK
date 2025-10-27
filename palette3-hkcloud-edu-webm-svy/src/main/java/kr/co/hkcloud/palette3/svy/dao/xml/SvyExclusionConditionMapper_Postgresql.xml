@@ -11,9 +11,9 @@
 			, PSEC.DEPT_ID
 			, PO.DEPT_NM
 			, PSEC.EXL_COND_SE_CD
-			, PCC2.CD_NM
+			, PCC2.CD_NM AS EXL_COND_SE_NM
 			, PSEC.EXL_COND_CD
-			, PCC1.CD_NM
+			, PCC1.CD_NM AS EXL_COND_NM
 			, PSEC.EXL_COND_CN
 			, PSEC.DEL_YN
 			, PSEC.USE_YN
@@ -61,6 +61,8 @@
 			, EXL_COND_SE_CD
 			, EXL_COND_CD
 			, EXL_COND_CN
+			, USE_YN
+			, DEL_YN
 			, REG_DT
 			, RGTR_ID
 			, MDFCN_DT
@@ -72,6 +74,8 @@
 			, #{EXL_COND_SE_CD}
 			, #{EXL_COND_CD}
 			, #{EXL_COND_CN}
+			, 'Y'
+			, 'N'
 			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
 			, #{USER_ID}::INTEGER
 			, TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
@@ -94,7 +98,8 @@
 	<update id="deleteCondition" parameterType="java.util.HashMap">
 		UPDATE 	/* 설문조사 제외 대상 삭제 */
 			PLT_SRVY_EXL_COND 
-		SET DEL_YN = 'Y'
+		SET USE_YN = 'N'
+			, DEL_YN = 'Y'
 			, MDFCN_DT = TO_CHAR(NOW(), 'YYYYMMDDHH24MISS')
 			, MDFR_ID = #{USER_ID}::INTEGER
 		WHERE SRVY_EXL_COND_ID = #{SRVY_EXL_COND_ID}::INTEGER
