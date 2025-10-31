@@ -1,3 +1,4 @@
+/*read me*/
 -Dspring.application.name=palette-webm1 
 -Dserver.port=8443
 -Dspring.profiles.active=local,local-phone,local-chat,local-km,local-admin 
@@ -7,3 +8,4 @@
 -Dk8s.node.name=localhost 
 -Dk8s.pod.name=podname 
 -Dk8s.pod.ip=127.0.0.1
+
