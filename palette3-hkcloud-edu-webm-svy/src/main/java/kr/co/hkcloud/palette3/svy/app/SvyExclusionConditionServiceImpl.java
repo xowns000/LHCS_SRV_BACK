@@ -38,7 +38,7 @@ public class SvyExclusionConditionServiceImpl implements SvyExclusionConditionSe
     @Transactional(readOnly = false)
     public TelewebJSON mergeCondition(TelewebJSON jsonParam) throws TelewebAppException {
         TelewebJSON objParam = new TelewebJSON();
-        if(StringUtils.isEmpty(jsonParam.getString("SRVY_EXL_TRGT_ID"))) {
+        if(StringUtils.isEmpty(jsonParam.getString("SRVY_EXL_COND_ID"))) {
             objParam = insertCondition(jsonParam);
         } else {
             objParam = updateCondition(jsonParam);
@@ -48,7 +48,7 @@ public class SvyExclusionConditionServiceImpl implements SvyExclusionConditionSe
     
     @Transactional(readOnly = false)
     public TelewebJSON insertCondition(TelewebJSON jsonParam) throws TelewebAppException {
-        jsonParam.setString("SRVY_EXL_TRGT_ID", Integer.toString(innbCreatCmmnService.createSeqNo("SRVY_EXL_TRGT_ID")));
+        jsonParam.setString("SRVY_EXL_COND_ID", Integer.toString(innbCreatCmmnService.createSeqNo("SRVY_EXL_COND_ID")));
         return mobjDao.insert(sqlNameSpace, "insertCondition", jsonParam);
     }
     
@@ -61,17 +61,17 @@ public class SvyExclusionConditionServiceImpl implements SvyExclusionConditionSe
     @Transactional(readOnly = false)
     public TelewebJSON deleteCondition(TelewebJSON jsonParam) throws TelewebAppException {
         
-        List<String> srvyExlTrgtList = new LinkedList<String>();
+        List<String> srvyExlCondList = new LinkedList<String>();
         JSONArray jsonObj = jsonParam.getDataObject(TwbCmmnConst.G_DATA);
         for (int n = 0; n < jsonObj.size(); n++) {
             JSONObject objData = jsonObj.getJSONObject(n);
             
-            srvyExlTrgtList.add(objData.getString("SRVY_EXL_TRGT_ID"));
+            srvyExlCondList.add(objData.getString("SRVY_EXL_COND_ID"));
             
         }
         //신규설정메뉴가 있으면
-        if(srvyExlTrgtList.size() > 0) {
-            jsonParam.setObject("SRVT_EXL_TRGT_LIST", 0, srvyExlTrgtList);
+        if(srvyExlCondList.size() > 0) {
+            jsonParam.setObject("SRVT_EXL_COND_LIST", 0, srvyExlCondList);
         }
         return mobjDao.update(sqlNameSpace, "deleteCondition", jsonParam);
     }

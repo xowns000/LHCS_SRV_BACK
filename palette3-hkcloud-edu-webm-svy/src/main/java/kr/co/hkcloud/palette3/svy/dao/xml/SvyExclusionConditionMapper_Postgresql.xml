@@ -31,7 +31,7 @@
 		LEFT JOIN PLT_COMM_CD PCC2 ON PCC2.CD_ID = PSEC.EXL_COND_SE_CD AND PCC2.GROUP_CD_ID = 'EXL_COND_TY'
 		WHERE 1=1
 			<if test='DEPT_ID!="" and DEPT_ID!=null and DEPT_ID!=undefined'>
-				AND PSEC.DEPT_ID = #{DEPT_ID}
+				AND PSEC.DEPT_ID = #{DEPT_ID}::INTEGER
 			</if>
 			<if test='EXL_COND_SE_CD!="" and EXL_COND_SE_CD!=null and EXL_COND_SE_CD!=undefined'>
 				AND PSEC.EXL_COND_SE_CD = #{EXL_COND_SE_CD}

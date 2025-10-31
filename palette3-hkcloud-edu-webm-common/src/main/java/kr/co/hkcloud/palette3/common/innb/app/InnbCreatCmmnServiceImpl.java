@@ -417,6 +417,9 @@ public class InnbCreatCmmnServiceImpl implements InnbCreatCmmnService {
     
     @Resource(name = "SrvyExlTrgtIdGnrService")
     private EgovIdGnrService srvyExlTrgtIdGnrService;
+    
+    @Resource(name = "SrvyExlCondIdGnrService")
+    private EgovIdGnrService srvyExlCondIdGnrService;
 
     @Resource(name = "ChtCuttBbsIdGnrService")
     private EgovIdGnrService chtCuttBbsIdGnrService;
@@ -809,6 +812,8 @@ public class InnbCreatCmmnServiceImpl implements InnbCreatCmmnService {
                 seq = Integer.parseInt(Optional.ofNullable(srvySttsHstryIdGnrService.getNextStringId()).orElse(""));
             } else if (tableName.equals("SRVY_EXL_TRGT_ID")) { //설문_제외_대상(테이블: PLT_SRVY_EXL_TRGT)
                 seq = Integer.parseInt(Optional.ofNullable(srvyExlTrgtIdGnrService.getNextStringId()).orElse(""));
+            } else if (tableName.equals("SRVY_EXL_COND_ID")) { //설문_제외_조건(테이블: PLT_SRVY_EXL_COND)
+                seq = Integer.parseInt(Optional.ofNullable(srvyExlCondIdGnrService.getNextStringId()).orElse(""));
             } else if (tableName.equals("CHT_CUTT_BBS_ID")) { // (고객문의,상품문의) 채팅_상담_게시판(테이블: PLT_CHT_CUTT_BBS)
                 seq = Integer.parseInt(Optional.ofNullable(chtCuttBbsIdGnrService.getNextStringId()).orElse(""));
             } else if (tableName.equals("CHT_CUTT_BBS_ANSWR_ID")) { // (고객문의,상품문의) 채팅_상담_게시판(테이블: PLT_CHT_CUTT_BBS)

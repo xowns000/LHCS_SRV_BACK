@@ -1698,6 +1698,18 @@ public class EgovIdgenConfig {
     }
 
     @Bean(destroyMethod = "destroy")
+    public EgovTableIdGnrServiceImpl SrvyExlCondIdGnrService(@Qualifier("paletteRoutingLazyDataSource") DataSource paletteRoutingLazyDataSource) {
+        EgovTableIdGnrServiceImpl egovTableIdGnrServiceImpl = new EgovTableIdGnrServiceImpl();
+        egovTableIdGnrServiceImpl.setDataSource(paletteRoutingLazyDataSource);
+        egovTableIdGnrServiceImpl.setBlockSize(1);
+        egovTableIdGnrServiceImpl.setTable("PLT_TBL_SEQ");
+        egovTableIdGnrServiceImpl.setTableName("SRVY_EXL_COND_ID");
+        egovTableIdGnrServiceImpl.setTableNameFieldName("COL_ID");
+        egovTableIdGnrServiceImpl.setNextIdFieldName("SEQ_VL");
+        return egovTableIdGnrServiceImpl;
+    }
+
+    @Bean(destroyMethod = "destroy")
     public EgovTableIdGnrServiceImpl ChtCuttBbsIdGnrService(@Qualifier("paletteRoutingLazyDataSource") DataSource paletteRoutingLazyDataSource) {
         EgovTableIdGnrServiceImpl egovTableIdGnrServiceImpl = new EgovTableIdGnrServiceImpl();
         egovTableIdGnrServiceImpl.setDataSource(paletteRoutingLazyDataSource);
